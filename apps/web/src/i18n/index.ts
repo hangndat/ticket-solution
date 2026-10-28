@@ -13,6 +13,14 @@ export {
 export { DICTS, EN, VI, type MessageKey } from './messages';
 export { t, isMessageKey } from './t';
 export {
+  dual,
+  formatDual,
+  localizeCatalog,
+  pickDual,
+  type DualString,
+  type Localized,
+} from './dual';
+export {
   AttendeeLocaleProvider,
   useAttendeeLocale,
   useAttendeeLocaleOptional,

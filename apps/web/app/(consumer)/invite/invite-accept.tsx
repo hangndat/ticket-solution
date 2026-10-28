@@ -2,6 +2,8 @@
 
 import { Button } from '@ticket/ui';
 import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useAttendeeLocale } from '../../../src/i18n';
+import { invitePageCopy } from '../../../src/invite/invite-copy';
 import {
   interpretAcceptInvite,
   type ViewResult,
@@ -89,6 +91,8 @@ export function InviteAcceptForm({
 }: {
   portalOrigin: string | null;
 }) {
+  const { locale } = useAttendeeLocale();
+  const copy = invitePageCopy(locale);
   const locationToken = useSyncExternalStore(
     subscribeInviteToken,
     getInviteTokenSnapshot,
@@ -134,7 +138,7 @@ export function InviteAcceptForm({
       REQUEST_TIMEOUT_MS,
     );
     if (result.networkError || result.timedOut) {
-      setUx(inviteNetworkMessage());
+      setUx(inviteNetworkMessage(locale));
       setBusy(false);
       return;
     }
@@ -144,7 +148,7 @@ export function InviteAcceptForm({
       result.networkError || result.timedOut,
     );
     setView(next);
-    setUx(messageForInviteView(next));
+    setUx(messageForInviteView(next, locale));
     if (next.kind === 'ok') {
       try {
         sessionStorage.removeItem(STORAGE_KEY);
@@ -155,6 +159,11 @@ export function InviteAcceptForm({
     }
     setBusy(false);
   }
+
+  useEffect(() => {
+    if (!view) return;
+    setUx(messageForInviteView(view, locale));
+  }, [locale, view]);
 
   const loginHref = '/api/auth/login?return=/invite';
   const outcomeLive =
@@ -172,35 +181,29 @@ export function InviteAcceptForm({
 
   return (
     <div className={claimFormRoot}>
-      <p className={inviteSupportCopy}>
-        Đăng nhập bằng đúng email đã được mời. Máy chủ kiểm tra hết hạn, dùng
-        một lần và khớp email — giao diện không tự cấp quyền Owner.
-      </p>
+      <p className={inviteSupportCopy}>{copy.support}</p>
       <div className={authButtonsRow}>
         <Button asChild variant="primary">
-          <a href={loginHref}>Đăng nhập</a>
+          <a href={loginHref}>{copy.login}</a>
         </Button>
       </div>
       <div className={inviteFormPanel}>
         <label>
-          Mã lời mời
+          {copy.tokenLabel}
           <input
             value={token}
             onChange={(e) => setTokenOverride(e.target.value)}
             autoComplete="off"
             spellCheck={false}
-            aria-label="Mã lời mời"
+            aria-label={copy.tokenLabel}
           />
         </label>
-        <span className={inviteFieldHint}>
-          Mở link mời (mã nằm sau # trên URL) — tránh dán mã dạng ?token= trên
-          thanh địa chỉ.
-        </span>
+        <span className={inviteFieldHint}>{copy.tokenHint}</span>
         {!token.trim() ? (
           <SurfaceState
             kind="empty"
-            title="Chưa có mã lời mời"
-            detail="Mở link mời hoặc dán mã vào ô trên sau khi đăng nhập đúng email."
+            title={copy.emptyTitle}
+            detail={copy.emptyDetail}
             testId="invite-token-empty"
           />
         ) : null}
@@ -209,19 +212,19 @@ export function InviteAcceptForm({
           variant="primary"
           disabled={busy || !token.trim() || !csrfReady}
           loading={busy}
-          loadingLabel="Đang nhận…"
+          loadingLabel={copy.accepting}
           onClick={() => void accept()}
           data-testid="invite-accept-submit"
         >
-          {csrfReady ? 'Nhận lời mời' : 'Đang chuẩn bị…'}
+          {csrfReady ? copy.submit : copy.preparing}
         </Button>
       </div>
       {busy ? (
         <div className={guestOutcomeWrap}>
           <SurfaceState
             kind="loading"
-            title="Đang nhận lời mời…"
-            detail="Máy chủ đang kiểm tra hết hạn, dùng một lần và khớp email — chưa coi là thành công."
+            title={copy.loadingTitle}
+            detail={copy.loadingDetail}
             testId="invite-accept-loading"
           />
         </div>
@@ -247,7 +250,7 @@ export function InviteAcceptForm({
                   )}
                   data-testid="invite-accept-portal-cta"
                 >
-                  Mở portal quản trị
+                  {copy.openPortal}
                 </a>
               </Button>
             ) : null}
