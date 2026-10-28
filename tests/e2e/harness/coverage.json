@@ -1,0 +1,9 @@
+[
+  {
+    "caseId": "SEC-02",
+    "tests": ["security.spec.ts › [SEC-02]"],
+    "layers": ["B", "H"],
+    "status": "blocked",
+    "reason": "Đã kiểm host-only Secure/HttpOnly/Lax OAuth cookie và Portal mutation thiếu Origin; còn authenticated CSRF, full surface/session/header matrix."
+  }
+]
