@@ -13,8 +13,7 @@ test('sessionRefreshRoutePath encodes allowlisted next paths', () => {
   );
   assert.equal(
     sessionRefreshRoutePath('/gate'),
-    '/api/auth/refresh?next=%2F',
-    'retired /gate post-login path falls back to home',
+    '/api/auth/refresh?next=%2Fgate',
   );
   assert.equal(
     sessionRefreshRoutePath('https://evil.example'),
@@ -33,7 +32,7 @@ test('ssrTerminalAuthRejectPath fails closed without login redirect loop', () =>
   );
   assert.equal(
     ssrTerminalAuthRejectPath('/gate'),
-    '/auth?error=session_rejected&next=%2F',
+    '/auth?error=session_rejected&next=%2Fgate',
   );
   assert.equal(
     ssrTerminalAuthRejectPath('https://evil.example'),

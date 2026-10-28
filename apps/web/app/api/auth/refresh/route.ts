@@ -10,7 +10,7 @@ import {
 } from '../../../../src/oidc/session-refresh';
 
 /**
- * GET /api/auth/refresh?next=/events (retired paths like /gate sanitize to /)
+ * GET /api/auth/refresh?next=/gate|/wallet|… (allowlisted via sanitizePostLoginPath)
  * Route Handler — may rotate HttpOnly session cookies (forbidden in RSC).
  */
 export async function GET(request: NextRequest) {

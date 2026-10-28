@@ -31,7 +31,8 @@ import {
   reportShowsPendingApprovalCta,
   type EventReportView,
 } from '../../../../../src/ops/report';
-import { GateStayAppNotice } from '../../../../../src/components/gate-deeplink';
+import { GateDeeplinkButton } from '../../../../../src/components/gate-deeplink';
+import { gateDeeplinkUrl } from '../../../../../src/oidc/config';
 import { EventReportAsOfLine } from '../../../../../src/components/event-report-as-of';
 import { ReadinessChecklist } from '../../../../../src/components/readiness-checklist';
 import { ReportStaleAlert } from '../../../../../src/components/report-stale-alert';
@@ -495,7 +496,11 @@ export default function EventOverviewPage() {
       ) : null}
 
 
-      {canScan ? <GateStayAppNotice /> : null}
+      {canScan ? (
+        <GateDeeplinkButton
+          href={gateDeeplinkUrl(undefined, '/gate', { tenantId, eventId })}
+        />
+      ) : null}
 
       {canReport ? (
         <Typography.Paragraph>
