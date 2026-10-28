@@ -70,6 +70,14 @@ export const D9_DEMO = {
       rawCodes: Array.from({ length: 10 }, (_, i) =>
         `DEMO-MFEST-${String(i + 1).padStart(3, '0')}`,
       ),
+      /** O31: 1 gate (local covers 1; prod seed covers 1/2/3). */
+      gates: [
+        {
+          id: 'd9d9f001-0009-4000-8000-000000000101',
+          name: 'Cổng chính',
+          sortOrder: 0,
+        },
+      ],
     },
     studioNight: {
       id: 'd9d9f001-0002-4000-8000-000000000002',
@@ -88,6 +96,24 @@ export const D9_DEMO = {
       rawCodes: Array.from({ length: 10 }, (_, i) =>
         `DEMO-STUDIO-${String(i + 1).padStart(3, '0')}`,
       ),
+      /** O31: 3 gates (with mfest=1 covers 1+3; count 2 is on prod seed). */
+      gates: [
+        {
+          id: 'd9d9f001-0009-4000-8000-000000000201',
+          name: 'Cổng chính',
+          sortOrder: 0,
+        },
+        {
+          id: 'd9d9f001-0009-4000-8000-000000000202',
+          name: 'Cổng VIP',
+          sortOrder: 1,
+        },
+        {
+          id: 'd9d9f001-0009-4000-8000-000000000203',
+          name: 'Cổng phụ',
+          sortOrder: 2,
+        },
+      ],
     },
   },
   staffEmail: 'staff@example.com',
@@ -111,6 +137,8 @@ export type D9DemoSeedReport = {
   /** ADR-19 marketing config publish per event. */
   configsPublished: number;
   configsSkipped: number;
+  gatesInserted: number;
+  gatesSkipped: number;
   staffUserIds: string[];
   attendeeUserIds: string[];
 };
@@ -439,6 +467,33 @@ async function ensureTenant(
   return true;
 }
 
+/** O31: idempotent demo gates (unique tenant+event+name under withTenant RLS). */
+async function ensureGates(
+  tx: Prisma.TransactionClient,
+  tenantId: string,
+  event: (typeof D9_DEMO.events)[keyof typeof D9_DEMO.events],
+): Promise<{ inserted: number; skipped: number }> {
+  let inserted = 0;
+  let skipped = 0;
+  for (const gate of event.gates) {
+    const rows = await tx.$queryRaw<Array<{ id: string }>>`
+      INSERT INTO gates (tenant_id, event_id, id, name, sort_order)
+      VALUES (
+        ${tenantId}::uuid,
+        ${event.id}::uuid,
+        ${gate.id}::uuid,
+        ${gate.name},
+        ${gate.sortOrder}::int
+      )
+      ON CONFLICT (tenant_id, event_id, name) DO NOTHING
+      RETURNING id
+    `;
+    if (rows[0]) inserted += 1;
+    else skipped += 1;
+  }
+  return { inserted, skipped };
+}
+
 async function ensureEvent(
   tx: Prisma.TransactionClient,
   tenantId: string,
@@ -745,6 +800,8 @@ export async function seedD9DemoDataset(
     assignmentsSkipped: 0,
     configsPublished: 0,
     configsSkipped: 0,
+    gatesInserted: 0,
+    gatesSkipped: 0,
     staffUserIds,
     attendeeUserIds,
   };
@@ -770,6 +827,9 @@ export async function seedD9DemoDataset(
       const codes = await ensureInventory(tx, hmac, tenant.id, event);
       report.codesInserted += codes.inserted;
       report.codesSkipped += codes.skipped;
+      const gates = await ensureGates(tx, tenant.id, event);
+      report.gatesInserted += gates.inserted;
+      report.gatesSkipped += gates.skipped;
       for (const userId of staffUserIds) {
         const access = await ensureStaffAccess(
           tx,
