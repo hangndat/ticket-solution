@@ -7,7 +7,7 @@
  * D9_DEMO_FORCE_MARKETING=1.
  */
 import { randomUUID } from 'node:crypto';
-import type { EventConfigPayload } from '@ticket/contracts';
+import type { EventConfigPayload, MembershipRole } from '@ticket/contracts';
 import type { PrismaClient, Prisma } from './generated/prisma/client';
 import { hashRedemptionCode, type CodeHmacConfig } from './code-hmac';
 import {
@@ -16,6 +16,8 @@ import {
 } from './config-publish';
 import {
   eventPermissionsForRole,
+  isMembershipRole,
+  samePermissionSet,
   tenantPermissionsForRole,
 } from './role-map';
 import { loadPublishedFormTerms } from './published-form';
@@ -641,13 +643,6 @@ async function ensureInventory(
   return { inserted, skipped };
 }
 
-function samePermissionSet(a: readonly string[], b: readonly string[]): boolean {
-  if (a.length !== b.length) return false;
-  const left = [...a].sort().join('\0');
-  const right = [...b].sort().join('\0');
-  return left === right;
-}
-
 async function ensureStaffAccess(
   tx: Prisma.TransactionClient,
   tenantId: string,
@@ -751,6 +746,110 @@ async function ensureStaffAccess(
     },
   });
   return { membership, assignment: 'granted' };
+}
+
+async function reconcileExistingStaffAssignment(
+  tx: Prisma.TransactionClient,
+  tenantId: string,
+  eventId: string,
+  userId: string,
+  role: MembershipRole,
+): Promise<'granted' | 'skipped'> {
+  if (role !== 'Owner' && role !== 'Manager') return 'skipped';
+  const expectedEventPerms = [...eventPermissionsForRole(role)];
+  const membership = await tx.membership.findUnique({
+    where: { tenantId_userId: { tenantId, userId } },
+  });
+  if (!membership || membership.revokedAt) return 'skipped';
+
+  const assignment = await tx.eventAssignment.findUnique({
+    where: {
+      tenantId_eventId_membershipId: {
+        tenantId,
+        eventId,
+        membershipId: membership.id,
+      },
+    },
+  });
+  if (assignment && !assignment.revokedAt) {
+    if (samePermissionSet(assignment.permissions, expectedEventPerms)) {
+      return 'skipped';
+    }
+    await tx.eventAssignment.update({
+      where: { id: assignment.id },
+      data: {
+        permissions: expectedEventPerms,
+        activatedAt: assignment.activatedAt ?? new Date(),
+      },
+    });
+    return 'granted';
+  }
+  if (assignment?.revokedAt) {
+    await tx.eventAssignment.update({
+      where: { id: assignment.id },
+      data: {
+        permissions: expectedEventPerms,
+        activatedAt: new Date(),
+        revokedAt: null,
+      },
+    });
+    return 'granted';
+  }
+  await tx.eventAssignment.create({
+    data: {
+      id: randomUUID(),
+      tenantId,
+      eventId,
+      membershipId: membership.id,
+      permissions: expectedEventPerms,
+      activatedAt: new Date(),
+    },
+  });
+  return 'granted';
+}
+
+/**
+ * staff@example.com also owns catalog UAT orgs that are not D9 UUIDs
+ * (Aurora Night Org). Re-seed must repair those event grants too.
+ */
+async function repairDemoStaffGrants(
+  db: PrismaClient,
+  staffUserIds: readonly string[],
+): Promise<{ granted: number; skipped: number }> {
+  let granted = 0;
+  let skipped = 0;
+  for (const userId of staffUserIds) {
+    const tenants = await db.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT set_config('app.actor_id', ${userId}, true)`;
+      return tx.$queryRaw<Array<{ tenant_id: string; role: string }>>`
+        SELECT tenant_id, role
+        FROM list_my_tenants()
+        WHERE role IN ('Owner', 'Manager')
+      `;
+    });
+    for (const row of tenants) {
+      if (!isMembershipRole(row.role)) continue;
+      const role: MembershipRole = row.role;
+      await withTenant(db, row.tenant_id, async (tx) => {
+        const events = await tx.event.findMany({
+          where: { tenantId: row.tenant_id },
+          select: { id: true },
+        });
+        for (const event of events) {
+          const status = await reconcileExistingStaffAssignment(
+            tx,
+            row.tenant_id,
+            event.id,
+            userId,
+            role,
+          );
+          if (status === 'granted') granted += 1;
+          else skipped += 1;
+        }
+      });
+    }
+  }
+  return { granted, skipped };
 }
 
 /**
@@ -861,6 +960,10 @@ export async function seedD9DemoDataset(
       created,
     });
   }
+
+  const repaired = await repairDemoStaffGrants(db, staffUserIds);
+  report.assignmentsGranted += repaired.granted;
+  report.assignmentsSkipped += repaired.skipped;
 
   return report;
 }
