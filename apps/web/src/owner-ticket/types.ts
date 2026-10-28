@@ -114,35 +114,83 @@ export function walletCopy(locale: AttendeeLocale) {
   return localizeCatalog(WALLET_COPY_CATALOG, locale);
 }
 
-export const OWNER_TICKET_COPY = {
-  title: 'Vé của bạn',
+export const OWNER_TICKET_COPY_CATALOG = {
+  title: dual('Vé của bạn', 'Your ticket'),
+  metaDescription: dual(
+    'Chi tiết vé dành cho chủ sở hữu đã đăng nhập.',
+    'Ticket details for the signed-in owner.',
+  ),
+  home: dual('Về trang chủ', 'Back to home'),
+  retry: dual('Thử lại', 'Try again'),
+  login: dual('Đăng nhập', 'Sign in'),
+  redeemCta: dual('Đổi mã lấy vé', 'Redeem a code'),
+  wallet: dual('Vé của tôi', 'My tickets'),
+  backWallet: dual('← Vé của tôi', '← My tickets'),
+  backWalletShort: dual('‹ Vé của tôi', '‹ My tickets'),
+  introPrefix: dual('Vé thuộc tổ chức', 'This ticket belongs to'),
+  qrLabel: dual('Mã QR vé {id}', 'Ticket QR {id}'),
+  demoTitle: dual('Không dùng vào cổng', 'Do not use at the gate'),
+  demoDetail: dual(
+    'Đây là vé demo / fixture — không quét tại cổng thật.',
+    'This is a demo / fixture ticket — do not scan it at a live gate.',
+  ),
+  stateBlocked: dual(
+    'Vé đang ở trạng thái {state}. Không dùng mã này để vào cổng.',
+    'This ticket is {state}. Do not use this code at the gate.',
+  ),
+  ticketCode: dual('Mã vé', 'Ticket'),
+  status: dual('Trạng thái', 'Status'),
+  credentialVersion: dual('Phiên bản chứng thực', 'Credential version'),
+  issuedAt: dual('Ngày cấp', 'Issued'),
   needLogin: {
-    title: 'Cần đăng nhập',
-    detail:
+    title: dual('Cần đăng nhập', 'Sign in required'),
+    detail: dual(
       'Liên kết vé yêu cầu phiên đăng nhập của chủ vé. Đăng nhập để tiếp tục — chúng tôi không hiển thị chi tiết vé khi chưa xác minh.',
+      "This ticket link requires the owner's signed-in session. Sign in to continue — ticket details are not shown until you are verified.",
+    ),
   },
   missing: {
-    title: 'Không tìm thấy vé',
-    detail:
+    title: dual('Không tìm thấy vé', 'Ticket not found'),
+    detail: dual(
       'Không có vé khớp đường dẫn này cho tài khoản hiện tại. Đăng xuất rồi đăng nhập đúng email chủ vé (trong thư xác nhận), hoặc kiểm tra lại liên kết.',
+      'No ticket matches this path for the current account. Sign out and sign in with the owner email from the confirmation message, or check the link.',
+    ),
   },
   forbidden: {
-    title: 'Bạn không có quyền xem vé này',
-    detail:
+    title: dual('Bạn không có quyền xem vé này', 'You cannot view this ticket'),
+    detail: dual(
       'Vé không thuộc tài khoản hiện tại hoặc tổ chức đã chặn truy cập. Đăng nhập đúng email chủ vé hoặc liên hệ ban tổ chức.',
+      'This ticket is not on the current account, or the organization blocked access. Sign in with the owner email or contact the organizer.',
+    ),
   },
   tenantUnresolved: {
-    title: 'Không xác định được tổ chức',
-    detail:
+    title: dual('Không xác định được tổ chức', 'Organization could not be resolved'),
+    detail: dual(
       'Tài khoản đã đăng nhập nhưng chưa gắn tổ chức khớp slug trên liên kết. Đăng nhập đúng email chủ vé trong thư, hoặc thử đổi mã lấy vé.',
+      'You are signed in, but this account is not attached to the organization in the link. Sign in with the owner email from the message, or try redeeming a code.',
+    ),
   },
   unreachable: {
-    title: 'Không tải được vé',
-    detail: 'Máy chủ vé tạm thời không phản hồi. Thử lại sau ít phút.',
+    title: dual('Không tải được vé', 'Could not load ticket'),
+    detail: dual(
+      'Máy chủ vé tạm thời không phản hồi. Thử lại sau ít phút.',
+      'The ticket server did not respond. Try again in a few minutes.',
+    ),
   },
   invalid: {
-    title: 'Liên kết không hợp lệ',
-    detail:
+    title: dual('Liên kết không hợp lệ', 'Invalid link'),
+    detail: dual(
       'Đường dẫn vé không đúng định dạng. Kiểm tra lại email hoặc mở từ «Vé của tôi».',
+      'This ticket path is not valid. Check the email again or open it from “My tickets”.',
+    ),
   },
 } as const;
+
+export const OWNER_TICKET_COPY = localizeCatalog(
+  OWNER_TICKET_COPY_CATALOG,
+  DEFAULT_ATTENDEE_LOCALE,
+);
+
+export function ownerTicketCopy(locale: AttendeeLocale) {
+  return localizeCatalog(OWNER_TICKET_COPY_CATALOG, locale);
+}
