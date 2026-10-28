@@ -110,6 +110,7 @@ export function StaffManualEntryScreen() {
           onSync={() => void gate.syncNow()}
           machineLabel={gate.machineLabel}
           eventName={gate.gateScope?.name ?? null}
+          hideEventTitle
           gateScope={gate.gateScope}
           pendingOp={gate.pendingOp}
           onContinueScan={
