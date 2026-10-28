@@ -48,6 +48,10 @@ Vé **USED**: không notice/pill phía trên; stamp chéo bán trong suốt «Đ
 
 Architecture impact: **Có** (route profile attendee). Approval ≠ code complete ≠ acceptance complete ≠ pilot ready.
 
+## O30 — Redesign «Vé của tôi» + back cho Tài khoản/Chính sách (28/10/2026)
+
+Owner USB 39 trên Epic [#914](https://github.com/hangndat/ticket-solution/issues/914). **Không đóng Epic.** Ví: nền paper phẳng, tên sự kiện một lần (section header), thẻ vé một hàng (mã vé → giờ → một pill hoặc tem «Đã sử dụng» → ›), vé còn hiệu lực lên trước, vé đã dùng mờ; offline/push gộp thành một hàng mỏng. Chi tiết vé bỏ tiêu đề «Vé của bạn» và wordmark banner lặp tên sự kiện. Back: `attendee-account`/`staff-account` có nested Stack nên index không có chevron → thêm chevron tường minh (fallback Events / Scan); `privacy-policy` bỏ `fullScreenModal`, push thường, có «Xong» khi deep link không lịch sử. Supersedes O29 chi tiết trình bày vé.
+
 ## O26 — Portal dùng giao diện mặc định Ant Design (26/10/2026)
 
 User quyết định **toàn bộ UI component của `apps/portal` dùng component có sẵn của `antd` với giao diện/token mặc định**. Không tạo thêm UI component hoặc wrapper riêng, design system, token, theme hay CSS tùy biến cho Portal. Khi cần một UI mới, ghép các component chính thức của `antd`; logic nghiệp vụ, dữ liệu, quyền và điều hướng vẫn có thể nằm trong module/hook riêng. Quyết định này thay yêu cầu “theme Vemoki” của O16 và thay định hướng dùng ProComponents của O18 đối với UI Portal; component ProComponents/custom hiện có phải được kiểm kê và chuyển dần sang `antd` trong Task migration, không coi là đã hoàn tất từ quyết định này. Không đổi design system của `apps/web` hoặc iOS; giữ tiếng Việt và accessibility.

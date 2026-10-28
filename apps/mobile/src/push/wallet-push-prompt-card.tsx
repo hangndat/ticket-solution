@@ -1,12 +1,13 @@
 import { useCallback, useState } from 'react';
-import { View } from 'react-native';
-import { AttendeeCta } from '@/components/attendee-cta';
-import { Notice } from '@/components/page';
+import { Text, View } from 'react-native';
+import { Button } from '@/components/ui/button';
 import { walletCopy } from '@/components/screen-state-copy';
 import { session } from '@/identity/session';
 import { runPushOptIn } from './push-opt-in.ts';
 import { dismissWalletPushPrompt } from './wallet-push-prompt-store.ts';
-import { space } from '@/theme/tokens';
+import { colors } from '@/theme/colors';
+import { radius, space } from '@/theme/tokens';
+import { typography } from '@/theme/typography';
 
 type Props = {
   onDismiss: () => void;
@@ -33,23 +34,35 @@ export function WalletPushPromptCard({ onDismiss, onEnabled }: Props) {
   }, [onDismiss]);
 
   return (
-    <View style={{ gap: space.md }} testID="wallet-push-prompt-card">
-      <Notice title={walletCopy.firstTicketPush.title}>
-        {walletCopy.firstTicketPush.body}
-      </Notice>
-      <AttendeeCta
-        label={walletCopy.firstTicketPush.enableCta}
-        onPress={() => void onEnable()}
-        disabled={busy}
-        testID="wallet-push-enable"
-      />
-      <AttendeeCta
-        label={walletCopy.firstTicketPush.dismissCta}
-        variant="secondary"
-        onPress={() => void onLater()}
-        disabled={busy}
-        testID="wallet-push-dismiss"
-      />
+    <View
+      testID="wallet-push-prompt-card"
+      style={{
+        backgroundColor: colors.surfaceSubtle,
+        borderRadius: radius.md,
+        paddingVertical: space.sm,
+        paddingHorizontal: space.md,
+        gap: space.xs
+      }}
+    >
+      <Text style={{ ...typography.footnote, color: colors.secondary }}>
+        {walletCopy.firstTicketPush.title}
+      </Text>
+      <View style={{ flexDirection: 'row', gap: space.sm, flexWrap: 'wrap' }}>
+        <Button
+          variant="ghost"
+          label={walletCopy.firstTicketPush.enableCta}
+          onPress={() => void onEnable()}
+          disabled={busy}
+          testID="wallet-push-enable"
+        />
+        <Button
+          variant="ghost"
+          label={walletCopy.firstTicketPush.dismissCta}
+          onPress={() => void onLater()}
+          disabled={busy}
+          testID="wallet-push-dismiss"
+        />
+      </View>
     </View>
   );
 }

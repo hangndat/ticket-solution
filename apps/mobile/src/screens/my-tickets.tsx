@@ -67,12 +67,12 @@ import { WalletPushPromptCard } from '@/push/wallet-push-prompt-card';
 import { shouldOfferWalletPushPrompt } from '@/push/wallet-push-prompt-policy';
 import { readWalletPushPromptDismissed } from '@/push/wallet-push-prompt-store';
 import {
-  countDistinctEvents,
   filterTicketsByEventId,
   groupTicketsByEvent,
   resolveWalletFilterEventName,
   walletEventSectionHeader,
-  walletListSubtitle
+  walletTicketCardTitle,
+  sortTicketsActiveFirst
 } from '@/tickets/wallet-event-grouping';
 
 function parseWalletEventIdFilter(
@@ -91,13 +91,15 @@ function WalletGroupedTicketList({
   filterEventId?: string;
 }) {
   if (filterEventId) {
-    const visible = filterTicketsByEventId(tickets, filterEventId);
+    const visible = sortTicketsActiveFirst(
+      filterTicketsByEventId(tickets, filterEventId),
+    );
     return (
-      <>
+      <View style={{ gap: space.sm }}>
         {visible.map((ticket) => (
           <TicketRow key={ticket.ticketId} ticket={ticket} />
         ))}
-      </>
+      </View>
     );
   }
 
@@ -105,11 +107,10 @@ function WalletGroupedTicketList({
   return (
     <>
       {groups.map((group) => (
-        <View key={group.eventId} style={{ gap: space.md }}>
+        <View key={group.eventId} style={{ gap: space.sm }}>
           <Text
             accessibilityRole="header"
-            style={{ ...typography.callout, color: brand.ink,
-              fontFamily: fontFamilies.bodySemiBold }}
+            style={{ ...typography.sectionTitle, color: brand.ink }}
           >
             {walletEventSectionHeader(group.eventName, group.tickets.length)}
           </Text>
@@ -122,10 +123,37 @@ function WalletGroupedTicketList({
   );
 }
 
-function TicketRow({ ticket }: { ticket: TicketSummary }) {
+function WalletSlimNotice({ text }: { text: string }) {
+  return (
+    <View
+      accessibilityRole="text"
+      style={{
+        backgroundColor: colors.surfaceSubtle,
+        borderRadius: radius.md,
+        paddingVertical: space.sm,
+        paddingHorizontal: space.md
+      }}
+    >
+      <Text style={{ ...typography.footnote, color: colors.secondary }}>
+        {text}
+      </Text>
+    </View>
+  );
+}
+
+function TicketRow({
+  ticket,
+  showEventTitle = false
+}: {
+  ticket: TicketSummary;
+  /** Event name is shown once by the section header; flat lists repeat it as the title. */
+  showEventTitle?: boolean;
+}) {
   const [focused, setFocused] = useState(false);
   const row = presentTicketRow(ticket);
   const used = isUsedTicketState(ticket.state);
+  const title = showEventTitle ? row.eventTitle : walletTicketCardTitle(ticket);
+  const hasLogo = hasDemoMediaForEventId(ticket.eventId);
   return (
     <Link
       href={{
@@ -144,46 +172,51 @@ function TicketRow({ ticket }: { ticket: TicketSummary }) {
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
         style={({ pressed }) => ({
-          padding: space.lg,
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: space.md,
+          minHeight: 72,
+          paddingVertical: space.md,
+          paddingHorizontal: space.lg,
           borderRadius: radius.lg,
           borderCurve: 'continuous',
           backgroundColor: colors.ticketCanvas,
           borderWidth: focused ? 2 : 1,
           borderColor: focused ? colors.focus : colors.line,
-          opacity: pressed ? 0.85 : 1,
-          gap: space.md,
+          opacity: pressed ? 0.85 : used ? 0.7 : 1,
           overflow: 'hidden',
         })}
       >
-        {used ? <TicketUsedStamp /> : <TicketStatusPill label={row.statusLabel} />}
-        {hasDemoMediaForEventId(ticket.eventId) ? (
+        {used ? <TicketUsedStamp /> : null}
+        {hasLogo ? (
           <EventLogo
             eventId={ticket.eventId}
-            height={28}
+            height={32}
             testID={`ticket-logo-${ticket.ticketId}`}
             accessibilityLabel="Logo sự kiện demo trên vé"
           />
         ) : null}
-        <Text
-          style={{ ...typography.body, color: brand.ink,
-            fontFamily: fontFamilies.bodySemiBold }}
-        >
-          {row.eventTitle}
-        </Text>
-        {row.whenLine ? (
+        <View style={{ flex: 1, flexShrink: 1, gap: space.xs }}>
           <Text
-            style={{ ...typography.subhead, color: colors.secondary,
-              fontFamily: fontFamilies.body,
-              lineHeight: 22 }}
+            style={{ ...typography.callout, color: brand.ink }}
           >
-            {row.whenLine}
+            {title}
           </Text>
-        ) : null}
+          {row.whenLine ? (
+            <Text
+              style={{ ...typography.subhead, color: colors.secondary }}
+            >
+              {row.whenLine}
+            </Text>
+          ) : null}
+        </View>
+        {used ? null : <TicketStatusPill label={row.statusLabel} />}
         <Text
-          style={{ ...typography.subhead, color: brand.signal,
-            fontFamily: fontFamilies.bodySemiBold }}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+          style={{ ...typography.title, color: colors.secondary }}
         >
-          {row.viewTicketCta}
+          ›
         </Text>
       </Pressable>
     </Link>
@@ -287,14 +320,19 @@ function OfflineDisplayWallet({
     <ScrollView
       contentInsetAdjustmentBehavior="automatic"
       style={{ flex: 1, backgroundColor: brand.paper }}
-      contentContainerStyle={{ padding: space.xl, paddingBottom: space.huge, gap: space.lg }}
+      contentContainerStyle={{
+        paddingHorizontal: space.xl,
+        paddingTop: space.md,
+        paddingBottom: space.huge,
+        gap: space.xl
+      }}
     >
-      <Notice title={attendeeWalletCopy.offlineBannerTitle}>
-        {walletOfflineNoticeBody(
+      <WalletSlimNotice
+        text={`${attendeeWalletCopy.offlineBannerTitle} · ${walletOfflineNoticeBody(
           attendeeWalletCopy.offlineBannerBody,
           syncedAt,
-        )}
-      </Notice>
+        )}`}
+      />
 
       {busy && tickets.length === 0 ? (
         <LoadingState title={walletCopy.loading.title}>
@@ -311,9 +349,9 @@ function OfflineDisplayWallet({
           {walletCopy.emptyOffline.body}
         </EmptyState>
       ) : (
-        <View style={{ gap: space.md }}>
-          {tickets.map((ticket) => (
-            <TicketRow key={ticket.ticketId} ticket={ticket} />
+        <View style={{ gap: space.sm }}>
+          {sortTicketsActiveFirst(tickets).map((ticket) => (
+            <TicketRow key={ticket.ticketId} ticket={ticket} showEventTitle />
           ))}
         </View>
       )}
@@ -551,18 +589,23 @@ function VerifiedWallet({ userId }: { userId: string }) {
     <ScrollView
       contentInsetAdjustmentBehavior="automatic"
       style={{ flex: 1, backgroundColor: brand.paper }}
-      contentContainerStyle={{ padding: space.xl, paddingBottom: space.huge, gap: space.lg }}
+      contentContainerStyle={{
+        paddingHorizontal: space.xl,
+        paddingTop: space.md,
+        paddingBottom: space.huge,
+        gap: space.xl
+      }}
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={() => void onRefresh()} />
       }
     >
       {offline ? (
-        <Notice title={attendeeWalletCopy.offlineBannerTitle}>
-          {walletOfflineNoticeBody(
+        <WalletSlimNotice
+          text={`${attendeeWalletCopy.offlineBannerTitle} · ${walletOfflineNoticeBody(
             attendeeWalletCopy.offlineBannerBody,
             lastSyncedAt,
-          )}
-        </Notice>
+          )}`}
+        />
       ) : null}
 
       {filterEventId ? (
@@ -591,16 +634,6 @@ function VerifiedWallet({ userId }: { userId: string }) {
             testID="wallet-clear-event-filter"
           />
         </View>
-      ) : tickets.length > 0 ? (
-        <Text
-          style={{ ...typography.subhead, color: colors.secondary,
-            fontFamily: fontFamilies.body }}
-        >
-          {walletListSubtitle(
-            tickets.length,
-            countDistinctEvents(tickets),
-          )}
-        </Text>
       ) : null}
 
       {busy && tickets.length === 0 ? (
@@ -609,7 +642,7 @@ function VerifiedWallet({ userId }: { userId: string }) {
         </LoadingState>
       ) : null}
 
-      {showPushPrompt && tickets.length > 0 ? (
+      {showPushPrompt && !offline && tickets.length > 0 ? (
         <WalletPushPromptCard onDismiss={() => setShowPushPrompt(false)} />
       ) : null}
 
@@ -628,7 +661,7 @@ function VerifiedWallet({ userId }: { userId: string }) {
           {walletCopy.emptyOnline.body}
         </EmptyState>
       ) : (
-        <View style={{ gap: space.lg }}>
+        <View style={{ gap: space.xl }}>
           <WalletGroupedTicketList
             tickets={tickets}
             filterEventId={filterEventId}

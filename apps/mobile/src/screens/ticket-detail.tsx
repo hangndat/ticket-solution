@@ -377,26 +377,20 @@ export function TicketDetailScreen() {
                 accessibilityLabel="Logo sự kiện demo trên vé"
               />
             ) : null}
-            {used ? null : <TicketStatusPill label={row.statusLabel} />}
           </View>
           <Text
             maxFontSizeMultiplier={2}
-            style={{
-              color: brand.ink,
-              ...typography.display,
-              textAlign: 'center'
-            }}
-          >
-            Vé của bạn
-          </Text>
-          <Text
-            maxFontSizeMultiplier={2}
             accessibilityRole="header"
-            style={{ ...typography.sectionTitle, color: brand.ink,
+            style={{ ...typography.sectionTitleBold, color: brand.ink,
               textAlign: 'center' }}
           >
             {row.eventTitle}
           </Text>
+          {used ? null : (
+            <View style={{ alignItems: 'center' }}>
+              <TicketStatusPill label={row.statusLabel} />
+            </View>
+          )}
           {eventWhen ? (
             <Text
               style={{ ...typography.subhead, color: colors.secondary,

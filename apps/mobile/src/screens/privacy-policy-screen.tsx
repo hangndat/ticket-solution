@@ -1,3 +1,4 @@
+import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { ScrollView, Text, View } from 'react-native';
 import {
   PRIVACY_POLICY_INTRO,
@@ -6,6 +7,8 @@ import {
   PRIVACY_POLICY_TITLE,
   PRIVACY_POLICY_UPDATED,
 } from '@/account-deletion/privacy-policy-copy';
+import { closePrivacyPolicy } from '@/navigation/close-privacy-policy';
+import { parsePrivacyOrigin } from '@/navigation/privacy-policy-navigation';
 import { TabStackTitle } from '@/navigation/tab-stack-title';
 import { brand, colors } from '@/theme/colors';
 import { fontFamilies } from '@/theme/fonts';
@@ -14,8 +17,22 @@ import { typography } from '@/theme/typography';
 
 /** Shared native privacy (attendee + staff). No WebView. */
 export function PrivacyScreen() {
+  const { from } = useLocalSearchParams<{ from?: string }>();
+  const origin = parsePrivacyOrigin(from);
+  // Deep link with no history: no native back chevron — offer an explicit exit.
+  const needsExit = !router.canGoBack();
   return (
     <>
+      {needsExit ? (
+        <Stack.Toolbar placement="left">
+          <Stack.Toolbar.Button
+            accessibilityLabel="Đóng chính sách quyền riêng tư"
+            onPress={() => closePrivacyPolicy(origin)}
+          >
+            Xong
+          </Stack.Toolbar.Button>
+        </Stack.Toolbar>
+      ) : null}
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
         style={{ flex: 1, backgroundColor: brand.paper }}

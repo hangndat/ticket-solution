@@ -1,7 +1,8 @@
 import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { Spinner } from '@/components/ui/spinner';
-import { router, useFocusEffect, useSegments } from 'expo-router';
+import { router, useFocusEffect, useSegments, type Href } from 'expo-router';
+import { privacyPolicyHref } from '@/navigation/privacy-policy-navigation';
 import type { MeResponse } from '@ticket/contracts';
 import { AttendeeCta } from '@/components/attendee-cta';
 import {
@@ -75,7 +76,7 @@ function MisconfiguredAccount({
         <AccountGroupedRow
           label={accountCopy.privacyRow}
           showChevron
-          onPress={() => router.push('/privacy-policy')}
+          onPress={() => router.push(privacyPolicyHref('attendee') as Href)}
           testID="account-cta-privacy"
         />
       </AccountGroupedSection>
@@ -299,7 +300,11 @@ function ConfiguredAccount({
           <AccountGroupedRow
             label={accountCopy.privacyRow}
             showChevron
-            onPress={() => router.push('/privacy-policy')}
+            onPress={() =>
+              router.push(
+                privacyPolicyHref(staffWorkspace ? 'staff' : 'attendee') as Href,
+              )
+            }
             disabled={busy}
             testID="account-cta-privacy"
           />
