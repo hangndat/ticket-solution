@@ -45,7 +45,6 @@ const ALLOWED = new Set([
   '/redeem',
   '/wallet',
   '/admin',
-  '/gate',
   '/auth',
   '/account',
 ]);

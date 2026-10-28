@@ -22,8 +22,7 @@ import { isEventPagePermitted } from '../../../../../../src/prep/event-access-re
 import { useEventAccess } from '../../../../../../src/prep/use-event-access';
 import { canPerformEventAction } from '../../../../../../src/nav/capability-policy';
 import { GatesPanel } from '../../../../../../src/gates/gates-panel';
-import { GateDeeplinkButton } from '../../../../../../src/components/gate-deeplink';
-import { gateDeeplinkUrl } from '../../../../../../src/oidc/config';
+import { GateStayAppNotice } from '../../../../../../src/components/gate-deeplink';
 import { EventReportAsOfLine } from '../../../../../../src/components/event-report-as-of';
 import { ReportStaleAlert } from '../../../../../../src/components/report-stale-alert';
 import {
@@ -121,9 +120,7 @@ export default function EventGateReportPage() {
 
   return (
     <PortalPage title={t('gate.h_1klnels')}>
-      <GateDeeplinkButton
-        href={gateDeeplinkUrl(undefined, '/gate', { tenantId, eventId })}
-      />
+      <GateStayAppNotice />
 
       {shown ? (
         <ReportStaleAlert

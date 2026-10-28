@@ -94,25 +94,3 @@ export function productOrigin(env: OidcEnvBag = process.env): string {
   return 'http://127.0.0.1:3000';
 }
 
-const GATE_DEEPLINK_ID = /^[A-Za-z0-9_-]{1,128}$/;
-
-function isGateDeeplinkId(value: string): boolean {
-  return GATE_DEEPLINK_ID.test(value);
-}
-
-export function gateDeeplinkUrl(
-  env: OidcEnvBag = process.env,
-  path = '/gate',
-  query?: { tenantId?: string; eventId?: string },
-): string {
-  const origin = productOrigin(env);
-  const safePath = path.startsWith('/') && !path.startsWith('//') ? path : '/gate';
-  const url = new URL(`${origin}${safePath}`);
-  if (query?.tenantId && isGateDeeplinkId(query.tenantId)) {
-    url.searchParams.set('tenantId', query.tenantId);
-  }
-  if (query?.eventId && isGateDeeplinkId(query.eventId)) {
-    url.searchParams.set('eventId', query.eventId);
-  }
-  return url.toString();
-}

@@ -24,8 +24,6 @@ export type NavCapabilities = {
   authenticated: boolean;
   /** Staff / operator — portal CTA via GET /admin redirect (D-7). */
   showPortalStaff: boolean;
-  /** Web contingency gate — requires gate.confirm on a discovery event. */
-  showGate: boolean;
   showAccount: boolean;
 };
 
@@ -169,7 +167,6 @@ export function deriveNavCapabilities(input: {
     return {
       authenticated: false,
       showPortalStaff: false,
-      showGate: false,
       showAccount: false,
     };
   }
@@ -186,17 +183,9 @@ export function deriveNavCapabilities(input: {
       ) ??
         false));
 
-  const showGate =
-    staffEligible &&
-    (input.meEvents?.items.some((event) =>
-      event.permissions.includes('gate.confirm'),
-    ) ??
-      false);
-
   return {
     authenticated: true,
     showPortalStaff,
-    showGate,
     showAccount: true,
   };
 }
@@ -211,9 +200,6 @@ export function buildNavLinks(caps: NavCapabilities): NavLink[] {
       label: 'Quản trị tổ chức',
       testId: 'nav-portal-staff',
     });
-  }
-  if (caps.showGate) {
-    links.push({ href: '/gate', label: 'Cổng', testId: 'nav-gate' });
   }
   if (caps.showAccount) {
     links.push({ href: '/account', label: 'Tài khoản', testId: 'nav-account' });
