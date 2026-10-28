@@ -17,17 +17,15 @@ import {
   type FetchJsonResult,
 } from '../src/redeem/fetch-json';
 
-const STAFF_CAPS: NavCapabilities = {
+const AUTH_CAPS: NavCapabilities = {
   authenticated: true,
-  showPortalStaff: true,
   showAccount: true,
 };
 
-const STAFF_LINKS: NavLink[] = [
+const AUTH_LINKS: NavLink[] = [
   { href: '/', label: 'Khám phá', testId: 'nav-events' },
   { href: '/redeem', label: 'Đổi mã', testId: 'nav-redeem' },
   { href: '/wallet', label: 'Vé của tôi', testId: 'nav-wallet' },
-  { href: '/admin', label: 'Quản trị tổ chức', testId: 'nav-portal-staff' },
   { href: '/account', label: 'Tài khoản', testId: 'nav-account' },
 ];
 
@@ -53,71 +51,68 @@ test('isMembershipAuthzDenial matches MEMBERSHIP_* / PERMISSION_DENIED 401/403',
   assert.equal(isMembershipAuthzDenial(500, { code: 'MEMBERSHIP_REVOKED' }), false);
 });
 
-test('NavCapabilitiesStore.reset clears staff links immediately', () => {
+test('NavCapabilitiesStore.reset clears authenticated links immediately', () => {
   const store = new NavCapabilitiesStore(async () => ({
-    caps: STAFF_CAPS,
-    links: STAFF_LINKS,
+    caps: AUTH_CAPS,
+    links: AUTH_LINKS,
   }));
   store.replaceSnapshot({
-    caps: STAFF_CAPS,
-    links: STAFF_LINKS,
+    caps: AUTH_CAPS,
+    links: AUTH_LINKS,
     resolved: true,
     loading: false,
   });
-  assert.ok(store.getSnapshot().links.some((l) => l.href === '/admin'));
+  assert.ok(store.getSnapshot().links.some((l) => l.href === '/wallet'));
 
   store.reset();
   const snap = store.getSnapshot();
   assert.equal(snap.resolved, true);
   assert.equal(snap.loading, false);
-  assert.equal(snap.caps.showPortalStaff, false);
+  assert.equal(snap.caps.authenticated, false);
   assert.deepEqual(
     snap.links.map((l) => l.href),
     GUEST_NAV_LINKS.map((l) => l.href),
   );
 });
 
-test('handleAuthzDenial clears staff then refetch can restore when still eligible', async () => {
+test('handleAuthzDenial clears auth then refetch can restore when still eligible', async () => {
   let loads = 0;
   const store = new NavCapabilitiesStore(async () => {
     loads += 1;
-    return { caps: STAFF_CAPS, links: STAFF_LINKS };
+    return { caps: AUTH_CAPS, links: AUTH_LINKS };
   });
   store.replaceSnapshot({
-    caps: STAFF_CAPS,
-    links: STAFF_LINKS,
+    caps: AUTH_CAPS,
+    links: AUTH_LINKS,
     resolved: true,
     loading: false,
   });
 
   store.handleAuthzDenial(403, { code: 'MEMBERSHIP_REVOKED' });
-  // Immediately after denial: guest chrome (before refetch settles).
-  assert.ok(!store.getSnapshot().links.some((l) => l.href === '/admin'));
+  assert.ok(!store.getSnapshot().links.some((l) => l.href === '/wallet'));
 
   await new Promise((r) => setTimeout(r, 0));
-  await store.refresh(); // ensure settled if race
-  // Wait for the void refresh from handleAuthzDenial
+  await store.refresh();
   for (let i = 0; i < 20 && store.getSnapshot().loading; i += 1) {
     await new Promise((r) => setTimeout(r, 5));
   }
   assert.ok(loads >= 1);
-  // Loader still returns staff — chrome restored after revalidation.
-  assert.ok(store.getSnapshot().links.some((l) => l.href === '/admin'));
+  assert.ok(store.getSnapshot().links.some((l) => l.href === '/wallet'));
 });
 
 test('handleAuthzDenial ignores non-membership 403', () => {
   const store = new NavCapabilitiesStore(async () => ({
-    caps: STAFF_CAPS,
-    links: STAFF_LINKS,
+    caps: AUTH_CAPS,
+    links: AUTH_LINKS,
   }));
   store.replaceSnapshot({
-    caps: STAFF_CAPS,
-    links: STAFF_LINKS,
+    caps: AUTH_CAPS,
+    links: AUTH_LINKS,
     resolved: true,
     loading: false,
   });
   store.handleAuthzDenial(403, { code: 'SLUG_TAKEN' });
-  assert.ok(store.getSnapshot().links.some((l) => l.href === '/admin'));
+  assert.ok(store.getSnapshot().links.some((l) => l.href === '/wallet'));
 });
 
 test('late refresh after reset cannot restore revoked chrome', async () => {
@@ -131,12 +126,12 @@ test('late refresh after reset cannot restore revoked chrome', async () => {
 
   const pending = store.refresh();
   store.reset();
-  resolveLoad({ caps: STAFF_CAPS, links: STAFF_LINKS });
+  resolveLoad({ caps: AUTH_CAPS, links: AUTH_LINKS });
   await pending;
 
   const snap = store.getSnapshot();
-  assert.equal(snap.caps.showPortalStaff, false);
-  assert.ok(!snap.links.some((l) => l.href === '/admin'));
+  assert.equal(snap.caps.authenticated, false);
+  assert.ok(!snap.links.some((l) => l.href === '/wallet'));
 });
 
 test('fetchJson publishes results to observers (SEC-CACHE hook)', async () => {
@@ -177,7 +172,7 @@ test('isNavDiscoveryRequestUrl marks only me/events and me/tenants', async () =>
 test('singleton reset helper clears shared store', () => {
   resetNavCapabilitiesStoreForTests();
   const snap = navCapabilitiesStore.getSnapshot();
-  assert.equal(snap.caps.showPortalStaff, false);
+  assert.equal(snap.caps.authenticated, false);
   assert.deepEqual(
     snap.links.map((l) => l.href),
     GUEST_NAV_LINKS.map((l) => l.href),
