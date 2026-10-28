@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { attendeeWalletCopy } from '@/attendee/attendee-outcome-copy';
 import { brand, colors } from '@/theme/colors';
-import { space } from '@/theme/tokens';
+import { radius, space } from '@/theme/tokens';
 import { typography } from '@/theme/typography';
 
 /**
@@ -34,7 +34,7 @@ const styles = StyleSheet.create({
     transform: [{ rotate: '-22deg' }],
     borderWidth: 2,
     borderColor: brand.destructive,
-    borderRadius: 4,
+    borderRadius: radius.xs,
     paddingHorizontal: space.lg,
     paddingVertical: space.xs,
     backgroundColor: colors.onAccent,
