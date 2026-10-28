@@ -76,7 +76,7 @@ function PublishedEventCard({ item }: { item: PublishedEventSummary }) {
             tenantSlug={item.tenantSlug}
             bannerUrl={item.brand.bannerUrl}
             fallbackColor={item.brand.primaryColor}
-            wordmark={item.brand.organizationName}
+            wordmark={item.name}
             height={EVENT_BANNER_HEIGHT_LIST}
             style={{ borderRadius: 0 }}
             testID={`pub-media-${item.id}-banner`}
