@@ -6,6 +6,13 @@ Tracking: Issues [#10](https://github.com/hangndat/ticket-solution/issues/10), [
 
 **Kiến trúc hiện trạng (canonical, Epic [#891](https://github.com/hangndat/ticket-solution/issues/891) / F06):** [`docs/architecture/ar891-current-architecture.md`](./architecture/ar891-current-architecture.md) — deployed / tested / proposed; không thay nội dung quyết định lịch sử bên dưới.
 
+## O32 — Portal quản lý cổng + tên cổng lấy từ API (28/10/2026)
+
+Owner chốt «làm» trên Epic [#914](https://github.com/hangndat/ticket-solution/issues/914). **Không đóng Epic.** Deploy prod migration `202610280001_o31_gates` + api + portal được owner ủy quyền riêng cho task này.
+
+- **Portal (`apps/portal`, không phải `apps/web` — portal tổ chức là app riêng):** mục «Cổng vào» trên trang «Cổng» của sự kiện: danh sách + thêm cổng (tên 1–80, thứ tự tùy chọn 0–9999); nút thêm chỉ hiện khi có `event.update`; 409 `GATE_NAME_CONFLICT` → thông báo VI; 0 cổng → giải thích nhân viên mở phiên không cần chọn cổng. BFF `GET|POST /api/bff/tenants/{t}/events/{e}/gates` → API `/v1/gate/events/{e}/gates`. **Chưa có đổi tên/xóa** (cần quyết định thiết kế về phiên đang dùng cổng) — việc riêng.
+- **Mobile:** API không có endpoint đọc/list phiên, nên **id cổng** (không lưu tên) được lưu cùng id phiên trong workspace store sẵn có (`sessionGateByScope`, khóa theo scope, chỉ hợp lệ khi `sessionId` khớp; xóa cùng phiên). **Tên cổng luôn lấy từ danh sách cổng của API** theo id (cả sau mở lại app). Thay phiên (renew) giữ cổng cũ bằng cách gửi lại `gateId`.
+
 ## O31 — Cổng (gate) theo sự kiện + mở phiên theo cổng + dòng trạng thái Scan (28/10/2026)
 
 Owner chốt trên Epic [#914](https://github.com/hangndat/ticket-solution/issues/914): nhân viên chọn cổng trước khi mở phiên cổng. **Không đóng Epic; migration/deploy prod cần ủy quyền riêng.**
