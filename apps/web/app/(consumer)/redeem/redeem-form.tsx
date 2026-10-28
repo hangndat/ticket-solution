@@ -119,8 +119,6 @@ export function RedeemForm({
 }: Props) {
   const { locale } = useAttendeeLocale();
   const copy = redeemFormCopy(locale);
-  const localeRef = useRef(locale);
-  localeRef.current = locale;
   const [tenantId, setTenantId] = useState(initialTenantId);
   const [eventId, setEventId] = useState(initialEventId);
   const [tenantSlug, setTenantSlug] = useState(initialTenantSlug);
@@ -188,6 +186,7 @@ export function RedeemForm({
     [],
   );
 
+  /* eslint-disable react-hooks/preserve-manual-memoization -- stable setters */
   const loadSchema = useCallback(() => {
     const generation = ++generationRef.current;
     const slugTenant = tenantSlug.trim();
@@ -254,7 +253,7 @@ export function RedeemForm({
     (next: RedeemDecision, generation: number, fingerprint?: string) => {
       if (isStale(generation)) return;
       setDecision(next);
-      setUx(messageForDecision(next, localeRef.current));
+      setUx(messageForDecision(next, locale));
       if (next.kind === 'issued') {
         setTicket({
           ticketId: next.ticketId,
@@ -322,7 +321,7 @@ export function RedeemForm({
       setTicket(null);
       setAttempt(null);
     },
-    [eventId, eventSlug, isStale, loadSchema, tenantSlug],
+    [eventId, eventSlug, isStale, loadSchema, tenantSlug, locale],
   );
 
   const runPoll = useCallback(
@@ -341,7 +340,7 @@ export function RedeemForm({
           onStart: () => {
             if (isStale(generation)) return;
             setPolling(true);
-            const pollCopy = redeemFormCopy(localeRef.current);
+            const pollCopy = redeemFormCopy(locale);
             setUx({
               kind: 'polling',
               title: pollCopy.pollingTitle,
@@ -357,8 +356,8 @@ export function RedeemForm({
             if (isStale(generation)) return;
             setUx(
               kind === 'network'
-                ? networkMessage(localeRef.current)
-                : timeoutMessage(localeRef.current),
+                ? networkMessage(locale)
+                : timeoutMessage(locale),
             );
           },
           onDecision: (next) => applyDecision(next, generation, fingerprint),
@@ -372,12 +371,13 @@ export function RedeemForm({
       if (isStale(generation)) return outcome;
       if (outcome === 'timeout' || outcome === 'cancelled') {
         setAttempt({ key, fingerprint, unclear: true });
-        setUx(unknownMessage(key, localeRef.current));
+        setUx(unknownMessage(key, locale));
       }
       return outcome;
     },
-    [applyDecision, isStale],
+    [applyDecision, isStale, locale],
   );
+  /* eslint-enable react-hooks/preserve-manual-memoization */
 
   function resetGlobalResolveSession() {
     setGlobalPhase('enter-code');
@@ -432,7 +432,7 @@ export function RedeemForm({
       const result = await resolveRedemptionCodeGlobal(trimmed);
       if (isStale(generation)) return;
       if (result.status === 'network') {
-        setUx(networkMessage(localeRef.current));
+        setUx(networkMessage(locale));
         setSchemaNotice(null);
         return;
       }
@@ -442,7 +442,7 @@ export function RedeemForm({
             result.code,
             result.message,
             result.httpStatus >= 500,
-            localeRef.current,
+            locale,
           ),
         );
         setSchemaNotice(null);
@@ -455,7 +455,7 @@ export function RedeemForm({
             'REDEMPTION_WINDOW_CLOSED',
             undefined,
             undefined,
-            localeRef.current,
+            locale,
           ),
         );
         setSchemaNotice(null);
@@ -577,8 +577,8 @@ export function RedeemForm({
       if (result.timedOut || result.networkError) {
         setUx(
           result.networkError
-            ? networkMessage(localeRef.current)
-            : timeoutMessage(localeRef.current),
+            ? networkMessage(locale)
+            : timeoutMessage(locale),
         );
         setRaw(null);
         await runPoll(
@@ -605,7 +605,7 @@ export function RedeemForm({
           result.json.code,
           result.json.message,
           result.json.retryable,
-          localeRef.current,
+          locale,
         ).retryable;
 
       if (next.kind === 'unknown' || retryableApi || result.status === 503) {
@@ -659,7 +659,7 @@ export function RedeemForm({
       const result = await fetchOwnerRedemptionStatus(pendingRequestId, tenantId);
       if (isStale(generation)) return;
       if (result.status === 'ok') {
-        setUx(messageForOwnerStatus(result.body, localeRef.current));
+        setUx(messageForOwnerStatus(result.body, locale));
         setRaw(JSON.stringify(result.body, null, 2));
         if (result.body.status === 'ISSUED') {
           setDecision({
@@ -686,17 +686,17 @@ export function RedeemForm({
         return;
       }
       if (result.status === 'unauthorized') {
-        setUx(messageForApiError('UNAUTHENTICATED', undefined, undefined, localeRef.current));
+        setUx(messageForApiError('UNAUTHENTICATED', undefined, undefined, locale));
         return;
       }
       setUx(
         messageForApiError(
           undefined,
           result.status === 'not-found'
-            ? redeemFormCopy(localeRef.current).ownerNotFound
-            : redeemFormCopy(localeRef.current).ownerUnread,
+            ? redeemFormCopy(locale).ownerNotFound
+            : redeemFormCopy(locale).ownerUnread,
           undefined,
-          localeRef.current,
+          locale,
         ),
       );
     });
@@ -715,15 +715,15 @@ export function RedeemForm({
       if (result.timedOut || result.networkError) {
         setUx(
           result.networkError
-            ? networkMessage(localeRef.current)
-            : timeoutMessage(localeRef.current),
+            ? networkMessage(locale)
+            : timeoutMessage(locale),
         );
         return;
       }
       setRaw(JSON.stringify(result.json, null, 2));
       if (result.status >= 200 && result.status < 300) {
         setTickets(result.json as MeTicketsResponse);
-        const loaded = redeemFormCopy(localeRef.current);
+        const loaded = redeemFormCopy(locale);
         const count = String(
           (result.json as MeTicketsResponse)?.tickets?.length ?? 0,
         );
@@ -739,7 +739,7 @@ export function RedeemForm({
             result.json.code,
             result.json.message,
             result.json.retryable,
-            localeRef.current,
+            locale,
           ),
         );
       } else {
@@ -748,7 +748,7 @@ export function RedeemForm({
             undefined,
             `HTTP ${result.status}`,
             undefined,
-            localeRef.current,
+            locale,
           ),
         );
       }

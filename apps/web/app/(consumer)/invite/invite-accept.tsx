@@ -160,22 +160,18 @@ export function InviteAcceptForm({
     setBusy(false);
   }
 
-  useEffect(() => {
-    if (!view) return;
-    setUx(messageForInviteView(view, locale));
-  }, [locale, view]);
-
   const loginHref = '/api/auth/login?return=/invite';
+  const displayUx = view ? messageForInviteView(view, locale) : ux;
   const outcomeLive =
-    ux && ux.kind !== 'success'
+    displayUx && displayUx.kind !== 'success'
       ? liveRegionForStatus(
-          ux.kind === 'network' || ux.kind === 'unknown'
+          displayUx.kind === 'network' || displayUx.kind === 'unknown'
             ? 'unknown'
-            : ux.kind === 'auth' || ux.kind === 'denied'
+            : displayUx.kind === 'auth' || displayUx.kind === 'denied'
               ? 'error'
-              : ux.kind,
+              : displayUx.kind,
         )
-      : ux?.kind === 'success'
+      : displayUx?.kind === 'success'
         ? liveRegionForStatus('success')
         : null;
 
@@ -229,7 +225,7 @@ export function InviteAcceptForm({
           />
         </div>
       ) : null}
-      {ux && ux.kind === 'success' && view?.kind === 'ok' ? (
+      {displayUx && displayUx.kind === 'success' && view?.kind === 'ok' ? (
         <section
           className={inviteSuccessOutcomeClass()}
           role={outcomeLive?.role ?? 'status'}
@@ -237,8 +233,8 @@ export function InviteAcceptForm({
           aria-atomic={outcomeLive?.ariaAtomic}
           data-testid="invite-accept-result"
         >
-          <h2>{ux.title}</h2>
-          <p>{ux.detail}</p>
+          <h2>{displayUx.title}</h2>
+          <p>{displayUx.detail}</p>
           <p className={authButtonsRow}>
             {portalOrigin ? (
               <Button asChild variant="primary">
@@ -257,12 +253,12 @@ export function InviteAcceptForm({
           </p>
         </section>
       ) : null}
-      {ux && ux.kind !== 'success' ? (
+      {displayUx && displayUx.kind !== 'success' ? (
         <div className={guestOutcomeWrap}>
           <SurfaceState
-            kind={surfaceKind(ux)}
-            title={ux.title}
-            detail={ux.detail}
+            kind={surfaceKind(displayUx)}
+            title={displayUx.title}
+            detail={displayUx.detail}
             testId="invite-accept-result"
           />
         </div>
