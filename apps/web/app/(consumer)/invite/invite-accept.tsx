@@ -28,6 +28,7 @@ import {
 import { REQUEST_TIMEOUT_MS } from '../../../src/redeem/poll-operation';
 import { liveRegionForStatus } from '../../../src/ui/live-region';
 import { SurfaceState } from '../../../src/ui/surface-state';
+import { portalMigrationLocation } from '../../../src/portal/dual-run';
 
 const STORAGE_KEY = 'vemoki_invite_token';
 
@@ -83,7 +84,11 @@ function surfaceKind(
   return 'error';
 }
 
-export function InviteAcceptForm() {
+export function InviteAcceptForm({
+  portalOrigin,
+}: {
+  portalOrigin: string | null;
+}) {
   const locationToken = useSyncExternalStore(
     subscribeInviteToken,
     getInviteTokenSnapshot,
@@ -232,11 +237,20 @@ export function InviteAcceptForm() {
           <h2>{ux.title}</h2>
           <p>{ux.detail}</p>
           <p className={authButtonsRow}>
-            <Button asChild variant="primary">
-              <a href={`/admin?tenantId=${encodeURIComponent(view.value.tenantId)}`}>
-                Mở Admin
-              </a>
-            </Button>
+            {portalOrigin ? (
+              <Button asChild variant="primary">
+                <a
+                  href={portalMigrationLocation(
+                    portalOrigin,
+                    '/admin',
+                    `?tenantId=${encodeURIComponent(view.value.tenantId)}`,
+                  )}
+                  data-testid="invite-accept-portal-cta"
+                >
+                  Mở portal quản trị
+                </a>
+              </Button>
+            ) : null}
           </p>
         </section>
       ) : null}

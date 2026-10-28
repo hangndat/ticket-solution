@@ -125,7 +125,7 @@ function NavLinkItem({
 /**
  * SiteNav — links from server capabilities (MeEvents / MeTenants / PlatformMe).
  * Starts deny-by-default (guest); never hardcodes Admin/Cổng/Platform by route.
- * SEC-CACHE: clears staff links on MEMBERSHIP_* 401/403; refetches on focus/visibility.
+ * SEC-CACHE: clears authenticated links on MEMBERSHIP_* 401/403; refetches on focus/visibility.
  */
 export function SiteNav({ trailing }: { trailing?: ReactNode }) {
   const pathname = usePathname() ?? '/';
