@@ -541,12 +541,6 @@ export function GlobalRedeemScreen() {
         testID="global-redeem-code"
       />
       {!resolved ? (
-        <Text style={{ color: colors.secondary, ...typography.callout }}>
-          {redeemCopy.globalVerifiedHint}
-        </Text>
-      ) : null}
-
-      {!resolved ? (
         <AttendeeCta
           label={busy ? 'Đang tra cứu…' : redeemCopy.lookupCta}
           disabled={busy || code.trim().length === 0}
