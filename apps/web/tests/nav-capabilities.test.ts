@@ -53,7 +53,6 @@ test('guest / unauthenticated never gets portal staff chrome', () => {
   assert.deepEqual(caps, {
     authenticated: false,
     showPortalStaff: false,
-    showGate: false,
     showAccount: false,
   });
   const hrefs = buildNavLinks(caps).map((l) => l.href);
@@ -84,7 +83,7 @@ test('attendee-only: staffEligible false → no staff chrome', () => {
   assert.ok(!hrefs.includes('/auth'), 'logged-in nav uses Tài khoản, not Đăng nhập');
 });
 
-test('Scanner with gate.confirm gets web gate nav, not portal staff without tenant perms', () => {
+test('Scanner with gate.confirm has no web gate nav (D-6), not portal staff without tenant perms', () => {
   const caps = deriveNavCapabilities({
     authenticated: true,
     meEvents: {
@@ -113,9 +112,8 @@ test('Scanner with gate.confirm gets web gate nav, not portal staff without tena
     platformMe: null,
   });
   assert.equal(caps.showPortalStaff, false);
-  assert.equal(caps.showGate, true);
   const hrefs = buildNavLinks(caps).map((l) => l.href);
-  assert.ok(hrefs.includes('/gate'));
+  assert.ok(!hrefs.includes('/gate'));
   assert.ok(!hrefs.includes('/admin'));
 });
 

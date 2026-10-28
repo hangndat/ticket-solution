@@ -17,8 +17,8 @@ test('site-chrome wires mobile menu via Radix Sheet', () => {
   assert.match(src, /onNavigate=\{closeMobile\}/);
 });
 
-test('web contingency gate route tree is present', () => {
-  assert.equal(existsSync(join(root, 'app/gate/page.tsx')), true);
+test('D-6: retired web gate route has no app/gate page tree', () => {
+  assert.equal(existsSync(join(root, 'app/gate')), false);
 });
 
 test('custom mobile-menu-focus trap removed (Radix owns focus)', () => {

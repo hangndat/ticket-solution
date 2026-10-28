@@ -14,21 +14,21 @@ Role thực thi: [`launch-uat`](../agents/roles/launch-uat.md) · skill `.cursor
 | Acceptance complete | Không chấm lại từng Issue. |
 | **Pilot ready** | **Có, trừ máy thật đã hoãn.** Mọi P0 không thuộc suite hoãn phải `PASS`. |
 
-`GO` đợt này khi mọi P0 ngoài mục hoãn = `PASS` và không còn P0 `BLOCKED`.
-`NO-GO` khi một P0 không hoãn bị `FAIL` hoặc `BLOCKED`.
+`GO` đợt này khi mọi P0 ngoài mục hoãn **và ngoài OUT** = `PASS` và không còn P0 `BLOCKED`.
+`NO-GO` khi một P0 không hoãn / không OUT bị `FAIL` hoặc `BLOCKED`.
 Case `DEFERRED` (máy thật, quyết định 2026-10-19) không kéo verdict đợt này. Vẫn bắt buộc trước ngày diễn có quét QR / push trên máy.
-Case `OUT` (ngoài MVP) = `N/A`, không kéo verdict.
+Case `OUT` (ngoài MVP / đã bỏ theo quyết định sản phẩm) = `N/A`, **không** kéo verdict — gồm A04, B04 và toàn suite E (web `/gate` đã bỏ theo [O23](../DECISION-LOG.md#o23--gate-chỉ-trên-ios-staff-chốt-hướng-thiết-kế-vemoki-24102026) + D-6 [#788](https://github.com/hangndat/ticket-solution/issues/788)/[#804](https://github.com/hangndat/ticket-solution/pull/804); residual [#878](https://github.com/hangndat/ticket-solution/issues/878)). **`GET /gate` → 308 `/` là leftover xóa route, không phải bug cần restore.** Cổng admission thật = **iOS staff (suite G)**.
 
 ## 2. Bề mặt và dữ liệu
 
 | Bề mặt | Origin | Việc |
 | --- | --- | --- |
 | Marketing | `https://vemoki.com` | VI+EN |
-| Portal nhân sự | `https://portal.vemoki.com` | VI+EN catalog; Gate **không** nằm ở đây |
-| App khách + cổng web | `https://app.vemoki.com` | Redeem, claim, invite, `/gate` |
+| Portal nhân sự | `https://portal.vemoki.com` | VI+EN; báo cáo cổng + quản lý tên cổng (O32); **không** quét/admission |
+| App khách web | `https://app.vemoki.com` | Redeem, claim, invite, ví — **không** Web Gate (`/gate` đã bỏ O23/D-6) |
 | IdP | `https://auth.vemoki.com` | Realm `ticket` |
 | API | nội bộ `ticket-api` / BFF | Không gọi công khai tùy tiện |
-| iOS | bundle `com.hangndat.ticket`, team cá nhân | Local signed; không EAS |
+| iOS Staff Gate | bundle `com.hangndat.ticket`, team cá nhân | Quét / nhập tay / xác nhận vào cổng (O23); local signed; **không EAS** |
 | Hàng xóm | `ancafe` / `dath` | Chỉ smoke “không vỡ”, không sửa |
 
 Tenant demo đã biết trên prod (đợt portal 2026-10-19, **phải xác nhận lại**, không kế thừa):
@@ -40,8 +40,8 @@ Persona demo (mật khẩu là seed demo, không phải khách thật):
 
 | Persona | Email | Mật khẩu | Surface được vào |
 | --- | --- | --- | --- |
-| Staff | `staff@example.com` | `staff-demo` | Portal + app `/gate` |
-| Attendee | `attendee@example.com` | `attendee-demo` | App khách, không shell quản trị |
+| Staff | `staff@example.com` | `staff-demo` | Portal (báo cáo/org) + **iOS Staff** (cổng) |
+| Attendee | `attendee@example.com` | `attendee-demo` | App khách web/iOS, không shell quản trị |
 
 Không tạo user mới. Không dùng hộp thư khách thật.
 
@@ -59,7 +59,7 @@ Lớp thiết bị: `http` | `browser` | `sim` | `physical`.
 | A01 | P0 | http | `GET /` marketing, portal, app, auth | 200 hoặc 302 hợp lệ; không 502 |
 | A02 | P0 | http | Portal `/api/bff/me/subject` không cookie | 401 |
 | A03 | P0 | http | App `/api/bff/me` không cookie | 401 |
-| A04 | P0 | http | `GET https://app.vemoki.com/gate` không cookie | 307 `/auth?next=/gate` |
+| A04 | **OUT** | http | ~~`GET …/gate` → auth~~ | **N/A** — O23 + D-6 [#788](https://github.com/hangndat/ticket-solution/issues/788)/[#804](https://github.com/hangndat/ticket-solution/pull/804); residual [#878](https://github.com/hangndat/ticket-solution/issues/878). **308→`/` không FAIL.** Cổng = suite G |
 | A05 | P0 | http | Host ancafe và dath | Vẫn 200; không đổi conf |
 | A06 | P1 | http | Cert các host vemoki còn hạn > 14 ngày | Ghi ngày hết hạn |
 
@@ -72,7 +72,7 @@ Client: `ticket-admin-web` (portal), `ticket-platform-web` (platform), `ticket-w
 | B01 | P0 | browser | Portal → Đăng nhập nhân sự → staff | Về `/` đã đăng nhập; shell có org, không kẹt «Cần đăng nhập» |
 | B02 | P0 | http | Authorize portal | `redirect_uri=https://portal.vemoki.com/api/auth/callback`, scope `openid profile email`, có PKCE. **Không** `offline_access` |
 | B03 | P0 | browser | Callback portal sau login | 307 về app, không 502 nginx |
-| B04 | P0 | browser | App login staff `return=/gate` | Tới trang «Cổng check-in dự phòng» |
+| B04 | **OUT** | browser | ~~App login staff `return=/gate`~~ | **N/A** — O23/D-6/#878; không surface web `/gate`. Staff cổng = iOS (G). **Không FAIL** vì 308→`/` |
 | B05 | P0 | http | Authorize app | `redirect_uri=https://app.vemoki.com/api/auth/callback`, scope không `offline_access` |
 | B06 | P0 | browser | Attendee login portal | Không vào shell Owner; từ chối hoặc về bề mặt khách |
 | B07 | P0 | browser | Sai mật khẩu | Ở lại Keycloak, không set cookie app |
@@ -88,7 +88,7 @@ Client: `ticket-admin-web` (portal), `ticket-platform-web` (platform), `ticket-w
 | --- | --- | --- | --- | --- |
 | C01 | P0 | browser | Home sau login | Có tenant Aurora; không màn «Cần đăng nhập» |
 | C02 | P0 | browser | Chọn event Aurora Night | Overview event mở, không 422 |
-| C03 | P0 | browser | Nút «Mở cổng quét trên app» | `href` là `https://app.vemoki.com/gate`, tab mới. **Cấm** `127.0.0.1` |
+| C03 | P0 | browser | Trang portal «Cổng» / deep-link hint | Copy hướng dẫn soát vé **iOS Staff** (#806/#808). **Không** link `app.vemoki.com/gate`. **Cấm** `127.0.0.1`. Báo cáo cổng portal (O32). 308 app `/gate` **không** liên quan C03 |
 | C04 | P0 | browser | Members | Danh sách tải; không lộ tenant khác |
 | C05 | P1 | browser | Mời thành viên (không gửi email khách) | Form chặn địa chỉ không hợp lệ; không gửi SMTP thật trong UAT |
 | C06 | P1 | browser | Cấu hình event / quota / nguồn mã (chỉ đọc) | Số liệu hiện, không 500 |
@@ -108,21 +108,15 @@ Client: `ticket-admin-web` (portal), `ticket-platform-web` (platform), `ticket-w
 | D06 | P1 | browser | Viewport 390px redeem | Dùng được, không tràn nút chính |
 | D07 | P1 | browser | Marketing EN → bấm vào app | Ghi locale **không** đi theo (gap đã biết) — không FAIL P0 |
 
-## 8. Suite E — Cổng web (dự phòng, online)
+## 8. Suite E — Cổng web (đã bỏ — OUT)
 
-Điều kiện: B04 + C03. Cổng web **không** xếp hàng offline.
+**OUT toàn suite** theo [O23](../DECISION-LOG.md#o23--gate-chỉ-trên-ios-staff-chốt-hướng-thiết-kế-vemoki-24102026) + D-6 ([#788](https://github.com/hangndat/ticket-solution/issues/788)/PR [#804](https://github.com/hangndat/ticket-solution/pull/804)) + residual [#878](https://github.com/hangndat/ticket-solution/issues/878): Web Gate đã xóa; admission chỉ trên **iOS Staff (suite G)**. Portal không deep-link `/gate` ([#806](https://github.com/hangndat/ticket-solution/issues/806)/PR [#808](https://github.com/hangndat/ticket-solution/pull/808)). Mọi E01–E07 = `N/A` — **không** FAIL vì 308→`/`.
 
 | ID | P | Lớp | Các bước | Đúng |
 | --- | --- | --- | --- | --- |
-| E01 | P0 | browser | Staff mở `/gate` | Có form phiên; copy «Chưa rõ / không cho khách qua» khi lỗi |
-| E02 | P0 | browser | Mở phiên với tenant + event Aurora | Phiên mở, không `TENANT_REQUIRED` |
-| E03 | P0 | browser | Giữ chỗ + xác nhận một ticket ID hợp lệ chưa check-in | Trạng thái cho vào chỉ sau phản hồi hệ thống |
-| E04 | P0 | browser | Xác nhận lại cùng vé | Từ chối trùng; không cho vào lần hai |
-| E05 | P0 | browser | Ticket ID không tồn tại | Từ chối, không 500 |
-| E06 | P1 | browser | DevTools offline giữa chừng | UI «Chưa rõ», không tự cho vào |
-| E07 | P0 | browser | Attendee mở `/gate` | Không mở được phiên staff |
+| E01–E07 | **OUT** | — | ~~Staff/attendee web `/gate`~~ | **N/A** — không chạy; cổng = G |
 
-Camera cổng **ngày diễn** là app nhân viên (suite G), không phải trang này.
+Camera / quét / xác nhận vào cổng ngày diễn = suite G (thiết bị thật).
 
 ## 9. Suite F — iOS khách (Simulator)
 
@@ -147,7 +141,7 @@ Build local, team `BLUA62D52G`, không EAS.
 | --- | --- | --- | --- | --- |
 | G01 | **PASS** (TestFlight) | physical | Cài bản local signed lên máy thật | Mở app, team cá nhân. **Đã chạy 2026-10-21** trên DatHN iPhone 15 Pro, bản cài từ **TestFlight 1.0.0 (26)** (không phải local signed): [D13-TF-BETA-SUBMITTED-2026-10-21.md](../reviews/D13-TF-BETA-SUBMITTED-2026-10-21.md) |
 | G02 | **PASS** | physical | Login staff, tab Nhân viên | Tab hiện vì có quyền. `review-staff@vemoki.com`, build 26, 2026-10-21: [D13-TF-BETA-SUBMITTED-2026-10-21.md](../reviews/D13-TF-BETA-SUBMITTED-2026-10-21.md) |
-| G03 | **PASS** | physical | Quét QR vé thật (suite D/E) | Một lần cho vào. Camera thật, «Đã vào cổng», server ghi check-in thật; vé đã undo/cấp spare: [D13-TF-BETA-SUBMITTED-2026-10-21.md](../reviews/D13-TF-BETA-SUBMITTED-2026-10-21.md) |
+| G03 | **PASS** | physical | Quét QR vé thật (suite D / mã demo) | Một lần cho vào. Camera thật, «Đã vào cổng», server ghi check-in thật; vé đã undo/cấp spare: [D13-TF-BETA-SUBMITTED-2026-10-21.md](../reviews/D13-TF-BETA-SUBMITTED-2026-10-21.md). **Không** phụ thuộc suite E (OUT) |
 | G04 | DEFERRED (chưa có bằng chứng) | physical | Quét lại cùng QR | Từ chối trùng |
 | G05 | DEFERRED (chưa có bằng chứng) | physical | Từ chối quyền camera | Thông báo, không crash, không cho vào |
 | G06 | DEFERRED (chưa có bằng chứng) | physical | Mất mạng lúc quét | «Chưa rõ», không cho vào; không hàng đợi offline trừ khi D7 đã bật trên build này |
@@ -201,7 +195,7 @@ Các mục sau đã vá trên VPS trong phiên 2026-10-19. Chúng **chưa** đư
 | Portal scope bỏ `offline_access` | B02, B03, J02 |
 | Nginx buffer callback | B03, J06 |
 | API `PLATFORM_*` | C01, I02, J03 |
-| Nút cổng lấy origin từ server, không `127.0.0.1` | C03, E01 |
+| Portal cổng: hint iOS Staff, không `app./gate`, không `127.0.0.1` | C03 (O23/D-6/#808) |
 | Portal `lang` từ cookie | B10, C08 |
 | Portal sider nhóm + home unauth → Keycloak (spinner) | B01, B08; **bổ sung** catalog nav P1–P3 [PORTAL-PROD-UAT-NAV-2026-10-19.md](../reviews/PORTAL-PROD-UAT-NAV-2026-10-19.md) và DoD [PORTAL-NAV-SPINNER-WIP-DOD-2026-10-19.md](../reviews/PORTAL-NAV-SPINNER-WIP-DOD-2026-10-19.md) — **không** thay case B06 (attendee từ chối portal) |
 
@@ -210,7 +204,7 @@ Các mục sau đã vá trên VPS trong phiên 2026-10-19. Chúng **chưa** đư
 Không chạy trong lượt thiết kế này.
 
 1. **Sóng 0** — một worker `Sora · uat`: suite A + J (chỉ đọc). Fail A/J thì dừng, không login hàng loạt.
-2. **Sóng 1** — cùng role, tuần tự vì chung demo user: B → C → D → E → I.
+2. **Sóng 1** — cùng role, tuần tự vì chung demo user: B → C → D → I (**không** E — OUT).
 3. **Sóng 2** — `Zico · ios` build + `Sora · uat` hoặc Zico nếu Spec giao: suite F trên Simulator.
 4. **Sóng 3** — máy thật (G, H01): **hoãn**. Không spawn, không ghi `PASS`.
 5. **Sóng 4** — `James · dod+sec` đọc artifact, không chạy lại hết. Verdict `GO`/`NO-GO` theo P0 còn lại. Session James ≠ Sora.
@@ -222,6 +216,7 @@ Cost tier worker: `standard`, model `composer-2.5`.
 ```text
 Launch: NO-GO | GO
 P0: pass n / fail n / blocked n / not-run n
+OUT (không kéo): A04, B04, E* (Web Gate bỏ — O23 / #788 / #878; 308→/ ≠ FAIL)
 P1 gaps: …
 Deferred: G04–G06 (máy thật). G01–G03 PASS (TestFlight build 26, 2026-10-21); H01 PASS (sandbox 2026-10-17, production 2026-10-21)
 Drift git↔VPS: có | không
@@ -229,4 +224,4 @@ Catalog SHA: …
 Artifact: docs/reviews/PROD-LAUNCH-UAT-<date>.md
 ```
 
-Suite G và H01 hoãn không làm đợt này thành NO-GO. Các P0 còn lại vẫn chặn.
+Suite G (DEFERRED còn lại) và H01 lịch sử không làm đợt này thành NO-GO chỉ vì hoãn. **A04/B04/E OUT không chặn GO.** Các P0 còn lại (B/C/D/F/I/J …) vẫn chặn. Cổng admission = G, không phải web `/gate`.
