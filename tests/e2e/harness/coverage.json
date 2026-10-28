@@ -5,5 +5,12 @@
     "layers": ["B", "H"],
     "status": "blocked",
     "reason": "Đã kiểm host-only Secure/HttpOnly/Lax OAuth cookie và Portal mutation thiếu Origin; còn authenticated CSRF, full surface/session/header matrix."
+  },
+  {
+    "caseId": "SEC-05",
+    "tests": ["security.spec.ts › [SEC-05]"],
+    "layers": ["B", "H"],
+    "status": "blocked",
+    "reason": "B: web+portal home CSP/nosniff theo profile hiện tại. Còn authenticated surfaces và full header matrix."
   }
 ]

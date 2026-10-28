@@ -2,7 +2,17 @@
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
-const cases = ['SEC-01', 'AUTH-03', 'GATE-01', 'GATE-03', 'DB-03'];
+const cases = [
+  'SEC-01',
+  'SEC-02',
+  'SEC-03',
+  'SEC-04',
+  'SEC-05',
+  'AUTH-03',
+  'GATE-01',
+  'GATE-03',
+  'DB-03',
+];
 const args = process.argv.slice(2);
 const caseFlag = args.indexOf('--case');
 const selected = caseFlag < 0 ? null : args[caseFlag + 1];
@@ -19,7 +29,7 @@ if (
   (selected && !cases.includes(selected))
 ) {
   console.error(
-    'Usage: node tests/e2e/http/entry.mjs [--list] [--case SEC-01|AUTH-03|GATE-01|GATE-03|DB-03]',
+    'Usage: node tests/e2e/http/entry.mjs [--list] [--case SEC-01|SEC-02|SEC-03|SEC-04|SEC-05|AUTH-03|GATE-01|GATE-03|DB-03]',
   );
   process.exit(2);
 }

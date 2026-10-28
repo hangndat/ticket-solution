@@ -32,7 +32,17 @@ const smoke = [
   'SEC-01',
   'SEC-02',
 ];
-const httpCases = ['SEC-01', 'AUTH-03', 'GATE-01', 'GATE-03', 'DB-03'];
+const httpCases = [
+  'SEC-01',
+  'SEC-02',
+  'SEC-03',
+  'SEC-04',
+  'SEC-05',
+  'AUTH-03',
+  'GATE-01',
+  'GATE-03',
+  'DB-03',
+];
 const match = args.find((arg) => arg.startsWith('--case='));
 const allBrowserCases = [
   ...Array.from(
@@ -236,7 +246,10 @@ if (mode === 'list' || args.includes('--list')) {
     await waitFor('API health', () =>
       getLocalJson(state, state.origins.api, '/v1/health'),
     );
-    if (mode !== 'http') {
+    const httpNeedsFrontend =
+      mode === 'http' &&
+      caseIds.some((id) => ['SEC-02', 'SEC-03', 'SEC-05'].includes(id));
+    if (mode !== 'http' || httpNeedsFrontend) {
       if (!skipBuild) {
         console.log('E2E: build Web/Portal production');
         const builds = ['web', 'portal'].map((name) =>
@@ -319,6 +332,15 @@ if (mode === 'list' || args.includes('--list')) {
           waitFor(`${name} HTTPS`, () => localPage(state, state.origins[name])),
         ),
       );
+      const manifestWithUpstream = JSON.parse(
+        readFileSync(state.manifestPath, 'utf8'),
+      );
+      manifestWithUpstream.runtime.upstreamPorts = {
+        web: state.ports.web,
+        portal: state.ports.portal,
+        api: state.ports.api,
+      };
+      privateJson(state.manifestPath, manifestWithUpstream);
     }
     console.log(
       `E2E ${state.id}: runtime sẵn sàng; chạy ${mode}, ${caseIds.length} nhóm fixture`,

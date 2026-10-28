@@ -199,6 +199,16 @@ function realmConfig(state, caseIds) {
   for (const id of caseIds) {
     state.caseAccounts[id] = {};
     addAccounts(id.toLowerCase(), state.caseAccounts[id]);
+    if (id === 'SEC-05') {
+      const formulaEmail = `=formula-${state.id}@example.test`;
+      const attendee = state.caseAccounts[id].attendee;
+      attendee.username = formulaEmail;
+      const realmUser = realm.users.find((user) => user.id === attendee.subject);
+      if (realmUser) {
+        realmUser.username = formulaEmail;
+        realmUser.email = formulaEmail;
+      }
+    }
   }
   state.clientSecrets = {};
   if (state.origins.shortWeb) {
@@ -325,6 +335,56 @@ function realmConfig(state, caseIds) {
           'included.custom.audience': 'ticket-api',
           'access.token.claim': 'true',
           'id.token.claim': 'false',
+        },
+      },
+    ],
+  });
+  state.clientSecrets['e2e-http-platform'] = randomBytes(24).toString('base64url');
+  realm.clients.push({
+    clientId: 'e2e-http-platform',
+    enabled: true,
+    publicClient: false,
+    secret: state.clientSecrets['e2e-http-platform'],
+    protocol: 'openid-connect',
+    standardFlowEnabled: false,
+    directAccessGrantsEnabled: true,
+    defaultClientScopes: ['basic', 'profile', 'email', 'roles'],
+    protocolMappers: [
+      {
+        name: 'real-platform-audience',
+        protocol: 'openid-connect',
+        protocolMapper: 'oidc-audience-mapper',
+        consentRequired: false,
+        config: {
+          'included.custom.audience': 'ticket-platform-api',
+          'access.token.claim': 'true',
+          'id.token.claim': 'false',
+        },
+      },
+      {
+        name: 'e2e-platform-acr',
+        protocol: 'openid-connect',
+        protocolMapper: 'oidc-hardcoded-claim-mapper',
+        consentRequired: false,
+        config: {
+          'claim.name': 'acr',
+          'claim.value': '2',
+          'jsonType.label': 'String',
+          'id.token.claim': 'true',
+          'access.token.claim': 'true',
+        },
+      },
+      {
+        name: 'auth-time',
+        protocol: 'openid-connect',
+        protocolMapper: 'oidc-usersessionmodel-note-mapper',
+        consentRequired: false,
+        config: {
+          'user.session.note': 'AUTH_TIME',
+          'claim.name': 'auth_time',
+          'jsonType.label': 'int',
+          'id.token.claim': 'true',
+          'access.token.claim': 'true',
         },
       },
     ],

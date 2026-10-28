@@ -7,6 +7,33 @@ import { ROOT, privateJson } from './runtime.mjs';
 const requireBackend = createRequire(
   resolve(ROOT, 'packages/backend/package.json'),
 );
+const requireApi = createRequire(resolve(ROOT, 'apps/api/package.json'));
+
+function hourWindowStart(now = new Date()) {
+  return new Date(
+    Date.UTC(
+      now.getUTCFullYear(),
+      now.getUTCMonth(),
+      now.getUTCDate(),
+      now.getUTCHours(),
+      0,
+      0,
+      0,
+    ),
+  );
+}
+
+async function primeUserRateCounter(admin, userId, bucketKey, count) {
+  const window = hourWindowStart();
+  await admin.query(
+    `INSERT INTO notification_rate_counters (
+      tenant_id, bucket_key, window_started_at, count, updated_at
+    ) VALUES ($1::uuid, $2, $3::timestamptz, $4, now())
+    ON CONFLICT (tenant_id, bucket_key, window_started_at)
+    DO UPDATE SET count = EXCLUDED.count, updated_at = now()`,
+    [userId, bucketKey, window.toISOString(), count],
+  );
+}
 
 function formAnswers(email) {
   return {
@@ -214,7 +241,7 @@ export async function seedRuntime(state, caseIds) {
         fixture.data.registrationName = `New Tenant ${state.id}`;
         fixture.data.registrationSlug = `new-${slug}`;
       }
-      if (['AUTH-03', 'DB-03'].includes(caseId)) {
+      if (['AUTH-03', 'DB-03', 'SEC-04', 'SEC-05'].includes(caseId)) {
         fixture.data.formVersion = 'form-v1';
         fixture.data.termsVersion = 'terms-v1';
         if (caseId === 'AUTH-03')
@@ -293,6 +320,10 @@ export async function seedRuntime(state, caseIds) {
           actorUserId: accounts.owner.userId,
           expectedVersion: saved.version,
         });
+        if (caseId === 'SEC-05') {
+          fixture.data.configVersion = saved.version;
+          fixture.data.xssPersistMarker = `SEC05-PERSIST-${state.id}`;
+        }
         if (caseId === 'WEB-01') {
           const draftEventId = randomUUID();
           const privateEventId = randomUUID();
@@ -633,8 +664,14 @@ export async function seedRuntime(state, caseIds) {
           'PORT-08',
           'PORT-09',
           'GATE-03',
+          'SEC-04',
+          'SEC-05',
         ].includes(caseId)
       ) {
+        const answers =
+          fixture.data.answers ??
+          formAnswers(accounts.attendee.username);
+        if (caseId === 'SEC-05') fixture.data.answers = answers;
         const outcome = await backend.withTenant(db, tenantId, (tx) =>
           backend.redeemAndIssueTicket(tx, hmac, state.secrets.credential, {
             tenantId,
@@ -683,7 +720,56 @@ export async function seedRuntime(state, caseIds) {
         );
       }
       if (caseId === 'PORT-04') fixture.data.capacity = 100;
-      if (caseId === 'SEC-01') {
+      if (caseId === 'SEC-04') {
+        const { API_RATE_BUCKETS, API_RATE_LIMITS } = requireApi(
+          './dist/http-limits.js',
+        );
+        const resolveBucket = 'redemption.resolve';
+        const resolveLimit = 30;
+        const prime = new Client({
+          connectionString: `postgresql://postgres:${state.secrets.pg}@127.0.0.1:${state.ports.pg}/e2e`,
+        });
+        await prime.connect();
+        try {
+          await primeUserRateCounter(
+            prime,
+            accounts.attendee.userId,
+            resolveBucket,
+            resolveLimit,
+          );
+          await primeUserRateCounter(
+            prime,
+            accounts.attendee.userId,
+            API_RATE_BUCKETS.redeem,
+            API_RATE_LIMITS.redeemPerUser,
+          );
+          await primeUserRateCounter(
+            prime,
+            accounts.scanner.userId,
+            API_RATE_BUCKETS.gateReserve,
+            API_RATE_LIMITS.gateReservePerUser - 1,
+          );
+          await primeUserRateCounter(
+            prime,
+            accounts.scanner.userId,
+            API_RATE_BUCKETS.gateOfflineSyncReceipt,
+            API_RATE_LIMITS.gateOfflineSyncReceiptPerUser,
+          );
+          await primeUserRateCounter(
+            prime,
+            accounts.owner.userId,
+            API_RATE_BUCKETS.importJobsList,
+            API_RATE_LIMITS.importJobsListPerUser,
+          );
+        } finally {
+          await prime.end();
+        }
+        fixture.data.rateLimits = {
+          resolveLimit,
+          redeemLimit: API_RATE_LIMITS.redeemPerUser,
+        };
+      }
+      if (caseId === 'SEC-01' || caseId === 'SEC-02') {
         const foreignTenantId = randomUUID();
         const foreignEventId = randomUUID();
         await backend.withTenant(db, foreignTenantId, async (tx) => {
@@ -719,6 +805,8 @@ export async function seedRuntime(state, caseIds) {
     hostSuffix: state.suffix,
     httpClientId: 'e2e-http',
     httpClientSecret: state.clientSecrets['e2e-http'],
+    httpPlatformClientId: 'e2e-http-platform',
+    httpPlatformClientSecret: state.clientSecrets['e2e-http-platform'],
   };
   state.manifest = manifest;
   state.manifestPath = resolve(state.dir, 'manifest.json');
