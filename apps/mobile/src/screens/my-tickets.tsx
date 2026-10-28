@@ -30,7 +30,7 @@ import {
 import { AttendeeScreenChrome } from '@/navigation/attendee-screen-chrome';
 import { hasDemoMediaForEventId } from '@/data/demo-media';
 import { brand, colors } from '@/theme/colors';
-import { space, radius } from '@/theme/tokens';
+import { layout, space, radius } from '@/theme/tokens';
 import { typography } from '@/theme/typography';
 import { fontFamilies } from '@/theme/fonts';
 import { session } from '@/identity/session';
@@ -125,7 +125,7 @@ function EventIdentityBlock({ group }: { group: EventTicketGroup }) {
         <EventBanner
           eventId={group.eventId}
           height={size}
-          style={{ width: size, borderRadius: radius.none }}
+          style={{ width: size, borderRadius: layout.none }}
           testID={`wallet-event-banner-${group.eventId}`}
           accessibilityLabel={`Banner ${group.eventName}`}
         />

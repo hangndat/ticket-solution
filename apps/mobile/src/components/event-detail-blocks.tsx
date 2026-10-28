@@ -6,7 +6,7 @@ import { eventsCopy } from '@/components/screen-state-copy';
 import { isLongEventText } from '@/published/event-detail-model';
 import { brand, colors } from '@/theme/colors';
 import { fontFamilies } from '@/theme/fonts';
-import { space } from '@/theme/tokens';
+import { layout, space } from '@/theme/tokens';
 import { typography } from '@/theme/typography';
 
 const copy = eventsCopy.detail;
@@ -129,7 +129,7 @@ export function ExpandableText({
           accessibilityLabel={open ? copy.seeLess : copy.seeMore}
           accessibilityState={{ expanded: open }}
           onPress={() => setOpen((v) => !v)}
-          style={{ minHeight: 44, alignSelf: 'flex-start', paddingHorizontal: space.none }}
+          style={{ minHeight: 44, alignSelf: 'flex-start', paddingHorizontal: layout.none }}
         />
       ) : null}
     </View>
@@ -181,7 +181,7 @@ export function CollapsibleRow({
         style={{
           minHeight: 48,
           paddingVertical: space.md,
-          paddingHorizontal: space.none,
+          paddingHorizontal: layout.none,
           alignSelf: 'stretch',
         }}
         contentStyle={{
