@@ -15,10 +15,8 @@ import {
 } from 'react-native';
 import type { TicketSummary } from '@ticket/contracts';
 import { AttendeeCta } from '@/components/attendee-cta';
-import { TicketStatusPill } from '@/components/ticket-status-pill';
 import { Button } from '@/components/ui/button';
-import { EventLogo } from '@/components/event-media';
-import { Notice } from '@/components/page';
+import { EventBanner } from '@/components/event-media';
 import {
   EmptyState,
   ErrorState,
@@ -27,11 +25,8 @@ import {
 import { eventsCopy, walletCopy } from '@/components/screen-state-copy';
 import { ATTENDEE_REDEEM_PATH } from '@/navigation/attendee-redeem-entry';
 import {
-  attendeeWalletCopy,
-  isUsedTicketState,
-  presentTicketRow
+  attendeeWalletCopy
 } from '@/attendee/attendee-outcome-copy';
-import { TicketUsedStamp } from '@/components/ticket-used-stamp';
 import { AttendeeScreenChrome } from '@/navigation/attendee-screen-chrome';
 import { hasDemoMediaForEventId } from '@/data/demo-media';
 import { brand, colors } from '@/theme/colors';
@@ -67,12 +62,19 @@ import { WalletPushPromptCard } from '@/push/wallet-push-prompt-card';
 import { shouldOfferWalletPushPrompt } from '@/push/wallet-push-prompt-policy';
 import { readWalletPushPromptDismissed } from '@/push/wallet-push-prompt-store';
 import {
+  eventIdentityColor,
+  eventInitial,
   filterTicketsByEventId,
   groupTicketsByEvent,
   resolveWalletFilterEventName,
-  walletEventSectionHeader,
+  walletGroupA11yLabel,
+  walletGroupCountChip,
+  walletGroupSummary,
+  walletTicketA11yLabel,
   walletTicketCardTitle,
-  sortTicketsActiveFirst
+  walletTicketStatus,
+  type EventTicketGroup,
+  type WalletTicketStatus
 } from '@/tickets/wallet-event-grouping';
 
 function parseWalletEventIdFilter(
@@ -85,41 +87,135 @@ function parseWalletEventIdFilter(
 
 function WalletGroupedTicketList({
   tickets,
-  filterEventId
+  filterEventId,
+  offline = false
 }: {
   tickets: TicketSummary[];
   filterEventId?: string;
+  offline?: boolean;
 }) {
-  if (filterEventId) {
-    const visible = sortTicketsActiveFirst(
-      filterTicketsByEventId(tickets, filterEventId),
-    );
-    return (
-      <View style={{ gap: space.sm }}>
-        {visible.map((ticket) => (
-          <TicketRow key={ticket.ticketId} ticket={ticket} />
-        ))}
-      </View>
-    );
-  }
-
-  const groups = groupTicketsByEvent(tickets);
+  const groups = groupTicketsByEvent(
+    filterEventId ? filterTicketsByEventId(tickets, filterEventId) : tickets,
+  );
   return (
     <>
       {groups.map((group) => (
-        <View key={group.eventId} style={{ gap: space.sm }}>
-          <Text
-            accessibilityRole="header"
-            style={{ ...typography.sectionTitle, color: brand.ink }}
-          >
-            {walletEventSectionHeader(group.eventName, group.tickets.length)}
-          </Text>
-          {group.tickets.map((ticket) => (
-            <TicketRow key={ticket.ticketId} ticket={ticket} />
-          ))}
-        </View>
+        <EventTicketSection key={group.eventId} group={group} offline={offline} />
       ))}
     </>
+  );
+}
+
+/** Event identity block: banner image when the event has one, else its color + initial. */
+function EventIdentityBlock({ group }: { group: EventTicketGroup }) {
+  const size = 56;
+  const color = eventIdentityColor(group.eventId, group.brandColor);
+  if (hasDemoMediaForEventId(group.eventId)) {
+    return (
+      <View
+        style={{
+          width: size,
+          height: size,
+          borderRadius: radius.md,
+          borderCurve: 'continuous',
+          overflow: 'hidden',
+          backgroundColor: color
+        }}
+      >
+        <EventBanner
+          eventId={group.eventId}
+          height={size}
+          style={{ width: size, borderRadius: 0 }}
+          testID={`wallet-event-banner-${group.eventId}`}
+          accessibilityLabel={`Banner ${group.eventName}`}
+        />
+      </View>
+    );
+  }
+  return (
+    <View
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+      style={{
+        width: size,
+        height: size,
+        borderRadius: radius.md,
+        borderCurve: 'continuous',
+        backgroundColor: color,
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}
+    >
+      <Text
+        style={{
+          fontFamily: fontFamilies.display,
+          fontSize: 26,
+          fontWeight: '700',
+          color: colors.onAccent
+        }}
+      >
+        {eventInitial(group.eventName)}
+      </Text>
+    </View>
+  );
+}
+
+function EventTicketSection({
+  group,
+  offline
+}: {
+  group: EventTicketGroup;
+  offline: boolean;
+}) {
+  const accent = eventIdentityColor(group.eventId, group.brandColor);
+  const summary = walletGroupSummary(group);
+  return (
+    <View style={{ gap: space.sm }}>
+      <View
+        accessible
+        accessibilityRole="header"
+        accessibilityLabel={walletGroupA11yLabel(group)}
+        style={{ flexDirection: 'row', alignItems: 'center', gap: space.md }}
+      >
+        <EventIdentityBlock group={group} />
+        <View style={{ flex: 1, flexShrink: 1, gap: 2 }}>
+          <Text style={{ ...typography.callout, color: brand.ink }}>
+            {group.eventName}
+          </Text>
+          {group.metaLine ? (
+            <Text style={{ ...typography.caption, color: colors.secondary }}>
+              {group.metaLine}
+            </Text>
+          ) : null}
+          {summary ? (
+            <Text style={{ ...typography.caption, color: colors.secondary }}>
+              {summary}
+            </Text>
+          ) : null}
+        </View>
+        <View
+          style={{
+            backgroundColor: colors.surfaceSubtle,
+            borderRadius: radius.sm,
+            paddingHorizontal: space.sm,
+            paddingVertical: space.xs
+          }}
+        >
+          <Text style={{ ...typography.badge, color: brand.ink }}>
+            {walletGroupCountChip(group.tickets.length)}
+          </Text>
+        </View>
+      </View>
+      {group.tickets.map((ticket) => (
+        <TicketRow
+          key={ticket.ticketId}
+          ticket={ticket}
+          eventName={group.eventName}
+          accent={accent}
+          offline={offline}
+        />
+      ))}
+    </View>
   );
 }
 
@@ -141,19 +237,59 @@ function WalletSlimNotice({ text }: { text: string }) {
   );
 }
 
+function StatusChip({ status }: { status: WalletTicketStatus }) {
+  const palette = {
+    usable: { bg: colors.admitSurface, fg: colors.admit },
+    sync: { bg: colors.unknownSurface, fg: colors.unknown },
+    used: { bg: colors.surfaceMuted, fg: colors.secondary },
+    inactive: { bg: colors.surfaceMuted, fg: colors.secondary },
+    pending: { bg: colors.surfaceSubtle, fg: colors.secondary }
+  }[status.tone];
+  return (
+    <View
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: space.xs,
+        alignSelf: 'flex-start',
+        backgroundColor: palette.bg,
+        borderRadius: radius.sm,
+        paddingHorizontal: space.sm,
+        paddingVertical: space.xs
+      }}
+    >
+      {status.tone === 'used' ? (
+        <Text style={{ ...typography.badge, color: palette.fg }}>✓</Text>
+      ) : null}
+      <Text
+        style={{
+          ...typography.badge,
+          color: palette.fg,
+          fontFamily: fontFamilies.bodySemiBold
+        }}
+      >
+        {status.label}
+      </Text>
+    </View>
+  );
+}
+
 function TicketRow({
   ticket,
-  showEventTitle = false
+  eventName,
+  accent,
+  offline = false
 }: {
   ticket: TicketSummary;
-  /** Event name is shown once by the section header; flat lists repeat it as the title. */
-  showEventTitle?: boolean;
+  eventName: string;
+  accent: string;
+  offline?: boolean;
 }) {
   const [focused, setFocused] = useState(false);
-  const row = presentTicketRow(ticket);
-  const used = isUsedTicketState(ticket.state);
-  const title = showEventTitle ? row.eventTitle : walletTicketCardTitle(ticket);
-  const hasLogo = hasDemoMediaForEventId(ticket.eventId);
+  const status = walletTicketStatus(ticket, { offline });
+  const quiet = status.tone === 'used' || status.tone === 'inactive';
   return (
     <Link
       href={{
@@ -164,53 +300,38 @@ function TicketRow({
     >
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={
-          used
-            ? `${row.eventTitle} · ${attendeeWalletCopy.usedWatermarkA11y}`
-            : row.accessibilityLabel
-        }
+        accessibilityLabel={walletTicketA11yLabel(eventName, ticket, status)}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
         style={({ pressed }) => ({
           flexDirection: 'row',
           alignItems: 'center',
           gap: space.md,
-          minHeight: 72,
-          paddingVertical: space.md,
-          paddingHorizontal: space.lg,
-          borderRadius: radius.lg,
+          minHeight: 56,
+          paddingVertical: space.sm,
+          paddingHorizontal: space.md,
+          borderRadius: radius.md,
           borderCurve: 'continuous',
-          backgroundColor: colors.ticketCanvas,
+          backgroundColor: quiet ? colors.surfaceSubtle : colors.ticketCanvas,
           borderWidth: focused ? 2 : 1,
           borderColor: focused ? colors.focus : colors.line,
-          opacity: pressed ? 0.85 : used ? 0.7 : 1,
+          borderLeftWidth: 4,
+          borderLeftColor: focused ? colors.focus : accent,
+          opacity: pressed ? 0.85 : 1,
           overflow: 'hidden',
         })}
       >
-        {used ? <TicketUsedStamp /> : null}
-        {hasLogo ? (
-          <EventLogo
-            eventId={ticket.eventId}
-            height={32}
-            testID={`ticket-logo-${ticket.ticketId}`}
-            accessibilityLabel="Logo sự kiện demo trên vé"
-          />
-        ) : null}
-        <View style={{ flex: 1, flexShrink: 1, gap: space.xs }}>
-          <Text
-            style={{ ...typography.callout, color: brand.ink }}
-          >
-            {title}
-          </Text>
-          {row.whenLine ? (
-            <Text
-              style={{ ...typography.subhead, color: colors.secondary }}
-            >
-              {row.whenLine}
-            </Text>
-          ) : null}
-        </View>
-        {used ? null : <TicketStatusPill label={row.statusLabel} />}
+        <Text
+          style={{
+            ...typography.callout,
+            flex: 1,
+            flexShrink: 1,
+            color: quiet ? colors.secondary : brand.ink
+          }}
+        >
+          {walletTicketCardTitle(ticket)}
+        </Text>
+        <StatusChip status={status} />
         <Text
           accessibilityElementsHidden
           importantForAccessibility="no-hide-descendants"
@@ -266,7 +387,7 @@ export function MyTicketsScreen() {
 
 /**
  * Display-only wallet from prior online-verified binding + durable cache.
- * Flat list only: offline cache may lack eventName — no event grouping (issue 602).
+ * Grouped by eventId; a cache row without eventName falls back to «Sự kiện» (still distinct by color).
  */
 function OfflineDisplayWallet({
   userId,
@@ -349,10 +470,8 @@ function OfflineDisplayWallet({
           {walletCopy.emptyOffline.body}
         </EmptyState>
       ) : (
-        <View style={{ gap: space.sm }}>
-          {sortTicketsActiveFirst(tickets).map((ticket) => (
-            <TicketRow key={ticket.ticketId} ticket={ticket} showEventTitle />
-          ))}
+        <View style={{ gap: space.xl }}>
+          <WalletGroupedTicketList tickets={tickets} offline />
         </View>
       )}
 
@@ -665,6 +784,7 @@ function VerifiedWallet({ userId }: { userId: string }) {
           <WalletGroupedTicketList
             tickets={tickets}
             filterEventId={filterEventId}
+            offline={offline}
           />
         </View>
       )}
