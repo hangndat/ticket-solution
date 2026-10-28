@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { isTenantSlug } from '../branding';
 import {
   attendeeWalletTicketCard,
   attendeeWalletTicketCardDisabled,
@@ -29,12 +30,19 @@ type Props = {
   tenantSlug: string | null;
 };
 
+/** Membership slug, else tenant UUID (valid slug; detail uses ?tenantId=). */
+export function walletTicketHref(
+  ticket: Pick<WalletTicketRow, 'ticketId' | 'tenantId'>,
+  tenantSlug: string | null,
+): string | null {
+  const slug = (tenantSlug?.trim() || ticket.tenantId.trim()).toLowerCase();
+  if (!slug || !isTenantSlug(slug)) return null;
+  return `/t/${encodeURIComponent(slug)}/tickets/${encodeURIComponent(ticket.ticketId)}?tenantId=${encodeURIComponent(ticket.tenantId)}`;
+}
+
 export function WalletTicketCard({ ticket, tenantSlug }: Props) {
   const title = eventTitle(ticket);
-  const href =
-    tenantSlug
-      ? `/t/${encodeURIComponent(tenantSlug)}/tickets/${encodeURIComponent(ticket.ticketId)}?tenantId=${encodeURIComponent(ticket.tenantId)}`
-      : null;
+  const href = walletTicketHref(ticket, tenantSlug);
 
   const inner = (
     <>

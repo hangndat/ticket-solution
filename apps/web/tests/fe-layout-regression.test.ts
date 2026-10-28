@@ -56,6 +56,21 @@ test('marketing layout does not hide footer via runtime CSS hack', () => {
   assert.doesNotMatch(layout, /marketing-surface/);
 });
 
+test('attendee desktop nav stays a single row at 1024–1440', () => {
+  const surface = readFileSync(
+    join(WEB_ROOT, 'src/attendee-surface.ts'),
+    'utf8',
+  );
+  assert.match(
+    surface,
+    /attendeeNavLinksDesktop =\s*'[^']*flex-nowrap[^']*'/,
+  );
+  assert.match(
+    surface,
+    /attendeeNavAvatarLabel =\s*'[^']*xl:inline[^']*'/,
+  );
+});
+
 test('consumer page shell keeps SiteNav outside padded main', () => {
   const shell = readFileSync(
     join(WEB_ROOT, 'src/consumer-page-shell.tsx'),
