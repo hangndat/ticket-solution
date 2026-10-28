@@ -194,5 +194,50 @@ class ReleaseFixture(unittest.TestCase):
         self.assertEqual(db.execute("SELECT provider_status FROM jobs WHERE id=3").fetchone()[0], "PENDING")
 
 
+class BuildCacheHelpers(unittest.TestCase):
+    def test_store_default_is_per_platform_and_outside_stage(self):
+        a = release.default_pnpm_store("linux/amd64")
+        b = release.default_pnpm_store("linux/arm64")
+        self.assertEqual(a.name, "pnpm-store-linux-amd64")
+        self.assertNotEqual(a, b)
+
+    def test_container_script_uses_external_store_and_frozen_lockfile(self):
+        script = release.container_script()
+        self.assertIn(f"pnpm config set store-dir {release.STORE_MOUNT}", script)
+        self.assertNotIn("/app/.pnpm-store", script)
+        self.assertIn("pnpm install --frozen-lockfile", script)
+        self.assertEqual(script.count("step \""), len(release.STEPS))
+
+    def test_container_script_reports_steps_and_failure(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            fake = Path(tmp) / "pnpm"
+            fake.write_text("#!/bin/sh\n[ \"$2\" = '@ticket/ui' ] && exit 3\nexit 0\n")
+            fake.chmod(0o755)
+            run = subprocess.run(["sh", "-ec", release.container_script()], env={"PATH": f"{tmp}:/usr/bin:/bin"},
+                                 text=True, capture_output=True)
+        self.assertNotEqual(run.returncode, 0)
+        self.assertIn("done: build contracts", run.stdout)
+        self.assertIn("FAILED: build ui", run.stdout)
+        self.assertNotIn("build api", run.stdout)
+
+    def test_stale_builds_detected_and_removed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            old, fresh, keep = root / ".build-old", root / ".build-new", root / ".build-me"
+            for d in (old, fresh, keep):
+                (d / "sub").mkdir(parents=True)
+            import os, time
+            os.utime(old, (time.time() - 7200,) * 2)
+            os.utime(keep, (time.time() - 7200,) * 2)
+            self.assertEqual(release.stale_builds(root, keep, 60), [old])
+            release.remove_tree(old)
+            self.assertFalse(old.exists())
+
+    def test_prepare_store_creates_dir(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            store = release.prepare_store(Path(tmp) / "a" / "store")
+            self.assertTrue(store.is_dir())
+
+
 if __name__ == "__main__":
     unittest.main()

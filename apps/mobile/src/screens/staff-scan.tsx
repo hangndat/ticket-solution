@@ -5,6 +5,7 @@ import { AtmosphereWash } from '@/components/screen-atmosphere';
 import { scanCopy } from '@/components/screen-state-copy';
 import { canReconcile } from '@/gate/gate-scan';
 import { GateCamera } from '@/gate/gate-camera';
+import { GateCameraIdle, StaffGateOpenSession } from '@/gate/staff-gate-open-session';
 import { announcementPhaseFor } from '@/gate/gate-outcome-copy';
 import { StaffGateNoEventState } from '@/gate/staff-gate-empty-state';
 import { StaffGateOpsSticky } from '@/gate/staff-gate-ops-sticky';
@@ -32,6 +33,10 @@ export function StaffScanScreen() {
   const outcomeEmphasized =
     gate.busy || outcomeView.kind !== 'idle' || gate.pendingOp !== null;
 
+  // Live preview only with an open session (or while the gate list failed to
+  // load, so the first-scan open fallback never regresses).
+  const showLive = Boolean(gate.sessionId) || gate.gates.openUi.scanFallback;
+
   return (
     <>
       <View
@@ -52,17 +57,12 @@ export function StaffScanScreen() {
           <StaffGateOpsSticky
             connectivity={gate.connectivity}
             hasSession={Boolean(gate.sessionId)}
-            sessionId={gate.sessionId}
+            gateName={gate.gates.sessionGateName}
             queueSnap={gate.queueSnap}
             onSync={() => void gate.syncNow()}
             machineLabel={gate.machineLabel}
             eventName={gate.gateScope?.name ?? null}
-            canSwitchEvent={gate.gateEventChoices.length > 1}
-            eventPickerOpen={gate.eventPickerOpen}
-            onToggleEventPicker={() => gate.setEventPickerOpen((open) => !open)}
-            gateEventChoices={gate.gateEventChoices}
             gateScope={gate.gateScope}
-            onSelectGateScope={gate.selectGateScope}
             pendingOp={gate.pendingOp}
             onContinueScan={
               gate.pendingOp && !gate.busy ? gate.dismissPendingAction : undefined
@@ -85,10 +85,14 @@ export function StaffScanScreen() {
         >
           <StaffGateNoEventState />
           <View style={{ position: 'relative' }}>
-            <GateCamera
-              disabled={gate.scanDisabled}
-              onScan={gate.handleCameraScan}
-            />
+            {showLive ? (
+              <GateCamera
+                disabled={gate.scanDisabled}
+                onScan={gate.handleCameraScan}
+              />
+            ) : (
+              <GateCameraIdle />
+            )}
             <StaffGateScanToast
               active={Boolean(showCameraToast && (gate.toastOp || gate.busy))}
               visible={showCameraToast}
@@ -96,6 +100,8 @@ export function StaffScanScreen() {
               busy={gate.busy}
             />
           </View>
+          <StaffGateOpenSession gates={gate.gates} />
+          {outcomeEmphasized ? (
           <View
             testID="gate-scan-outcome-panel"
             {...gateOutcomeAnnouncement({
@@ -115,12 +121,13 @@ export function StaffScanScreen() {
               emphasized={outcomeEmphasized}
             />
           </View>
-          <Text
-            style={{ ...typography.footnote, color: colors.secondary, }}
-          >
-            Quét QR trong khung — kết quả hiện bên dưới, không che camera. Nhập tay
-            và lịch sử ở tab riêng.
-          </Text>
+          ) : showLive ? (
+            <Text
+              style={{ ...typography.footnote, color: colors.secondary }}
+            >
+              Đưa QR vào khung hoặc nhập mã thủ công ở tab Nhập tay.
+            </Text>
+          ) : null}
         </ScrollView>
       </View>
       <StaffGateScreenChrome tabTitle={STAFF_TAB_TITLES.scan} largeTitle={false} />

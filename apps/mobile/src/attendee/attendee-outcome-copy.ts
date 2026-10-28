@@ -52,7 +52,7 @@ export function ticketStateLabelVi(state: string): string {
     case 'ACTIVE':
       return 'Chưa sử dụng';
     case 'USED':
-      return 'Đã dùng';
+      return 'Đã sử dụng';
     case 'REVOKED':
       return 'Đã thu hồi';
     case 'EXPIRED':
@@ -203,6 +203,9 @@ export const attendeeWalletCopy = {
   demoNotForGate: 'Không dùng vào cổng',
   revokedHint: 'Vé không còn hiệu lực — không quét cổng.',
   usedHint: 'Vé đã dùng — không quét cổng lại.',
+  usedWatermark: 'Đã sử dụng',
+  usedWatermarkA11y: 'Vé đã sử dụng, không dùng để vào cổng',
+  usedQrA11y: 'Mã QR đã sử dụng, không còn hiệu lực vào cổng',
   expiredHint: 'Vé hết hạn — không quét cổng.',
 } as const;
 
@@ -222,6 +225,10 @@ export function ticketScheduleVenueLines(ticket: TicketSummary): {
     when: eventDate(demo),
     where: demo.location?.trim() || null,
   };
+}
+
+export function isUsedTicketState(state: string): boolean {
+  return state.trim().toUpperCase() === 'USED';
 }
 
 export function ticketGateHint(

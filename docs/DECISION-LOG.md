@@ -1,10 +1,74 @@
 # Decision log — sản phẩm & kỹ thuật
 
-Ngày cập nhật: 2026-10-26
+Ngày cập nhật: 2026-10-28
 Nguồn: [PRD](./PRD.md) mục 15, [Technical Design](./TECHNICAL-DESIGN.md) mục 2 & 18, [ROADMAP](./ROADMAP.md)
 Tracking: Issues [#10](https://github.com/hangndat/ticket-solution/issues/10), [#11](https://github.com/hangndat/ticket-solution/issues/11)
 
 **Kiến trúc hiện trạng (canonical, Epic [#891](https://github.com/hangndat/ticket-solution/issues/891) / F06):** [`docs/architecture/ar891-current-architecture.md`](./architecture/ar891-current-architecture.md) — deployed / tested / proposed; không thay nội dung quyết định lịch sử bên dưới.
+
+## O32 — Portal quản lý cổng + tên cổng lấy từ API (28/10/2026)
+
+Owner chốt «làm» trên Epic [#914](https://github.com/hangndat/ticket-solution/issues/914). **Không đóng Epic.** Deploy prod migration `202610280001_o31_gates` + api + portal được owner ủy quyền riêng cho task này.
+
+- **Portal (`apps/portal`, không phải `apps/web` — portal tổ chức là app riêng):** mục «Cổng vào» trên trang «Cổng» của sự kiện: danh sách + thêm cổng (tên 1–80, thứ tự tùy chọn 0–9999); nút thêm chỉ hiện khi có `event.update`; 409 `GATE_NAME_CONFLICT` → thông báo VI; 0 cổng → giải thích nhân viên mở phiên không cần chọn cổng. BFF `GET|POST /api/bff/tenants/{t}/events/{e}/gates` → API `/v1/gate/events/{e}/gates`. **Chưa có đổi tên/xóa** (cần quyết định thiết kế về phiên đang dùng cổng) — việc riêng.
+- **Mobile:** API không có endpoint đọc/list phiên, nên **id cổng** (không lưu tên) được lưu cùng id phiên trong workspace store sẵn có (`sessionGateByScope`, khóa theo scope, chỉ hợp lệ khi `sessionId` khớp; xóa cùng phiên). **Tên cổng luôn lấy từ danh sách cổng của API** theo id (cả sau mở lại app). Thay phiên (renew) giữ cổng cũ bằng cách gửi lại `gateId`.
+
+## O31 — Cổng (gate) theo sự kiện + mở phiên theo cổng + dòng trạng thái Scan (28/10/2026)
+
+Owner chốt trên Epic [#914](https://github.com/hangndat/ticket-solution/issues/914): nhân viên chọn cổng trước khi mở phiên cổng. **Không đóng Epic; migration/deploy prod cần ủy quyền riêng.**
+
+- **Dữ liệu (migration `202610280001_o31_gates`):** bảng `gates (tenant_id, event_id, id, name, sort_order, created_at)`, unique `(tenant_id, event_id, name)`, FK `(tenant_id, event_id)` → `events`, RLS FORCE + policy `gates_isolation` giống `staff_sessions`. `staff_sessions.gate_id` **NULLABLE**, FK ghép `(tenant_id, event_id, gate_id)` → `gates` (DB chặn cổng khác sự kiện/tenant). Phiên cũ không đổi.
+- **API:** `GET /v1/gate/events/{eventId}/gates?tenantId=` (quyền `gate.confirm` trên sự kiện); `POST /v1/gate/events/{eventId}/gates` `{tenantId,name,sortOrder?}` (quyền `event.update`; trùng tên → 409 `GATE_NAME_CONFLICT`); `POST .../sessions` nhận `gateId` tùy chọn (không thuộc sự kiện+tenant → 404 `GATE_NOT_FOUND`); response phiên thêm `gateId`, `gateName` (null nếu không có cổng).
+- **Tạo cổng:** chỉ endpoint organizer (ít xâm lấn nhất). **Không** tạo cổng mặc định lười: sự kiện 0 cổng giữ nguyên hành vi cũ (không picker). Chưa có UI portal tạo cổng — việc riêng.
+- **Invariant phiên:** hiện **không** có ràng buộc «một phiên mở / sự kiện» (mỗi lần mở chèn thêm hàng ACTIVE; ràng buộc duy nhất là hold một vé). Giữ nguyên, không thêm per-gate unique → mở lại cùng cổng tạo phiên mới như hôm nay.
+- **Mobile:** picker cổng chỉ hiện khi sự kiện có ≥1 cổng; nút «Mở phiên cổng» luôn có khi chưa có phiên (kể cả 0 cổng, mở không `gateId`); chưa có phiên → watermark camera tĩnh, không mount preview. Nếu tải danh sách cổng lỗi → giữ camera + mở phiên ở lượt quét đầu (không regress offline/first-scan). Tên cổng của phiên chỉ lưu trong bộ nhớ (mở lại app còn phiên nhưng không còn tên cổng).
+- **Dòng trạng thái:** một dòng duy nhất «● Chưa mở phiên» / «● Sẵn sàng · <cổng>» + icon bên phải (Mạng `wifi`/`wifi.slash`, Phiên cổng `door.left.hand.open|closed`, Chờ đồng bộ `icloud.and.arrow.up` chỉ khi có hàng đợi), chạm để xem giải thích. Bỏ dòng tên sự kiện, dòng «Phiên cổng · id», khối «Sẵn sàng quét» khi idle.
+
+## O27 — iOS attendee IA, privacy native, staff event chrome, USB (28/10/2026)
+
+Owner chốt trên Epic [#914](https://github.com/hangndat/ticket-solution/issues/914) ngày 28/10/2026. **Không đóng Epic.** Implementation app iOS thuộc worker/slice `apps/mobile` riêng — quyết định này chỉ SoT product/UAT/docs.
+
+| # | Quyết định | Chi tiết |
+| - | ---------- | -------- |
+| 1 | iOS VoiceOver | **Giữ ngoài** Epic #914 (O25 §4). Không AC S4/S6, không case catalog UAT, không known gap, không follow-up, không chặn `Hoàn thành`. |
+| 2 | Chính sách quyền riêng tư | Màn **native** «Chính sách quyền riêng tư». **Không** webpage/WebView in-app. Không yêu cầu UAT mở `vemoki.com/privacy` trong WebView. |
+| 3 | Guest IA | **Không** `NativeTabs` cho attendee khi chưa đăng nhập: không tab Sự kiện, không Tài khoản, không Vé. Một stack: **Đăng nhập** + **Đổi mã**. Không section thông báo/phiên trống khi logged out. Login = CTA header kiểu staff (`person.circle`), **không** tab Tài khoản. |
+| 4 | Verified attendee | Tabs **Sự kiện** + **Vé của tôi** only. Account qua nút header (cùng pattern staff). **Không** tab Tài khoản. |
+| 5 | Headers | Attendee dùng cùng native large-title chrome như staff History/Manual (`tabRootStackScreenOptions`). |
+| 6 | USB / máy thật | Hai mode (prod extras vs local API) trong [`.cursor/skills/ios-usb-device/SKILL.md`](../.cursor/skills/ios-usb-device/SKILL.md). Không EAS Cloud Build. |
+| 7 | Staff đổi sự kiện | Scan và tab staff khác dùng `StaffGateScreenChrome`: bộ đổi sự kiện **chỉ trên header**, icon SF (không text-only). **Bỏ** picker sự kiện trùng trong body. |
+| 8 | Banner sự kiện | Banner **đơn giản, theo từng sự kiện** (ảnh hoặc brand token của event đó). Catalog **không** tô cả list bằng event đầu. List / detail / ticket dùng **một** nhịp banner khiêm tốn. |
+
+Thay các AC/UAT cũ yêu cầu catalog guest 2–3 tab (Sự kiện/Tài khoản/Vé), privacy WebView, picker sự kiện staff trong body, hoặc catalog nhuộm full-list từ event đầu. Không đảo O23 (Gate chỉ iOS Staff) hay O25 ownership/offline.
+
+Architecture impact: **Có** đối với navigation chrome iOS (IA/header/privacy/staff event switcher/banner per-event); commit docs này **không** đổi runtime. Approval ≠ code complete ≠ acceptance complete ≠ pilot ready.
+
+## O28 — Guest Events catalog + tab Đổi mã (28/10/2026)
+
+Owner **sửa** O27 §3–§4 trên Epic [#914](https://github.com/hangndat/ticket-solution/issues/914) cùng ngày 28/10/2026. Văn bản O27 giữ làm lịch sử; **không** viết lại im lặng. **Không đóng Epic.**
+
+| # | Quyết định | Chi tiết |
+| - | ---------- | -------- |
+| 1 | Guest tabs | NativeTabs **Sự kiện + Đổi mã**. Catalog sự kiện công khai (search + banner per-event). **Không** tab Tài khoản, **không** Vé. |
+| 2 | Verified attendee | Tabs **Sự kiện + Đổi mã + Vé của tôi**. Account qua header → `/account`. **Không** tab Tài khoản. |
+| 3 | Staff | Workspace 3 tab không đổi (O27 §7). |
+| 4 | Đổi mã | Tab riêng (label/nav/CTA «Đổi mã», SF `text.badge.plus`). **Không** CTA footer trên list Sự kiện. Tab root = màn đổi mã toàn cục (mã → Tìm vé → Xác nhận). Guest login gate giữ ở lookup/confirm; **không** ẩn ô mã. `/redeem` và `/redeem-global` redirect vào tab (giữ `?code=`). Sau redeem thành công vẫn mở chi tiết vé (tab Vé). |
+| 5 | Header identity | Guest: `person.circle` → **OIDC đăng nhập ngay** (a11y «Đăng nhập»), **không** đẩy `/account`. Verified: → `/account`. |
+| 6 | Giữ từ O27 | Privacy native; header large-title như staff; staff đổi sự kiện chỉ header; banner per-event; USB skill; VoiceOver ngoài #914. |
+
+Architecture impact: **Có** (IA NativeTabs guest + redeem tab). Approval ≠ code complete ≠ acceptance complete ≠ pilot ready.
+
+## O29 — Profile root stack + vé đã dùng watermark (28/10/2026)
+
+Owner USB 38 trên Epic [#914](https://github.com/hangndat/ticket-solution/issues/914). **Không đóng Epic.** O28 §2/§5 ghi header → `/account`; NativeTabs trigger `account` (hidden) **không điều hướng được trên iOS**, nên tap `person.circle` chết. Sửa giống staff: profile attendee = root stack **`/attendee-account`** (chrome `tabDetail` + back). `/account` redirect. Guest header vẫn OIDC trực tiếp.
+
+Vé **USED**: không notice/pill phía trên; stamp chéo bán trong suốt «Đã sử dụng» trên mặt vé (list + detail). QR used vẫn hiện nhưng mờ / không trông còn hiệu lực. Không file asset mới.
+
+Architecture impact: **Có** (route profile attendee). Approval ≠ code complete ≠ acceptance complete ≠ pilot ready.
+
+## O30 — Redesign «Vé của tôi» + back cho Tài khoản/Chính sách (28/10/2026)
+
+Owner USB 39 trên Epic [#914](https://github.com/hangndat/ticket-solution/issues/914). **Không đóng Epic.** Ví: nền paper phẳng, tên sự kiện một lần (section header), thẻ vé một hàng (mã vé → giờ → một pill hoặc tem «Đã sử dụng» → ›), vé còn hiệu lực lên trước, vé đã dùng mờ; offline/push gộp thành một hàng mỏng. Chi tiết vé bỏ tiêu đề «Vé của bạn» và wordmark banner lặp tên sự kiện. Back: `attendee-account`/`staff-account` có nested Stack nên index không có chevron → thêm chevron tường minh (fallback Events / Scan); `privacy-policy` bỏ `fullScreenModal`, push thường, có «Xong» khi deep link không lịch sử. Supersedes O29 chi tiết trình bày vé.
 
 ## O26 — Portal dùng giao diện mặc định Ant Design (26/10/2026)
 
@@ -27,6 +91,7 @@ User duyệt định hướng/phạm vi Epic [#914](https://github.com/hangndat/
 | 1 | Ownership | `apps/portal` và `apps/web` là **hai ownership slice riêng**; mỗi slice tối đa một feature coding worker cùng lúc. Thay quy định "cùng slice web, kể cả `apps/web` và `apps/portal`" trong `docs/plans/PORTAL-ROADMAP.md` §4 và `docs/plans/PORTAL-IMPLEMENTATION-RUN.md`. Shared contracts, root tooling, lockfile, CI vẫn do coordinator. Giữ caps, employee identity, backpressure; không giao một employee hai dispatch chồng nhau. |
 | 2 | Offline attendee web | Attendee web cần mạng để tải vé lần đầu. Epic #914 **không** thêm cold-offline web, PWA hoặc cache offline. Tiêu chí cold-offline web trong #889/#881 là ngoài scope, không được ghi PASS. |
 | 3 | Offline iOS | iOS offline chỉ áp dụng cho dữ liệu đã tải theo contract hiện hành (ADR-18, O10); không mở rộng claim offline multi-device. |
+| 4 | iOS VoiceOver | Owner 28/10/2026: **loại khỏi plan Epic #914** — không AC S4/S6, không known gap, không follow-up. Không chặn `Hoàn thành`. |
 
 Architecture impact: **Không** (quy tắc ownership/scope, không đổi runtime). Approval ≠ code complete ≠ acceptance complete ≠ pilot ready.
 

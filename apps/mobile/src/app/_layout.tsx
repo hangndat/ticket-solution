@@ -19,7 +19,10 @@ import {
   captureOfflineBindingEpoch
 } from '@/tickets/bind-after-verify';
 import { offlineDisplay } from '@/tickets/offline-display-session';
-import { tabDetailStackScreenOptions } from '@/navigation/tab-stack-options';
+import {
+  tabDetailStackScreenOptions,
+  tabRootStackScreenOptions,
+} from '@/navigation/tab-stack-options';
 
 const stackBackFromTabs = {
   ...tabDetailStackScreenOptions,
@@ -30,8 +33,39 @@ function AppStack() {
   return (
     <Stack>
       <Stack.Screen
+        name="index"
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="welcome"
+        options={{
+          ...tabRootStackScreenOptions,
+          title: 'Vemoki',
+        }}
+      />
+      <Stack.Screen
         name="(tabs)"
-        options={{ headerShown: false, title: 'Sự kiện' }}
+        options={{
+          ...tabDetailStackScreenOptions,
+          headerShown: false,
+          title: 'Sự kiện',
+        }}
+      />
+      <Stack.Screen
+        name="account"
+        options={{
+          ...tabDetailStackScreenOptions,
+          headerShown: false,
+          title: 'Tài khoản',
+        }}
+      />
+      <Stack.Screen
+        name="attendee-account"
+        options={{
+          ...tabDetailStackScreenOptions,
+          headerShown: false,
+          title: 'Tài khoản',
+        }}
       />
       <Stack.Screen
         name="events/[tenantSlug]/[slug]"
@@ -49,21 +83,18 @@ function AppStack() {
       />
       <Stack.Screen
         name="redeem"
-        options={{ ...stackBackFromTabs, title: 'Đổi mã (sự kiện)' }}
+        options={{ ...stackBackFromTabs, title: 'Đổi mã' }}
       />
       <Stack.Screen
         name="redeem-global"
-        options={{ ...stackBackFromTabs, title: 'Đổi mã lấy vé' }}
+        options={{ ...stackBackFromTabs, title: 'Đổi mã' }}
       />
       <Stack.Screen
         name="privacy-policy"
         options={{
-          ...tabDetailStackScreenOptions,
+          ...stackBackFromTabs,
           title: 'Chính sách quyền riêng tư',
-          presentation: 'fullScreenModal',
           headerShown: true,
-          headerBackButtonDisplayMode: 'default',
-          headerBackTitle: 'Quay lại',
           gestureEnabled: true
         }}
       />
@@ -73,23 +104,38 @@ function AppStack() {
       />
       <Stack.Screen
         name="membership-invite"
-        options={{ title: 'Lời mời thành viên' }}
+        options={{ ...stackBackFromTabs, title: 'Lời mời thành viên' }}
       />
       <Stack.Screen
         name="staff-access"
-        options={{ title: 'Nhân viên', headerLargeTitle: true }}
+        options={{
+          ...tabRootStackScreenOptions,
+          title: 'Nhân viên',
+        }}
       />
       <Stack.Screen
         name="staff-account"
-        options={{ headerShown: false, title: 'Tài khoản' }}
+        options={{
+          ...tabDetailStackScreenOptions,
+          headerShown: false,
+          title: 'Tài khoản',
+        }}
       />
       <Stack.Screen
         name="uat/session"
-        options={{ title: 'UAT session', headerShown: false }}
+        options={{
+          ...tabDetailStackScreenOptions,
+          title: 'UAT session',
+          headerShown: false,
+        }}
       />
       <Stack.Screen
         name="uat/gate-expo-ui"
-        options={{ title: 'UAT gate @expo/ui', headerShown: true }}
+        options={{
+          ...tabDetailStackScreenOptions,
+          title: 'UAT gate @expo/ui',
+          headerShown: true,
+        }}
       />
     </Stack>
   );

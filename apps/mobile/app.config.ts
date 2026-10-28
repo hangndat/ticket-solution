@@ -102,7 +102,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       supportsTablet: true,
       bundleIdentifier: 'com.hangndat.ticket',
       appleTeamId: 'BLUA62D52G',
-      buildNumber: '32',
+      buildNumber: '45',
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
         UIBackgroundModes: ['remote-notification'],
@@ -136,7 +136,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       [
         'expo-camera',
         {
-          cameraPermission: 'Scan ticket QR codes at the gate.',
+          cameraPermission:
+            'Vemoki cần camera để quét mã QR vé tại cổng.',
           recordAudioAndroid: false,
         },
       ],

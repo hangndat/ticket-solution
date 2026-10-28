@@ -21,6 +21,7 @@ import {
 import { isEventPagePermitted } from '../../../../../../src/prep/event-access-resolver';
 import { useEventAccess } from '../../../../../../src/prep/use-event-access';
 import { canPerformEventAction } from '../../../../../../src/nav/capability-policy';
+import { GatesPanel } from '../../../../../../src/gates/gates-panel';
 import { GateStayAppNotice } from '../../../../../../src/components/gate-deeplink';
 import { EventReportAsOfLine } from '../../../../../../src/components/event-report-as-of';
 import { ReportStaleAlert } from '../../../../../../src/components/report-stale-alert';
@@ -244,6 +245,12 @@ export default function EventGateReportPage() {
     </Flex>
   )
       ) : null}
+
+      <GatesPanel
+        tenantId={tenantId}
+        eventId={eventId}
+        canCreate={canPerformEventAction('updateEvent', access.permissions)}
+      />
     </PortalPage>
   );
 }

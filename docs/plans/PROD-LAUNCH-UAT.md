@@ -4,7 +4,7 @@ Ngày thiết kế: 2026-10-19.
 Trạng thái: **thiết kế, chưa chạy đợt này.**
 Role thực thi: [`launch-uat`](../agents/roles/launch-uat.md) · skill `.cursor/skills/launch-uat/SKILL.md`.
 
-Đợt này trả lời một câu: **có được tuyên bố pilot ready / mở launch production không.** Không thay DoD từng PR (`reviewer-dod`) và không thay review bảo mật code (`reviewer-security`).
+Đợt này trả lời một câu: **có được tuyên bố pilot ready / mở launch production không.** Không thay DoD từng PR (`reviewer-dod`) và không thay review bảo mật code (`reviewer-security`). **iOS VoiceOver ngoài phạm vi Epic #914 / quyết định owner** — không thêm case catalog, không chặn đóng #914. IA iOS attendee/staff chrome theo [O27](../DECISION-LOG.md): **không** FAIL vì thiếu guest catalog tab / NativeTabs / tab Tài khoản / privacy WebView; **không** FAIL vì thiếu picker sự kiện trong body Scan; **không** PASS catalog nếu cả list dùng banner/token của event đầu.
 
 ## 1. Ba mức — đợt này chỉ chấm mức 3
 
@@ -130,12 +130,14 @@ Build local, team `BLUA62D52G`, không EAS.
 
 | ID | P | Lớp | Các bước | Đúng |
 | --- | --- | --- | --- | --- |
-| F01 | P0 | sim | Cold launch | Vào được home, không crash |
-| F02 | P0 | sim | Login attendee | Session khách |
-| F03 | P0 | sim | Ví vé | Vé đã redeem hiện; QR đọc được bằng mắt trên screenshot |
-| F04 | P0 | sim | Tab Nhân viên khi login attendee | Ẩn hoặc disabled (O02) |
+| F01 | P0 | sim | Cold launch **chưa đăng nhập** | Tabs **Sự kiện + Đổi mã**; catalog sự kiện public; **không** Tài khoản, **không** Vé. Login = header `person.circle` → OIDC (không `/account`). Đổi mã là tab, không CTA footer Events. Không crash. ([O28](../DECISION-LOG.md)) |
+| F02 | P0 | sim | Login attendee verified | Tabs **Sự kiện + Đổi mã + Vé của tôi**; Account qua header; **không** tab Tài khoản. Session khách |
+| F03 | P0 | sim | Ví vé (tab Vé của tôi) | Vé đã redeem hiện; QR đọc được bằng mắt trên screenshot |
+| F04 | P0 | sim | Tab Nhân viên khi login attendee | Ẩn (O02). Không tab Account attendee |
 | F05 | P1 | sim | Airplane mode, mở vé đã lưu | Vé local còn; không bịa trạng thái đã check-in |
 | F06 | P1 | sim | Deep link invite | Không `Unmatched Route` |
+| F07 | P0 | sim | Mở «Chính sách quyền riêng tư» | Màn **native**; **không** WebView / webpage in-app |
+| F08 | P1 | sim | Catalog / detail / vé (≥2 sự kiện khác brand) | Banner **per-event** (ảnh hoặc token của event đó), nhịp khiêm tốn, list/detail/ticket cùng rhythm. **Không** tô cả list từ event đầu ([O27](../DECISION-LOG.md)) |
 
 ## 10. Suite G — iOS nhân viên, thiết bị thật
 
@@ -149,6 +151,7 @@ Build local, team `BLUA62D52G`, không EAS.
 | G04 | DEFERRED (chưa có bằng chứng) | physical | Quét lại cùng QR | Từ chối trùng |
 | G05 | DEFERRED (chưa có bằng chứng) | physical | Từ chối quyền camera | Thông báo, không crash, không cho vào |
 | G06 | DEFERRED (chưa có bằng chứng) | physical | Mất mạng lúc quét | «Chưa rõ», không cho vào; không hàng đợi offline trừ khi D7 đã bật trên build này |
+| G07 | P1 | sim hoặc physical | Staff Scan (và tab dùng `StaffGateScreenChrome`) | Đổi sự kiện **chỉ trên header**, icon SF (không text-only). **Không** picker sự kiện trùng trong body ([O27](../DECISION-LOG.md)). Không FAIL case G vì thiếu sticky/body picker cũ |
 
 ## 11. Suite H — Thư và push
 

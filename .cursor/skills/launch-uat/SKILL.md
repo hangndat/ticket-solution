@@ -22,7 +22,7 @@ Browser/emulator policy: `.cursor/rules/uat-headless.mdc`.
 
 - Web prod: `orca tab create --url <url> --worktree path:<repo> --json` rồi `orca exec --page <id>`.
 - HTTP smoke (không thay UI): `curl` status + redirect. Không dùng cookie session của user.
-- iOS: boot local build, `orca emulator attach`. Không EAS Cloud Build.
+- iOS: boot local build, `orca emulator attach`. Không EAS Cloud Build. Máy thật USB: skill [ios-usb-device](../ios-usb-device/SKILL.md) — chọn **prod** vs **local API**, không trộn extras.
 - Ảnh: `apps/web/.uat-artifacts/prod-launch-<date>/` hoặc `apps/mobile/.uat-artifacts/` (gitignored). Evidence trỏ path đó.
 
 ## Tài khoản
@@ -32,3 +32,7 @@ Chỉ user demo trong catalog. Không tạo user mới trên realm production tr
 ## Kết quả
 
 Một review file mới theo role. Verdict launch là `GO` hoặc `NO-GO`. `PASS with known gap` của DoD cũ không được nâng thành `GO`.
+
+Epic [#914](https://github.com/hangndat/ticket-solution/issues/914) / S6: **iOS VoiceOver ngoài phạm vi / quyết định owner** — không phải case catalog, không known gap, không chặn đóng Epic.
+
+[O28](../../../docs/DECISION-LOG.md) (sửa O27 §3–§4): guest NativeTabs **Sự kiện + Đổi mã**; verified **Sự kiện + Đổi mã + Vé của tôi**; Đổi mã là tab (không footer Events); header guest → OIDC. Privacy **native**; staff đổi sự kiện chỉ header SF icon; banner **per-event**. Không FAIL UAT theo AC guest-no-tabs hoặc WebView privacy cũ.

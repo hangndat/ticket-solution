@@ -1,11 +1,14 @@
-import { router } from 'expo-router';
-import { resolvePrivacyDismissAction } from './privacy-policy-navigation';
+import { router, type Href } from 'expo-router';
+import {
+  resolvePrivacyDismissAction,
+  type PrivacyPolicyOrigin,
+} from './privacy-policy-navigation';
 
-export function closePrivacyPolicy(): void {
-  const action = resolvePrivacyDismissAction(router.canGoBack());
+export function closePrivacyPolicy(origin: PrivacyPolicyOrigin = 'attendee'): void {
+  const action = resolvePrivacyDismissAction(router.canGoBack(), origin);
   if (action.kind === 'back') {
     router.back();
     return;
   }
-  router.replace(action.pathname);
+  router.replace(action.pathname as Href);
 }

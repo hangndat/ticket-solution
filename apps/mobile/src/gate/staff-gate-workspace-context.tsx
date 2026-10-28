@@ -33,6 +33,15 @@ import { reconcileOpsWithHistoricalReceipts } from '@/gate/offline-sync-receipt'
 import { OFFLINE_SYNC_ERROR_CODES } from '@/gate/offline-sync-contract';
 import { openReplacementGateSession } from '@/gate/gate-session-renewal';
 import {
+  effectiveSelectedGate,
+  fetchEventGates,
+  gatesStateKey,
+  resolveOpenSessionUi,
+  type GatesLoadState,
+  type OpenSessionUi,
+  type StaffGate,
+} from '@/gate/staff-gate-gates';
+import {
   applyKnownOperationImportToOps,
   findScopedGateOpByClientEventId,
   importKnownOperationErrorMessage,
@@ -76,6 +85,9 @@ import {
   persistActiveScope,
   scopeStorageKey,
   sliceWorkspaceForScope,
+  gateIdForSession,
+  gateNameFromList,
+  recordSessionGate,
   emptyStaffGateWorkspace
 } from '@/gate/staff-gate-workspace';
 import {
@@ -142,7 +154,23 @@ async function resolveGateAuth(): Promise<
   return { ok: true, bearer, apiBase };
 }
 
+/** O31: gate picker + explicit «Mở phiên cổng» state for the active event. */
+export type StaffGateGatesValue = {
+  status: 'loading' | 'ready' | 'error';
+  gates: StaffGate[];
+  selectedGateId: string | null;
+  /** Gate of the open session; null when none or opened without a gate. */
+  sessionGateName: string | null;
+  openUi: OpenSessionUi;
+  opening: boolean;
+  openError: string | null;
+  selectGate: (gateId: string) => void;
+  openSession: () => Promise<void>;
+  reloadGates: () => Promise<void>;
+};
+
 export type StaffGateWorkspaceValue = {
+  gates: StaffGateGatesValue;
   ready: boolean;
   busy: boolean;
   ops: GateOp[];
@@ -213,6 +241,14 @@ export function StaffGateWorkspaceProvider({
   const [gateEventsError, setGateEventsError] = useState<string | null>(null);
   const [workspaceLoadError, setWorkspaceLoadError] = useState(false);
   const [eventPickerOpen, setEventPickerOpen] = useState(false);
+  const [gatesLoad, setGatesLoad] = useState<GatesLoadState | null>(null);
+  const [selectedGate, setSelectedGate] = useState<{ key: string; id: string } | null>(null);
+  const [sessionGateState, setSessionGateState] = useState<{
+    sessionId: string;
+    gateId: string | null;
+  } | null>(null);
+  const [sessionOpening, setSessionOpening] = useState(false);
+  const [sessionOpenError, setSessionOpenError] = useState<{ key: string; message: string } | null>(null);
   const lock = useRef(false);
   const lockOwnerRef = useRef<string | null>(null);
   const workspaceRef = useRef(emptyStaffGateWorkspace());
@@ -347,6 +383,16 @@ export function StaffGateWorkspaceProvider({
   const verifiedUserId = identitySnapshot.status === 'verified' ? identitySnapshot.userId : null;
 
 
+  const gatesKey =
+    verifiedUserId && gateScope ? gatesStateKey(verifiedUserId, gateScope) : null;
+  const gatesForKey = gatesLoad && gatesLoad.key === gatesKey ? gatesLoad : null;
+  const effectiveSelected = effectiveSelectedGate(
+    gatesForKey?.gates ?? [],
+    selectedGate && selectedGate.key === gatesKey ? selectedGate.id : null,
+  );
+  const sessionGate =
+    sessionGateState && sessionGateState.sessionId === sessionId ? sessionGateState : null;
+
   const persist = useCallback(
     async (
       next: GateOp[],
@@ -470,8 +516,10 @@ export function StaffGateWorkspaceProvider({
     }
     if (!orderRejected || recoveryAttemptedSessionsRef.current.has(activeSession) || !receiptGuard()) return;
     recoveryAttemptedSessionsRef.current.add(activeSession);
+    const priorGateId = gateIdForSession(workspaceRef.current, scope, activeSession);
     const renewal = await openReplacementGateSession({
       bearer, apiBase, tenantId: scope.tenantId, eventId: scope.eventId,
+      gateId: priorGateId,
       shouldContinue: receiptGuard,
     });
     if (renewal.kind === 'auth') clearStaffChromeAfterAuthzDenial();
@@ -482,6 +530,10 @@ export function StaffGateWorkspaceProvider({
     feedbackGenerationRef.current += 1;
     const latestAtRenewal = viewRef.current.ops;
     viewRef.current = { gateScope: scope, sessionId: nextSession, ops: latestAtRenewal };
+    if (renewal.kind === 'ok') {
+      workspaceRef.current = recordSessionGate(workspaceRef.current, scope, renewal.sessionId, renewal.gateId);
+      setSessionGateState({ sessionId: renewal.sessionId, gateId: renewal.gateId });
+    }
     workspaceRef.current = persistActiveScope(workspaceRef.current, scope, latestAtRenewal, nextSession);
     setSessionId(nextSession);
     await saveWorkspace(userId);
@@ -568,6 +620,7 @@ export function StaffGateWorkspaceProvider({
       setGateScope(merged.scope);
       setOps(slice.ops);
       setSessionId(slice.sessionId);
+      setSessionGateState(slice.sessionId && slice.gateId ? { sessionId: slice.sessionId, gateId: slice.gateId } : null);
       viewRef.current = { gateScope: merged.scope, sessionId: slice.sessionId, ops: slice.ops };
       if (!currentView.gateScope || !sameStaffGateScope(currentView.gateScope, merged.scope) || currentView.sessionId !== slice.sessionId) {
         feedbackGenerationRef.current += 1;
@@ -772,6 +825,7 @@ export function StaffGateWorkspaceProvider({
       setGateScope(next);
       setOps(slice.ops);
       setSessionId(slice.sessionId);
+      setSessionGateState(slice.sessionId && slice.gateId ? { sessionId: slice.sessionId, gateId: slice.gateId } : null);
       clearScanFeedback();
       setEventPickerOpen(false);
       void saveWorkspace(verifiedUserId);
@@ -871,12 +925,27 @@ export function StaffGateWorkspaceProvider({
         apiBase: auth.apiBase,
         ops: opsForScope(ops, gateScope),
         staffSessionId: sessionId,
+        gateId: effectiveSelected?.id ?? null,
         fallback: scanFallback,
         preferOfflineQueue: preferOffline,
         shouldContinue: isCurrent,
       });
       if (!isCurrent()) return;
       const nextSessionId = result.staffSessionId ?? sessionId;
+      if (result.openedSessionGate && result.staffSessionId) {
+        setSessionGateState({
+          sessionId: result.staffSessionId,
+          gateId: result.openedSessionGate.gateId,
+        });
+        if (gateScope) {
+          workspaceRef.current = recordSessionGate(
+            workspaceRef.current,
+            gateScope,
+            result.staffSessionId,
+            result.openedSessionGate.gateId,
+          );
+        }
+      }
       if (result.membershipAuthzDenied) {
         clearStaffChromeAfterAuthzDenial();
       }
@@ -928,6 +997,7 @@ export function StaffGateWorkspaceProvider({
   }, [
     applyScanResult,
     connectivity,
+    effectiveSelected,
     gateEventsError,
     gateScope,
     ops,
@@ -1119,6 +1189,139 @@ export function StaffGateWorkspaceProvider({
     await endKeycloakSession();
   }, [clearScanFeedback]);
 
+  const loadGates = useCallback(async (key: string, scope: StaffGateScope) => {
+    const stillCurrent = () => {
+      const snap = session.getSnapshot();
+      const view = viewRef.current.gateScope;
+      return snap.status === 'verified' && view !== null && gatesStateKey(snap.userId, view) === key;
+    };
+    const auth = await resolveGateAuth();
+    if (!stillCurrent()) return;
+    if (!auth.ok) {
+      setGatesLoad({ key, status: 'error', gates: [] });
+      return;
+    }
+    const result = await fetchEventGates({
+      bearer: auth.bearer,
+      apiBase: auth.apiBase,
+      tenantId: scope.tenantId,
+      eventId: scope.eventId,
+    });
+    if (!stillCurrent()) return;
+    if (result.kind === 'auth') clearStaffChromeAfterAuthzDenial();
+    setGatesLoad(
+      result.kind === 'ok'
+        ? { key, status: 'ready', gates: result.gates }
+        : { key, status: 'error', gates: [] },
+    );
+  }, []);
+
+  useEffect(() => {
+    if (!active || !ready || !gatesKey || !gateScope) return;
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) void loadGates(gatesKey, gateScope);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [active, ready, gatesKey, gateScope, loadGates]);
+
+  const reloadGates = useCallback(async () => {
+    if (!gatesKey || !gateScope) return;
+    setGatesLoad({ key: gatesKey, status: 'loading', gates: [] });
+    await loadGates(gatesKey, gateScope);
+  }, [gatesKey, gateScope, loadGates]);
+
+  const selectGate = useCallback(
+    (gateId: string) => {
+      if (gatesKey) setSelectedGate({ key: gatesKey, id: gateId });
+    },
+    [gatesKey],
+  );
+
+  const openUi = resolveOpenSessionUi({
+    hasScope: Boolean(gateScope && ready),
+    hasSession: Boolean(sessionId),
+    gates: gatesForKey,
+    selected: effectiveSelected,
+    opening: sessionOpening,
+  });
+
+  const openSession = useCallback(async () => {
+    const epoch = session.captureEpoch();
+    const startedView = viewRef.current;
+    const scope = startedView.gateScope;
+    if (!epoch || epoch.userId !== verifiedUserId || !scope || startedView.sessionId || lock.current) return;
+    if ((gatesForKey?.gates.length ?? 0) > 0 && !effectiveSelected) return;
+    const key = gatesKey ?? '';
+    const writeGeneration = gateWorkspaceWriteGeneration(epoch.userId);
+    const startedGeneration = feedbackGenerationRef.current;
+    const isCurrent = gateWorkspaceOperationGuard({
+      startedUserId: epoch.userId, startedView, startedGeneration, writeGeneration,
+      isEpochCurrent: () => session.isEpochCurrent(epoch),
+      currentUserId: () => { const snap = session.getSnapshot(); return snap.status === 'verified' ? snap.userId : null; },
+      currentView: () => viewRef.current,
+      currentGeneration: () => feedbackGenerationRef.current,
+      isWriteGenerationCurrent: () => isGateWorkspaceWriteGenerationCurrent(epoch.userId, writeGeneration),
+    });
+    const attemptId = randomId();
+    lock.current = true;
+    lockOwnerRef.current = attemptId;
+    setSessionOpening(true);
+    setSessionOpenError(null);
+    try {
+      const auth = await resolveGateAuth();
+      if (!isCurrent()) return;
+      if (!auth.ok) {
+        setSessionOpenError({ key, message: auth.message });
+        return;
+      }
+      const opened = await openReplacementGateSession({
+        bearer: auth.bearer,
+        apiBase: auth.apiBase,
+        tenantId: scope.tenantId,
+        eventId: scope.eventId,
+        gateId: effectiveSelected?.id ?? null,
+        shouldContinue: isCurrent,
+      });
+      if (opened.kind === 'stale') return;
+      if (opened.kind === 'auth') {
+        clearStaffChromeAfterAuthzDenial();
+        setSessionOpenError({ key, message: 'Không đủ quyền mở phiên cổng cho sự kiện này.' });
+        return;
+      }
+      if (opened.kind === 'error') {
+        setSessionOpenError({ key, message: 'Không mở được phiên cổng. Kiểm tra mạng rồi thử lại.' });
+        if (gatesKey) void loadGates(gatesKey, scope);
+        return;
+      }
+      setSessionGateState({ sessionId: opened.sessionId, gateId: opened.gateId });
+      workspaceRef.current = recordSessionGate(workspaceRef.current, scope, opened.sessionId, opened.gateId);
+      setConnectivity('online');
+      await persist(viewRef.current.ops, null, opened.sessionId, isCurrent);
+    } finally {
+      if (lockOwnerRef.current === attemptId) { lock.current = false; lockOwnerRef.current = null; }
+      if (session.isEpochCurrent(epoch)) setSessionOpening(false);
+    }
+  }, [effectiveSelected, gatesForKey, gatesKey, loadGates, persist, verifiedUserId]);
+
+  const gatesValue = useMemo(
+    (): StaffGateGatesValue => ({
+      status: gatesForKey?.status ?? 'loading',
+      gates: gatesForKey?.gates ?? [],
+      selectedGateId: effectiveSelected?.id ?? null,
+      sessionGateName: gateNameFromList(gatesForKey?.gates ?? [], sessionGate?.gateId ?? null),
+      openUi,
+      opening: sessionOpening,
+      openError: sessionOpenError && sessionOpenError.key === gatesKey ? sessionOpenError.message : null,
+      selectGate,
+      openSession,
+      reloadGates,
+    }),
+    [gatesForKey, effectiveSelected, sessionGate, openUi, sessionOpening, sessionOpenError, gatesKey, selectGate, openSession, reloadGates],
+  );
+
   const feedbackOp = busy ? null : selectScanFeedbackOp(pendingOp, toastOp);
 
   const toastStatus = presentGateScanStatus({
@@ -1155,6 +1358,7 @@ export function StaffGateWorkspaceProvider({
 
   const value = useMemo(
     (): StaffGateWorkspaceValue => ({
+      gates: gatesValue,
       ready,
       busy,
       ops,
@@ -1189,6 +1393,7 @@ export function StaffGateWorkspaceProvider({
       logoutStaff
     }),
     [
+      gatesValue,
       ready,
       busy,
       ops,

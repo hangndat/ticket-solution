@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Input } from '@/components/ui/input';
-import { Link, router } from 'expo-router';
+import { Link } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { AttendeeCta } from '@/components/attendee-cta';
+import { EVENT_BANNER_HEIGHT_LIST } from '@/components/event-banner-metrics';
 import { EventBanner } from '@/components/event-media';
 import {
   EmptyState,
@@ -11,6 +11,7 @@ import {
   LoadingState
 } from '@/components/screen-state';
 import { eventsCopy } from '@/components/screen-state-copy';
+import { AttendeeScreenChrome } from '@/navigation/attendee-screen-chrome';
 import { fetchPlatformPublishedEventList } from '@/published/published-event-api';
 import {
   initialPublishedListPhase,
@@ -26,10 +27,8 @@ import { brand, colors } from '@/theme/colors';
 import { fontFamilies } from '@/theme/fonts';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useAttendeeTabBarInset } from '@/navigation/use-attendee-tab-bar-inset';
-import { useShowAttendeeTabs } from '@/navigation/use-staff-workspace';
 import { WalletOwnedTicketsLink } from '@/components/wallet-owned-tickets-link';
-import { ScreenAtmosphere } from '@/components/screen-atmosphere';
-import { space, radius } from '@/theme/tokens';
+import { layout, space, radius } from '@/theme/tokens';
 import { typography } from '@/theme/typography';
 
 function formatListDate(startsAt: string, timezone: string): string {
@@ -76,9 +75,12 @@ function PublishedEventCard({ item }: { item: PublishedEventSummary }) {
             eventId={item.id}
             tenantSlug={item.tenantSlug}
             bannerUrl={item.brand.bannerUrl}
-            height={142}
-            style={{ borderRadius: 0 }}
+            fallbackColor={item.brand.primaryColor}
+            wordmark={item.name}
+            height={EVENT_BANNER_HEIGHT_LIST}
+            style={{ borderRadius: layout.none }}
             testID={`pub-media-${item.id}-banner`}
+            accessibilityLabel={`Banner ${item.name}`}
           />
           <View style={{ padding: space.lg, gap: space.sm }}>
             <Text
@@ -131,13 +133,12 @@ function PublishedEventCard({ item }: { item: PublishedEventSummary }) {
 
 /**
  * Events home: platform published catalog (`GET /v1/public/events`).
- * Layout parity: large title «Sự kiện» (native) → search → cards → đổi mã CTA.
+ * Layout parity: large title «Sự kiện» (native) → search → cards. Đổi mã is its own tab.
  */
 export function EventsScreen() {
-  const showAttendeeChrome = useShowAttendeeTabs();
   const tabBarInset = useAttendeeTabBarInset(56);
   const insets = useSafeAreaInsets();
-  const { applyBranding } = useTheme();
+  const { resetToDefault } = useTheme();
   const [published, setPublished] = useState<PublishedEventSummary[]>([]);
   const [publishedPhase, setPublishedPhase] = useState<PublishedListPhase>(() =>
     initialPublishedListPhase(isAppCatalogConfigured()),
@@ -186,19 +187,8 @@ export function EventsScreen() {
   }, [reloadKey]);
 
   useEffect(() => {
-    if (publishedPhase !== 'ready' || published.length === 0) return;
-    const first = published[0];
-    applyBranding(
-      {
-        tenantSlug: first.tenantSlug,
-        organizationName: first.brand.organizationName,
-        primaryColor: first.brand.primaryColor,
-        logoUrl: first.brand.logoUrl,
-        wordmark: first.brand.organizationName
-      },
-      'api',
-    );
-  }, [applyBranding, published, publishedPhase]);
+    resetToDefault();
+  }, [resetToDefault]);
 
   const normalizedQuery = searchQuery.trim().toLocaleLowerCase('vi');
   const listData =
@@ -222,25 +212,14 @@ export function EventsScreen() {
   const listHeader = (
     <View style={{ gap: space.md, paddingBottom: space.xs }}>
       {showCatalogChrome ? (
-        <View style={{ gap: space.xs }}>
-          <Text
-            accessibilityRole="header"
-            maxFontSizeMultiplier={2}
-            style={{ ...typography.hero, color: brand.ink,
-              fontFamily: fontFamilies.display,
-              letterSpacing: -0.5 }}
-          >
-            {eventsCopy.listHeadline}
-          </Text>
-          <Text
-            maxFontSizeMultiplier={2}
-            style={{ ...typography.subhead, color: colors.secondary,
-              fontFamily: fontFamilies.body,
-              lineHeight: 22 }}
-          >
-            {eventsCopy.heroSupport}
-          </Text>
-        </View>
+        <Text
+          maxFontSizeMultiplier={2}
+          style={{ ...typography.subhead, color: colors.secondary,
+            fontFamily: fontFamilies.body,
+            lineHeight: 22 }}
+        >
+          {eventsCopy.heroSupport}
+        </Text>
       ) : null}
       {showCatalogChrome ? (
         <Input
@@ -278,27 +257,15 @@ export function EventsScreen() {
     </View>
   );
 
-  const listFooter =
-    showAttendeeChrome && publishedPhase === 'ready' ? (
-      <View style={{ paddingTop: space.sm, paddingBottom: space.xxxl }}>
-        <AttendeeCta
-          label={eventsCopy.redeemCta}
-          variant="secondary"
-          onPress={() => router.push('/redeem-global')}
-          testID="events-cta-redeem"
-        />
-      </View>
-    ) : undefined;
-
   const bottomInset = tabBarInset;
 
   return (
-    <ScreenAtmosphere>
+    <>
       <FlatList
-        contentInsetAdjustmentBehavior="never"
+        contentInsetAdjustmentBehavior="automatic"
         keyboardShouldPersistTaps="handled"
         scrollIndicatorInsets={{ bottom: tabBarInset - insets.bottom }}
-        style={{ flex: 1, backgroundColor: 'transparent' }}
+        style={{ flex: 1, backgroundColor: brand.paper }}
         contentContainerStyle={{
           paddingHorizontal: space.xl,
           paddingTop: space.sm,
@@ -308,7 +275,6 @@ export function EventsScreen() {
         data={listData}
         keyExtractor={(item) => `pub:${item.tenantSlug}:${item.id}`}
         ListHeaderComponent={listHeader}
-        ListFooterComponent={listFooter}
         ListEmptyComponent={
           publishedPhase === 'ready' ? (
             normalizedQuery ? (
@@ -332,7 +298,8 @@ export function EventsScreen() {
         }
         renderItem={({ item }) => <PublishedEventCard item={item} />}
       />
-    </ScreenAtmosphere>
+    <AttendeeScreenChrome title={eventsCopy.listHeadline} />
+    </>
   );
 }
 
