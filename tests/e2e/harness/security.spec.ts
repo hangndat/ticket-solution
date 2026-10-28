@@ -33,3 +33,26 @@ test('[SEC-02] OAuth cookies stay on their HTTPS host and missing Origin fails c
   );
   expect([401, 403]).toContain(missingOrigin.status());
 });
+
+test('[SEC-05] CSP and nosniff on web and portal home responses', async ({
+  context,
+}) => {
+  const manifest = loadManifest();
+  for (const [label, origin] of [
+    ['web', manifest.origins.web],
+    ['portal', manifest.origins.portal],
+  ] as const) {
+    const response = await context.request.get(`${origin}/`, {
+      maxRedirects: 0,
+    });
+    expect(response.status()).toBeGreaterThanOrEqual(200);
+    expect(response.status()).toBeLessThan(400);
+    const csp = response.headers()['content-security-policy'];
+    expect(csp).toBeTruthy();
+    expect(csp).toMatch(/default-src 'self'/);
+    expect(csp).toMatch(/object-src 'none'/);
+    expect(csp).toMatch(/frame-ancestors 'none'/);
+    expect(response.headers()['x-content-type-options']).toBe('nosniff');
+    expect(label.length).toBeGreaterThan(0);
+  }
+});
