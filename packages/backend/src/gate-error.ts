@@ -10,6 +10,9 @@ export const GATE_ERROR_CODES = {
   SESSION_NOT_ACTIVE: 'SESSION_NOT_ACTIVE',
   /** Open account-deletion request — cannot open a new Gate staff session. */
   ACCOUNT_DELETION_OPEN: 'ACCOUNT_DELETION_OPEN',
+  /** O31 — gate missing or not in the same tenant+event. */
+  GATE_NOT_FOUND: 'GATE_NOT_FOUND',
+  GATE_NAME_CONFLICT: 'GATE_NAME_CONFLICT',
   CHECKIN_NOT_FOUND: 'CHECKIN_NOT_FOUND',
   CHECKIN_ALREADY_UNDONE: 'CHECKIN_ALREADY_UNDONE',
   EVENT_NOT_FOUND: 'EVENT_NOT_FOUND',
