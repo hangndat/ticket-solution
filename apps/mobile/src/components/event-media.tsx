@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import {
   Text,
   View,
@@ -11,11 +12,8 @@ import {
   eventIdentityColor,
   eventInitial,
 } from '@/brand/event-identity';
-import {
-  hasDemoMediaForEventId,
-  hasDemoMediaForTenantSlug
-} from '@/data/demo-media';
-import { brand, colors } from '@/theme/colors';
+import { hasDemoMediaForEventId } from '@/data/demo-media';
+import { colors } from '@/theme/colors';
 import { fontFamilies } from '@/theme/fonts';
 import { typography } from '@/theme/typography';
 import { space, radius } from '@/theme/tokens';
@@ -28,6 +26,7 @@ import { EVENT_BANNER_HEIGHT_LIST } from './event-banner-metrics.ts';
 type BannerProps = {
   /** Fixture / published event id for local demo pack lookup + hash fallback. */
   eventId?: string | null;
+  /** Kept for callers; demo pack must NOT key off tenantSlug (published seed reuses fixture slugs). */
   tenantSlug?: string | null;
   /** Published remote banner (https only). */
   bannerUrl?: string | null;
@@ -45,6 +44,7 @@ type BannerProps = {
 
 type LogoProps = {
   eventId?: string | null;
+  /** Kept for callers; demo pack keys off fixture eventId only. */
   tenantSlug?: string | null;
   logoUrl?: string | null;
   logoSource?: ImageSourcePropType | null;
@@ -54,17 +54,21 @@ type LogoProps = {
   accessibilityLabel?: string;
 };
 
+/** Fixture event ids only — never tenantSlug (prod published seed shares mfest-demo / demo-studio). */
 function bundledDemoSource(
   eventId?: string | null,
-  tenantSlug?: string | null,
 ): { logo: ImageSourcePropType; banner: ImageSourcePropType } | null {
-  if (
-    hasDemoMediaForEventId(eventId) ||
-    hasDemoMediaForTenantSlug(tenantSlug)
-  ) {
+  if (hasDemoMediaForEventId(eventId)) {
     return { logo: demoLogoSource, banner: demoBannerSource };
   }
   return null;
+}
+
+function shortEventLabel(wordmark?: string | null): string | null {
+  const name = wordmark?.trim();
+  if (!name) return null;
+  if (name.length <= 28) return name;
+  return `${name.slice(0, 27)}…`;
 }
 
 function EventBrandFallback({
@@ -86,7 +90,9 @@ function EventBrandFallback({
 }) {
   const fill = eventIdentityColor(eventId?.trim() || 'event', fallbackColor);
   const initial = eventInitial(wordmark?.trim() || '');
-  const fontSize = Math.max(28, Math.min(Math.round(height * 0.42), 64));
+  const label = shortEventLabel(wordmark);
+  // Large monogram — distinctly not the old 22% wash + tiny caption wordmark.
+  const fontSize = Math.max(40, Math.min(Math.round(height * 0.5), 72));
 
   return (
     <View
@@ -103,23 +109,42 @@ function EventBrandFallback({
           backgroundColor: fill,
           alignItems: 'center',
           justifyContent: 'center',
+          paddingHorizontal: space.md,
+          gap: space.xs,
         },
         style,
       ]}
     >
       <Text
-        maxFontSizeMultiplier={1.35}
+        maxFontSizeMultiplier={1.2}
         style={{
           ...typography.display,
           fontFamily: fontFamilies.display,
           fontSize,
-          lineHeight: Math.round(fontSize * 1.1),
+          lineHeight: Math.round(fontSize * 1.05),
           fontWeight: '700',
           color: colors.onAccent,
+          textAlign: 'center',
         }}
       >
         {initial}
       </Text>
+      {label ? (
+        <Text
+          numberOfLines={1}
+          maxFontSizeMultiplier={1.2}
+          style={{
+            ...typography.caption,
+            fontFamily: fontFamilies.body,
+            fontWeight: '600',
+            color: colors.onAccent,
+            textAlign: 'center',
+            opacity: 0.95,
+          }}
+        >
+          {label}
+        </Text>
+      ) : null}
     </View>
   );
 }
@@ -130,7 +155,6 @@ function EventBrandFallback({
  */
 export function EventBanner({
   eventId,
-  tenantSlug,
   bannerUrl,
   bannerSource,
   fallbackColor,
@@ -140,11 +164,16 @@ export function EventBanner({
   testID = 'event-banner',
   accessibilityLabel = 'Ảnh banner sự kiện'
 }: BannerProps) {
-  const pack = bundledDemoSource(eventId, tenantSlug);
+  const [imageFailed, setImageFailed] = useState(false);
+  const pack = bundledDemoSource(eventId);
   const source =
     bannerSource ?? remoteImageSource(bannerUrl) ?? pack?.banner ?? null;
 
-  if (!source) {
+  useEffect(() => {
+    setImageFailed(false);
+  }, [eventId, bannerUrl, bannerSource]);
+
+  if (!source || imageFailed) {
     return (
       <EventBrandFallback
         eventId={eventId}
@@ -165,12 +194,13 @@ export function EventBanner({
       testID={testID}
       resizeMode="cover"
       collapseOnFail={false}
+      onError={() => setImageFailed(true)}
       style={[
         {
           height,
           width: '100%',
           borderRadius: radius.md,
-          backgroundColor: brand.paper
+          backgroundColor: fillPlaceholder(eventId, fallbackColor),
         },
         style,
       ]}
@@ -178,12 +208,18 @@ export function EventBanner({
   );
 }
 
+function fillPlaceholder(
+  eventId?: string | null,
+  fallbackColor?: string | null,
+): string {
+  return eventIdentityColor(eventId?.trim() || 'event', fallbackColor);
+}
+
 /**
  * Event / org logo lockup for cards and ticket chrome.
  */
 export function EventLogo({
   eventId,
-  tenantSlug,
   logoUrl,
   logoSource,
   height = 36,
@@ -191,7 +227,7 @@ export function EventLogo({
   testID = 'event-logo',
   accessibilityLabel = 'Logo sự kiện'
 }: LogoProps) {
-  const pack = bundledDemoSource(eventId, tenantSlug);
+  const pack = bundledDemoSource(eventId);
   const source =
     logoSource ?? remoteImageSource(logoUrl) ?? pack?.logo ?? null;
 

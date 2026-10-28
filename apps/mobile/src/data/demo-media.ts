@@ -1,7 +1,11 @@
 /**
  * Demo media catalog keys (D9 / brand/demo/manifest.json).
  * Bundled raster sources live in demo-media-assets.ts (Metro require).
- * Explicit fixture catalog only — never a fallback for published/MinIO URLs.
+ * Explicit fixture event ids only — never a fallback for published/MinIO URLs.
+ *
+ * Do not key EventBanner off tenantSlug: prod published seed reuses
+ * `mfest-demo` / `demo-studio` and would force the old bundled banner.png
+ * over the solid brand + initial fallback.
  */
 
 /** Fixture event ids that ship local logo+banner. */
