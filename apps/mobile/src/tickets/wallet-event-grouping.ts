@@ -2,6 +2,9 @@ import type { TicketSummary } from '@ticket/contracts';
 import { ticketStateLabelVi } from '../attendee/attendee-outcome-copy.ts';
 import { eventDate, findDemoEventById } from '../data/demo-events.ts';
 
+/** Re-export shared brand helpers so My Tickets keeps a stable import path. */
+export { eventIdentityColor, eventInitial } from '../brand/event-identity.ts';
+
 /** Display name for wallet grouping and section headers (API name first). */
 export function ticketEventDisplayName(ticket: TicketSummary): string {
   const fromApi = ticket.eventName?.trim();
@@ -131,36 +134,6 @@ export function sortTicketsActiveFirst(tickets: TicketSummary[]): TicketSummary[
 /** Card title under an event section header: short ticket code, not the event again. */
 export function walletTicketCardTitle(ticket: TicketSummary): string {
   return `Vé · ${ticket.ticketId.slice(0, 8).toUpperCase()}`;
-}
-
-/** Deep, white-text-safe identity hues for events that ship no brand color. */
-const EVENT_IDENTITY_PALETTE = [
-  '#245B47',
-  '#59428A',
-  '#8A3B2E',
-  '#1F5A7A',
-  '#7A5A12',
-  '#8A2F5E',
-] as const;
-
-/** Stable per-event accent: the event's own brand color, else a hash of its id. */
-export function eventIdentityColor(
-  eventId: string,
-  brandColor?: string | null,
-): string {
-  const own = brandColor?.trim();
-  if (own && /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(own)) return own;
-  let h = 0;
-  for (let i = 0; i < eventId.length; i += 1) {
-    h = (h * 31 + eventId.charCodeAt(i)) >>> 0;
-  }
-  return EVENT_IDENTITY_PALETTE[h % EVENT_IDENTITY_PALETTE.length];
-}
-
-/** One-letter monogram for the identity block. */
-export function eventInitial(eventName: string): string {
-  const ch = [...eventName.trim()][0];
-  return ch ? ch.toLocaleUpperCase('vi') : 'S';
 }
 
 export type WalletTicketTone = 'usable' | 'used' | 'inactive' | 'sync' | 'pending';

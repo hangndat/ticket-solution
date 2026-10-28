@@ -8,12 +8,17 @@ import {
 import { SafeEventImage } from './safe-event-image.tsx';
 import { remoteImageSource } from './safe-event-image-url.ts';
 import {
+  eventIdentityColor,
+  eventInitial,
+} from '@/brand/event-identity';
+import {
   hasDemoMediaForEventId,
   hasDemoMediaForTenantSlug
 } from '@/data/demo-media';
-import { brand, space, radius } from '@/theme/tokens';
+import { brand, colors } from '@/theme/colors';
 import { fontFamilies } from '@/theme/fonts';
 import { typography } from '@/theme/typography';
+import { space, radius } from '@/theme/tokens';
 import {
   demoBannerSource,
   demoLogoSource,
@@ -21,7 +26,7 @@ import {
 import { EVENT_BANNER_HEIGHT_LIST } from './event-banner-metrics.ts';
 
 type BannerProps = {
-  /** Fixture / published event id for local demo pack lookup. */
+  /** Fixture / published event id for local demo pack lookup + hash fallback. */
   eventId?: string | null;
   tenantSlug?: string | null;
   /** Published remote banner (https only). */
@@ -30,7 +35,7 @@ type BannerProps = {
   bannerSource?: ImageSourcePropType | null;
   /** This event's primary color — never another card's brand. */
   fallbackColor?: string | null;
-  /** This event's org / name wordmark when there is no image. */
+  /** Event name (or org) used for the solid-fallback monogram. */
   wordmark?: string | null;
   height?: number;
   style?: StyleProp<ViewStyle>;
@@ -62,11 +67,8 @@ function bundledDemoSource(
   return null;
 }
 
-function isCssHexColor(value: string): boolean {
-  return /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(value.trim());
-}
-
 function EventBrandFallback({
+  eventId,
   height,
   fallbackColor,
   wordmark,
@@ -74,6 +76,7 @@ function EventBrandFallback({
   accessibilityLabel,
   style,
 }: {
+  eventId?: string | null;
   height: number;
   fallbackColor?: string | null;
   wordmark?: string | null;
@@ -81,11 +84,9 @@ function EventBrandFallback({
   accessibilityLabel: string;
   style?: StyleProp<ViewStyle>;
 }) {
-  const wash =
-    fallbackColor && isCssHexColor(fallbackColor)
-      ? fallbackColor
-      : brand.paperDeep;
-  const label = wordmark?.trim() || '';
+  const fill = eventIdentityColor(eventId?.trim() || 'event', fallbackColor);
+  const initial = eventInitial(wordmark?.trim() || '');
+  const fontSize = Math.max(28, Math.min(Math.round(height * 0.42), 64));
 
   return (
     <View
@@ -97,45 +98,35 @@ function EventBrandFallback({
           height,
           width: '100%',
           borderRadius: radius.md,
+          borderCurve: 'continuous',
           overflow: 'hidden',
-          backgroundColor: brand.paper,
-          justifyContent: 'flex-end',
-          padding: space.md,
+          backgroundColor: fill,
+          alignItems: 'center',
+          justifyContent: 'center',
         },
         style,
       ]}
     >
-      <View
-        pointerEvents="none"
+      <Text
+        maxFontSizeMultiplier={1.35}
         style={{
-          position: 'absolute',
-          top: 0,
-          right: 0,
-          bottom: 0,
-          left: 0,
-          backgroundColor: wash,
-          opacity: 0.22,
+          ...typography.display,
+          fontFamily: fontFamilies.display,
+          fontSize,
+          lineHeight: Math.round(fontSize * 1.1),
+          fontWeight: '700',
+          color: colors.onAccent,
         }}
-      />
-      {label ? (
-        <Text
-          numberOfLines={1}
-          style={{
-            ...typography.caption,
-            color: brand.ink,
-            fontFamily: fontFamilies.bodySemiBold,
-          }}
-        >
-          {label}
-        </Text>
-      ) : null}
+      >
+        {initial}
+      </Text>
     </View>
   );
 }
 
 /**
- * Simple per-event banner: image if this event has one, else a quiet wash +
- * wordmark from THIS event's brand — not catalog-wide Vemoki chrome.
+ * Simple per-event banner: image if this event has one, else a solid brand
+ * fill + large initial from THIS event — not catalog-wide Vemoki chrome.
  */
 export function EventBanner({
   eventId,
@@ -156,6 +147,7 @@ export function EventBanner({
   if (!source) {
     return (
       <EventBrandFallback
+        eventId={eventId}
         height={height}
         fallbackColor={fallbackColor}
         wordmark={wordmark}

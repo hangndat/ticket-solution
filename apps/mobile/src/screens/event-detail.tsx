@@ -127,6 +127,7 @@ function FixtureDemoDetail({
         <EventBanner
           eventId={event.id}
           tenantSlug={event.tenantSlug}
+          fallbackColor={event.brand.primaryColor}
           wordmark={event.name}
           height={EVENT_BANNER_HEIGHT_DETAIL}
           style={{ borderRadius: 0, width: undefined }}
@@ -329,7 +330,7 @@ function PublishedEventComposition({
           tenantSlug={event.tenantSlug}
           bannerUrl={event.brand.bannerUrl}
           fallbackColor={event.brand.primaryColor}
-          wordmark={event.brand.organizationName}
+          wordmark={event.name}
           height={EVENT_BANNER_HEIGHT_DETAIL}
           style={{ borderRadius: 0, width: undefined }}
           testID={`pub-detail-banner-${event.id}`}
