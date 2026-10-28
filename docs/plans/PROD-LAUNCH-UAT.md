@@ -130,8 +130,8 @@ Build local, team `BLUA62D52G`, không EAS.
 
 | ID | P | Lớp | Các bước | Đúng |
 | --- | --- | --- | --- | --- |
-| F01 | P0 | sim | Cold launch **chưa đăng nhập** | Stack **Đăng nhập + Đổi mã**; **không** NativeTabs, **không** catalog tab Sự kiện / Tài khoản / Vé. Login = CTA header (`person.circle`). Không section thông báo/phiên trống. Không crash. **Không** PASS bằng «home = guest event catalog» cũ |
-| F02 | P0 | sim | Login attendee verified | Tabs **Sự kiện + Vé của tôi** only; Account qua header; **không** tab Tài khoản. Session khách |
+| F01 | P0 | sim | Cold launch **chưa đăng nhập** | Tabs **Sự kiện + Đổi mã**; catalog sự kiện public; **không** Tài khoản, **không** Vé. Login = header `person.circle` → OIDC (không `/account`). Đổi mã là tab, không CTA footer Events. Không crash. ([O28](../DECISION-LOG.md)) |
+| F02 | P0 | sim | Login attendee verified | Tabs **Sự kiện + Đổi mã + Vé của tôi**; Account qua header; **không** tab Tài khoản. Session khách |
 | F03 | P0 | sim | Ví vé (tab Vé của tôi) | Vé đã redeem hiện; QR đọc được bằng mắt trên screenshot |
 | F04 | P0 | sim | Tab Nhân viên khi login attendee | Ẩn (O02). Không tab Account attendee |
 | F05 | P1 | sim | Airplane mode, mở vé đã lưu | Vé local còn; không bịa trạng thái đã check-in |

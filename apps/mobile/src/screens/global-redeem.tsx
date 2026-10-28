@@ -50,7 +50,10 @@ import { useFadeInOnMount } from '@/hooks/use-fade-in-on-mount';
 import {
   parkSignInReturn
 } from '@/navigation/sign-in-return-intent';
-import { sanitizeRedeemCodeParam } from '@/navigation/attendee-redeem-entry';
+import {
+  ATTENDEE_REDEEM_PATH,
+  sanitizeRedeemCodeParam,
+} from '@/navigation/attendee-redeem-entry';
 import { randomId } from '@/lib/random-id';
 import { refreshWalletAfterIssue } from '@/tickets/refresh-wallet-after-issue';
 import { ticketDetailHref } from '@/tickets/ticket-detail-href';
@@ -248,7 +251,7 @@ export function GlobalRedeemScreen() {
         parkedUserId: epoch?.userId ?? null,
         parkedGeneration: epoch?.generation ?? null
       });
-      parkSignInReturn({ pathname: '/redeem-global' });
+      parkSignInReturn({ pathname: ATTENDEE_REDEEM_PATH });
       const ok = await signIn();
       if (ok) setResolveError(null);
       return;
@@ -440,7 +443,7 @@ export function GlobalRedeemScreen() {
         parkedGeneration: epoch?.generation ?? null
       });
     }
-    parkSignInReturn({ pathname: '/redeem-global' });
+    parkSignInReturn({ pathname: ATTENDEE_REDEEM_PATH });
     const ok = await signIn();
     if (ok && decision?.kind === 'denied' && AUTH_CODES.has(decision.code)) {
       setDecision(null);

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { ATTENDEE_TAB_TITLES } from '../navigation/attendee-tab-titles.ts';
 import {
   accountCopy,
   eventsCopy,
@@ -44,9 +45,10 @@ test('redeem global guest copy avoids internal session/memory jargon', () => {
   assert.doesNotMatch(redeemCopy.authRequiredBody, /phiên/i);
 });
 
-test('redeem and events CTAs share Đổi mã lấy vé; lookup stays Tìm vé', () => {
+test('redeem and events CTAs share Đổi mã; lookup stays Tìm vé', () => {
   assert.equal(redeemCopy.screenTitle, eventsCopy.redeemCta);
-  assert.equal(redeemCopy.screenTitle, 'Đổi mã lấy vé');
+  assert.equal(redeemCopy.screenTitle, ATTENDEE_TAB_TITLES.redeem);
+  assert.equal(redeemCopy.screenTitle, 'Đổi mã');
   assert.equal(redeemCopy.lookupCta, 'Tìm vé');
   assert.equal(redeemCopy.lookupAgainCta, 'Tìm lại');
   assert.equal(redeemCopy.formSectionTitle, 'Thông tin bắt buộc');
