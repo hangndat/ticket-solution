@@ -118,10 +118,12 @@ export function canAccessPortalPath(
   if (parts[2] === 'e') {
     if (!context.eventId || parts[3] !== context.eventId) return false;
     const route = parts.slice(4).join('/') || 'overview';
+    // Legacy /reports URL = event Gate report (report.read), not a second product.
+    const eventRoute = route === 'reports' ? 'gate' : route;
     return (
-      route in EVENT_ROUTES &&
+      eventRoute in EVENT_ROUTES &&
       canAccessEventRoute(
-        route as keyof typeof EVENT_ROUTES,
+        eventRoute as keyof typeof EVENT_ROUTES,
         context.eventPermissions,
       )
     );
@@ -137,7 +139,8 @@ export function canAccessPortalPath(
       )
     );
   }
-  if (route === 'analytics') {
+  // Legacy /t/{tenant}/reports = P2 Analytics (report.read on an assigned event).
+  if (route === 'analytics' || route === 'reports') {
     return canAccessTenantRoute(
       'analytics',
       context.tenantPermissions,
