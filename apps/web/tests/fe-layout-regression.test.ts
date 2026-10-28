@@ -14,7 +14,12 @@ test('consumer layout exposes footer landmark for sticky-footer regression', () 
     join(WEB_ROOT, 'app/(consumer)/layout.tsx'),
     'utf8',
   );
-  assert.match(layout, /data-testid="site-footer"/);
+  assert.match(layout, /ConsumerFooter/);
+  const footer = readFileSync(
+    join(WEB_ROOT, 'src/i18n/consumer-footer.tsx'),
+    'utf8',
+  );
+  assert.match(footer, /data-testid="site-footer"/);
   const root = readFileSync(join(WEB_ROOT, 'app/layout.tsx'), 'utf8');
   assert.match(root, /attendeeBody/);
   assert.doesNotMatch(root, /data-testid="site-footer"/);

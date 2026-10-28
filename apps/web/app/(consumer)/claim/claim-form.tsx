@@ -4,6 +4,8 @@ import { Button } from '@ticket/ui';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import type { FormAnswerValue, FormDefinition } from '@ticket/contracts';
+import { useAttendeeLocale } from '../../../src/i18n';
+import { guestClaimCopy } from '../../../src/guest/claim-copy';
 import { decideClaimBody } from '../../../src/guest/claim-api';
 import {
   clearClaimHashFromLocation,
@@ -96,6 +98,8 @@ function subscribeClaimLocation(onStoreChange: () => void): () => void {
 }
 
 export function GuestClaimForm() {
+  const { locale } = useAttendeeLocale();
+  const copy = guestClaimCopy(locale);
   const locationSnap = useSyncExternalStore(
     subscribeClaimLocation,
     getClaimLocationSnapshot,
@@ -188,19 +192,22 @@ export function GuestClaimForm() {
       setFormDefinition(result.schema.form);
       setTermsVersion(result.schema.terms?.version ?? null);
       setTermsBody(result.schema.terms?.bodyMarkdown ?? null);
-      setEventName(result.schema.eventName ?? 'Sự kiện được mời');
+      setEventName(
+        result.schema.eventName ?? guestClaimCopy(locale).invitedEventFallback,
+      );
       setOrganizationName(result.schema.organizationName ?? '');
       setSchemaStatus('ready');
       } else {
+        const schemaCopy = guestClaimCopy(locale);
         setSchemaError(result.status === 'not-found'
-          ? 'Không tìm thấy sự kiện đã xuất bản. Mở lại liên kết trong email.'
-          : 'Thông tin lời mời không khớp sự kiện đã xuất bản hoặc chưa thể tải biểu mẫu.');
+          ? schemaCopy.schemaNotFound
+          : schemaCopy.schemaMismatch);
         setSchemaStatus('error');
       }
     });
     return () => { cancelled = true; };
   }, [contextKey, validContext, displayTenantSlug, displayEventSlug,
-    displayTenantId, displayEventId, locationSnap]);
+    displayTenantId, displayEventId, locationSnap, locale]);
 
   async function submitClaim() {
     if (!validContext || !schemaReady || !idempotencyKey || busy || claimedKey === contextKey) return;
@@ -213,9 +220,8 @@ export function GuestClaimForm() {
     if (!token.trim()) {
       setUx({
         kind: 'error',
-        title: 'Thiếu mã lời mời',
-        detail:
-          'Mở liên kết lời mời để lấy mã — không dán mã vào địa chỉ trang.',
+        title: copy.missingToken.title,
+        detail: copy.missingToken.detail,
         retryable: false,
       });
       setBusy(false);
@@ -224,8 +230,8 @@ export function GuestClaimForm() {
     if (!displayTenantId.trim() || !displayEventId.trim()) {
       setUx({
         kind: 'error',
-        title: 'Thiếu thông tin sự kiện',
-        detail: 'Cần mã tổ chức và mã sự kiện kèm theo lời mời.',
+        title: copy.missingScope.title,
+        detail: copy.missingScope.detail,
         retryable: false,
       });
       setBusy(false);
@@ -234,9 +240,8 @@ export function GuestClaimForm() {
     if (!termsVersion) {
       setUx({
         kind: 'error',
-        title: 'Chưa có biểu mẫu',
-        detail:
-          'Tải biểu mẫu sự kiện đã xuất bản trước khi nhận lời mời.',
+        title: copy.noForm.title,
+        detail: copy.noForm.detail,
         retryable: false,
       });
       setBusy(false);
@@ -258,8 +263,8 @@ export function GuestClaimForm() {
     if ((validated && !validated.ok) || termsIssue) {
       setUx({
         kind: 'error',
-        title: 'Biểu mẫu chưa hợp lệ',
-        detail: 'Sửa các trường được đánh dấu rồi thử lại.',
+        title: copy.formInvalid.title,
+        detail: copy.formInvalid.detail,
         retryable: false,
       });
       setBusy(false);
@@ -302,9 +307,8 @@ export function GuestClaimForm() {
       setDecision(null);
       setUx({
         kind: 'auth',
-        title: 'Cần đăng nhập',
-        detail:
-          'Đăng nhập bằng email đã được mời rồi quay lại nhận lời mời — intent được giữ trên thiết bị này.',
+        title: copy.auth.title,
+        detail: copy.auth.detail,
         retryable: false,
       });
       setBusy(false);
@@ -317,7 +321,7 @@ export function GuestClaimForm() {
       idempotencyKey,
       result.networkError || result.timedOut,
     );
-    const nextUx = messageForDecision(next);
+    const nextUx = messageForDecision(next, locale);
     setDecision(next);
     setPendingTenantId(next.kind === 'pending' ? displayTenantId.trim() : '');
     setUx(nextUx);
@@ -346,7 +350,7 @@ export function GuestClaimForm() {
     if (activeContext.current !== activeKey ||
         claimLocationKey(readClaimTokenFromLocation()) !== activeKey) return;
     if (result.status === 'ok') {
-      setUx(messageForOwnerStatus(result.body));
+      setUx(messageForOwnerStatus(result.body, locale));
       if (result.body.status === 'ISSUED') {
         setDecision({ kind: 'issued', ticketId: result.body.ticketId,
           requestId, replayed: false });
@@ -354,10 +358,10 @@ export function GuestClaimForm() {
         setDecision(null);
       }
     } else {
-      setUx({ kind: 'unknown', title: 'Chưa đọc được trạng thái',
+      setUx({ kind: 'unknown', title: copy.unreadStatus.title,
         detail: result.status === 'unauthorized'
-          ? 'Đăng nhập lại bằng email được mời để xem trạng thái yêu cầu.'
-          : 'Chưa xác nhận được trạng thái mới. Thử kiểm tra lại sau.',
+          ? copy.unreadStatus.unauthorized
+          : copy.unreadStatus.retry,
         retryable: true });
     }
     setBusy(false);
@@ -386,24 +390,24 @@ export function GuestClaimForm() {
       <h2>{ux.title}</h2>
       <p>{ux.detail}</p>
       {decision?.kind === 'pending' ? (
-        <p>Chưa phải vé — kiểm tra lại khi có cập nhật.</p>
+        <p>{copy.pendingNotTicket}</p>
       ) : null}
       {ux.kind === 'auth' ? (
         <p className={authButtonsRow}>
           <Button asChild variant="brand">
-            <a href={loginHref}>Đăng nhập bằng email đã được mời</a>
+            <a href={loginHref}>{copy.loginInvitedAuth}</a>
           </Button>
         </p>
       ) : null}
       {decision?.kind === 'pending' ? (
         <p><Button type="button" variant="secondary" disabled={busy}
-          onClick={() => void refreshClaimStatus()}>Kiểm tra trạng thái</Button></p>
+          onClick={() => void refreshClaimStatus()}>{copy.checkStatus}</Button></p>
       ) : ux.kind === 'unknown' && validContext ? (
         <p><Button type="button" variant="secondary" disabled={busy}
-          onClick={() => void submitClaim()}>Gửi lại cùng yêu cầu</Button></p>
+          onClick={() => void submitClaim()}>{copy.resubmit}</Button></p>
       ) : null}
       {decision?.kind === 'issued' ? (
-        <p><Button asChild variant="brand"><Link href="/wallet">Xem vé của tôi</Link></Button></p>
+        <p><Button asChild variant="brand"><Link href="/wallet">{copy.viewWallet}</Link></Button></p>
       ) : null}
     </section>
   ) : null;
@@ -413,12 +417,12 @@ export function GuestClaimForm() {
       return <div className={claimFormRoot}>{outcomeSection}</div>;
     }
     return <div className={claimFormRoot}>
-      <SurfaceState kind="empty" title="Mở liên kết trong email"
-        detail="Liên kết lời mời cần đầy đủ thông tin sự kiện. Hãy mở lại email mời để tiếp tục."
+      <SurfaceState kind="empty" title={copy.emptyTitle}
+        detail={copy.emptyDetail}
         testId="claim-token-empty" />
       <div className={authButtonsRow}>
-        <Button asChild variant="secondary"><Link href="/redeem">Đổi mã</Link></Button>
-        <Button asChild variant="secondary"><Link href="/wallet">Vé của tôi</Link></Button>
+        <Button asChild variant="secondary"><Link href="/redeem">{copy.redeem}</Link></Button>
+        <Button asChild variant="secondary"><Link href="/wallet">{copy.wallet}</Link></Button>
       </div>
     </div>;
   }
@@ -426,36 +430,35 @@ export function GuestClaimForm() {
   return (
     <div className={claimFormRoot}>
       <p>
-        Đăng nhập bằng đúng email đã được mời và đã xác minh. Sau đó hoàn tất
-        biểu mẫu và đồng ý điều khoản để nhận lời mời.
+        {copy.support}
       </p>
 
       <div className={authButtonsRow}>
         <Button asChild variant="primary">
-          <a href={loginHref}>Đăng nhập bằng email được mời</a>
+          <a href={loginHref}>{copy.loginInvited}</a>
         </Button>
       </div>
 
       {schemaKey !== contextKey || schemaStatus === 'loading' ? (
-        <SurfaceState kind="loading" title="Đang tải sự kiện…"
-          detail="Đang kiểm tra biểu mẫu và điều khoản đã xuất bản." />
+        <SurfaceState kind="loading" title={copy.loadingTitle}
+          detail={copy.loadingDetail} />
       ) : null}
       {schemaKey === contextKey && schemaStatus === 'error' ? (
-        <SurfaceState kind="error" title="Không thể mở lời mời" detail={schemaError} />
+        <SurfaceState kind="error" title={copy.schemaErrorTitle} detail={schemaError} />
       ) : null}
 
       {busy && !ux ? (
         <SurfaceState
           kind="loading"
-          title="Đang xử lý…"
-          detail="Đang chờ phản hồi từ máy chủ — chưa có kết quả nhận lời mời."
+          title={copy.busyTitle}
+          detail={copy.busyDetail}
           testId="claim-busy-loading"
         />
       ) : null}
 
       {schemaReady ? (
         <>
-          <section aria-label="Sự kiện trong lời mời">
+          <section aria-label={copy.eventSectionAria}>
             <h2>{eventName}</h2>
             {organizationName ? <p>{organizationName}</p> : null}
           </section>
@@ -477,16 +480,16 @@ export function GuestClaimForm() {
               onChange={(e) => setTermsAccepted(e.target.checked)}
               aria-invalid={fieldErrors.terms ? true : undefined}
             />
-            <label htmlFor="claim-terms-consent">Tôi đồng ý với điều khoản sự kiện</label>
+            <label htmlFor="claim-terms-consent">{copy.termsConsent}</label>
           </div>
           {fieldErrors.terms ? <p className="field-error" role="alert">{fieldErrors.terms}</p> : null}
           {termsBody ? (
             <details className="mt-2.5 min-w-0 max-w-full text-sm [&_summary]:mb-2 [&_summary]:cursor-pointer [&_summary]:font-bold" open>
-              <summary>Điều khoản sự kiện</summary>
+              <summary>{copy.termsSummary}</summary>
               <div
                 className="max-h-80 max-w-full overflow-auto whitespace-pre-wrap break-words rounded-md border border-line bg-paper p-4 text-[0.9rem] font-normal leading-[1.6]"
                 tabIndex={0}
-                aria-label="Nội dung điều khoản sự kiện"
+                aria-label={copy.termsBodyAria}
               >
                 {termsBody}
               </div>
@@ -500,10 +503,10 @@ export function GuestClaimForm() {
         variant="primary"
         disabled={busy || claimedKey === contextKey}
         loading={busy}
-        loadingLabel="Đang gửi…"
+        loadingLabel={copy.sending}
         onClick={() => void submitClaim()}
       >
-        Nhận vé mời
+        {copy.submit}
       </Button> : null}
 
       {outcomeSection}

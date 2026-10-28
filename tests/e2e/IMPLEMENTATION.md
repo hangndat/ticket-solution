@@ -2,14 +2,15 @@
 
 Đã dựng runner và chạy browser/API/PG thật. **Browser suite hiện có đã xanh 42/42; chưa nghiệm thu đủ 86 nhóm acceptance.** Inventory đủ 86 ID (70 P0, 16 P1); `coverage.json` từng slice tiếp tục đánh `blocked` khi còn nhánh chưa triển khai/chưa được chứng minh. Mapping selector không phải full coverage hoặc runtime PASS.
 
-Baseline product: `022cb80fd159dad2a7ebd0eeeea07fd64391f90a`. Sau baseline đã sửa Web/Portal/backend cho các finding F01–F08 trong [FIXES.md](FIXES.md), gồm OIDC/session, CSRF, clone/preview, public projection và metric RLS. Chưa push/PR/deploy. `origin/main=cb875691` đã fetch và kiểm vùng overlap redeem; chưa merge.
+Baseline product: `022cb80fd159dad2a7ebd0eeeea07fd64391f90a`. Sau baseline đã sửa Web/Portal/backend cho các finding F01–F08 trong [FIXES.md](FIXES.md), gồm OIDC/session, CSRF, clone/preview, public projection và metric RLS. Nhánh tích hợp `origin/main=cb875691` theo yêu cầu user; hai conflict redeem được ghép giữ context login và nhãn i18n. Main đưa vào một lỗi server/client boundary ở wallet filter; đã tách helper dữ liệu khỏi client component. Chưa push/PR/deploy.
 
 ## Xác minh mới sau sửa product
 
 - Full production build + HTTP SEC-01 + **42/42 browser PASS**: `mvsdgi6z-fde3cd/summary.json`, `browser-tests.log` (không retry/skip). AUTH-07 cùng context và WEB-13 AUTO/MANUAL đều PASS.
+- Sau tích hợp main và sửa wallet filter boundary: full production build + HTTP SEC-01 + **42/42 browser PASS** ở `mvse0ao9-872b62/summary.json` (không retry/skip). Run đầu sau merge `mvsdvvh9-9e1b6d` FAIL 4 ca đều do `/wallet` render error; nguyên nhân có trong Web server log và đã được sửa trước run PASS.
 - Targeted WEB-13 AUTO/MANUAL PASS ở `mvscx4y6-06bb4f` sau khi test đợi phản hồi approve; AUTH-07 còn FAIL ở run đó và được sửa tiếp có chẩn đoán.
 - Targeted AUTH-01/02/04/05/07 PASS ở `mvsda8m1-d78411`; AUTH-07 lặp lại PASS ở `mvsdbupp-7aa1f6` và `mvsdd4l0-51ad3c`, gồm probe refresh cũ về sau logout.
-- Backend D **38/38 selector PASS** (`pnpm test:integration:local --suite D`, PostgreSQL thật); HTTP **5/5 PASS** (`mvsdioat-9d3e7c/summary.json`, Keycloak/API thật). Review độc lập trên exact SHA còn chờ.
+- Backend D **38/38 selector PASS** (`pnpm test:integration:local --suite D`, PostgreSQL thật); HTTP **5/5 PASS** (`mvsdioat-9d3e7c/summary.json`, Keycloak/API thật). James đã review độc lập DoD + security PASS trên SHA trước merge `cffc5d693bccad75f6c7c6812b186ed110aa2335`; revalidation SHA tích hợp còn chờ.
 
 ## Những gì đã bàn giao
 
