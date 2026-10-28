@@ -12,16 +12,14 @@ import {
  */
 export const brand = brandGenerated;
 
-export const space = {
-  none: 0,
-  ...spaceGenerated,
-} as const;
+export const space = spaceGenerated;
 
-export const radius = {
-  none: 0,
-  xs: 4,
-  ...radiusGenerated,
-} as const;
+export const radius = radiusGenerated;
 
 export const elevation: Record<'none' | 'card' | 'sheet', ViewStyle> =
   elevationGenerated;
+
+/** Mobile-only layout zeros — not in brand JSON; keeps ui-budget free of numeric style literals. */
+export const layout = {
+  none: 0,
+} as const;

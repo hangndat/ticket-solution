@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   Text,
   View,
@@ -162,14 +162,12 @@ export function EventBanner({
   testID = 'event-banner',
   accessibilityLabel = 'Ảnh banner sự kiện'
 }: BannerProps) {
-  const [imageFailed, setImageFailed] = useState(false);
   const pack = bundledDemoSource(eventId);
   const source =
     bannerSource ?? remoteImageSource(bannerUrl) ?? pack?.banner ?? null;
-
-  useEffect(() => {
-    setImageFailed(false);
-  }, [eventId, bannerUrl, bannerSource]);
+  const sourceKey = `${eventId ?? ''}|${bannerUrl ?? ''}|${bannerSource ? 'explicit' : ''}`;
+  const [failedSourceKey, setFailedSourceKey] = useState<string | null>(null);
+  const imageFailed = failedSourceKey === sourceKey;
 
   if (!source || imageFailed) {
     return (
@@ -192,7 +190,7 @@ export function EventBanner({
       testID={testID}
       resizeMode="cover"
       collapseOnFail={false}
-      onError={() => setImageFailed(true)}
+      onError={() => setFailedSourceKey(sourceKey)}
       style={[
         {
           height,

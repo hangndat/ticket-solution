@@ -28,7 +28,7 @@ import { fontFamilies } from '@/theme/fonts';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useAttendeeTabBarInset } from '@/navigation/use-attendee-tab-bar-inset';
 import { WalletOwnedTicketsLink } from '@/components/wallet-owned-tickets-link';
-import { space, radius } from '@/theme/tokens';
+import { layout, space, radius } from '@/theme/tokens';
 import { typography } from '@/theme/typography';
 
 function formatListDate(startsAt: string, timezone: string): string {
@@ -78,7 +78,7 @@ function PublishedEventCard({ item }: { item: PublishedEventSummary }) {
             fallbackColor={item.brand.primaryColor}
             wordmark={item.name}
             height={EVENT_BANNER_HEIGHT_LIST}
-            style={{ borderRadius: radius.none }}
+            style={{ borderRadius: layout.none }}
             testID={`pub-media-${item.id}-banner`}
             accessibilityLabel={`Banner ${item.name}`}
           />
