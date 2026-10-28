@@ -41,6 +41,7 @@ export function AttendeeLocaleProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const stored = readStoredAttendeeLocale();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLocaleState(stored);
     applyHtmlLang(stored);
     setHydrated(true);
