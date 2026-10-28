@@ -1,0 +1,151 @@
+[
+  {
+    "caseId": "AUTH-01",
+    "tests": ["auth.spec.ts › [AUTH-01]"],
+    "layers": ["B", "H"],
+    "status": "blocked",
+    "reason": "Có login attendee, BFF /me, PKCE/state/nonce assertion; smoke mvs7d4db-259457 FAIL vì OIDC nonce null. Chưa kiểm staff client và scope."
+  },
+  {
+    "caseId": "AUTH-02",
+    "tests": ["auth.spec.ts › [AUTH-02]"],
+    "layers": ["B", "H"],
+    "status": "blocked",
+    "reason": "Có sai mật khẩu/callback thực sự thiếu state và xác nhận BFF không tạo session; chưa có issuer/audience/expiry/upstream matrix."
+  },
+  {
+    "caseId": "AUTH-03",
+    "tests": ["auth.spec.ts › [AUTH-03]"],
+    "layers": ["B"],
+    "status": "blocked",
+    "reason": "Có guest gate và unverified submit bị chặn trước issue; chưa đối soát DB code/quota/pending."
+  },
+  {
+    "caseId": "AUTH-04",
+    "tests": ["auth.spec.ts › [AUTH-04]"],
+    "layers": ["B", "H"],
+    "status": "blocked",
+    "reason": "Có Web logout; thiếu Portal/Platform host-cookie boundary."
+  },
+  {
+    "caseId": "AUTH-05",
+    "tests": ["auth.spec.ts › [AUTH-05]"],
+    "layers": ["H"],
+    "status": "blocked",
+    "reason": "Có refresh success với TTL ngắn; thiếu revoked refresh fail-closed và concurrent actor isolation."
+  },
+  {
+    "caseId": "AUTH-06",
+    "tests": ["auth.spec.ts › [AUTH-06]"],
+    "layers": ["H"],
+    "status": "blocked",
+    "reason": "Có attendee không có Portal identity; thiếu revoke membership/assignment/session rồi mutation."
+  },
+  {
+    "caseId": "AUTH-07",
+    "tests": ["auth.spec.ts › [AUTH-07]"],
+    "layers": ["B", "H"],
+    "status": "blocked",
+    "reason": "Có đổi account, reload detail, HTTP owner 200 rồi 403/404, no-store; thiếu in-flight request/back-cache và admin data."
+  },
+  {
+    "caseId": "AUTH-08",
+    "tests": ["auth.spec.ts › [AUTH-08]"],
+    "layers": ["B"],
+    "status": "blocked",
+    "reason": "Có consent, một POST browser, HTTP ACK 200/201/202 với requestId/REQUESTED và copy không hứa xóa ngay; thiếu DB one-open-request, retry sau unknown, revoke/job/IdP failure."
+  },
+  {
+    "caseId": "WEB-01",
+    "tests": ["public.spec.ts › [WEB-01]"],
+    "layers": ["B"],
+    "status": "blocked",
+    "reason": "Có published trên catalog/detail, draft vắng catalog và detail HTTP 404, private/unlisted vắng catalog nhưng direct link HTTP 200 theo PRD M03; source hiện tại chặn private direct link. Thiếu API projection trực tiếp và nonexistent event."
+  },
+  {
+    "caseId": "WEB-02",
+    "tests": ["redeem.spec.ts › [WEB-02]"],
+    "layers": ["B", "H"],
+    "status": "blocked",
+    "reason": "Có UI auto, wallet, QR/reload và ticket list; thiếu DB code/quota/operation/outbox đối soát."
+  },
+  {
+    "caseId": "WEB-03",
+    "tests": ["redeem.spec.ts › [WEB-03]"],
+    "layers": ["B"],
+    "status": "blocked",
+    "reason": "Có event context qua login và global resolve đối chiếu tên sự kiện; thiếu invalid/ambiguous privacy branch. Source hiện tại có nguy cơ mất slug khi login."
+  },
+  {
+    "caseId": "WEB-04",
+    "tests": ["redeem.spec.ts › [WEB-04]"],
+    "layers": ["B", "H"],
+    "status": "blocked",
+    "reason": "Có invalid code/no-ticket; thiếu expired/used/closed/suspended/quota/limit matrix và DB state."
+  },
+  {
+    "caseId": "WEB-05",
+    "tests": ["redeem.spec.ts › [WEB-05]"],
+    "layers": ["B"],
+    "status": "blocked",
+    "reason": "Có terms/required client gate; thiếu field-type/allowlist/server version assertions."
+  },
+  {
+    "caseId": "WEB-06",
+    "tests": ["redeem.spec.ts › [WEB-06]"],
+    "layers": ["B"],
+    "status": "blocked",
+    "reason": "Có manual pending/no ticket; thiếu Portal approve/reject/expiry và quota allocation đối soát."
+  },
+  {
+    "caseId": "WEB-07",
+    "tests": ["redeem.spec.ts › [WEB-07]"],
+    "layers": ["B", "H"],
+    "status": "blocked",
+    "reason": "Có double submit/one new ticket; thiếu lost-response/replay/payload-conflict/operation evidence."
+  },
+  {
+    "caseId": "WEB-08",
+    "tests": ["redeem.spec.ts › [WEB-08]"],
+    "layers": ["B", "H", "R"],
+    "status": "implemented"
+  },
+  {
+    "caseId": "WEB-09",
+    "tests": ["public.spec.ts › [WEB-09]"],
+    "layers": ["B", "H"],
+    "status": "blocked",
+    "reason": "Có owner list/detail isolation, trang denied và HTTP 403/404; thiếu multi-tenant, request/operation và revoked/cancelled states."
+  },
+  {
+    "caseId": "WEB-10",
+    "tests": ["fault.spec.ts › [WEB-10]"],
+    "layers": ["B", "H"],
+    "status": "blocked",
+    "reason": "Có fault proxy đúng event của run và public-detail failure/recovery; chưa kiểm owner tickets/redeem timeout, 500 và unknown reconciliation."
+  },
+  {
+    "caseId": "WEB-11",
+    "tests": ["public.spec.ts › [WEB-11]"],
+    "layers": ["B"],
+    "status": "blocked",
+    "reason": "Có 390px event/redeem/ticket CTA và overflow; thiếu desktop/form/menu/modal state."
+  },
+  {
+    "caseId": "WEB-12",
+    "tests": ["public.spec.ts › [WEB-12]"],
+    "layers": ["B", "H"],
+    "status": "blocked",
+    "reason": "Có VI/EN, demo CTA, privacy/support; thiếu lead submit và tenant ACTIVE/Owner negative đối soát."
+  },
+  {
+    "caseId": "WEB-13",
+    "tests": [
+      "claim.spec.ts › [WEB-13] AUTO",
+      "claim.spec.ts › [WEB-13] MANUAL"
+    ],
+    "layers": ["B", "H", "R"],
+    "status": "blocked",
+    "reason": "Có import/preview/commit/dispatch/Mailpit/claim/approve happy paths; thiếu reject/expiry/wrong-email/unverified/token replay/idempotency/quota DB assertions."
+  }
+]

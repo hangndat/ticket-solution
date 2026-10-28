@@ -1,0 +1,37 @@
+[
+  {
+    "caseId": "SEC-01",
+    "tests": ["H:tests/e2e/http/live.test.mjs#[SEC-01]"],
+    "layers": ["H"],
+    "status": "blocked",
+    "reason": "Đã viết H report own/cross-tenant/cross-event; chờ runtime. Chưa phủ toàn bộ resource read/mutate/list/export/operation và browser B."
+  },
+  {
+    "caseId": "AUTH-03",
+    "tests": ["H:tests/e2e/http/live.test.mjs#[AUTH-03]"],
+    "layers": ["H"],
+    "status": "blocked",
+    "reason": "Đã viết H guest/unverified deny và verified issue cùng code; chờ runtime. Browser UX và các nhánh lookup/confirm còn thiếu."
+  },
+  {
+    "caseId": "GATE-01",
+    "tests": ["H:tests/e2e/http/live.test.mjs#[GATE-01]"],
+    "layers": ["H"],
+    "status": "blocked",
+    "reason": "Đã viết H list/create/duplicate/permission/session nullable/foreign-gate FK/cross-event; chờ runtime. Chưa phủ mở lại cùng gate và actor có assignment cả hai event."
+  },
+  {
+    "caseId": "GATE-03",
+    "tests": ["H:tests/e2e/http/live.test.mjs#[GATE-03]"],
+    "layers": ["H"],
+    "status": "blocked",
+    "reason": "Đã viết H invalid ticket UUID, missing ticket, assignment deny và reject audit; chờ runtime. API Gate nhận ticketId, không có HTTP QR parser; QR audience/kid/version/hash, revoked/cancelled còn thiếu."
+  },
+  {
+    "caseId": "DB-03",
+    "tests": ["H:tests/e2e/http/live.test.mjs#[DB-03]"],
+    "layers": ["H"],
+    "status": "blocked",
+    "reason": "Đã viết H issue/replay/changed-payload conflict và đối soát ticket/quota; chờ runtime. Multi-actor concurrency, source counter, audit và outbox cần D/R evidence riêng."
+  }
+]
