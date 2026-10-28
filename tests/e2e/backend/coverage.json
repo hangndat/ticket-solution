@@ -396,11 +396,12 @@
     "tests": [
       "D:packages/backend/test/cs-export.test.cjs#CS lookup/export/events",
       "D:packages/backend/test/portal-audit-codes.test.cjs#H-A1/H-C1/H-P-AUDIT",
-      "U:apps/worker/test/worker-budget-fault.test.cjs#queue alert emits only aggregate"
+      "U:apps/worker/test/worker-budget-fault.test.cjs#queue alert emits only aggregate",
+      "H:tests/e2e/http/live.test.mjs#[SEC-06]"
     ],
-    "layers": ["D", "U"],
+    "layers": ["D", "U", "H"],
     "status": "blocked",
-    "reason": "D/U masking/log subset; thiếu H token/secret/cache/cursor full matrix."
+    "reason": "D/U masking/log subset + H live PASS (run mvshygj4-1a9ed3): audit/codes list no forbidden keys/raw-value leak, limit capped 100, cursor opaque + INVALID_CURSOR on tamper, deny bodies clean, report/me-tickets/gate-session Cache-Control không public. Thiếu H cho CS lookup/export và platform audit; Cache-Control các route này hiện absent (không explicit no-store như exports/inventory/tenant-limits) — gap ghi lại, không tự sửa product trong task test-only này."
   },
   {
     "caseId": "POL-01",

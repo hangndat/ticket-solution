@@ -38,6 +38,7 @@ const httpCases = [
   'SEC-03',
   'SEC-04',
   'SEC-05',
+  'SEC-06',
   'AUTH-03',
   'GATE-01',
   'GATE-03',

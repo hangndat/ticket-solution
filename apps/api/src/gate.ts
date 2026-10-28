@@ -3,6 +3,7 @@ import {
   Body,
   Controller,
   Get,
+  Header,
   Headers,
   HttpCode,
   HttpException,
@@ -527,6 +528,7 @@ export class GateController {
   @ApiBearerAuth()
   @ApiOkResponse({ type: SessionResponseDto })
   @ApiUnauthorizedResponse({ type: ApiErrorDto })
+  @Header('Cache-Control', 'private, no-store')
   openSession(
     @Headers('authorization') authorization: string | undefined,
     @Param('eventId') eventId: string,
@@ -579,6 +581,7 @@ export class GateController {
 
   @Post('gate/events/:eventId/sessions/revoke')
   @ApiBearerAuth()
+  @Header('Cache-Control', 'private, no-store')
   revokeSession(
     @Headers('authorization') authorization: string | undefined,
     @Param('eventId') eventId: string,
