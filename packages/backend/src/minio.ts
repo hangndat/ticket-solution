@@ -23,6 +23,7 @@ export type ObjectStore = {
     contentType: string,
   ): Promise<void>;
   getObject(objectKey: string): Promise<Buffer>;
+  deleteObject(objectKey: string): Promise<void>;
   createPresignedPutUrl(input: {
     objectKey: string;
     contentType: string;
@@ -92,13 +93,37 @@ function objectPath(cfg: MinioConfig, objectKey: string): string {
     .join('/')}`;
 }
 
+function assertObjectKey(objectKey: string): void {
+  if (typeof objectKey !== 'string' || objectKey.trim() === '') {
+    throw new ConfigError(
+      CONFIG_ERROR_CODES.ASSET_INVALID,
+      'Object key is required',
+    );
+  }
+  if (objectKey.startsWith('/') || objectKey.includes('\\')) {
+    throw new ConfigError(
+      CONFIG_ERROR_CODES.ASSET_INVALID,
+      'Object key is invalid',
+    );
+  }
+  for (const segment of objectKey.split('/')) {
+    if (segment === '..' || segment === '.') {
+      throw new ConfigError(
+        CONFIG_ERROR_CODES.ASSET_INVALID,
+        'Object key is invalid',
+      );
+    }
+  }
+}
+
 async function signedRequest(input: {
   cfg: MinioConfig;
-  method: 'PUT' | 'GET';
+  method: 'PUT' | 'GET' | 'DELETE';
   objectKey: string;
   body?: Buffer;
   contentType?: string;
   timeoutMs?: number;
+  notFoundOk?: boolean;
 }): Promise<Buffer> {
   const url = new URL(input.cfg.endpoint);
   if (!['http:', 'https:'].includes(url.protocol)) {
@@ -182,7 +207,12 @@ async function signedRequest(input: {
         res.on('end', () => {
           clearTimeout(deadline);
           const buf = Buffer.concat(chunks);
-          if ((res.statusCode ?? 500) >= 400) {
+          const status = res.statusCode ?? 500;
+          if (status >= 400) {
+            if (input.notFoundOk && status === 404) {
+              resolve(Buffer.alloc(0));
+              return;
+            }
             reject(
               new ConfigError(
                 CONFIG_ERROR_CODES.MINIO_MISCONFIGURED,
@@ -252,6 +282,30 @@ export async function getObject(
   objectKey: string,
 ): Promise<Buffer> {
   return signedRequest({ cfg, method: 'GET', objectKey });
+}
+
+export async function deleteObject(
+  cfg: MinioConfig,
+  objectKey: string,
+  timeoutMs?: number,
+): Promise<void> {
+  assertObjectKey(objectKey);
+  const started = performance.now();
+  try {
+    await signedRequest({
+      cfg,
+      method: 'DELETE',
+      objectKey,
+      timeoutMs,
+      notFoundOk: true,
+    });
+  } finally {
+    metricsObserveSeconds(
+      'worker_provider_latency_seconds',
+      (performance.now() - started) / 1000,
+      { provider: 'minio' },
+    );
+  }
 }
 
 export function createPresignedPutUrl(
@@ -327,6 +381,7 @@ export function createMinioObjectStore(cfg: MinioConfig): ObjectStore {
     putObject: (objectKey, body, contentType) =>
       putObject(cfg, objectKey, body, contentType),
     getObject: (objectKey) => getObject(cfg, objectKey),
+    deleteObject: (objectKey) => deleteObject(cfg, objectKey),
     createPresignedPutUrl: (input) =>
       Promise.resolve(createPresignedPutUrl(cfg, input)),
   };
@@ -351,6 +406,10 @@ export function createMemoryObjectStore(): ObjectStore & {
         );
       }
       return Buffer.from(row.body);
+    },
+    async deleteObject(objectKey) {
+      assertObjectKey(objectKey);
+      objects.delete(objectKey);
     },
     async createPresignedPutUrl(input) {
       const token = randomUUID();
