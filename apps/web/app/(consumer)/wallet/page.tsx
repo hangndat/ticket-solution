@@ -1,6 +1,4 @@
 import type { Metadata } from 'next';
-import { Button } from '@ticket/ui';
-import Link from 'next/link';
 import { isUuid } from '../../../src/bff/ids';
 import { loginHref } from '../../../src/oidc/login-href';
 import { readRefreshToken } from '../../../src/oidc/cookies';
@@ -10,20 +8,23 @@ import {
 } from '../../../src/oidc/owner-session-guard';
 import {
   attendeeWalletGrid,
-  attendeeWalletHeading,
-  attendeeWalletHeadingCta,
-  attendeeWalletIntro,
   attendeeWalletPage,
 } from '../../../src/attendee-detail-surface';
-import { attendeeAuthButtons } from '../../../src/attendee-surface';
 import { loadOwnerWallet, WALLET_COPY } from '../../../src/owner-ticket';
+import {
+  WalletEmpty,
+  WalletFilterEmpty,
+  WalletHeading,
+  WalletInvalid,
+  WalletNeedLogin,
+  WalletUnreachable,
+} from '../../../src/owner-ticket/wallet-chrome';
 import {
   buildWalletEventFilters,
   WalletEventFilters,
 } from '../../../src/owner-ticket/wallet-event-filters';
 import { WalletTicketCard } from '../../../src/owner-ticket/wallet-ticket-card';
 import { ConsumerPageShell } from '../../../src/consumer-page-shell';
-import { SurfaceState } from '../../../src/ui/surface-state';
 
 export const dynamic = 'force-dynamic';
 
@@ -55,26 +56,8 @@ export default async function WalletPage({ searchParams }: Props) {
         mainClassName={attendeeWalletPage}
         mainTestId="wallet-need-login"
       >
-        <header className={attendeeWalletHeading}>
-          <h1>{WALLET_COPY.title}</h1>
-          <p className={attendeeWalletIntro}>{WALLET_COPY.intro}</p>
-        </header>
-        <SurfaceState
-          kind="empty"
-          title={WALLET_COPY.needLogin.title}
-          detail={WALLET_COPY.needLogin.detail}
-          testId="wallet-need-login-state"
-          action={
-            <div className={attendeeAuthButtons}>
-              <Button asChild variant="brand">
-                <a href={walletLogin}>Đăng nhập</a>
-              </Button>
-              <Button asChild variant="secondary">
-                <Link href="/redeem">Đổi mã lấy vé</Link>
-              </Button>
-            </div>
-          }
-        />
+        <WalletHeading showIntro />
+        <WalletNeedLogin loginHref={walletLogin} />
       </ConsumerPageShell>
     );
   }
@@ -85,20 +68,8 @@ export default async function WalletPage({ searchParams }: Props) {
         mainClassName={attendeeWalletPage}
         mainTestId="wallet-unreachable"
       >
-        <header className={attendeeWalletHeading}>
-          <h1>{WALLET_COPY.title}</h1>
-        </header>
-        <SurfaceState
-          kind="error"
-          title={WALLET_COPY.unreachable.title}
-          detail={WALLET_COPY.unreachable.detail}
-          testId="wallet-unreachable-state"
-          action={
-            <Button asChild variant="brand">
-              <Link href="/wallet">Thử lại</Link>
-            </Button>
-          }
-        />
+        <WalletHeading />
+        <WalletUnreachable />
       </ConsumerPageShell>
     );
   }
@@ -109,20 +80,8 @@ export default async function WalletPage({ searchParams }: Props) {
         mainClassName={attendeeWalletPage}
         mainTestId="wallet-invalid"
       >
-        <header className={attendeeWalletHeading}>
-          <h1>{WALLET_COPY.title}</h1>
-        </header>
-        <SurfaceState
-          kind="error"
-          title={WALLET_COPY.invalid.title}
-          detail={WALLET_COPY.invalid.detail}
-          testId="wallet-invalid-state"
-          action={
-            <Button asChild variant="brand">
-              <Link href="/wallet">Thử lại</Link>
-            </Button>
-          }
-        />
+        <WalletHeading />
+        <WalletInvalid />
       </ConsumerPageShell>
     );
   }
@@ -138,28 +97,10 @@ export default async function WalletPage({ searchParams }: Props) {
       mainClassName={attendeeWalletPage}
       mainTestId="wallet-ready"
     >
-      <header className={attendeeWalletHeading}>
-        <div>
-          <h1>{WALLET_COPY.title}</h1>
-          <p className={attendeeWalletIntro}>{WALLET_COPY.intro}</p>
-        </div>
-        <Button asChild variant="brand" className={attendeeWalletHeadingCta}>
-          <Link href="/redeem">Đổi mã lấy vé</Link>
-        </Button>
-      </header>
+      <WalletHeading showIntro showCta />
 
       {tickets.length === 0 ? (
-        <SurfaceState
-          kind="empty"
-          title={WALLET_COPY.empty.title}
-          detail={WALLET_COPY.empty.detail}
-          testId="wallet-empty"
-          action={
-            <Button asChild variant="brand">
-              <Link href="/redeem">Đổi mã lấy vé</Link>
-            </Button>
-          }
-        />
+        <WalletEmpty />
       ) : (
         <>
           <WalletEventFilters
@@ -168,17 +109,7 @@ export default async function WalletPage({ searchParams }: Props) {
             totalCount={tickets.length}
           />
           {visible.length === 0 ? (
-            <SurfaceState
-              kind="empty"
-              title="Không có vé cho bộ lọc này"
-              detail="Chọn «Tất cả» hoặc sự kiện khác để xem vé của bạn."
-              testId="wallet-filter-empty"
-              action={
-                <Button asChild variant="brand">
-                  <Link href="/wallet">Xem tất cả vé</Link>
-                </Button>
-              }
-            />
+            <WalletFilterEmpty />
           ) : (
             <div className={attendeeWalletGrid} role="list" data-testid="wallet-ticket-grid">
               {visible.map((ticket) => (
