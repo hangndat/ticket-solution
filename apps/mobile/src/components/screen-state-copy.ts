@@ -174,8 +174,6 @@ export const redeemCopy = {
   globalGuestTitle: 'Đăng nhập khi xác nhận',
   globalGuestBody:
     'Nhập hoặc dán mã trước. Đăng nhập khi tìm vé hoặc xác nhận để nhận vé vào ví.',
-  globalVerifiedHint:
-    'Không cần chọn tổ chức hoặc sự kiện.',
   codeFieldLabel: 'Mã nhận vé',
   codeFieldPlaceholder: 'Nhập hoặc dán mã',
   lookupCta: 'Tìm vé',

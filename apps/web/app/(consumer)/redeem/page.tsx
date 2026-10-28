@@ -31,7 +31,7 @@ export const dynamic = 'force-dynamic';
 export const metadata = {
   title: ATTENDEE_COPY.redeemTitle,
   description:
-    'Nhập mã mời — không cần chọn sự kiện hay tổ chức. Đăng nhập trước khi đổi mã.',
+    'Nhập mã mời. Đăng nhập trước khi đổi mã.',
 };
 
 type Props = {
@@ -74,7 +74,7 @@ export default async function RedeemPage({ searchParams }: Props) {
           <p className={redeemEyebrow}>{ATTENDEE_COPY.redeemEyebrow}</p>
           <h1>{ATTENDEE_COPY.redeemTitle}</h1>
           <p className={redeemLead}>
-            Một mã mời duy nhất. Không cần chọn sự kiện hay tổ chức.
+            Một mã mời duy nhất.
           </p>
         </header>
 
