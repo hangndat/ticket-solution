@@ -99,7 +99,7 @@ export const eventsCopy = {
   searchAccessibilityLabel: 'Tìm tên sự kiện',
   listHeadline: 'Sự kiện',
   publishedStatusPill: 'Sắp diễn ra',
-  redeemCta: 'Đổi mã lấy vé',
+  redeemCta: 'Đổi mã',
   signInCta: 'Đăng nhập',
   accountCta: 'Tài khoản',
   goToAccountSignInCta: 'Đến tài khoản để đăng nhập',
@@ -158,7 +158,7 @@ export const redeemCopy = {
   authRequiredBody:
     'Cần đăng nhập để tiếp tục đổi mã.',
   authGateCta: 'Tiếp tục đăng nhập',
-  screenTitle: 'Đổi mã lấy vé',
+  screenTitle: 'Đổi mã',
   globalGuestTitle: 'Đăng nhập khi xác nhận',
   globalGuestBody:
     'Nhập hoặc dán mã trước. Đăng nhập khi tìm vé hoặc xác nhận để nhận vé vào ví.',

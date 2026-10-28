@@ -25,6 +25,21 @@ Thay các AC/UAT cũ yêu cầu catalog guest 2–3 tab (Sự kiện/Tài khoả
 
 Architecture impact: **Có** đối với navigation chrome iOS (IA/header/privacy/staff event switcher/banner per-event); commit docs này **không** đổi runtime. Approval ≠ code complete ≠ acceptance complete ≠ pilot ready.
 
+## O28 — Guest Events catalog + tab Đổi mã (28/10/2026)
+
+Owner **sửa** O27 §3–§4 trên Epic [#914](https://github.com/hangndat/ticket-solution/issues/914) cùng ngày 28/10/2026. Văn bản O27 giữ làm lịch sử; **không** viết lại im lặng. **Không đóng Epic.**
+
+| # | Quyết định | Chi tiết |
+| - | ---------- | -------- |
+| 1 | Guest tabs | NativeTabs **Sự kiện + Đổi mã**. Catalog sự kiện công khai (search + banner per-event). **Không** tab Tài khoản, **không** Vé. |
+| 2 | Verified attendee | Tabs **Sự kiện + Đổi mã + Vé của tôi**. Account qua header → `/account`. **Không** tab Tài khoản. |
+| 3 | Staff | Workspace 3 tab không đổi (O27 §7). |
+| 4 | Đổi mã | Tab riêng (label/nav/CTA «Đổi mã», SF `text.badge.plus`). **Không** CTA footer trên list Sự kiện. Tab root = màn đổi mã toàn cục (mã → Tìm vé → Xác nhận). Guest login gate giữ ở lookup/confirm; **không** ẩn ô mã. `/redeem` và `/redeem-global` redirect vào tab (giữ `?code=`). Sau redeem thành công vẫn mở chi tiết vé (tab Vé). |
+| 5 | Header identity | Guest: `person.circle` → **OIDC đăng nhập ngay** (a11y «Đăng nhập»), **không** đẩy `/account`. Verified: → `/account`. |
+| 6 | Giữ từ O27 | Privacy native; header large-title như staff; staff đổi sự kiện chỉ header; banner per-event; USB skill; VoiceOver ngoài #914. |
+
+Architecture impact: **Có** (IA NativeTabs guest + redeem tab). Approval ≠ code complete ≠ acceptance complete ≠ pilot ready.
+
 ## O26 — Portal dùng giao diện mặc định Ant Design (26/10/2026)
 
 User quyết định **toàn bộ UI component của `apps/portal` dùng component có sẵn của `antd` với giao diện/token mặc định**. Không tạo thêm UI component hoặc wrapper riêng, design system, token, theme hay CSS tùy biến cho Portal. Khi cần một UI mới, ghép các component chính thức của `antd`; logic nghiệp vụ, dữ liệu, quyền và điều hướng vẫn có thể nằm trong module/hook riêng. Quyết định này thay yêu cầu “theme Vemoki” của O16 và thay định hướng dùng ProComponents của O18 đối với UI Portal; component ProComponents/custom hiện có phải được kiểm kê và chuyển dần sang `antd` trong Task migration, không coi là đã hoàn tất từ quyết định này. Không đổi design system của `apps/web` hoặc iOS; giữ tiếng Việt và accessibility.

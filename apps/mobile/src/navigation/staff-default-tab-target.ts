@@ -8,7 +8,7 @@ export const STAFF_TAB_SEGMENT_NAMES = [
 ] as const;
 
 /** Attendee tabs staff must leave when gate workspace is active. */
-const ATTENDEE_ONLY_TAB_SEGMENTS = new Set(['(events)', 'my-tickets']);
+const ATTENDEE_ONLY_TAB_SEGMENTS = new Set(['(events)', 'redeem', 'my-tickets']);
 
 /**
  * Account routes staff may open without replacing to Scan (toolbar / hidden tab).

@@ -24,7 +24,8 @@ import {
   ErrorState,
   LoadingState
 } from '@/components/screen-state';
-import { walletCopy } from '@/components/screen-state-copy';
+import { eventsCopy, walletCopy } from '@/components/screen-state-copy';
+import { ATTENDEE_REDEEM_PATH } from '@/navigation/attendee-redeem-entry';
 import {
   attendeeWalletCopy,
   presentTicketRow
@@ -629,9 +630,9 @@ function VerifiedWallet({ userId }: { userId: string }) {
 
       {tickets.length === 0 && !busy ? (
         <AttendeeCta
-          label="Đổi mã lấy vé"
+          label={eventsCopy.redeemCta}
           variant="secondary"
-          onPress={() => router.push('/redeem-global')}
+          onPress={() => router.push(ATTENDEE_REDEEM_PATH)}
         />
       ) : null}
     </ScrollView>

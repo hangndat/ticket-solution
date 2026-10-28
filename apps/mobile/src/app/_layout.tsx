@@ -75,11 +75,11 @@ function AppStack() {
       />
       <Stack.Screen
         name="redeem"
-        options={{ ...stackBackFromTabs, title: 'Đổi mã lấy vé' }}
+        options={{ ...stackBackFromTabs, title: 'Đổi mã' }}
       />
       <Stack.Screen
         name="redeem-global"
-        options={{ ...stackBackFromTabs, title: 'Đổi mã lấy vé' }}
+        options={{ ...stackBackFromTabs, title: 'Đổi mã' }}
       />
       <Stack.Screen
         name="privacy-policy"

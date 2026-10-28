@@ -16,6 +16,7 @@ import {
   LoadingState
 } from '@/components/screen-state';
 import { eventsCopy, redeemCopy } from '@/components/screen-state-copy';
+import { ATTENDEE_REDEEM_PATH } from '@/navigation/attendee-redeem-entry';
 import { eventDate, findDemoEvent } from '@/data/demo-events';
 import {
   fetchPublishedEventDetail,
@@ -348,7 +349,7 @@ function PublishedEventComposition({
           </Text>
           <AttendeeCta
             label={eventsCopy.redeemCta}
-            onPress={() => router.push('/redeem-global')}
+            onPress={() => router.push(ATTENDEE_REDEEM_PATH)}
             testID="event-detail-cta-redeem"
           />
         </View>
