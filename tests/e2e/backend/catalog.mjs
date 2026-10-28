@@ -232,7 +232,7 @@ export const notes = {
     'U/H validation/rate subset; thiếu live bucket scopes và full 429 branch matrix.',
   'SEC-05': 'D/U CSV/asset/template; thiếu H upload caps, rich text/XSS/CSP.',
   'SEC-06':
-    'D/U masking/log subset + H live (tests/e2e/http/live.test.mjs#[SEC-06]): audit/codes projection, cursor opaque, limit cap100, deny body, report/me-tickets/gate-session Cache-Control không public. Thiếu H cho CS lookup/export và platform audit; Cache-Control report/tickets/session hiện absent, không phải explicit no-store — ghi gap, không tự sửa product.',
+    'D/U masking/log subset + H live (tests/e2e/http/live.test.mjs#[SEC-06], mvsik1si-bee5e5 trên 97c15301): audit/codes projection, cursor opaque, limit cap100, deny body; report/me-tickets/gate-session/audit/codes assert Cache-Control private, no-store trên success và deny/error. Thiếu H cho CS lookup/export, process logs, platform audit và các endpoint nhạy cảm khác.',
   'POL-01':
     'D scrub/retry/tombstone đạt; metric slaOverdue fail 0 vs admin count 1 do runtime RLS; chưa đủ kết luận toàn bộ SLA.',
   'POL-02':

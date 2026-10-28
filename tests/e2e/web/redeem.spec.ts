@@ -161,11 +161,7 @@ test.describe('[WEB-04] negative redeem matrix', () => {
       manifest,
       caseData<string>(f, 'closedCode'),
     );
-    const closed = page.getByTestId('redeem-ux-closed');
-    const error = page.getByTestId('redeem-ux-error');
-    await expect(closed.or(error)).toBeVisible();
-    await expect(page.getByTestId('redeem-ticket-card')).toHaveCount(0);
-    await expect(closed.or(error)).not.toContainText('@');
+    await assertRedeemOutcomePanel(page, 'closed');
     await assertWalletUnchanged(page, manifest, f.tenantId, before);
   });
 

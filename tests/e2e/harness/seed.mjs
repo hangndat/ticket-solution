@@ -655,7 +655,9 @@ export async function seedRuntime(state, caseIds) {
             async (eventId) => {
               await tx.$executeRaw`
                 UPDATE events
-                SET status = 'DRAFT', content_status = 'DRAFT'
+                SET business_status = 'CANCELLED',
+                    cancel_reason = 'E2E closed event',
+                    cancelled_at = now()
                 WHERE tenant_id = ${tenantId}::uuid AND id = ${eventId}::uuid
               `;
             },
