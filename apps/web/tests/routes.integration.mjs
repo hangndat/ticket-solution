@@ -196,15 +196,16 @@ test('production routes isolate tenant content and reject unknown pairs', async 
     assert.ok(!claimHtml.includes('Keycloak'));
     assert.ok(!claimHtml.includes('Không tải được trang này'));
 
-    // Launch UAT A04: anonymous /gate → auth soft-redirect (307 /auth?next=/gate).
+    // D-6: retired web gate — /gate and /gate/* → / (308).
     const gateRaw = await fetch(base + '/gate', { redirect: 'manual' });
-    assert.ok(
-      gateRaw.status === 307 || gateRaw.status === 302,
-      `GET /gate should HTTP 307/302, got ${gateRaw.status}`,
-    );
+    assert.equal(gateRaw.status, 308, 'GET /gate should HTTP 308');
     const gateLoc = gateRaw.headers.get('location') ?? '';
-    assert.match(gateLoc, /\/auth(\?|$)/, `Location should be /auth: ${gateLoc}`);
-    assert.match(gateLoc, /next=%2Fgate|next=\/gate/, `Location should preserve next=/gate: ${gateLoc}`);
+    assert.ok(
+      gateLoc.endsWith('/') || gateLoc.endsWith('/?') || /\/$/.test(gateLoc.replace(/\?.*$/, '')),
+      `Location should be home: ${gateLoc}`,
+    );
+    const gateNested = await fetch(base + '/gate/scan', { redirect: 'manual' });
+    assert.equal(gateNested.status, 308, 'GET /gate/* should HTTP 308');
 
     // Issue #1021: bogus Server Action probes → 400 at proxy (no use server in web).
     for (const actionId of ['x', 'action', '0', '1']) {

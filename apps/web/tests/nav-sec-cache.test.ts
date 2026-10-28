@@ -20,7 +20,6 @@ import {
 const STAFF_CAPS: NavCapabilities = {
   authenticated: true,
   showPortalStaff: true,
-  showGate: false,
   showAccount: true,
 };
 
