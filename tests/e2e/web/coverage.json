@@ -66,15 +66,18 @@
     "caseId": "WEB-02",
     "tests": ["redeem.spec.ts › [WEB-02]"],
     "layers": ["B", "H"],
-    "status": "blocked",
-    "reason": "Có UI auto, wallet, QR/reload và ticket list; thiếu DB code/quota/operation/outbox đối soát."
+    "status": "implemented",
+    "reason": "Browser UI auto, wallet, QR/reload và ticket list; PostgreSQL runtime role + tenant transaction-local RLS xác nhận code CONSUMED, đúng một request/ticket/operation và TicketIssued outbox, event/type/source/owner cùng mọi quota bucket tăng đúng một. Targeted WEB-02/07 PASS run mvsw7lum-c9f6a7."
   },
   {
     "caseId": "WEB-03",
-    "tests": ["redeem.spec.ts › [WEB-03]"],
-    "layers": ["B"],
-    "status": "blocked",
-    "reason": "Có event context qua login và global resolve đối chiếu tên sự kiện; thiếu invalid/ambiguous privacy branch. Source hiện tại có nguy cơ mất slug khi login."
+    "tests": [
+      "redeem.spec.ts › [WEB-03] event link and global entry resolve code to the same published event",
+      "redeem.spec.ts › [WEB-03] invalid and ambiguous codes keep context private and state unchanged"
+    ],
+    "layers": ["B", "H"],
+    "status": "implemented",
+    "reason": "Targeted WEB-03 PASS run mvswo3mv-e5d2f8: event/global login giữ context; invalid code cả hai entry có UX invalid, lỗi không lộ owner/tenant/event ngoài published projection; routing group AMBIGUOUS synthetic trong run cô lập trả RESOLVE_DISABLED/UX closed rồi được khôi phục. PostgreSQL runtime role xác nhận không đổi code/request/ticket/quota/outbox; event-scoped invalid ghi đúng một operation từ chối CODE_INVALID. Chưa tạo collision legacy thật giữa hai event; nhánh API ambiguity được kích qua trạng thái routing group synthetic."
   },
   {
     "caseId": "WEB-04",
@@ -110,11 +113,12 @@
       "redeem.spec.ts › [WEB-07] idempotent redemption › double submit issues one ticket for a fresh code",
       "redeem.spec.ts › [WEB-07] idempotent redemption › lost response after server commit reconciles to one ticket via poll",
       "redeem.spec.ts › [WEB-07] idempotent redemption › reload after success cannot replay a second ticket for the same code",
-      "redeem.spec.ts › [WEB-07] idempotent redemption › same idempotency key with a changed payload is rejected without issuing a second ticket"
+      "redeem.spec.ts › [WEB-07] idempotent redemption › same idempotency key with a changed payload is rejected without issuing a second ticket",
+      "redeem.spec.ts › [WEB-07] idempotent redemption › two concurrent requests for one code issue only one ticket"
     ],
     "layers": ["B", "H"],
-    "status": "blocked",
-    "reason": "Có double submit, lost-response sau commit (Playwright route.fetch()+abort() cắt response client sau khi server thật đã commit, rồi UI tự poll reconcile), reload mất idempotency-key phía client rồi resume (CODE_CONSUMED → ux 'used'), và same-key đổi payload (409 IDEMPOTENCY_CONFLICT qua POST BFF thật, không mock) — ticket không nhân đôi ở mọi nhánh, wallet đối soát từng bước. H business-invariant (hash mismatch, CODE_CONSUMED) đã có unit riêng ở packages/backend/test/issue.test.cjs, test web không lặp lại. Thiếu: raw DB query bảng operations/redemption_codes từ phía web test, và race hai request đồng thời thật (double-click vẫn là 2 request nối tiếp rất gần theo UI, không phải song song tuyệt đối)."
+    "status": "implemented",
+    "reason": "Double submit, lost-response sau commit rồi UI poll, reload/resubmit CODE_CONSUMED, same-key đổi payload IDEMPOTENCY_CONFLICT và hai POST BFF thật đồng thời với key khác cho cùng mã (201/409). PostgreSQL runtime role + tenant transaction-local RLS đối soát đúng một request/ticket/operation thành công, code CONSUMED, quota +1 mỗi bucket và một TicketIssued outbox; reload không tăng state. Targeted WEB-02/07 PASS run mvsw7lum-c9f6a7; race gửi Promise.all qua mạng, không có barrier bảo đảm hai transaction cùng lúc giữ lock."
   },
   {
     "caseId": "WEB-08",
