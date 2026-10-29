@@ -8,7 +8,7 @@ import { toCsvRow } from './csv-guard';
 import {
   getObject,
   putObject,
-  requireMinioConfig,
+  requireMinioExportsConfig,
   type MinioConfig,
 } from './minio';
 import { withTenant } from './tenant-context';
@@ -83,6 +83,12 @@ function parseTtlSeconds(env: NodeJS.ProcessEnv): number {
   return Math.floor(raw);
 }
 
+function assertTtlSeconds(ttlSeconds: number): void {
+  if (!Number.isInteger(ttlSeconds) || ttlSeconds < 60 || ttlSeconds > 7 * 86400) {
+    throw new ExportError(EXPORT_ERROR_CODES.INVALID_FILTER, 'Invalid export TTL');
+  }
+}
+
 function validateFilter(filter: ExportFilter | undefined): ExportFilter {
   const out: ExportFilter = {};
   if (!filter) return out;
@@ -145,6 +151,7 @@ export async function createExportJob(
     ttlSeconds: number;
   },
 ): Promise<ExportJob> {
+  assertTtlSeconds(input.ttlSeconds);
   if (!input.clientKey?.trim()) {
     throw new ExportError(
       EXPORT_ERROR_CODES.IDEMPOTENCY_KEY_REQUIRED,
@@ -158,15 +165,23 @@ export async function createExportJob(
     eventId: input.eventId,
   });
 
-  const events = await tx.$queryRaw<{ id: string }[]>`
-    SELECT id FROM events
+  const events = await tx.$queryRaw<{ id: string; allowed: boolean }[]>`
+    SELECT id, export_retention_fenced_at IS NULL AND (
+      ends_at IS NULL OR clock_timestamp() + (${input.ttlSeconds}::text || ' seconds')::interval
+        + interval '24 hours'
+        < ends_at + interval '90 days'
+    ) AS allowed FROM events
     WHERE tenant_id = ${input.tenantId}::uuid AND id = ${input.eventId}::uuid
+    FOR UPDATE
   `;
   if (!events[0]) {
     throw new ExportError(
       EXPORT_ERROR_CODES.EVENT_NOT_FOUND,
       'Event not found',
     );
+  }
+  if (!events[0].allowed) {
+    throw new ExportError(EXPORT_ERROR_CODES.EXPORT_EXPIRED, 'Export retention cutoff reached');
   }
 
   const filter = validateFilter(input.filter);
@@ -380,13 +395,17 @@ export async function downloadExport(
         status: string;
         object_key: string | null;
         expires_at: Date | null;
+        within_retention: boolean;
       }[]
     >`
-      SELECT id, status, object_key, expires_at
-      FROM exports
-      WHERE tenant_id = ${input.tenantId}::uuid
-        AND event_id = ${input.eventId}::uuid
-        AND id = ${input.exportId}::uuid
+      SELECT x.id, x.status, x.object_key, x.expires_at,
+        (e.ends_at IS NULL OR clock_timestamp() < e.ends_at + interval '90 days')
+          AS within_retention
+      FROM exports x
+      JOIN events e ON e.tenant_id = x.tenant_id AND e.id = x.event_id
+      WHERE x.tenant_id = ${input.tenantId}::uuid
+        AND x.event_id = ${input.eventId}::uuid
+        AND x.id = ${input.exportId}::uuid
     `;
     const row = rows[0];
     if (!row) {
@@ -401,7 +420,8 @@ export async function downloadExport(
         'Export not ready',
       );
     }
-    if (row.expires_at && row.expires_at.getTime() < Date.now()) {
+    if (!row.within_retention ||
+        (row.expires_at && row.expires_at.getTime() <= Date.now())) {
       throw new ExportError(EXPORT_ERROR_CODES.EXPORT_EXPIRED, 'Export expired');
     }
 
@@ -496,8 +516,23 @@ export async function processExportJob(
   ttlSeconds: number,
   leaseOwner?: string,
 ): Promise<void> {
+  assertTtlSeconds(ttlSeconds);
   // Phase 1: short txn — lock row, build CSV, release before network I/O.
   const prepared = await withTenant(db, tenantId, async (tx) => {
+    const identity = await tx.$queryRaw<{ event_id: string }[]>`
+      SELECT event_id FROM exports
+      WHERE tenant_id = ${tenantId}::uuid AND id = ${exportId}::uuid
+    `;
+    if (!identity[0]) return null;
+    const event = await tx.$queryRaw<{ allowed: boolean }[]>`
+      SELECT export_retention_fenced_at IS NULL AND (
+        ends_at IS NULL OR clock_timestamp() + (${ttlSeconds}::text || ' seconds')::interval
+          + interval '24 hours'
+          < ends_at + interval '90 days'
+      ) AS allowed FROM events
+      WHERE tenant_id = ${tenantId}::uuid AND id = ${identity[0].event_id}::uuid
+      FOR UPDATE
+    `;
     const rows = await tx.$queryRaw<
       {
         id: string;
@@ -514,6 +549,15 @@ export async function processExportJob(
     `;
     const job = rows[0];
     if (!job || (job.status !== 'PROCESSING' && job.status !== 'PENDING')) {
+      return null;
+    }
+    if (job.event_id !== identity[0].event_id) return null;
+    if (!event[0]?.allowed) {
+      await tx.$executeRaw`
+        UPDATE exports SET status = 'FAILED', error_code = 'EXPORT_EXPIRED',
+          lease_owner = NULL, lease_expires_at = NULL, updated_at = clock_timestamp()
+        WHERE tenant_id = ${tenantId}::uuid AND id = ${exportId}::uuid
+      `;
       return null;
     }
     if (
@@ -544,10 +588,38 @@ export async function processExportJob(
       filter,
     );
     const objectKey = `exports/${tenantId}/${job.event_id}/${exportId}.csv`;
-    return { csv, rowCount, objectKey };
+    return { csv, rowCount, objectKey, eventId: job.event_id };
   });
 
   if (!prepared) return;
+
+  // Recheck after CSV preparation, immediately before the external PUT.
+  const mayPut = await withTenant(db, tenantId, async (tx) => {
+    const event = await tx.$queryRaw<{ allowed: boolean }[]>`
+      SELECT export_retention_fenced_at IS NULL AND (
+        ends_at IS NULL OR clock_timestamp() + (${ttlSeconds}::text || ' seconds')::interval
+          + interval '24 hours'
+          < ends_at + interval '90 days'
+      ) AS allowed FROM events
+      WHERE tenant_id = ${tenantId}::uuid AND id = ${prepared.eventId}::uuid
+      FOR UPDATE
+    `;
+    const rows = await tx.$queryRaw<{ status: string; lease_owner: string | null }[]>`
+      SELECT status, lease_owner FROM exports
+      WHERE tenant_id = ${tenantId}::uuid AND id = ${exportId}::uuid FOR UPDATE
+    `;
+    const job = rows[0];
+    if (!job || job.status !== 'PROCESSING' ||
+        (leaseOwner && job.lease_owner !== leaseOwner)) return false;
+    if (event[0]?.allowed) return true;
+    await tx.$executeRaw`
+      UPDATE exports SET status = 'FAILED', error_code = 'EXPORT_EXPIRED',
+        lease_owner = NULL, lease_expires_at = NULL, updated_at = clock_timestamp()
+      WHERE tenant_id = ${tenantId}::uuid AND id = ${exportId}::uuid
+    `;
+    return false;
+  });
+  if (!mayPut) return;
 
   // Phase 2: MinIO upload outside any DB transaction.
   try {
@@ -581,13 +653,37 @@ export async function processExportJob(
 
   // Phase 3: mark READY in short txn with ownership check.
   await withTenant(db, tenantId, async (tx) => {
+    const event = await tx.$queryRaw<{ allowed: boolean }[]>`
+      SELECT export_retention_fenced_at IS NULL AND (
+        ends_at IS NULL OR clock_timestamp() + (${ttlSeconds}::text || ' seconds')::interval
+          + interval '24 hours'
+          < ends_at + interval '90 days'
+      ) AS allowed FROM events
+      WHERE tenant_id = ${tenantId}::uuid AND id = ${prepared.eventId}::uuid
+      FOR UPDATE
+    `;
+    if (!event[0]?.allowed) {
+      await tx.$executeRaw`
+        UPDATE exports SET status = 'FAILED', error_code = 'EXPORT_EXPIRED',
+          lease_owner = NULL, lease_expires_at = NULL, updated_at = clock_timestamp()
+        WHERE tenant_id = ${tenantId}::uuid AND id = ${exportId}::uuid
+          AND status = 'PROCESSING'
+          AND (${leaseOwner ?? null}::text IS NULL OR lease_owner = ${leaseOwner ?? null})
+          AND purged_at IS NULL
+      `;
+      return;
+    }
     await tx.$executeRaw`
       UPDATE exports
       SET status = 'READY',
           row_count = ${prepared.rowCount},
           object_key = ${prepared.objectKey},
           error_code = NULL,
-          expires_at = now() + (${ttlSeconds}::text || ' seconds')::interval,
+          expires_at = LEAST(
+            clock_timestamp() + (${ttlSeconds}::text || ' seconds')::interval,
+            (SELECT ends_at + interval '89 days' FROM events
+             WHERE tenant_id = ${tenantId}::uuid AND id = ${prepared.eventId}::uuid)
+          ),
           lease_owner = NULL,
           lease_expires_at = NULL,
           updated_at = now()
@@ -609,13 +705,13 @@ export async function relayExportsOnce(
   leaseOwner: string,
   limit = 5,
 ): Promise<{ claimed: number; completed: number; failed: number }> {
-  const minio = requireMinioConfig(env);
+  const minio = requireMinioExportsConfig(env);
   const ttl = parseTtlSeconds(env);
   const claimed = await db.$queryRaw<
     { export_id: string; tenant_id: string; event_id: string }[]
   >`
     SELECT export_id, tenant_id, event_id
-    FROM claim_exports_batch(${limit}::integer, ${leaseOwner}::text)
+    FROM claim_exports_batch(${limit}::integer, ${leaseOwner}::text, ${ttl}::integer)
   `;
   let completed = 0;
   let failed = 0;
@@ -637,4 +733,4 @@ export async function relayExportsOnce(
   return { claimed: claimed.length, completed, failed };
 }
 
-export { parseTtlSeconds, requireMinioConfig };
+export { parseTtlSeconds, requireMinioExportsConfig };

@@ -215,8 +215,10 @@ export {
 } from './config-assets';
 export {
   readMinioEnvironment,
+  readMinioExportsEnvironment,
   readMinioImportsEnvironment,
   requireMinioConfig,
+  requireMinioExportsConfig,
   createMinioObjectStore,
   createMemoryObjectStore,
   putObject,
