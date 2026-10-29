@@ -217,7 +217,7 @@ export function attendeeTicketStateTag(state: string): string {
       'bg-[color-mix(in_srgb,var(--color-focus)_10%,var(--color-paper))] text-[color-mix(in_srgb,var(--color-ink)_45%,var(--color-muted))]',
     );
   }
-  if (state === 'REVOKED' || state === 'EXPIRED') {
+  if (state === 'REVOKED' || state === 'CANCELLED' || state === 'EXPIRED') {
     return cn(
       attendeeTicketStateTagBase,
       'bg-[color-mix(in_srgb,var(--color-signal)_12%,var(--color-paper))] text-[color-mix(in_srgb,var(--color-destructive)_75%,var(--color-signal))]',

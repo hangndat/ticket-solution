@@ -55,6 +55,13 @@
     "reason": "Đã viết H guest/unverified deny và verified issue cùng code; chờ runtime. Browser UX và các nhánh lookup/confirm còn thiếu."
   },
   {
+    "caseId": "AUTH-06",
+    "tests": ["H:tests/e2e/http/live.test.mjs#[AUTH-06]"],
+    "layers": ["H"],
+    "status": "blocked",
+    "reason": "Run mvsyhf8g-55a61e PASS (working tree chưa commit dựa trên d63b4eb, 2026-10-29): auth06Revoke chạy dưới SET LOCAL ROLE ticket_runtime + tenant RLS, UPDATE scoped rowCount=1 bắt buộc. Revoke memberships.revoked_at → scanner gate-session tiếp theo deny; revoke event_assignments.revoked_at → manager tạo gate deny; owner revoke staff session đang mở → supervisor confirm reservation 409 SESSION_NOT_ACTIVE, report checkInSuccessCount không đổi. Gaps: không kiểm UI-false-success (không có UI gate trong gói H); chưa phủ revoke giữa lúc request đang bay (race) hoặc actor khác cùng tenant giữ session song song."
+  },
+  {
     "caseId": "GATE-01",
     "tests": ["H:tests/e2e/http/live.test.mjs#[GATE-01]"],
     "layers": ["H"],

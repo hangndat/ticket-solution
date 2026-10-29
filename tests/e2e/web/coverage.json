@@ -29,17 +29,23 @@
   },
   {
     "caseId": "AUTH-05",
-    "tests": ["auth.spec.ts › [AUTH-05]"],
-    "layers": ["H"],
+    "tests": [
+      "B:auth.spec.ts › [AUTH-05] expired access token refreshes inside BFF",
+      "B:auth.spec.ts › [AUTH-05] revoked Keycloak refresh fails closed and actors stay isolated"
+    ],
+    "layers": ["B"],
     "status": "blocked",
-    "reason": "Có refresh success với TTL ngắn; thiếu revoked refresh fail-closed và concurrent actor isolation."
+    "reason": "Run mvsyhvyb-0f40bb (working tree chưa commit dựa trên d63b4eb, 2026-10-29): TTL ngắn refresh xoay cookie thành công; revoke refresh token thật qua Keycloak /revoke rồi chờ access token hết hạn theo exp thật — actor bị revoke nhận refresh redirect /auth, mất toàn bộ oidc_access_token/oidc_refresh_token/web_oidc_sub, /api/bff/me 401; actor khác trong context riêng vẫn refresh/wallet/me 200 và không lộ userId chéo. Phân biệt rõ: API bearer vẫn 200 trong 5 phút clock-skew theo thiết kế xác minh JWT (không phải bug), còn BFF cookie-refresh path dùng refresh token nên fail-closed ngay khi bị revoke. Chưa có case H riêng cho AUTH-05 (API 401 khi access token tự hết hạn không refresh) — không trong scope dispatch này."
   },
   {
     "caseId": "AUTH-06",
-    "tests": ["auth.spec.ts › [AUTH-06]"],
-    "layers": ["H"],
+    "tests": [
+      "B:auth.spec.ts › [AUTH-06] attendee session grants no staff Portal identity",
+      "H:live.test.mjs#[AUTH-06]"
+    ],
+    "layers": ["B", "H"],
     "status": "blocked",
-    "reason": "Có attendee không có Portal identity; thiếu revoke membership/assignment/session rồi mutation."
+    "reason": "Browser run mvsyhvyb-0f40bb + HTTP run mvsyhf8g-55a61e (working tree chưa commit dựa trên d63b4eb, 2026-10-29): B xác nhận attendee session không tự có Portal /api/bff/me/subject (401). H (tests/e2e/http/live.test.mjs, dùng ticket_runtime + tenant RLS qua auth06Revoke) revoke thật memberships.revoked_at rồi scanner tạo gate session tiếp theo bị deny; revoke event_assignments.revoked_at rồi manager tạo gate bị deny; revoke staff session qua API rồi supervisor confirm reservation đang mở trả 409 SESSION_NOT_ACTIVE và report checkInSuccessCount không tăng. UI-false-success không kiểm riêng ở lớp này (không có UI gate trong gói browser); đã chứng minh ở tầng API là nguồn sự thật."
   },
   {
     "caseId": "AUTH-07",
@@ -128,10 +134,12 @@
   },
   {
     "caseId": "WEB-09",
-    "tests": ["public.spec.ts › [WEB-09]"],
+    "tests": [
+      "public.spec.ts › [WEB-09] multi-tenant owner wallet and private detail/QR/request/operation"
+    ],
     "layers": ["B", "H"],
-    "status": "blocked",
-    "reason": "Có owner list/detail isolation, trang denied và HTTP 403/404; thiếu multi-tenant, request/operation và revoked/cancelled states."
+    "status": "implemented",
+    "reason": "WEB-09 targeted PASS run mvsy2fr7-514bd0. PostgreSQL runtime role + transaction-local RLS xác nhận X/Y không có staff membership ở hai tenant, bốn vé đều thuộc X, gồm ACTIVE/REVOKED/CANCELLED. Keycloak thật: ví X hiển thị vé cả hai tenant; ví/list Y rỗng, detail URL không có QR, ticket API 403/404; request và operation của X trả 200 nhưng Y bị 403/404. Detail X hiển thị nhãn và cảnh báo đúng cho vé thu hồi/hủy."
   },
   {
     "caseId": "WEB-10",

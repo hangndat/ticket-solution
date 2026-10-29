@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHmac, randomUUID } from 'node:crypto';
+import { createRequire } from 'node:module';
 import http from 'node:http';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
@@ -13,6 +14,7 @@ const CASE_IDS = [
   'SEC-05',
   'SEC-06',
   'AUTH-03',
+  'AUTH-06',
   'GATE-01',
   'GATE-03',
   'DB-03',
@@ -226,8 +228,19 @@ function cookieHeader(cookies) {
   return cookies.map(({ name, value }) => `${name}=${value}`).join('; ');
 }
 
-async function oidcBrowserSession(browser, ctx, origin, otherOrigin, loginPath, probePath, actor) {
-  const account = required(ctx.fixture.accounts?.[actor], `SEC-02 ${actor} account`);
+async function oidcBrowserSession(
+  browser,
+  ctx,
+  origin,
+  otherOrigin,
+  loginPath,
+  probePath,
+  actor,
+) {
+  const account = required(
+    ctx.fixture.accounts?.[actor],
+    `SEC-02 ${actor} account`,
+  );
   const browserContext = await browser.newContext();
   try {
     const page = await browserContext.newPage();
@@ -238,18 +251,33 @@ async function oidcBrowserSession(browser, ctx, origin, otherOrigin, loginPath, 
     await page.waitForURL((url) => url.origin === new URL(origin).origin, {
       timeout: 30_000,
     });
-    const probe = await browserContext.request.get(new URL(probePath, origin).toString());
-    assert.equal(probe.status(), 200, `SEC-02 ${actor}: authenticated BFF probe`);
+    const probe = await browserContext.request.get(
+      new URL(probePath, origin).toString(),
+    );
+    assert.equal(
+      probe.status(),
+      200,
+      `SEC-02 ${actor}: authenticated BFF probe`,
+    );
     const cookies = await browserContext.cookies(origin);
-    assert.ok(cookies.length > 0, `SEC-02 ${actor}: OIDC did not issue cookies`);
     assert.ok(
-      !(await browserContext.cookies(otherOrigin)).some(({ name }) => name === 'oidc_access_token'),
+      cookies.length > 0,
+      `SEC-02 ${actor}: OIDC did not issue cookies`,
+    );
+    assert.ok(
+      !(await browserContext.cookies(otherOrigin)).some(
+        ({ name }) => name === 'oidc_access_token',
+      ),
       `SEC-02 ${actor}: session cookie crossed host boundary`,
     );
     const otherHostProbe = await browserContext.request.get(
       new URL('/api/bff/me/tenants', otherOrigin).toString(),
     );
-    assert.equal(otherHostProbe.status(), 401, `SEC-02 ${actor}: other host must stay anonymous`);
+    assert.equal(
+      otherHostProbe.status(),
+      401,
+      `SEC-02 ${actor}: other host must stay anonymous`,
+    );
     return cookies;
   } finally {
     await browserContext.close();
@@ -589,6 +617,39 @@ function gatePath(f, suffix) {
   return `/gate/events/${f.eventId}/${suffix}`;
 }
 
+async function auth06Revoke(f, statement, values) {
+  const requireBackend = createRequire(
+    new URL('../../../packages/backend/package.json', import.meta.url),
+  );
+  const { Client } = requireBackend('pg');
+  const client = new Client({
+    connectionString: required(
+      f.data?.controlDatabaseUrl,
+      'AUTH-06 controlDatabaseUrl',
+    ),
+  });
+  await client.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query('SET LOCAL ROLE ticket_runtime');
+    await client.query("SELECT set_config('app.tenant_id', $1, true)", [
+      f.tenantId,
+    ]);
+    const changed = await client.query(statement, values);
+    assert.equal(
+      changed.rowCount,
+      1,
+      'AUTH-06 scoped revocation must change one row under tenant RLS',
+    );
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    await client.end();
+  }
+}
+
 for (const caseId of CASE_IDS) {
   if (chosen && chosen !== caseId) continue;
   test(`[${caseId}] live HTTP`, async () => {
@@ -843,9 +904,16 @@ for (const caseId of CASE_IDS) {
         assert.equal(portalCsrfOnly.body.code, 'CSRF_TOKEN_MISMATCH');
       }
 
-      const platformTenantsUrl = new URL('/api/bff/platform/tenants', ctx.portal);
+      const platformTenantsUrl = new URL(
+        '/api/bff/platform/tenants',
+        ctx.portal,
+      );
       const platformBootstrap = await fetch(platformTenantsUrl);
-      assert.equal(platformBootstrap.status, 401, 'platform BFF needs a session');
+      assert.equal(
+        platformBootstrap.status,
+        401,
+        'platform BFF needs a session',
+      );
       const platformCsrf = setCookieHeaders(platformBootstrap)
         .map(parseSetCookie)
         .find(({ name }) => name === PORTAL_CSRF_COOKIE);
@@ -856,26 +924,36 @@ for (const caseId of CASE_IDS) {
       const platformCsrfToken = required(
         setCookieHeaders(platformBootstrap)
           .find((header) => header.startsWith(`${PORTAL_CSRF_COOKIE}=`))
-          ?.split(';', 1)[0].slice(PORTAL_CSRF_COOKIE.length + 1),
+          ?.split(';', 1)[0]
+          .slice(PORTAL_CSRF_COOKIE.length + 1),
         'platform CSRF token',
       );
       const platformPayload = {
-        idempotencyKey: randomUUID(), slug: `sec02-${randomUUID()}`,
-        name: 'Synthetic SEC-02 anonymous probe', defaultTimezone: 'UTC',
-        ownerEmail: 'owner@example.test', limits: {}, flags: {},
+        idempotencyKey: randomUUID(),
+        slug: `sec02-${randomUUID()}`,
+        name: 'Synthetic SEC-02 anonymous probe',
+        defaultTimezone: 'UTC',
+        ownerEmail: 'owner@example.test',
+        limits: {},
+        flags: {},
       };
-      const platformPost = (headers) => bffJson(platformTenantsUrl, {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          Cookie: `${PORTAL_CSRF_COOKIE}=${platformCsrfToken}`,
-          [PORTAL_CSRF_HEADER]: platformCsrfToken,
-          ...headers,
-        },
-        body: JSON.stringify(platformPayload),
-      });
+      const platformPost = (headers) =>
+        bffJson(platformTenantsUrl, {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            Cookie: `${PORTAL_CSRF_COOKIE}=${platformCsrfToken}`,
+            [PORTAL_CSRF_HEADER]: platformCsrfToken,
+            ...headers,
+          },
+          body: JSON.stringify(platformPayload),
+        });
       expectStatus(await platformPost({}), 403, 'CSRF_ORIGIN_REQUIRED');
-      expectStatus(await platformPost({ Origin: EVIL_ORIGIN }), 403, 'CSRF_ORIGIN_MISMATCH');
+      expectStatus(
+        await platformPost({ Origin: EVIL_ORIGIN }),
+        403,
+        'CSRF_ORIGIN_MISMATCH',
+      );
       expectStatus(await platformPost({ Origin: portalOrigin }), 401);
 
       const suffix = required(process.env.E2E_HOST_SUFFIX, 'E2E_HOST_SUFFIX');
@@ -890,65 +968,124 @@ for (const caseId of CASE_IDS) {
       try {
         const surfaces = [
           {
-            label: 'web attendee', origin: ctx.web, login: '/api/auth/login?return=/',
-            probe: '/api/bff/me/tenants', actor: 'attendee', csrfName: WEB_CSRF_COOKIE,
-            csrfHeader: WEB_CSRF_HEADER, mutation: '/api/bff/redeem/resolve',
-            payload: { code: '' }, positiveCode: 'CODE_INVALID',
+            label: 'web attendee',
+            origin: ctx.web,
+            login: '/api/auth/login?return=/',
+            probe: '/api/bff/me/tenants',
+            actor: 'attendee',
+            csrfName: WEB_CSRF_COOKIE,
+            csrfHeader: WEB_CSRF_HEADER,
+            mutation: '/api/bff/redeem/resolve',
+            payload: { code: '' },
+            positiveCode: 'CODE_INVALID',
             anonymousPayload: { code: 'INVALID-PROBE' },
           },
           {
-            label: 'portal staff', origin: ctx.portal, login: '/api/auth/login?return=/',
-            probe: '/api/bff/me/tenants', actor: 'owner', csrfName: PORTAL_CSRF_COOKIE,
+            label: 'portal staff',
+            origin: ctx.portal,
+            login: '/api/auth/login?return=/',
+            probe: '/api/bff/me/tenants',
+            actor: 'owner',
+            csrfName: PORTAL_CSRF_COOKIE,
             csrfHeader: PORTAL_CSRF_HEADER,
             mutation: `/api/bff/tenants/${tenantId}/events/${eventId}/ticket-types`,
-            payload: { label: '' }, positiveCode: 'LABEL_REQUIRED',
+            payload: { label: '' },
+            positiveCode: 'LABEL_REQUIRED',
             anonymousPayload: { label: 'Synthetic SEC-02 anonymous probe' },
           },
         ];
         for (const surface of surfaces) {
           surface.cookies = await oidcBrowserSession(
-            browser, ctx, surface.origin,
+            browser,
+            ctx,
+            surface.origin,
             surface.origin === ctx.web ? ctx.portal : ctx.web,
-            surface.login, surface.probe, surface.actor,
+            surface.login,
+            surface.probe,
+            surface.actor,
           );
           const host = new URL(surface.origin).hostname;
           const sessionCookies = surface.cookies.filter(({ name }) =>
-            /^(oidc_(access|refresh|id)_|platform_oidc_(access|refresh))/.test(name),
+            /^(oidc_(access|refresh|id)_|platform_oidc_(access|refresh))/.test(
+              name,
+            ),
           );
-          assert.ok(sessionCookies.length > 0, `${surface.label}: session cookie required`);
+          assert.ok(
+            sessionCookies.length > 0,
+            `${surface.label}: session cookie required`,
+          );
           for (const cookie of sessionCookies) {
-            assert.equal(cookie.domain, host, `${surface.label}: host-only session cookie`);
-            assert.equal(cookie.httpOnly, true, `${surface.label}: HttpOnly session cookie`);
-            assert.equal(cookie.secure, true, `${surface.label}: Secure session cookie`);
-            assert.equal(cookie.sameSite, 'Lax', `${surface.label}: SameSite session cookie`);
+            assert.equal(
+              cookie.domain,
+              host,
+              `${surface.label}: host-only session cookie`,
+            );
+            assert.equal(
+              cookie.httpOnly,
+              true,
+              `${surface.label}: HttpOnly session cookie`,
+            );
+            assert.equal(
+              cookie.secure,
+              true,
+              `${surface.label}: Secure session cookie`,
+            );
+            assert.equal(
+              cookie.sameSite,
+              'Lax',
+              `${surface.label}: SameSite session cookie`,
+            );
           }
           const csrf = required(
-            surface.cookies.find(({ name }) => name === surface.csrfName)?.value,
+            surface.cookies.find(({ name }) => name === surface.csrfName)
+              ?.value,
             `${surface.label} CSRF cookie`,
           );
           const url = new URL(surface.mutation, surface.origin);
           const body = JSON.stringify(surface.payload);
           const base = { method: 'POST', body };
-          const send = (headers) => bffJson(url, { ...base, headers: {
-            'content-type': 'application/json', Cookie: cookieHeader(surface.cookies),
-            ...headers,
-          } });
+          const send = (headers) =>
+            bffJson(url, {
+              ...base,
+              headers: {
+                'content-type': 'application/json',
+                Cookie: cookieHeader(surface.cookies),
+                ...headers,
+              },
+            });
           for (const [headers, code] of [
             [{ [surface.csrfHeader]: csrf }, 'CSRF_ORIGIN_REQUIRED'],
-            [{ Origin: EVIL_ORIGIN, [surface.csrfHeader]: csrf }, 'CSRF_ORIGIN_MISMATCH'],
-            [{ Origin: new URL(surface.origin).origin },
-              surface.label === 'web attendee' ? 'CSRF_TOKEN_INVALID' : 'CSRF_TOKEN_MISMATCH'],
-            [{ Origin: new URL(surface.origin).origin,
-              [surface.csrfHeader]: 'wrong-token' },
-              surface.label === 'web attendee' ? 'CSRF_TOKEN_INVALID' : 'CSRF_TOKEN_MISMATCH'],
+            [
+              { Origin: EVIL_ORIGIN, [surface.csrfHeader]: csrf },
+              'CSRF_ORIGIN_MISMATCH',
+            ],
+            [
+              { Origin: new URL(surface.origin).origin },
+              surface.label === 'web attendee'
+                ? 'CSRF_TOKEN_INVALID'
+                : 'CSRF_TOKEN_MISMATCH',
+            ],
+            [
+              {
+                Origin: new URL(surface.origin).origin,
+                [surface.csrfHeader]: 'wrong-token',
+              },
+              surface.label === 'web attendee'
+                ? 'CSRF_TOKEN_INVALID'
+                : 'CSRF_TOKEN_MISMATCH',
+            ],
           ]) {
             const result = await send(headers);
             expectStatus(result, 403, code);
           }
-          expectStatus(await send({
-            Origin: new URL(surface.origin).origin,
-            [surface.csrfHeader]: csrf,
-          }), 422, surface.positiveCode);
+          expectStatus(
+            await send({
+              Origin: new URL(surface.origin).origin,
+              [surface.csrfHeader]: csrf,
+            }),
+            422,
+            surface.positiveCode,
+          );
           const beforeSession = await bffJson(url, {
             method: 'POST',
             headers: {
@@ -966,7 +1103,11 @@ for (const caseId of CASE_IDS) {
           new URL('/api/bff/platform/me', ctx.portal),
           { headers: { Cookie: cookieHeader(surfaces[1].cookies) } },
         );
-        assert.equal(staffOnPlatformBff.status, 401, 'staff session cannot enter platform BFF');
+        assert.equal(
+          staffOnPlatformBff.status,
+          401,
+          'staff session cannot enter platform BFF',
+        );
       } finally {
         await browser.close();
       }
@@ -1948,7 +2089,11 @@ for (const caseId of CASE_IDS) {
       );
       expectStatus(ticketsResp, 200);
       assertNoStoreCache(ticketsResp.headers, 'me/tickets');
-      const ticketsDenied = await request(ctx, 'GET', `/me/tickets?tenantId=${tenantId}`);
+      const ticketsDenied = await request(
+        ctx,
+        'GET',
+        `/me/tickets?tenantId=${tenantId}`,
+      );
       expectStatus(ticketsDenied, 401);
       assertNoStoreCache(ticketsDenied.headers, 'me/tickets denied');
 
@@ -2027,6 +2172,97 @@ for (const caseId of CASE_IDS) {
       const after = await request(ctx, 'GET', reportPath(f), owner);
       expectStatus(after, 200);
       assert.equal(after.body.quota.allocated, before.body.quota.allocated + 1);
+      return;
+    }
+    if (caseId === 'AUTH-06') {
+      const scanner = await bearer(ctx, 'scanner');
+      const manager = await bearer(ctx, 'manager');
+      const supervisor = await bearer(ctx, 'supervisor');
+      const owner = await bearer(ctx, 'owner');
+      const sessions = gatePath(f, 'sessions');
+      const scannerSession = await request(ctx, 'POST', sessions, scanner, {
+        tenantId: f.tenantId,
+      });
+      expectStatus(scannerSession, 200);
+      await auth06Revoke(
+        f,
+        'UPDATE memberships SET revoked_at = now() WHERE tenant_id = $1::uuid AND user_id = $2::uuid AND revoked_at IS NULL',
+        [f.tenantId, f.accounts.scanner.userId],
+      );
+      deny(
+        await request(ctx, 'POST', sessions, scanner, { tenantId: f.tenantId }),
+      );
+
+      const gates = gatePath(f, 'gates');
+      expectStatus(
+        await request(ctx, 'POST', gates, manager, {
+          tenantId: f.tenantId,
+          name: `AUTH-06 before ${randomUUID()}`,
+        }),
+        201,
+      );
+      await auth06Revoke(
+        f,
+        `UPDATE event_assignments SET revoked_at = now()
+         WHERE tenant_id = $1::uuid AND event_id = $2::uuid
+           AND membership_id = (SELECT id FROM memberships WHERE tenant_id = $1::uuid AND user_id = $3::uuid)
+           AND revoked_at IS NULL`,
+        [f.tenantId, f.eventId, f.accounts.manager.userId],
+      );
+      deny(
+        await request(ctx, 'POST', gates, manager, {
+          tenantId: f.tenantId,
+          name: `AUTH-06 after ${randomUUID()}`,
+        }),
+      );
+
+      const session = await request(ctx, 'POST', sessions, supervisor, {
+        tenantId: f.tenantId,
+      });
+      expectStatus(session, 200);
+      const before = await request(ctx, 'GET', reportPath(f), owner);
+      expectStatus(before, 200);
+      const reservation = await request(
+        ctx,
+        'POST',
+        gatePath(f, 'reservations'),
+        supervisor,
+        {
+          tenantId: f.tenantId,
+          staffSessionId: session.body.sessionId,
+          ticketId: required(f.ticketId, 'AUTH-06 ticketId'),
+        },
+      );
+      expectStatus(reservation, 200);
+      expectStatus(
+        await request(ctx, 'POST', gatePath(f, 'sessions/revoke'), owner, {
+          tenantId: f.tenantId,
+          staffSessionId: session.body.sessionId,
+        }),
+        201,
+      );
+      expectStatus(
+        await request(
+          ctx,
+          'POST',
+          `${gatePath(f, 'reservations')}/${reservation.body.reservationId}/confirm`,
+          supervisor,
+          {
+            tenantId: f.tenantId,
+            staffSessionId: session.body.sessionId,
+            token: reservation.body.token,
+          },
+        ),
+        409,
+        'SESSION_NOT_ACTIVE',
+      );
+      const after = await request(ctx, 'GET', reportPath(f), owner);
+      expectStatus(after, 200);
+      assert.equal(
+        after.body.checkInSuccessCount,
+        before.body.checkInSuccessCount,
+        'revoked session must not confirm check-in',
+      );
       return;
     }
     if (caseId === 'GATE-01') {
