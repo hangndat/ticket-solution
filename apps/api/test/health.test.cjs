@@ -27,6 +27,7 @@ test('Fastify liveness matches contract; redeem and gate routes documented', asy
       '/v1/gate/events/{eventId}/reservations/{reservationId}/confirm',
       '/v1/gate/events/{eventId}/sessions',
       '/v1/gate/events/{eventId}/sessions/revoke',
+      '/v1/gate/events/{eventId}/tickets/{ticketId}/reissue',
       '/v1/gate/events/{eventId}/tickets/{ticketId}/revoke',
       '/v1/health',
       '/v1/me',
