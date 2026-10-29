@@ -1,4 +1,6 @@
 import { readFileSync, writeFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import { resolve } from 'node:path';
 import {
   test,
   expect,
@@ -14,8 +16,12 @@ import {
   walletTicketIds,
   webUrl,
 } from './helpers';
+import { assertIssuedExactlyOnce, codeIdFor, readRedemptionState } from './redemption-db';
 
-type FaultMode = 'unavailable' | 'error500' | 'lostResponse' | 'timeout';
+const requireBackend = createRequire(resolve(process.cwd(), 'packages/backend/package.json'));
+const { Client } = requireBackend('pg');
+
+type FaultMode = 'unavailable' | 'error500' | 'lostResponse' | 'timeout' | 'earlyTimeout' | 'operation404';
 
 function catalogListPaths(manifest: ReturnType<typeof loadManifest>): string[] {
   return [
@@ -183,7 +189,7 @@ test('[WEB-10] owner wallet distinguishes upstream unavailable from real empty a
   }
 });
 
-test('[WEB-10] redeem shows client timeout when upstream hangs without committing or faking success', async ({
+test('[WEB-10] redeem keeps a retryable timeout attempt when upstream hangs without committing or faking success', async ({
   page,
 }) => {
   const manifest = loadManifest();
@@ -211,8 +217,9 @@ test('[WEB-10] redeem shows client timeout when upstream hangs without committin
       .getByRole('button', { name: 'Đổi mã lấy vé', exact: true })
       .click();
     await expect(page.getByTestId('redeem-ux-timeout')).toBeVisible({
-      timeout: 35_000,
+      timeout: 60_000,
     });
+    await expect(page.getByRole('button', { name: 'Kiểm tra lại' })).toBeEnabled();
     await expect(page.getByTestId('redeem-ux-success')).toHaveCount(0);
     await expect(page.getByTestId('redeem-ticket-card')).toHaveCount(0);
     expect(
@@ -223,7 +230,7 @@ test('[WEB-10] redeem shows client timeout when upstream hangs without committin
   }
 });
 
-test('[WEB-10] redeem distinguishes a request that never reached the server from a lost response that already committed, and never fakes success', async ({
+test('[WEB-10] redeem distinguishes an uncommitted request from a lost response that committed, and never fakes success', async ({
   page,
 }) => {
   const manifest = loadManifest();
@@ -250,8 +257,8 @@ test('[WEB-10] redeem distinguishes a request that never reached the server from
     await page
       .getByRole('button', { name: 'Đổi mã lấy vé', exact: true })
       .click();
-    await expect(page.getByTestId('redeem-ux-error')).toBeVisible({
-      timeout: 15_000,
+    await expect(page.getByTestId('redeem-ux-unknown')).toBeVisible({
+      timeout: 40_000,
     });
     await expect(page.getByTestId('redeem-ticket-card')).toHaveCount(0);
     expect(
@@ -302,5 +309,73 @@ test('[WEB-10] redeem distinguishes a request that never reached the server from
     expect(after.sort()).toEqual([firstTicketId, secondTicketId].sort());
   } finally {
     setFault(null);
+  }
+});
+
+test('[WEB-10] redeem reconciles retryable 404 before delayed commit with the original key', async ({ page }) => {
+  const manifest = loadManifest();
+  const fixture = fixtureFor(manifest, 'WEB-10');
+  const delayedCommitCode = fixture.data?.delayedCommitCode as string | undefined;
+  if (!delayedCommitCode || !process.env.DATABASE_URL || !process.env.E2E_RUN_DIR)
+    throw new Error('BLOCKED: WEB-10 delayed commit needs isolated database and code');
+  expect(fixture.tenantId).toMatch(/^[0-9a-f-]{36}$/i);
+  const adminUrl = new URL(process.env.DATABASE_URL);
+  adminUrl.username = 'postgres';
+  const admin = new Client({ connectionString: adminUrl.toString() });
+  const control = faultControlPathFor(manifest);
+  const path = `/v1/tenants/${fixture.tenantId}/events/${fixture.eventId}/redemptions`;
+  const setFault = (mode: FaultMode | null) =>
+    setFaultRoute(control, manifest.runId, path, mode);
+  let operationPath: string | null = null;
+  const answers = fixture.data?.answers as Record<string, string | boolean> | undefined;
+  const operation404Keys: string[] = [];
+  const postedKeys: string[] = [];
+  page.on('request', (request) => {
+    if (new URL(request.url()).pathname !== '/api/bff/redeem') return;
+    const body = request.postDataJSON() as { idempotencyKey?: string };
+    if (body.idempotencyKey) postedKeys.push(body.idempotencyKey);
+  });
+  page.on('response', (response) => {
+    const url = new URL(response.url());
+    if (url.pathname.startsWith('/api/bff/operations/') && response.status() === 404)
+      operation404Keys.push(decodeURIComponent(url.pathname.split('/').at(-1)!));
+  });
+
+  await admin.connect();
+  try {
+    await login(page, manifest, accountFor(manifest, 'WEB-10', 'attendee'));
+    const beforeWallet = await walletTicketIds(page, manifest, fixture.tenantId);
+    const before = await readRedemptionState(fixture, codeIdFor(fixture, 'delayedCommit'));
+    expect(before.tickets).toHaveLength(0);
+    await admin.query(`CREATE FUNCTION e2e_web10_delay_commit() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN PERFORM pg_sleep(3.5); RETURN NEW; END $$`);
+    await admin.query(`CREATE CONSTRAINT TRIGGER e2e_web10_delay_commit AFTER INSERT ON operations DEFERRABLE INITIALLY DEFERRED FOR EACH ROW WHEN (NEW.tenant_id = '${fixture.tenantId}'::uuid) EXECUTE FUNCTION e2e_web10_delay_commit()`);
+
+    setFault('earlyTimeout');
+    await openCodeConfirmation(page, manifest, delayedCommitCode);
+    await fillPublishedForm(page, answers);
+    await page.getByRole('button', { name: 'Đổi mã lấy vé', exact: true }).click();
+    await expect.poll(() => operation404Keys.length, { timeout: 12_000 }).toBeGreaterThan(0);
+    expect(postedKeys).toHaveLength(1);
+    expect(operation404Keys).toContain(postedKeys[0]);
+    operationPath = `/v1/operations/${encodeURIComponent(postedKeys[0])}`;
+    setFaultRoute(control, manifest.runId, operationPath, 'operation404');
+    await expect(page.getByTestId('redeem-ux-unknown')).toBeVisible({ timeout: 40_000 });
+    await expect(page.getByTestId('redeem-ticket-card')).toHaveCount(0);
+    expect(postedKeys).toHaveLength(1);
+    setFaultRoute(control, manifest.runId, operationPath, null);
+    await page.getByTestId('redeem-ux-unknown').getByRole('button').click();
+    await expect(page.getByTestId('redeem-ux-success')).toBeVisible({ timeout: 20_000 });
+    const ticketId = (await page.getByTestId('redeem-ticket-card').locator('dd').first().textContent())?.trim();
+    const after = await readRedemptionState(fixture, codeIdFor(fixture, 'delayedCommit'));
+    assertIssuedExactlyOnce(before, after, fixture, accountFor(manifest, 'WEB-10', 'attendee').userId!, ticketId);
+    expect(after.operations).toHaveLength(before.operations.length + 1);
+    expect(after.operations.filter((operation) => operation.client_key === postedKeys[0])).toHaveLength(1);
+    expect((await walletTicketIds(page, manifest, fixture.tenantId)).sort()).toEqual([...beforeWallet, ticketId!].sort());
+  } finally {
+    setFault(null);
+    if (operationPath) setFaultRoute(control, manifest.runId, operationPath, null);
+    await admin.query('DROP TRIGGER IF EXISTS e2e_web10_delay_commit ON operations');
+    await admin.query('DROP FUNCTION IF EXISTS e2e_web10_delay_commit()');
+    await admin.end();
   }
 });

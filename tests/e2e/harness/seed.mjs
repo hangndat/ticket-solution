@@ -304,7 +304,7 @@ export async function seedRuntime(state, caseIds) {
         });
         fixture.ticketTypeId = inventory.ticketTypeId;
         fixture.sourceId = inventory.sourceId;
-        if (['WEB-02', 'WEB-03', 'WEB-07'].includes(caseId)) {
+        if (['WEB-02', 'WEB-03', 'WEB-07', 'WEB-10'].includes(caseId)) {
           fixture.data.codeIds = { primary: inventory.codeIds[0] };
         }
         fixture.data.ticketTypeLabel = 'E2E General';
@@ -508,6 +508,35 @@ export async function seedRuntime(state, caseIds) {
               insertHmac: codeHmac,
             });
           }
+        }
+        if (caseId === 'WEB-10') {
+          const rawCode = `E2E-${state.id}-${caseId}-DC`;
+          const codeId = randomUUID();
+          fixture.data.delayedCommitCode = rawCode;
+          fixture.data.codeIds.delayedCommit = codeId;
+          const codeHmac = backend.hashRedemptionCode(hmac, rawCode);
+          await tx.$executeRaw`
+            INSERT INTO redemption_codes (
+              tenant_id, event_id, id, code_hmac, code_pepper_version,
+              source_id, ticket_type_id, status, created_at, updated_at
+            ) VALUES (
+              ${tenantId}::uuid, ${eventId}::uuid, ${codeId}::uuid,
+              ${codeHmac}, ${hmac.version},
+              ${fixture.sourceId}::uuid, ${fixture.ticketTypeId}::uuid,
+              'AVAILABLE', now(), now()
+            )
+          `;
+          await backend.attachCodeRoutingOnInsert(tx, {
+            peppers: [hmac],
+            fpSecret: state.secrets.hmac,
+            tenantId,
+            eventId,
+            redemptionCodeId: codeId,
+            rawCode,
+            codeStatus: 'AVAILABLE',
+            insertPepperVersion: 1,
+            insertHmac: codeHmac,
+          });
         }
         if (caseId === 'WEB-13') {
           const manualEventId = randomUUID();

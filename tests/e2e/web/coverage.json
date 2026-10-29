@@ -150,12 +150,13 @@
       "fault.spec.ts › [WEB-10] public detail shows upstream failure and recovers after transport restoration",
       "fault.spec.ts › [WEB-10] home catalog distinguishes upstream unavailable from filter empty and recovers",
       "fault.spec.ts › [WEB-10] owner wallet distinguishes upstream unavailable from real empty and recovers with real data",
-      "fault.spec.ts › [WEB-10] redeem shows client timeout when upstream hangs without committing or faking success",
-      "fault.spec.ts › [WEB-10] redeem distinguishes a request that never reached the server from a lost response that already committed, and never fakes success"
+      "fault.spec.ts › [WEB-10] redeem keeps a retryable timeout attempt when upstream hangs without committing or faking success",
+      "fault.spec.ts › [WEB-10] redeem distinguishes an uncommitted request from a lost response that committed, and never fakes success",
+      "fault.spec.ts › [WEB-10] redeem reconciles retryable 404 before delayed commit with the original key"
     ],
     "layers": ["B", "H"],
     "status": "implemented",
-    "reason": "F03 fix lượt 2: home catalog dùng revalidateSeconds:0 trên loadPublishedEventList để reload sau fault không dính Next fetch cache (mvt23wo0 grid stale); redeem sau client timeout giữ redeem-ux-timeout khi poll xác nhận không có operation (tránh overwrite bằng Operation not found). Browser PASS mvt28b4s-58bd32 5/5 fault.spec WEB-10."
+    "reason": "F03 catalog fault/recovery được giữ. F05: poll giữ retryable operation 404 ở trạng thái chưa rõ; E2E dùng trigger commit muộn trong DB cô lập, proxy 504 sớm, xác nhận GET 404 trước commit, recovery cùng key và đúng một vé; timeout không tạo vé giả và giữ đường kiểm tra lại."
   },
   {
     "caseId": "WEB-11",

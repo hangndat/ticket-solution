@@ -593,13 +593,8 @@ export function RedeemForm({
           generation,
           fingerprint,
         );
-        if (
-          hungWithoutResponse &&
-          (pollOutcome === 'error' || pollOutcome === 'timeout')
-        ) {
+        if (hungWithoutResponse && pollOutcome === 'timeout') {
           setUx(timeoutMessage(locale));
-          setAttempt(null);
-          setDecision(null);
         }
         return;
       }
