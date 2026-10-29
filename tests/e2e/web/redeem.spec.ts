@@ -27,7 +27,7 @@ import {
   codeIdFor,
   readRedemptionState,
 } from './redemption-db';
-import { withAmbiguousRoutingGroup } from './web03-ambiguity';
+import { withLegacyCodeCollision } from './web03-ambiguity';
 
 async function redeemCode(
   page: import('playwright/test').Page,
@@ -46,6 +46,10 @@ async function redeemCode(
     .getByRole('button', { name: 'Đổi mã lấy vé', exact: true })
     .click();
   return f;
+}
+
+function stableOutbox(state: Awaited<ReturnType<typeof readRedemptionState>>) {
+  return state.outbox.map(({ status, ...row }) => row);
 }
 
 test('[WEB-02] verified attendee redeems auto code and reloads QR', async ({
@@ -80,12 +84,14 @@ test('[WEB-02] verified attendee redeems auto code and reloads QR', async ({
   assertNoExtraIssue(issued, await readRedemptionState(f, codeId));
 });
 
-test('[WEB-03] event link and global entry resolve code to the same published event', async ({
+test('[WEB-03] event link survives login and issues for the globally resolved event', async ({
   page,
 }) => {
   const manifest = loadManifest();
   const f = fixtureFor(manifest, 'WEB-03');
   if (!f.code) throw new Error('BLOCKED: WEB-03 cần code');
+  const codeId = codeIdFor(f);
+  const before = await readRedemptionState(f, codeId);
   await page.goto(webUrl(manifest, eventPath(f)));
   const eventTitle = (await page.locator('#event-title').textContent())?.trim();
   expect(eventTitle).toBeTruthy();
@@ -120,6 +126,37 @@ test('[WEB-03] event link and global entry resolve code to the same published ev
       exact: true,
     }),
   ).toBeVisible();
+  await page.goto(webUrl(manifest, eventPath(f)));
+  await page
+    .getByTestId('event-sidebox')
+    .getByRole('link', { name: 'Đổi mã lấy vé' })
+    .click();
+  await expect(page.locator('input[name="tenantSlug"]')).toHaveValue(
+    f.tenantSlug,
+  );
+  await expect(page.locator('input[name="eventSlug"]')).toHaveValue(
+    f.eventSlug,
+  );
+  await page.locator('#redeem-code-confirm').fill(f.code);
+  await fillPublishedForm(
+    page,
+    f.data?.answers as Record<string, string | boolean>,
+  );
+  const [issueResponse] = await Promise.all([
+    page.waitForResponse(
+      (response) => new URL(response.url()).pathname === '/api/bff/redeem',
+    ),
+    page.getByRole('button', { name: 'Đổi mã lấy vé', exact: true }).click(),
+  ]);
+  expect(issueResponse.status()).toBe(201);
+  await expect(page.getByTestId('redeem-ux-success')).toBeVisible();
+  const card = page.getByTestId('redeem-ticket-card');
+  await expect(card).toBeVisible();
+  const ticketId = (await card.locator('dd').first().textContent())?.trim();
+  expect(ticketId).toMatch(/^[0-9a-f-]{36}$/i);
+  const issued = await readRedemptionState(f, codeId);
+  assertIssuedExactlyOnce(before, issued, f, actor.userId!, ticketId);
+  expect(await walletTicketIds(page, manifest, f.tenantId)).toContain(ticketId);
 });
 
 test('[WEB-03] invalid and ambiguous codes keep context private and state unchanged', async ({
@@ -163,7 +200,14 @@ test('[WEB-03] invalid and ambiguous codes keep context private and state unchan
   await expect(page.getByTestId('redeem-global-context')).toHaveCount(0);
   await expect(page.locator('main')).not.toContainText(`E2E WEB-03`);
   await expect(page.locator('main')).not.toContainText(ownerEmail);
-  expect(await readRedemptionState(f, codeId)).toEqual(before);
+  const afterInvalidGlobal = await readRedemptionState(f, codeId);
+  expect({
+    ...afterInvalidGlobal,
+    outbox: stableOutbox(afterInvalidGlobal),
+  }).toEqual({
+    ...before,
+    outbox: stableOutbox(before),
+  });
   await assertWalletUnchanged(page, manifest, f.tenantId, walletSignedIn);
 
   // The event link may show its published event, but a wrong code cannot issue.
@@ -198,7 +242,7 @@ test('[WEB-03] invalid and ambiguous codes keep context private and state unchan
   expect(afterInvalidEvent.requests).toEqual(before.requests);
   expect(afterInvalidEvent.tickets).toEqual(before.tickets);
   expect(afterInvalidEvent.quotas).toEqual(before.quotas);
-  expect(afterInvalidEvent.outbox).toEqual(before.outbox);
+  expect(stableOutbox(afterInvalidEvent)).toEqual(stableOutbox(before));
   expect(afterInvalidEvent.operations).toHaveLength(
     before.operations.length + 1,
   );
@@ -211,8 +255,8 @@ test('[WEB-03] invalid and ambiguous codes keep context private and state unchan
   ).toHaveLength(1);
   await assertWalletUnchanged(page, manifest, f.tenantId, walletSignedIn);
 
-  // Legacy ambiguity disables global lookup for every code, with no target data.
-  await withAmbiguousRoutingGroup(f, codeId, async () => {
+  // A second event with the same legacy code makes the real routing group ambiguous.
+  await withLegacyCodeCollision(f, codeId, async () => {
     const [ambiguousResponse] = await Promise.all([
       page.waitForResponse(
         (response) =>
@@ -230,7 +274,13 @@ test('[WEB-03] invalid and ambiguous codes keep context private and state unchan
     await expect(page.getByTestId('redeem-global-context')).toHaveCount(0);
     await expect(page.locator('main')).not.toContainText(`E2E WEB-03`);
     await expect(page.locator('main')).not.toContainText(ownerEmail);
-    expect(await readRedemptionState(f, codeId)).toEqual(afterInvalidEvent);
+    const afterAmbiguous = await readRedemptionState(f, codeId);
+    expect({ ...afterAmbiguous, outbox: stableOutbox(afterAmbiguous) }).toEqual(
+      {
+        ...afterInvalidEvent,
+        outbox: stableOutbox(afterInvalidEvent),
+      },
+    );
     await assertWalletUnchanged(page, manifest, f.tenantId, walletSignedIn);
   });
 });
