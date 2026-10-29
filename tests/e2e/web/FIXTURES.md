@@ -29,3 +29,7 @@ Mỗi `cases[ID]` cần `tenantId`, `tenantSlug`, `eventId`, `eventSlug` như `h
 Các test có request mất phản hồi/revoke/time travel cần control từ harness scoped theo run, chưa có trong contract `CaseFixture`; ghi `blocked` cho phần đó cho đến khi coordinator bổ sung cơ chế. Test Web không tự đổi contract hay seed product state bằng API của app.
 
 WEB-01: `privateEventId`/`privateEventSlug` phải là event **PUBLISHED + UNLISTED** trong cùng tenant để kiểm không có trong catalog nhưng direct link vẫn xem được theo PRD M03; `draftEventId`/`draftEventSlug` là DRAFT và direct link trả 404.
+
+WEB-02/07: `data.codeIds.primary` là ID PostgreSQL của `code` fresh. WEB-07 thêm mã độc lập `data.lostResponseCode`, `reloadCode`, `conflictCode`, `raceCode` với ID tương ứng trong `data.codeIds.lostResponse`, `reload`, `conflict`, `race`. Mỗi nhánh đối soát qua role runtime, `app.tenant_id` transaction-local; không lưu HMAC/secret trong manifest.
+
+WEB-03: `data.codeIds.primary` là ID của mã fresh cho đối soát PostgreSQL. Test đánh dấu routing group của mã này `AMBIGUOUS` chỉ sau nhánh resolve thành công, gọi API/BFF thật, rồi khôi phục trong `finally`; fixture chỉ tồn tại trong run cô lập. `data.invalidCode` không thuộc event nào. Nhánh event-scoped `CODE_INVALID` có thể ghi một operation từ chối theo contract, nhưng không đổi code/request/ticket/quota/outbox.

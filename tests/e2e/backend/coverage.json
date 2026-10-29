@@ -354,10 +354,10 @@
   },
   {
     "caseId": "SEC-02",
-    "tests": [],
-    "layers": [],
+    "tests": ["H:tests/e2e/http/live.test.mjs#[SEC-02]", "B:tests/e2e/harness/security.spec.ts#[SEC-02]"],
+    "layers": ["H", "B"],
     "status": "blocked",
-    "reason": "Thiếu H real cookie/CSRF/OIDC audience/host matrix."
+    "reason": "H real attendee/staff OIDC session, host-cookie và Origin/CSRF deny 403 với positive control 422; Platform anonymous BFF boundary PASS (mvswmkmm-65fb5c, full HTTP mvswv301-a66295). Platform authenticated BFF còn BLOCKED vì Keycloak từ chối OTP synthetic; chưa phủ mọi BFF mutate và session revoke matrix."
   },
   {
     "caseId": "SEC-03",

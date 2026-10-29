@@ -14,7 +14,7 @@
     ],
     "layers": ["H", "B"],
     "status": "blocked",
-    "reason": "H live PASS run mvsfkswp-8af93a: OAuth Set-Cookie host-only HttpOnly Secure SameSite=Lax on web+portal staff/platform login; portal/web BFF Origin thiếu/sai; JWT aud ticket-api↔ticket-platform-api disjoint + cross-API deny; evil Origin không thay bearer; foreign tenant deny với bearer. B: security.spec.ts cookie jar. Chưa platform/me 200 (browser MFA), mọi BFF mutate, CSRF 403 khi 401 trước session."
+    "reason": "H live PASS run mvswmkmm-65fb5c: OAuth Set-Cookie trên web/portal staff/platform; browser OIDC thật cho attendee và staff kiểm session cookie host-only HttpOnly Secure SameSite=Lax, host kia vẫn 401, BFF Origin/token matrix 403 sau session và request hợp lệ đi tiếp tới validation 422; cùng Origin+CSRF nhưng thiếu session là 401. Platform BFF kiểm Origin thiếu/sai 403 và Origin+CSRF hợp lệ nhưng thiếu session 401; JWT staff/platform audience disjoint, cross-API deny, CORS không thay bearer, foreign tenant deny. B: security.spec.ts cookie jar. Vẫn BLOCKED cho Platform session sau MFA: Keycloak fixture OTP trả Invalid authenticator code; chưa có authenticated Platform BFF matrix hoặc phủ mọi mutation route."
   },
   {
     "caseId": "SEC-03",
