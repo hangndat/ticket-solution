@@ -6,6 +6,7 @@ import {
   accountFor,
 } from '../harness/fixtures';
 import { caseData, eventPath, login, webUrl } from './helpers';
+import { readWeb09Database } from './web09-db';
 
 test('[WEB-01] only published projection is discoverable', async ({ page }) => {
   const manifest = loadManifest();
@@ -43,36 +44,121 @@ test('[WEB-01] only published projection is discoverable', async ({ page }) => {
   await expect(page.getByTestId('event-published')).toBeVisible();
 });
 
-test('[WEB-09] owner list/detail/QR remain private across attendees', async ({
+test('[WEB-09] multi-tenant owner wallet and private detail/QR/request/operation', async ({
   browser,
 }) => {
   const manifest = loadManifest();
   const f = fixtureFor(manifest, 'WEB-09');
   if (!f.ticketId)
     throw new Error('BLOCKED: WEB-09 cần ticketId thuộc attendee');
+  if (!f.requestId)
+    throw new Error('BLOCKED: WEB-09 cần requestId thuộc attendee');
+  const otherTenantId = caseData<string>(f, 'otherTenantId');
+  const otherTenantSlug = caseData<string>(f, 'otherTenantSlug');
+  const otherTickets = caseData<
+    Record<'ACTIVE' | 'REVOKED' | 'CANCELLED', string>
+  >(f, 'otherTickets');
+  const operationKey = caseData<string>(f, 'operationKey');
+  const actorX = accountFor(manifest, 'WEB-09', 'attendee');
+  const actorY = accountFor(manifest, 'WEB-09', 'otherAttendee');
+  if (!actorX.userId || !actorY.userId)
+    throw new Error('BLOCKED: WEB-09 cần identity PostgreSQL của X/Y');
+  for (const tenantId of [f.tenantId, otherTenantId]) {
+    const db = await readWeb09Database(f, tenantId, [
+      actorX.userId,
+      actorY.userId,
+    ]);
+    expect(db.memberships).toHaveLength(0);
+    const expected =
+      tenantId === f.tenantId
+        ? { [f.ticketId]: 'ACTIVE' }
+        : Object.fromEntries(
+            Object.entries(otherTickets).map(([state, id]) => [id, state]),
+          );
+    expect(
+      Object.fromEntries(db.tickets.map((row) => [row.id, row.state])),
+    ).toEqual(expected);
+    expect(db.tickets.every((row) => row.owner_user_id === actorX.userId)).toBe(
+      true,
+    );
+    expect(
+      db.operations.every((row) => row.actor_user_id === actorX.userId),
+    ).toBe(true);
+    if (tenantId === f.tenantId) {
+      expect(db.tickets[0].request_id).toBe(f.requestId);
+      expect(db.operations.some((row) => row.client_key === operationKey)).toBe(
+        true,
+      );
+    }
+  }
   const contextX = await browser.newContext();
   const contextY = await browser.newContext();
   try {
     const x = await contextX.newPage();
     const y = await contextY.newPage();
-    await login(x, manifest, accountFor(manifest, 'WEB-09', 'attendee'));
-    await login(y, manifest, accountFor(manifest, 'WEB-09', 'otherAttendee'));
+    await login(x, manifest, actorX);
+    await login(y, manifest, actorY);
     await x.goto(webUrl(manifest, '/wallet'));
-    await expect(x.getByTestId(`wallet-ticket-${f.ticketId}`)).toBeVisible();
+    for (const id of [f.ticketId, ...Object.values(otherTickets)])
+      await expect(x.getByTestId(`wallet-ticket-${id}`)).toBeVisible();
     await y.goto(webUrl(manifest, '/wallet'));
-    await expect(y.getByTestId(`wallet-ticket-${f.ticketId}`)).toHaveCount(0);
-    const detail = `/t/${f.tenantSlug}/tickets/${f.ticketId}?tenantId=${f.tenantId}`;
-    await y.goto(webUrl(manifest, detail));
-    await expect(y.getByTestId('owner-ticket-ready')).toHaveCount(0);
-    await expect(
-      y
-        .getByTestId('owner-ticket-forbidden')
-        .or(y.getByTestId('owner-ticket-missing')),
-    ).toBeVisible();
-    const response = await y.request.get(
-      webUrl(manifest, `/api/bff/tickets/${f.ticketId}?tenantId=${f.tenantId}`),
-    );
-    expect([403, 404]).toContain(response.status());
+    for (const [tenantId, tenantSlug, ticketId] of [
+      [f.tenantId, f.tenantSlug, f.ticketId],
+      [otherTenantId, otherTenantSlug, otherTickets.ACTIVE],
+    ]) {
+      await expect(y.getByTestId(`wallet-ticket-${ticketId}`)).toHaveCount(0);
+      const list = await y.request.get(
+        webUrl(manifest, `/api/bff/tickets?tenantId=${tenantId}`),
+      );
+      expect(list.status()).toBe(200);
+      expect((await list.json()).tickets).toEqual([]);
+      const detail = `/t/${tenantSlug}/tickets/${ticketId}?tenantId=${tenantId}`;
+      await y.goto(webUrl(manifest, detail));
+      await expect(y.getByTestId('owner-ticket-qr-figure')).toHaveCount(0);
+      await expect(
+        y
+          .getByTestId('owner-ticket-forbidden-state')
+          .or(y.getByTestId('owner-ticket-missing-state')),
+      ).toBeVisible();
+      const response = await y.request.get(
+        webUrl(manifest, `/api/bff/tickets/${ticketId}?tenantId=${tenantId}`),
+      );
+      expect([403, 404]).toContain(response.status());
+    }
+    for (const [path, expected] of [
+      [`/api/bff/redemptions/${f.requestId}?tenantId=${f.tenantId}`, 200],
+      [
+        `/api/bff/operations/${operationKey}?tenantId=${f.tenantId}&eventId=${f.eventId}`,
+        200,
+      ],
+    ] as const) {
+      expect((await x.request.get(webUrl(manifest, path))).status()).toBe(
+        expected,
+      );
+      expect([403, 404]).toContain(
+        (await y.request.get(webUrl(manifest, path))).status(),
+      );
+    }
+    for (const [state, ticketId] of Object.entries(otherTickets)) {
+      await x.goto(
+        webUrl(
+          manifest,
+          `/t/${otherTenantSlug}/tickets/${ticketId}?tenantId=${otherTenantId}`,
+        ),
+      );
+      await expect(x.getByTestId('owner-ticket-state')).toHaveText(state);
+      await expect(x.getByTestId('owner-ticket-state-tag')).toHaveText(
+        state === 'ACTIVE'
+          ? 'Sẵn sàng'
+          : state === 'REVOKED'
+            ? 'Đã thu hồi'
+            : 'Đã hủy',
+      );
+      if (state !== 'ACTIVE')
+        await expect(x.getByTestId('owner-ticket-state-notice')).toContainText(
+          'Không dùng mã này',
+        );
+    }
   } finally {
     await contextX.close();
     await contextY.close();

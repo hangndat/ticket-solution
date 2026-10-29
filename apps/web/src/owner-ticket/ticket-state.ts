@@ -10,6 +10,7 @@ const STATE_LABELS = {
   USED: dual('Đã dùng', 'Used'),
   CHECKED_IN: dual('Đã vào cổng', 'Checked in'),
   REVOKED: dual('Đã thu hồi', 'Revoked'),
+  CANCELLED: dual('Đã hủy', 'Cancelled'),
   EXPIRED: dual('Hết hạn', 'Expired'),
 } as const;
 
