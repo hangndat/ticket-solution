@@ -32,6 +32,7 @@ import {
   IDENTITY_ERROR_CODES,
   createExportJob,
   downloadExport,
+  exportWritesPaused,
   getExportJob,
   listExportJobs,
   parseTtlSeconds,
@@ -115,6 +116,9 @@ export class ExportApiService {
     idempotencyKey: string | undefined,
     body: ExportCreateBodyDto,
   ) {
+    if (exportWritesPaused(this.deps.env)) {
+      throw new ExportError(EXPORT_ERROR_CODES.MINIO_MISCONFIGURED, 'Exports are paused');
+    }
     if (!readMinioExportsEnvironment(this.deps.env)) {
       throw new ExportError(
         EXPORT_ERROR_CODES.MINIO_MISCONFIGURED,
@@ -184,6 +188,9 @@ export class ExportApiService {
     eventId: string,
     exportId: string,
   ) {
+    if (exportWritesPaused(this.deps.env)) {
+      throw new ExportError(EXPORT_ERROR_CODES.MINIO_MISCONFIGURED, 'Exports are paused');
+    }
     const minio = requireMinioExportsConfig(this.deps.env);
     const user = await this.actor(authorization);
     return downloadExport(this.deps.db!, minio, {

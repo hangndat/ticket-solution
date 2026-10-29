@@ -442,6 +442,7 @@ export {
   downloadExport,
   processExportJob,
   relayExportsOnce,
+  exportWritesPaused,
   parseTtlSeconds,
   type ExportFilter,
   type ExportJob,
