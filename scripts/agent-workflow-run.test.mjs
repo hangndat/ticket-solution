@@ -125,6 +125,18 @@ test('failed collect with --release skips worker-release',()=>fixture(({run,call
  assert.deepEqual(calls().map(a=>a[0]==='orchestration'?a[1]:a[0]),['worker-show','collect','snapshot']);
  assert.equal(calls().filter(a=>a[1]==='worker-release').length,0);
 }));
+test('settle retry preserves append-only event after telemetry recovers',()=>fixture(({dir,run,calls})=>{
+ run(start);
+ const first=run([...settle,'--employee','minh','--release'],{FIX_COLLECT_FAIL:'1'});
+ assert.equal(first.status,1,first.stderr);
+ const second=run([...settle,'--employee','minh','--release']);
+ assert.equal(second.status,0,second.stderr);
+ assert.equal(JSON.parse(second.stdout).companyTracking,'recorded');
+ assert.equal(calls().filter(a=>a[1]==='worker-release').length,1);
+ const log=events(join(dir,'work-events.jsonl'));
+ assert.deepEqual(log.map(e=>e.type),['assigned','settled','released']);
+ assert.match(log[1].summary,/telemetry unavailable/);
+}));
 test('quota unavailable recorded and never reported zero; start is not retried',()=>fixture(({run,calls})=>{
  const r=run(start,{FIX_SNAPSHOT_FAIL:'1'});assert.equal(r.status,0,r.stderr);const j=JSON.parse(r.stdout);assert.equal(j.quotaAvailable,false);
  assert.ok(readdirSync(j.receiptDirectory).some(n=>n.endsWith('.unavailable')));

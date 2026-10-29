@@ -12,6 +12,10 @@ export function generateOAuthState(): string {
   return base64Url(randomBytes(16));
 }
 
+export function generateOidcNonce(): string {
+  return base64Url(randomBytes(32));
+}
+
 function base64Url(buf: Buffer): string {
   return buf
     .toString('base64')

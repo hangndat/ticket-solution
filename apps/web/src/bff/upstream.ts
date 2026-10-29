@@ -1,7 +1,7 @@
 import { IDENTITY_ERROR_CODES } from '@ticket/contracts';
 import type { GateSsrTrace } from '../nav/ssr-trace';
 import { isOidcConfigured } from '../oidc/config';
-import { clearSessionCookies, readAccessToken } from '../oidc/cookies';
+import { clearEstablishedSessionCookies, readAccessToken } from '../oidc/cookies';
 import { refreshWebAccessToken } from '../oidc/refresh';
 import { bffApiError } from './api-error';
 
@@ -244,7 +244,7 @@ export async function forwardWithBearer(
     if (refreshed.reason === 'network') {
       return refreshFailureResponse('network');
     }
-    await clearSessionCookies();
+    await clearEstablishedSessionCookies();
     return refreshFailureResponse(refreshed.reason);
   }
   trace?.mark('forward_upstream_fetch_retry');

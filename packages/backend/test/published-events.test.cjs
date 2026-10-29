@@ -10,6 +10,7 @@ const { Client } = require('pg');
 const {
   createDatabase,
   withTenant,
+  withPlatformRole,
   createPrismaIdentityUserRepository,
   grantMembership,
   grantEventAssignment,
@@ -354,6 +355,30 @@ test(
       assert.ok(
         platformAfterDraft.items.some((row) => row.slug === 'draft-only'),
       );
+      await withTenant(db, D9_DEMO.tenants.mfest.id, async (tx) => {
+        await tx.$executeRaw`
+          UPDATE events SET visibility = 'UNLISTED'
+          WHERE tenant_id = ${D9_DEMO.tenants.mfest.id}::uuid AND id = ${draftId}::uuid
+        `;
+      });
+      const unlistedDetail = await getPublishedEventDetail(db, {
+        tenantSlug: 'mfest-demo',
+        eventSlug: 'draft-only',
+      });
+      assert.ok(unlistedDetail);
+      assert.equal(unlistedDetail.publishedConfigVersion, publishedDraft.publishedConfigVersion);
+      assert.equal(unlistedDetail.sections[0].title, 'Draft Hero');
+      const tenantCatalog = await listPublishedEvents(db, { tenantSlug: 'mfest-demo' });
+      assert.deepEqual(tenantCatalog.items.map((row) => row.slug), ['mfest']);
+      const platformCatalog = await listPlatformPublishedEvents(db, { limit: 50 });
+      assert.equal(platformCatalog.items.some((row) => row.slug === 'draft-only'), false);
+
+      await withTenant(db, D9_DEMO.tenants.mfest.id, async (tx) => {
+        await tx.$executeRaw`
+          UPDATE events SET visibility = 'PUBLIC'
+          WHERE tenant_id = ${D9_DEMO.tenants.mfest.id}::uuid AND id = ${draftId}::uuid
+        `;
+      });
       const page1 = await listPlatformPublishedEvents(db, { limit: 1 });
       if (page1.nextCursor) {
         const page2 = await listPlatformPublishedEvents(db, {
@@ -362,6 +387,22 @@ test(
         });
         assert.notEqual(page2.items[0]?.id, page1.items[0]?.id);
       }
+      await withPlatformRole(db, async (tx) => {
+        await tx.$executeRaw`
+          UPDATE tenants SET status = 'SUSPENDED'
+          WHERE id = ${D9_DEMO.tenants.mfest.id}::uuid
+        `;
+      });
+      assert.equal(
+        await getPublishedEventDetail(db, {
+          tenantSlug: 'mfest-demo',
+          eventSlug: 'draft-only',
+        }),
+        null,
+      );
+      assert.equal(await listPublishedEvents(db, { tenantSlug: 'mfest-demo' }), null);
+      const suspendedCatalog = await listPlatformPublishedEvents(db, { limit: 50 });
+      assert.equal(suspendedCatalog.items.some((row) => row.tenantSlug === 'mfest-demo'), false);
     } finally {
       if (db) await db.$disconnect().catch(() => {});
       if (name) {

@@ -66,7 +66,7 @@ import {
   readStoredResolveToken,
   writeStoredResolveToken,
 } from '../../../src/redeem/resolve-session';
-import { loginHref } from '../../../src/oidc/login-href';
+import { redeemLoginHref } from '../../../src/redeem/login-href';
 import { RedeemTermsConsent } from '../../../src/redeem/redeem-terms-consent';
 import {
   authButtonsRow,
@@ -95,8 +95,6 @@ import {
 import { liveRegionForStatus } from '../../../src/ui/live-region';
 import { SurfaceState } from '../../../src/ui/surface-state';
 
-const REDEEM_LOGIN_HREF = loginHref('/redeem');
-
 type Props = {
   productChrome?: boolean;
   globalEntry?: boolean;
@@ -117,6 +115,12 @@ export function RedeemForm({
   initialTenantSlug = '',
   initialEventSlug = '',
 }: Props) {
+  const redeemLogin = redeemLoginHref({
+    tenantId: initialTenantId,
+    eventId: initialEventId,
+    tenantSlug: initialTenantSlug,
+    eventSlug: initialEventSlug,
+  });
   const { locale } = useAttendeeLocale();
   const copy = redeemFormCopy(locale);
   const [tenantId, setTenantId] = useState(initialTenantId);
@@ -575,19 +579,23 @@ export function RedeemForm({
       if (isStale(generation)) return;
 
       if (result.timedOut || result.networkError) {
+        const hungWithoutResponse = result.timedOut && !result.networkError;
         setUx(
           result.networkError
             ? networkMessage(locale)
             : timeoutMessage(locale),
         );
         setRaw(null);
-        await runPoll(
+        const pollOutcome = await runPoll(
           key,
           payload.tenantId,
           payload.eventId,
           generation,
           fingerprint,
         );
+        if (hungWithoutResponse && pollOutcome === 'timeout') {
+          setUx(timeoutMessage(locale));
+        }
         return;
       }
 
@@ -1231,7 +1239,7 @@ export function RedeemForm({
                 {copy.viewWallet}
               </Button>
               <Button asChild variant="primary">
-                <a href={REDEEM_LOGIN_HREF}>{copy.login}</a>
+                <a href={redeemLogin}>{copy.login}</a>
               </Button>
             </>
           )}
@@ -1273,7 +1281,7 @@ export function RedeemForm({
           {ux.kind === 'auth' ? (
             <p className={authButtonsRow}>
               <Button asChild variant="brand">
-                <a href={REDEEM_LOGIN_HREF}>{copy.login}</a>
+                <a href={redeemLogin}>{copy.login}</a>
               </Button>
               {ux.code === IDENTITY_ERROR_CODES.EMAIL_NOT_VERIFIED ? (
                   <Button asChild variant="secondary">

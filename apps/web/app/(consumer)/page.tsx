@@ -39,7 +39,10 @@ async function loadHomeCatalog(): Promise<HomeCatalog> {
   let sawInvalid = false;
 
   for (const slug of slugs) {
-    const result = await loadPublishedEventList(slug, { limit: 50 });
+    const result = await loadPublishedEventList(slug, {
+      limit: 50,
+      revalidateSeconds: 0,
+    });
     if (result.status === 'ok') {
       items.push(...result.body.items);
       continue;

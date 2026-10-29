@@ -1,6 +1,6 @@
 import { isOidcConfigured, resolveWebAuthState } from '../../../src/oidc/config';
 import { readSubject } from '../../../src/oidc/cookies';
-import { loginHref } from '../../../src/oidc/login-href';
+import { redeemLoginHref } from '../../../src/redeem/login-href';
 import { ConsumerPageShell } from '../../../src/consumer-page-shell';
 import {
   globalRedeemEntryEnabled,
@@ -46,7 +46,7 @@ export default async function RedeemPage({ searchParams }: Props) {
   const configured = isOidcConfigured();
   const subject = await readSubject();
   const authState = resolveWebAuthState({ configured, subject });
-  const redeemLogin = loginHref('/redeem');
+  const redeemLogin = redeemLoginHref(params);
   const noticeKey = params.notice?.trim() ?? '';
   const tenantBound = isTenantBoundRedeemQuery({
     tenantId: params.tenantId,

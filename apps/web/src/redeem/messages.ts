@@ -128,6 +128,15 @@ const BY_CODE: Record<string, DualEntry> = {
     ),
     retryable: false,
   },
+  [ISSUE_ERROR_CODES.EVENT_CANCELLED]: {
+    kind: 'closed',
+    title: dual('Sự kiện đã hủy', 'Event cancelled'),
+    detail: dual(
+      'Sự kiện đã hủy và không còn nhận đổi mã.',
+      'This event was cancelled and is no longer accepting redemption codes.',
+    ),
+    retryable: false,
+  },
   [ISSUE_ERROR_CODES.REDEMPTION_WINDOW_CLOSED]: {
     kind: 'closed',
     title: dual('Ngoài cửa sổ đổi mã', 'Outside the redemption window'),

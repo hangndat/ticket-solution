@@ -352,3 +352,9 @@ User “duyệt, fix hết đi” mở phần recovery còn lại của #859. Ch
 ### Bổ sung #859 — khôi phục session sau lỗi thứ tự offline (24/10/2026)
 
 Trong batch user “duyệt, fix hết đi”, trace thật xác nhận sequence local1 nhỏ hơn server9 cho cùng device/session. Cho phép client giữ nguyên operation bị server từ chối và chỉ mở staff session thật mới qua API hiện có cho lượt quét tiếp theo; không đổi payload, sequence hay receipt của lượt cũ. Khóa bằng epoch/user/scope/session, giới hạn một recovery cho session lỗi. Không rotate session khi restart offline chưa nhận durable reject; không revoke session cũ nếu còn pending. Explicit logout xóa staff workspace cùng queue/sequence, còn restore unreachable giữ partition để M10 hồi phục. Không đổi receipt GET/read-only contract, DB schema hoặc authz. Chi tiết và trace: `.orca-metrics/fix-all/DECISION-F02-ORDER-RECOVERY.md`; cần review độc lập trên source freeze cuối trước nghiệm thu.
+
+## Bổ sung 29/10/2026 — retention O06 và ticket reissue
+
+User chốt để triển khai local: POL-02 bỏ qua event thiếu `ends_at`; event bị hủy tính mốc 365 ngày từ `cancelled_at`; QR `ticket_credentials` ngoài phạm vi POL-02; không thêm legal/dispute hold. POL-03 chỉ xóa object export, lấy `ends_at` làm mốc hết hạn nghiệp vụ; không mở rộng sang import hoặc QR object. Chi tiết kỹ thuật và test boundary: [O06 retention handoff](architecture/O06-RETENTION-HANDOFF.md).
+
+Ticket reissue chỉ dành cho Supervisor/Owner; credential cũ chuyển `REVOKED`, vẫn cho reissue khi event đã hủy, bắt buộc `reason`, chưa thêm rate limit. Chi tiết contract và giới hạn Gate hiện hành: [Ticket reissue handoff](architecture/TICKET-REISSUE-HANDOFF.md). User cũng giao tạm Higo phụ trách các task Portal còn thiếu. Các quyết định này cho phép chuẩn bị và kiểm thử local; không bao gồm push, PR hay deploy.

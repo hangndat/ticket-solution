@@ -151,7 +151,8 @@ export function main(argv=process.argv.slice(2)) {
     output={ok:!process.exitCode,command,runId:run,dispatchId:id,telemetryCollected:collected.ok,quotaAvailable,release,receiptDirectory:dir};
     if(employeeId) {
       try {
-        appendEvent({employeeId,type:'settled',runId:run,taskId:d.taskId||d.task_id,dispatchId:id,roleId:role,outcome:d.status,summary:`Dispatch ${d.status}; telemetry ${collected.ok?'collected':'unavailable'}.`,source:'Orca worker-show receipt'});
+        const priorSettlement=companyEvents().find(e=>e.dispatchId===id && e.type==='settled');
+        appendEvent({employeeId,type:'settled',runId:run,taskId:d.taskId||d.task_id,dispatchId:id,roleId:role,outcome:d.status,summary:priorSettlement?.summary ?? `Dispatch ${d.status}; telemetry ${collected.ok?'collected':'unavailable'}.`,source:'Orca worker-show receipt'});
         if(release==='released') appendEvent({employeeId,type:'released',runId:run,taskId:d.taskId||d.task_id,dispatchId:id,roleId:role,summary:'Đã release tài nguyên worker theo receipt.',source:'Orca worker-release receipt'});
         output.employeeId=employeeId;output.companyTracking='recorded';
       } catch(e) { output.ok=false;output.companyTracking='degraded';output.errorCode=e.message;process.exitCode=1; }

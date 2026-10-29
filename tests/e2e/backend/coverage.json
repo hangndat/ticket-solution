@@ -1,0 +1,452 @@
+[
+  {
+    "caseId": "DB-01",
+    "tests": [
+      "D:packages/backend/test/rls.test.cjs#PostgreSQL RLS through Prisma",
+      "D:packages/backend/test/rls-catalog.test.cjs#every tenant table",
+      "D:packages/backend/test/me-tickets-aggregate.test.cjs#W1: owner aggregate"
+    ],
+    "layers": ["D"],
+    "status": "blocked",
+    "reason": "D hiện có RLS/pool/owner; thiếu rollback/exception và H worker/export matrix."
+  },
+  {
+    "caseId": "DB-02",
+    "tests": [
+      "D:packages/backend/test/membership.test.cjs#membership deny-by-default",
+      "D:packages/backend/test/platform.test.cjs#O02 MeEvents",
+      "U:packages/backend/test/membership-unit.test.cjs#isMembershipActive"
+    ],
+    "layers": ["D", "U"],
+    "status": "blocked",
+    "reason": "D membership/revoke; thiếu H claim cũ và issuer+subject qua Keycloak thật."
+  },
+  {
+    "caseId": "DB-03",
+    "tests": [
+      "D:packages/backend/test/issue.test.cjs#issue: last-seat",
+      "D:packages/backend/test/approval.test.cjs#F01: mixed auto/manual"
+    ],
+    "layers": ["D"],
+    "status": "blocked",
+    "reason": "D quota/idempotency; thiếu H cùng request retry và audit matrix đầy đủ."
+  },
+  {
+    "caseId": "DB-04",
+    "tests": [
+      "D:packages/backend/test/issue.test.cjs#issue: last-seat",
+      "D:packages/backend/test/approval.test.cjs#manual redeem does not allocate"
+    ],
+    "layers": ["D"],
+    "status": "blocked",
+    "reason": "D unverified; thiếu canonicalization IdP và tranh per-email limit."
+  },
+  {
+    "caseId": "DB-05",
+    "tests": [
+      "D:packages/backend/test/issue.test.cjs#issue: last-seat",
+      "D:packages/backend/test/approval.test.cjs#F01: mixed auto/manual"
+    ],
+    "layers": ["D"],
+    "status": "blocked",
+    "reason": "D last-seat; thiếu quota nullable và fault rollback ở cả type/source."
+  },
+  {
+    "caseId": "DB-06",
+    "tests": [
+      "D:packages/backend/test/event-lifecycle.test.cjs#C-E event lifecycle"
+    ],
+    "layers": ["D"],
+    "status": "blocked",
+    "reason": "D event lifecycle; thiếu race config/quota/suspend và bounded transient retry."
+  },
+  {
+    "caseId": "DB-07",
+    "tests": [
+      "D:packages/backend/test/approval.test.cjs#manual redeem does not allocate",
+      "D:packages/backend/test/approval.test.cjs#manual approval is audited",
+      "D:packages/backend/test/form-consent.test.cjs#F-BE: form/consent"
+    ],
+    "layers": ["D"],
+    "status": "blocked",
+    "reason": "D pending/approve; thiếu H expiry/reject race và TTL cấu hình."
+  },
+  {
+    "caseId": "DB-08",
+    "tests": [
+      "D:packages/backend/test/issue.test.cjs#issue: last-seat",
+      "D:packages/backend/test/issue.test.cjs#issue: terminal QUOTA_EXHAUSTED",
+      "D:packages/backend/test/db08-fault-rollback.test.cjs#DB-08: fault before commit rolls back ticket/quota/code/operation/outbox; lost response after commit reconciles same key; operation lookup scoped to actor/event/command"
+    ],
+    "layers": ["D"],
+    "status": "implemented",
+    "reason": "DB-08 yêu cầu lớp D: fault ứng dụng trước commit rollback ticket/quota/code/operation/outbox, lost-response sau commit retry cùng key 3 lần về cùng kết quả, operation lookup từ chối actor/event/command sai; db08-fault-rollback.test.cjs PASS trên PostgreSQL thật. Chưa chứng minh process kill/TCP disconnect, nhưng PLAN.md cho phép crash/fault và không yêu cầu H cho ID này."
+  },
+  {
+    "caseId": "DB-09",
+    "tests": [
+      "D:packages/backend/test/gate.test.cjs#gate: one confirm wins",
+      "D:packages/backend/test/ticket-reissue-grants.test.cjs#reissue grant migration",
+      "D:packages/backend/test/event-lifecycle.test.cjs#C-E event lifecycle",
+      "D:packages/backend/test/db09-ticket-security-invariants.test.cjs#DB-09: revoke never reuses a redemption code; no path reassigns ticket owner; allocation is gated on the current event policy, not a stale snapshot",
+      "R:tests/e2e/backend/reissue-worker-mailpit.test.cjs#R reissue worker Mailpit"
+    ],
+    "layers": ["D", "R"],
+    "status": "blocked",
+    "reason": "D PostgreSQL: revoke không tái dùng mã, owner bất biến, reissue xoay credential/version với idempotency và grant Owner/Supervisor. R worker thật + Mailpit chứng minh PNG version mới đúng owner và revoke trước relay thành DEAD, không gửi. Thiếu H generic PATCH refusal; GATE-03 vẫn chưa xác thực QR credential khi scan."
+  },
+  {
+    "caseId": "DB-10",
+    "tests": [
+      "D:packages/backend/test/import-invitations.test.cjs#H-I1/H-I2/H-I3 import jobs"
+    ],
+    "layers": ["D"],
+    "status": "blocked",
+    "reason": "D import; thiếu H preview/commit race và file ownership."
+  },
+  {
+    "caseId": "DB-11",
+    "tests": [
+      "D:packages/backend/test/import-invitations.test.cjs#H-I1/H-I2/H-I3 import jobs"
+    ],
+    "layers": ["D"],
+    "status": "blocked",
+    "reason": "D import/invite; thiếu H 48h/claim host và wrong-owner matrix."
+  },
+  {
+    "caseId": "DB-12",
+    "tests": [
+      "D:packages/backend/test/config-publish.test.cjs#config publish is versioned",
+      "D:packages/backend/test/published-events.test.cjs#public published events"
+    ],
+    "layers": ["D"],
+    "status": "blocked",
+    "reason": "D publish/projection; thiếu H cache version/locale/no-store và rollback."
+  },
+  {
+    "caseId": "DB-13",
+    "tests": [
+      "D:packages/backend/test/event-lifecycle.test.cjs#C-E event lifecycle"
+    ],
+    "layers": ["D"],
+    "status": "blocked",
+    "reason": "D lifecycle; thiếu UTC/IANA/deadline sau lock và archived ticket policy."
+  },
+  {
+    "caseId": "DB-14",
+    "tests": [
+      "D:packages/backend/test/form-consent.test.cjs#F-BE: form/consent",
+      "D:packages/backend/test/config-publish.test.cjs#config publish is versioned"
+    ],
+    "layers": ["D"],
+    "status": "blocked",
+    "reason": "D form snapshot; thiếu H allowlist rich content và entitlement matrix."
+  },
+  {
+    "caseId": "DB-15",
+    "tests": [
+      "D:packages/backend/test/reporting.test.cjs#event report counts",
+      "D:packages/backend/test/gate.test.cjs#gate: one confirm wins"
+    ],
+    "layers": ["D"],
+    "status": "blocked",
+    "reason": "D report; thiếu full undo/cancel/final notification reconciliation."
+  },
+  {
+    "caseId": "DB-16",
+    "tests": [
+      "D:packages/backend/test/reporting.test.cjs#portfolio report filters"
+    ],
+    "layers": ["D"],
+    "status": "blocked",
+    "reason": "D assignment filter; thiếu H cursor/watermark và owner/manager boundaries."
+  },
+  {
+    "caseId": "DB-17",
+    "tests": [
+      "D:packages/backend/test/role-presets.test.cjs#P2-ROLES-PRESET",
+      "D:packages/backend/test/tenant-registration.test.cjs#P2 self-serve PENDING registration"
+    ],
+    "layers": ["D"],
+    "status": "blocked",
+    "reason": "D presets/onboarding; thiếu H usage/mutation limit và arbitrary permissions matrix."
+  },
+  {
+    "caseId": "DB-18",
+    "tests": [
+      "D:packages/backend/test/account-idp-erasure.test.cjs#SEC-2 T4/T14",
+      "D:packages/backend/test/account-idp-erasure.test.cjs#SEC-2 T9/T11/T12/T13",
+      "D:packages/backend/test/account-session-revoke.test.cjs#session"
+    ],
+    "layers": ["D"],
+    "status": "blocked",
+    "reason": "D deletion/tombstone; thiếu H session/IdP end-to-end và audit retention."
+  },
+  {
+    "caseId": "DB-19",
+    "tests": [
+      "D:packages/backend/test/account-idp-erasure.test.cjs#SEC-2 B1:",
+      "U:packages/backend/test/issue-unit.test.cjs#CODE_HMAC_PEPPER"
+    ],
+    "layers": ["D", "U"],
+    "status": "blocked",
+    "reason": "Keyring tombstone tests không chứng minh code/QR rotation."
+  },
+  {
+    "caseId": "GATE-01",
+    "tests": ["D:packages/backend/test/gates.test.cjs#O31 gates:"],
+    "layers": ["D"],
+    "status": "blocked",
+    "reason": "D gate FK/list/open; thiếu H permission và response contract."
+  },
+  {
+    "caseId": "GATE-02",
+    "tests": ["D:packages/backend/test/gate.test.cjs#gate: one confirm wins"],
+    "layers": ["D"],
+    "status": "blocked",
+    "reason": "D reserve conflict; thiếu H retry/cancel/expiry matrix."
+  },
+  {
+    "caseId": "GATE-03",
+    "tests": ["D:packages/backend/test/gate.test.cjs#gate: one confirm wins"],
+    "layers": ["D"],
+    "status": "blocked",
+    "reason": "Thiếu H QR audience/kid/version/hash/manual rejection và reject-audit."
+  },
+  {
+    "caseId": "GATE-04",
+    "tests": ["D:packages/backend/test/gate.test.cjs#gate: one confirm wins"],
+    "layers": ["D"],
+    "status": "blocked",
+    "reason": "D concurrent confirm; thiếu wrong holder/token, revoke/session race và H retry."
+  },
+  {
+    "caseId": "GATE-05",
+    "tests": ["D:packages/backend/test/gate.test.cjs#gate: one confirm wins"],
+    "layers": ["D"],
+    "status": "blocked",
+    "reason": "D undo; thiếu H permission/idempotency và concurrent scan/revoke."
+  },
+  {
+    "caseId": "GATE-06",
+    "tests": [
+      "D:packages/backend/test/offline-sync-apply.test.cjs#offline sync: apply",
+      "U:packages/backend/test/offline-sync-unit.test.cjs#validateOfflineSyncRequest"
+    ],
+    "layers": ["D", "U"],
+    "status": "blocked",
+    "reason": "D replay và U validation; thiếu H batch boundary, skew ±300s và mixed items."
+  },
+  {
+    "caseId": "GATE-07",
+    "tests": [
+      "D:packages/backend/test/offline-sync-apply.test.cjs#offline sync: apply"
+    ],
+    "layers": ["D"],
+    "status": "blocked",
+    "reason": "D duplicate/conflict; thiếu H authz-on-retry và mixed batch audit."
+  },
+  {
+    "caseId": "GATE-08",
+    "tests": [
+      "D:packages/backend/test/offline-sync-receipt.test.cjs#offline receipt lookup: matrix"
+    ],
+    "layers": ["D"],
+    "status": "blocked",
+    "reason": "D read-only receipt; thiếu H live authz và closed gate."
+  },
+  {
+    "caseId": "GATE-09",
+    "tests": [
+      "D:packages/backend/test/offline-sync-receipt.test.cjs#offline receipt lookup: matrix",
+      "D:packages/backend/test/offline-sync-receipt.test.cjs#offline receipt PG evidence",
+      "U:apps/api/test/gate-offline-sync-receipt.test.cjs#GET offline-sync receipt rejects invalid UUIDs"
+    ],
+    "layers": ["D", "U"],
+    "status": "blocked",
+    "reason": "D receipt matrix và H validation; thiếu H real authz/ownership/rate matrix."
+  },
+  {
+    "caseId": "JOB-01",
+    "tests": [
+      "D:packages/backend/test/issue.test.cjs#issue: last-seat",
+      "D:packages/backend/test/outbox-fence.test.cjs#TicketIssued: email outside tx"
+    ],
+    "layers": ["D"],
+    "status": "blocked",
+    "reason": "D ticket/outbox atomic; thiếu R worker stop/restart + Mailpit và Redis restart."
+  },
+  {
+    "caseId": "JOB-02",
+    "tests": [
+      "D:packages/backend/test/outbox-fence.test.cjs#outbox fence: MembershipInvite"
+    ],
+    "layers": ["D"],
+    "status": "blocked",
+    "reason": "D fence; thiếu R kill worker/lease reclaim."
+  },
+  {
+    "caseId": "JOB-03",
+    "tests": [
+      "D:packages/backend/test/issue.test.cjs#issue: last-seat",
+      "U:packages/backend/test/worker-provider-deadline.test.cjs#stalled SMTP transport"
+    ],
+    "layers": ["D", "U"],
+    "status": "blocked",
+    "reason": "D retry và U deadline; thiếu R SMTP timeout/accept-before-ack crash."
+  },
+  {
+    "caseId": "JOB-04",
+    "tests": [
+      "U:packages/backend/test/csv-guard.test.cjs#providerStatus maps",
+      "D:packages/backend/test/reporting.test.cjs#event report counts",
+      "D:packages/backend/test/outbox-fence.test.cjs#TicketIssued: email outside tx"
+    ],
+    "layers": ["U", "D"],
+    "status": "blocked",
+    "reason": "D/U provider mapping; thiếu resend caps/cooldown/final failure full matrix."
+  },
+  {
+    "caseId": "JOB-05",
+    "tests": [
+      "U:packages/backend/test/notification-unit.test.cjs#template allowlist"
+    ],
+    "layers": ["U"],
+    "status": "blocked",
+    "reason": "U template; thiếu D/H preview/publish/reminder schedule."
+  },
+  {
+    "caseId": "JOB-06",
+    "tests": [
+      "D:packages/backend/test/worker-db-cancel.test.cjs#PG lock cancels reconcile",
+      "U:apps/worker/test/worker-budget-fault.test.cjs#slow SMTP/APNs",
+      "U:apps/worker/test/worker-relay-tick-timeout.test.cjs#hung tick step"
+    ],
+    "layers": ["D", "U"],
+    "status": "blocked",
+    "reason": "D/U bounded timeout; thiếu R process kill/overlap and tenant cap."
+  },
+  {
+    "caseId": "JOB-07",
+    "tests": [
+      "D:packages/backend/test/cs-export.test.cjs#CS lookup/export/events",
+      "D:packages/backend/test/minio-real.test.cjs#MinIO"
+    ],
+    "layers": ["D"],
+    "status": "blocked",
+    "reason": "D object access; thiếu H signed URL authz/expiry across tenants."
+  },
+  {
+    "caseId": "JOB-08",
+    "tests": [],
+    "layers": [],
+    "status": "out",
+    "reason": "OUT: không có HTTP callback/transport nhận provider event trong API hiện hành."
+  },
+  {
+    "caseId": "SEC-01",
+    "tests": [
+      "D:packages/backend/test/rls.test.cjs#PostgreSQL RLS through Prisma",
+      "D:packages/backend/test/cs-export.test.cjs#CS lookup/export/events",
+      "D:packages/backend/test/role-presets.test.cjs#P2-ROLES-PRESET"
+    ],
+    "layers": ["D"],
+    "status": "blocked",
+    "reason": "D isolation; thiếu H URL/body/query/job/file read+mutate+list/export/operation matrix."
+  },
+  {
+    "caseId": "SEC-02",
+    "tests": ["H:tests/e2e/http/live.test.mjs#[SEC-02]", "B:tests/e2e/harness/security.spec.ts#[SEC-02]"],
+    "layers": ["H", "B"],
+    "status": "blocked",
+    "reason": "H real attendee/staff OIDC session, host-cookie và Origin/CSRF deny 403 với positive control 422; Platform anonymous BFF boundary PASS (mvswmkmm-65fb5c, full HTTP mvswv301-a66295). Platform authenticated BFF còn BLOCKED vì Keycloak từ chối OTP synthetic; chưa phủ mọi BFF mutate và session revoke matrix."
+  },
+  {
+    "caseId": "SEC-03",
+    "tests": [],
+    "layers": [],
+    "status": "blocked",
+    "reason": "Thiếu HTTP integration với host/forwarded headers và redirect; chưa có test được chọn."
+  },
+  {
+    "caseId": "SEC-04",
+    "tests": [
+      "D:apps/api/test/redemptions-resolve-rls.test.cjs#resolve rate limit",
+      "U:apps/api/test/import-list.test.cjs#G-09 API limits",
+      "U:apps/api/test/tenant-limits.test.cjs#G-10 API limiter",
+      "H:tests/e2e/http/live.test.mjs#[SEC-04]"
+    ],
+    "layers": ["D", "U", "H"],
+    "status": "blocked",
+    "reason": "U/H validation/rate subset; thiếu live bucket scopes và full 429 branch matrix. H: tests/e2e/http/live.test.mjs#[SEC-04] bổ sung bounded Keycloak HTTP (resolve/redeem/gate/receipt/import/resend cooldown); D/U selectors giữ nguyên."
+  },
+  {
+    "caseId": "SEC-05",
+    "tests": [
+      "U:packages/backend/test/csv-guard.test.cjs#csv guard prefixes",
+      "D:packages/backend/test/config-publish.test.cjs#asset quarantine finalize",
+      "U:packages/backend/test/notification-unit.test.cjs#template allowlist",
+      "H:tests/e2e/http/live.test.mjs#[SEC-05]",
+      "B:tests/e2e/harness/security.spec.ts › [SEC-05]"
+    ],
+    "layers": ["U", "D", "H", "B"],
+    "status": "blocked",
+    "reason": "D/U CSV/asset/template plus H/B upload caps, rich text/XSS/CSP subset on live stack. Gaps: portal BFF upload chunked cap, every export column formula matrix, full CSP nonce profile."
+  },
+  {
+    "caseId": "SEC-06",
+    "tests": [
+      "D:packages/backend/test/cs-export.test.cjs#CS lookup/export/events",
+      "D:packages/backend/test/portal-audit-codes.test.cjs#H-A1/H-C1/H-P-AUDIT",
+      "U:apps/worker/test/worker-budget-fault.test.cjs#queue alert emits only aggregate",
+      "H:tests/e2e/http/live.test.mjs#[SEC-06]"
+    ],
+    "layers": ["D", "U", "H"],
+    "status": "blocked",
+    "reason": "D/U masking/log subset + H live PASS (run mvsik1si-bee5e5 trên 97c15301): audit/codes list không lộ forbidden keys/raw values, limit cap 100, cursor opaque + INVALID_CURSOR, deny bodies sạch; report/me-tickets/gate-session/audit/codes assert Cache-Control private, no-store trên success và deny/error. Thiếu H cho CS lookup/export, process logs, platform audit và chưa bao phủ mọi endpoint nhạy cảm."
+  },
+  {
+    "caseId": "POL-01",
+    "tests": [
+      "D:packages/backend/test/account-idp-erasure.test.cjs#SEC-2 T4/T14",
+      "D:packages/backend/test/account-idp-erasure.test.cjs#SEC-2 T6/T7/T8",
+      "D:packages/backend/test/account-idp-erasure.test.cjs#SEC-2 T9/T11/T12/T13",
+      "D:tests/e2e/backend/retention-db.test.cjs#[POL-01]"
+    ],
+    "layers": ["D"],
+    "status": "blocked",
+    "reason": "D scrub/retry/tombstone đạt; metric slaOverdue fail 0 vs admin count 1 do runtime RLS; chưa đủ kết luận toàn bộ SLA."
+  },
+  {
+    "caseId": "POL-02",
+    "tests": [
+      "D:packages/backend/test/portal-audit-codes.test.cjs#H-A1/H-C1/H-P-AUDIT",
+      "D:packages/backend/test/o06-retention-db.test.cjs#O06 POL-02/03",
+      "D:packages/backend/test/o06-retention-db.test.cjs#O06 PII writer"
+    ],
+    "layers": ["D"],
+    "status": "blocked",
+    "reason": "D POL-02 kiểm clock ends_at NULL, CANCELLED lấy cancelled_at, PII writer/sweep hai thứ tự row lock, tenant isolation và replay. Cần ops đo event lớn, restore re-sweep. Audit TTL 730 ngày là gap policy riêng: chưa có deletion job."
+  },
+  {
+    "caseId": "POL-03",
+    "tests": [
+      "D:packages/backend/test/minio-real.test.cjs#MinIO",
+      "D:packages/backend/test/o06-retention-db.test.cjs#O06 POL-02/03",
+      "D:packages/backend/test/o06-retention-db.test.cjs#O06 export claim",
+      "D:packages/backend/test/o06-retention-db.test.cjs#O06 delete failure"
+    ],
+    "layers": ["D"],
+    "status": "blocked",
+    "reason": "D POL-03 kiểm clock ends_at + 90 ngày kể cả CANCELLED, event fence, lease/reclaim, delete 404 và token cũ không finalize. F01 còn mở: stale PUT sau purge có thể tái tạo bytes; chưa có MinIO barrier proof hoặc object-store write fence. Signed URL expiry và ops restore còn thiếu."
+  },
+  {
+    "caseId": "POL-04",
+    "tests": [
+      "D:packages/backend/test/account-idp-erasure.test.cjs#SEC-2 T4/T14"
+    ],
+    "layers": ["D"],
+    "status": "blocked",
+    "reason": "Privacy copy và restore/RPO/RTO cần bằng chứng browser/ops riêng."
+  }
+]

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { buildWebAuthorizeUrl } from '../../../../src/oidc/authorize';
 import { isOidcConfigured, readOidcWebConfig } from '../../../../src/oidc/config';
 import {
+  NONCE_COOKIE,
   PKCE_COOKIE,
   STATE_COOKIE,
   sessionCookieOptions,
@@ -15,6 +16,7 @@ import {
 import {
   codeChallengeS256,
   generateCodeVerifier,
+  generateOidcNonce,
   generateOAuthState,
 } from '../../../../src/oidc/pkce';
 
@@ -36,12 +38,14 @@ export async function GET(request: NextRequest) {
   const config = readOidcWebConfig()!;
   const verifier = generateCodeVerifier();
   const state = generateOAuthState();
+  const nonce = generateOidcNonce();
   const challenge = codeChallengeS256(verifier);
 
   const jar = await cookies();
   const shortLived = sessionCookieOptions(600);
   jar.set(PKCE_COOKIE, verifier, shortLived);
   jar.set(STATE_COOKIE, state, shortLived);
+  jar.set(NONCE_COOKIE, nonce, shortLived);
 
   const returnPath = sanitizePostLoginPath(
     request.nextUrl.searchParams.get('return'),
@@ -54,6 +58,7 @@ export async function GET(request: NextRequest) {
 
   const authorize = buildWebAuthorizeUrl(config, {
     state,
+    nonce,
     codeChallenge: challenge,
   });
 

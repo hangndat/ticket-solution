@@ -1,15 +1,7 @@
 'use client';
 
-import { CSRF_COOKIE, CSRF_HEADER } from '../bff/csrf-constants';
+import { csrfJsonMutation } from './csrf-client';
 import { fetchJson, type FetchJsonResult } from '../redeem/fetch-json';
-
-function readCsrfFromDocument(): string {
-  if (typeof document === 'undefined') return '';
-  const match = document.cookie.match(
-    new RegExp(`(?:^|;\\s*)${CSRF_COOKIE}=([^;]+)`),
-  );
-  return match?.[1]?.trim() ?? '';
-}
 
 /** Same-origin JSON mutation with CSRF header + no-store. */
 export async function platformMutate(
@@ -18,19 +10,7 @@ export async function platformMutate(
   timeoutMs: number,
   method: 'POST' | 'PUT' | 'PATCH' = 'POST',
 ): Promise<FetchJsonResult> {
-  const csrf = readCsrfFromDocument();
-  return fetchJson(
-    path,
-    {
-      method,
-      headers: {
-        'Content-Type': 'application/json',
-        [CSRF_HEADER]: csrf,
-      },
-      body: JSON.stringify(body),
-    },
-    timeoutMs,
-  );
+  return csrfJsonMutation(path, body, timeoutMs, method);
 }
 
 export async function platformGet(
