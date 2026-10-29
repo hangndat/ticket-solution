@@ -203,7 +203,9 @@ function realmConfig(state, caseIds) {
       const formulaEmail = `=formula-${state.id}@example.test`;
       const attendee = state.caseAccounts[id].attendee;
       attendee.username = formulaEmail;
-      const realmUser = realm.users.find((user) => user.id === attendee.subject);
+      const realmUser = realm.users.find(
+        (user) => user.id === attendee.subject,
+      );
       if (realmUser) {
         realmUser.username = formulaEmail;
         realmUser.email = formulaEmail;
@@ -339,7 +341,8 @@ function realmConfig(state, caseIds) {
       },
     ],
   });
-  state.clientSecrets['e2e-http-platform'] = randomBytes(24).toString('base64url');
+  state.clientSecrets['e2e-http-platform'] =
+    randomBytes(24).toString('base64url');
   realm.clients.push({
     clientId: 'e2e-http-platform',
     enabled: true,
@@ -515,31 +518,37 @@ function startProxy(state) {
         res.end('Unknown E2E host');
         return;
       }
+      const reqPath = String(req.url).split('?')[0];
+      let faultMode;
       if (
         route === 'api' &&
         state.faultControlPath &&
-        state.faultPaths?.includes(String(req.url).split('?')[0]) &&
+        state.faultPaths?.includes(reqPath) &&
         existsSync(state.faultControlPath)
       ) {
         let fault;
         try {
           fault = JSON.parse(readFileSync(state.faultControlPath, 'utf8'));
         } catch {
-          fault = { ownerRunId: state.id, apiUnavailable: true };
+          fault = null;
         }
-        if (fault.ownerRunId === state.id && fault.apiUnavailable === true) {
-          res.writeHead(503, {
-            'content-type': 'application/json',
-            'cache-control': 'no-store',
-          });
-          res.end(
-            JSON.stringify({
-              code: 'E2E_UPSTREAM_UNAVAILABLE',
-              retryable: true,
-            }),
-          );
-          return;
+        if (fault?.ownerRunId === state.id) {
+          faultMode = fault.routes?.[reqPath];
         }
+      }
+      if (faultMode === 'unavailable' || faultMode === 'error500') {
+        res.writeHead(faultMode === 'unavailable' ? 503 : 500, {
+          'content-type': 'application/json',
+          'cache-control': 'no-store',
+        });
+        res.end(
+          JSON.stringify(
+            faultMode === 'unavailable'
+              ? { code: 'E2E_UPSTREAM_UNAVAILABLE', retryable: true }
+              : { code: 'E2E_UPSTREAM_ERROR', retryable: false },
+          ),
+        );
+        return;
       }
       const headers = {
         ...req.headers,
@@ -549,6 +558,27 @@ function startProxy(state) {
         'x-forwarded-port': String(state.tlsPort),
       };
       delete headers.forwarded;
+      if (faultMode === 'lostResponse') {
+        // Forward to the real upstream so the operation commits server-side,
+        // then drop the connection instead of relaying the response — the
+        // client must reconcile via the real operation, not assume failure.
+        const target = httpRequest(
+          {
+            hostname: '127.0.0.1',
+            port: upstream,
+            path: req.url,
+            method: req.method,
+            headers,
+          },
+          (reply) => {
+            reply.resume();
+            reply.on('end', () => res.destroy());
+          },
+        );
+        target.on('error', () => res.destroy());
+        req.pipe(target);
+        return;
+      }
       const target = httpRequest(
         {
           hostname: '127.0.0.1',

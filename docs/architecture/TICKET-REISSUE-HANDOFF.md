@@ -7,7 +7,19 @@
 | Quyết định nguồn | [PRD §M08](../PRD.md) dòng 191–201 · [TECHNICAL-DESIGN §8–9](../TECHNICAL-DESIGN.md) · [ADR-18](../ops/ADR-18-OFFLINE-GATE-SYNC.md) · [PLAN DB-09/DB-19/GATE-03](../../tests/e2e/PLAN.md) · evidence [.artifacts/db09-local.md](../../.artifacts/db09-local.md) |
 | Architecture impact | **Có** (schema ticket_credentials, permission catalog, transaction/lock order, idempotency) |
 | Security impact | **Có** (credential invalidation semantics, actor/authz, audit) |
-| **Kết luận** | **Đủ để triển khai trong scope** cho phần D/API (mint version mới + vô hiệu version cũ, idempotent, audited) — kèm **5 lựa chọn policy chưa thể suy ra** (mục 7) và **1 blocker ngoài phạm vi Task này** chặn nghiệm thu PRD đầy đủ (mục 2, GATE-03) |
+| **Kết luận** | **Đủ để triển khai trong scope** cho phần D/API (mint version mới + vô hiệu version cũ, idempotent, audited) — **5 lựa chọn policy đã chốt** (§0, 2026-10-29; mục 7 giữ lại để truy vết). Vẫn còn **1 vấn đề ngoài phạm vi Task này** chặn nghiệm thu PRD đầy đủ (mục 2, GATE-03) — không do quyết định này giải quyết, cần Task riêng |
+
+## 0. Quyết định bổ sung — User, 2026-10-29
+
+User đã chốt sau restart, trả lời trực tiếp 5 điểm "Lựa chọn policy" ở §7 (đánh dấu **Đã chốt** tại §7 bên dưới, giữ nguyên nội dung gốc để truy vết):
+
+1. **Actor**: chỉ **Supervisor/Owner** — không mở cho CS. Permission `ticket.reissue` thêm vào `SUPERVISOR_EVENT` như đề xuất gốc §3, không mở rộng thêm.
+2. **Giá trị status cho credential bị thay**: tái dùng **`REVOKED`** (Phương án A §5) — **không** thêm `SUPERSEDED`, không cần migration ALTER CHECK.
+3. **Event đã `CANCELLED`**: **cho phép reissue** (giữ tiền lệ `revokeTicket` — không thêm event-open check), đúng hành vi đã mô tả ở §6 dòng "Event đã `business_status='CANCELLED'`".
+4. **`reason`**: **bắt buộc** (giống `revoke`/`undo`, validate ở HTTP layer) — không phải optional như `resend`.
+5. **Giới hạn tần suất**: **không thêm rate limit mới** — nhất quán với quyết định 1 (actor chỉ Supervisor/Owner, hành động hiếm và có audit, không cần cooldown như `resend`).
+
+Vì actor chỉ Supervisor/Owner (điểm 1) và status tái dùng `REVOKED` (điểm 2), **migration #2 ở §9 gốc (thêm `SUPERSEDED`) không còn cần** — bảng migration §9 đã cập nhật bên dưới.
 
 **Non-goals:** không đổi online reserve/confirm (ADR-06), không đổi offline sync (ADR-18 — D7 giữ "undo/revoke offline không hỗ trợ", reissue cũng không hỗ trợ offline), không thiết kế policy sửa email owner (PRD dòng 199 — khác phạm vi), không tự thêm `release-allocation` (TD §7, cần product chốt riêng), không implement GATE-03 (mục 2).
 
@@ -36,9 +48,7 @@ Và ở phía server, `gate.ts` hàm `reserveCheckin`/`confirmCheckin` (đã đ�
 
 ## 3. Permission và actor
 
-Permission catalog hiện có (`role-map.ts:6-32`): `SUPERVISOR_EVENT = ['gate.confirm','gate.undo','ticket.revoke']`, `CS_EVENT = ['cs.lookup','cs.resend']`. Không có permission reissue. Đề xuất permission mới `ticket.reissue`, thêm vào `SUPERVISOR_EVENT` (cùng nhóm với `ticket.revoke` — cùng là hành động bảo mật/lifecycle trên credential, cần `requireTenantPermission(..., eventId)` scoped theo event giống `revokeTicket`). Owner-tenant thừa hưởng qua `eventPermissionsForRole('Owner')` (đã gồm `SUPERVISOR_EVENT`).
-
-**Mở, không tự quyết** (mục 7.1): CS có nên có `ticket.reissue` không (giống `cs.resend`, rủi ro thấp hơn revoke) — PRD không nêu actor cụ thể cho "phát hành lại" QR (chỉ nêu actor cho sửa email owner, PRD dòng 199, không áp dụng ở đây).
+Permission catalog hiện có (`role-map.ts:6-32`): `SUPERVISOR_EVENT = ['gate.confirm','gate.undo','ticket.revoke']`, `CS_EVENT = ['cs.lookup','cs.resend']`. Không có permission reissue. **Đã chốt (User, 2026-10-29 — §0 điểm 1): permission mới `ticket.reissue` thêm vào `SUPERVISOR_EVENT`** (cùng nhóm với `ticket.revoke` — cùng là hành động bảo mật/lifecycle trên credential, cần `requireTenantPermission(..., eventId)` scoped theo event giống `revokeTicket`). Owner-tenant thừa hưởng qua `eventPermissionsForRole('Owner')` (đã gồm `SUPERVISOR_EVENT`). **CS không có `ticket.reissue`** — không thêm vào `CS_EVENT`.
 
 ## 4. Endpoint, transaction, lock order
 
@@ -47,7 +57,7 @@ Permission catalog hiện có (`role-map.ts:6-32`): `SUPERVISOR_EVENT = ['gate.c
 ```
 POST /v1/gate/events/{eventId}/tickets/{ticketId}/reissue
 Header: Idempotency-Key (bắt buộc, UUID)
-Body: { tenantId, reason }
+Body: { tenantId, reason }  -- reason bắt buộc (đã chốt, §0 điểm 4) — validate ở HTTP layer, 422 nếu thiếu/rỗng, giống revoke/undo
 ```
 
 Hàm nghiệp vụ `reissueTicketCredential(tx, input)` trả `ReissueOutcome` (pattern giống `ReserveOutcome`/`ConfirmOutcome` — `{ok:true,...} | GateDenyOutcome`, unwrap ở HTTP layer giống `unwrapReserveOutcome`).
@@ -100,10 +110,9 @@ CREATE TABLE ticket_credentials (
 );
 ```
 
-Không có unique/partial-index đảm bảo *chỉ một* version `ACTIVE` tại một thời điểm — bất biến này hiện chỉ đúng vì chưa ai từng rotate. Hai lựa chọn cho giá trị "đã vô hiệu vì bị thay bằng version mới" (mục 7.2 — chọn giữa hai, không tự quyết):
+Không có unique/partial-index đảm bảo *chỉ một* version `ACTIVE` tại một thời điểm — bất biến này hiện chỉ đúng vì chưa ai từng rotate. **Đã chốt (User, 2026-10-29 — §0 điểm 2): Phương án A — tái dùng `REVOKED`** cho credential bị thay khi reissue. Không cần migration ALTER CHECK. Phân biệt "revoke ticket" vs "reissue" chỉ qua `audit_logs.action` (`ticket.revoke` vs `ticket.credential_reissue`) — hệ quả đã biết và chấp nhận: CS tra `ticket_credentials.status='REVOKED'` không tự biết lý do nếu không join audit; không cần xử lý thêm trong Task này.
 
-- **A — tái dùng `REVOKED`:** không cần migration ALTER CHECK. Phân biệt "revoke ticket" vs "reissue" chỉ qua `audit_logs.action` (`ticket.revoke` vs `ticket.credential_reissue`). Rủi ro: CS tra `ticket_credentials.status='REVOKED'` không tự biết lý do (phải join audit).
-- **B — thêm `SUPERSEDED`:** migration `ALTER ... DROP CONSTRAINT ticket_credentials_status_chk; ADD CHECK (status IN ('ACTIVE','REVOKED','SUPERSEDED'))`. Rõ nghĩa hơn khi điều tra, nhưng là thay đổi schema cần coordinator duyệt thêm.
+~~B — thêm `SUPERSEDED` (migration `ALTER ... ticket_credentials_status_chk` thêm giá trị): không chọn.~~
 
 **Độc lập với lựa chọn trên, đề xuất luôn thêm** (migration cần, không phải lựa chọn — đây là invariant DB-09 đòi hỏi "QR cũ vô hiệu" phải đúng ở mọi lúc, không chỉ đúng tại thời điểm code chạy):
 
@@ -126,16 +135,20 @@ CREATE UNIQUE INDEX ticket_credentials_one_active_idx
 | `tickets.state = 'USED'` | Deny `TICKET_NOT_ACTIVE` (dùng chung code với reserve/confirm). Vé đã tiêu thụ, rotate không có mục đích — Gate sẽ luôn trả `ALREADY_CHECKED_IN` bất kể version. |
 | `tickets.state = 'REVOKED'` | Deny `TICKET_NOT_ACTIVE`. Vé đã chết, không có gì để bảo vệ bằng rotate. |
 | `tickets.state = 'CANCELLED'` | Deny `TICKET_NOT_ACTIVE`. (Giá trị này nằm trong CHECK constraint từ D2 nhưng **chưa có code path nào set** — `cancelEvent`, event-lifecycle.ts:852-941, chỉ đổi `events.business_status`, không đổi từng `tickets.state`. Xử lý thủ tục như trên để an toàn nếu tương lai có path gán state này.) |
-| Event đã `business_status='CANCELLED'`, ticket vẫn `ACTIVE` | **Không chặn ở layer event-policy** — khác `reserveCheckin`/issue, `revokeTicket` hiện tại cũng không gọi `assertOpenForGate`/`assertOpenForIssuance` (gate.ts:938-987, đã đọc toàn bộ, không có check event). Đề xuất reissue theo đúng tiền lệ revoke: không thêm event-open check (CS vẫn cần sửa lỗi vé dù event đã bị hủy). Nếu coordinator muốn khác tiền lệ, đó là lựa chọn 7.3. |
+| Event đã `business_status='CANCELLED'`, ticket vẫn `ACTIVE` | **Không chặn ở layer event-policy** (đã chốt, §0 điểm 3 / §7.3) — khác `reserveCheckin`/issue, `revokeTicket` hiện tại cũng không gọi `assertOpenForGate`/`assertOpenForIssuance` (gate.ts:938-987, đã đọc toàn bộ, không có check event). Reissue theo đúng tiền lệ revoke: không thêm event-open check (CS/Supervisor vẫn cần sửa lỗi vé dù event đã bị hủy). |
 | QR `ticket.credential` (PNG) hoặc `ticket.display` đã cache offline trên máy khách, dùng sau khi server đã reissue | Server-side: version cũ không còn `ACTIVE`, không ảnh hưởng gì tới việc Gate chấp nhận quét hay không — xem mục 2. App vẫn hiển thị `ticket.display` cũ (có `credentialVersion` cũ, cosmetic) cho tới lần sync `/me/tickets` kế tiếp; đây không phải lỗi của reissue, là giới hạn hiện hành của "không có credential check tại Gate". |
 
-## 7. Lựa chọn policy — owner phải chốt, không tự suy ra
+## 7. Lựa chọn policy — đã chốt (User, 2026-10-29 — §0)
 
-1. **Actor được gọi reissue**: chỉ Supervisor+Owner (giống `ticket.revoke`) hay thêm cả CS (giống `cs.resend`) hay cho owner tự phục vụ qua app (chưa có endpoint owner-mutation nào tồn tại hôm nay — `apps/api/src/tickets.ts` chỉ có `redeem`/read; tự-phục-vụ là mặt bằng quyền mới, không chỉ thêm permission).
-2. **Giá trị status cho credential bị thay** (mục 5): tái dùng `REVOKED` (không migration) hay thêm `SUPERSEDED` (migration, rõ nghĩa hơn).
-3. **Event đã cancelled có chặn reissue không**: giữ tiền lệ revoke (không chặn) hay siết hơn (chặn, buộc CS xử lý qua kênh khác).
-4. **`reason` bắt buộc hay optional**: giống `revoke`/`undo` (bắt buộc, validate ở HTTP layer) hay giống `resend` (không bắt buộc).
-5. **Giới hạn tần suất**: `resend` có cooldown 60s + 10 lần/giờ/actor (`cs.ts:21-22`). Reissue — mỗi lần gọi vô hiệu QR vừa gửi trước, nên spam-reissue tạo trải nghiệm xấu cho chủ vé (nhận liên tiếp nhiều email "QR cũ đã hỏng"); PRD không nêu limit. Đề xuất áp cooldown/limit tương tự `resend` nếu actor gồm CS; nếu chỉ Supervisor (hành động hiếm, có audit) có thể bỏ qua.
+Danh sách gốc giữ lại để truy vết, kết quả chốt ghi ngay sau mỗi điểm:
+
+1. **Actor được gọi reissue**: chỉ Supervisor+Owner (giống `ticket.revoke`) hay thêm cả CS (giống `cs.resend`) hay cho owner tự phục vụ qua app. → **Chốt: chỉ Supervisor/Owner.** Không CS, không owner tự phục vụ (không có endpoint owner-mutation nào hôm nay, giữ nguyên — không mở mặt bằng quyền mới).
+2. **Giá trị status cho credential bị thay** (mục 5): tái dùng `REVOKED` (không migration) hay thêm `SUPERSEDED` (migration, rõ nghĩa hơn). → **Chốt: tái dùng `REVOKED`** (Phương án A). Không migration ALTER CHECK.
+3. **Event đã cancelled có chặn reissue không**: giữ tiền lệ revoke (không chặn) hay siết hơn (chặn). → **Chốt: không chặn** — giữ tiền lệ revoke, cho phép reissue khi event đã cancelled.
+4. **`reason` bắt buộc hay optional**: giống `revoke`/`undo` (bắt buộc) hay giống `resend` (không bắt buộc). → **Chốt: bắt buộc.**
+5. **Giới hạn tần suất**: `resend` có cooldown 60s + 10 lần/giờ/actor (`cs.ts:21-22`). → **Chốt: không thêm rate limit mới** cho reissue — nhất quán với điểm 1 (chỉ Supervisor/Owner, hành động hiếm, có audit, khác rủi ro spam của CS `resend`).
+
+Không còn lựa chọn policy nào mở ở mục này.
 
 ## 8. Response / privacy
 
@@ -143,21 +156,30 @@ Response HTTP chỉ trả `{ticketId, credentialVersion, replayed}` — **không
 
 ## 9. Migration cần (tổng hợp)
 
-| # | Nội dung | Bắt buộc hay theo lựa chọn §7 |
+| # | Nội dung | Trạng thái sau §0 |
 | --- | --- | --- |
 | 1 | `ticket_credentials_one_active_idx` — partial unique `(tenant_id, ticket_id) WHERE status='ACTIVE'` | Bắt buộc (mục 5) |
-| 2 | (nếu chọn 7.2 = B) `ALTER ... ticket_credentials_status_chk` thêm `'SUPERSEDED'` | Theo lựa chọn 7.2 |
+| 2 | ~~`ALTER ... ticket_credentials_status_chk` thêm `'SUPERSEDED'`~~ | **Không cần** — đã chốt dùng `REVOKED` (§0 điểm 2) |
 | 3 | Thêm `'ticket.reissue'` vào `SUPERVISOR_EVENT` (`role-map.ts`) — code, không SQL | Bắt buộc, coordinator/backend sở hữu file này |
-| 4 | Route + controller DTO mới trong `apps/api/src/gate.ts` (web sở hữu client gọi, backend sở hữu route) | Bắt buộc |
+| 4 | Route + controller DTO mới trong `apps/api/src/gate.ts`; validate `reason` bắt buộc ở DTO (backend sở hữu route; web sở hữu client gọi) | Bắt buộc |
 
-Tên migration đề xuất (chưa tạo file — theo rule, coordinator xác nhận ID trước khi worker tạo thật): `202610290001_ticket_credentials_reissue` (tiếp theo `202610280003...`, ngày đối chiếu 29/10/2026 — xác nhận lại thứ tự thật tại thời điểm implement vì nhánh khác có thể đã chiếm slot).
+Tên migration đề xuất (chưa tạo file — theo rule, coordinator xác nhận ID trước khi worker tạo thật): `202610290001_ticket_credentials_reissue` (tiếp theo `202610280003...`, ngày đối chiếu 29/10/2026 — xác nhận lại thứ tự thật tại thời điểm implement vì nhánh khác có thể đã chiếm slot). **Lưu ý sequencing:** [O06-RETENTION-HANDOFF.md](./O06-RETENTION-HANDOFF.md) cũng đề xuất migration mới cùng mốc ngày (POL-02/POL-03) — coordinator xác nhận thứ tự số thật giữa 2 bộ migration trước khi tạo file, tránh trùng slot.
+
+### Thứ tự triển khai đề xuất
+
+1. **Migration**: chỉ mục #1 ở bảng trên (`ticket_credentials_one_active_idx`) — xác nhận tên/số file thật với coordinator trước khi tạo (xem lưu ý sequencing).
+2. **Code — permission**: thêm `'ticket.reissue'` vào `SUPERVISOR_EVENT` (`role-map.ts`).
+3. **Code — hàm nghiệp vụ**: `reissueTicketCredential(tx, input)` trong `gate.ts` theo đúng thứ tự lock/transaction §4 (bước 1–14); tái dùng `claimOperation`/`completeOperation`/`canonicalHash`/`requireIdempotencyKey` từ `event-operations.ts` — không viết lại logic claim/replay.
+4. **Code — route**: `POST /v1/gate/events/{eventId}/tickets/{ticketId}/reissue` + DTO validate `reason` bắt buộc (422 nếu thiếu/rỗng), `Idempotency-Key` bắt buộc.
+5. **Test**: viết test matrix §10 trước hoặc cùng bước 3–4 (dùng làm acceptance) — thứ tự D (idempotency, unique index, deny theo state) → H (permission 403/validation 422) → R (outbox thật qua Mailpit).
+6. **Theo dõi riêng, không block**: coordinator mở Task GATE-03 (§2) — cần để PRD M08 nghiệm thu đầy đủ ở cổng thật, nhưng không gộp vào Task reissue này.
 
 ## 10. Test matrix (D/H/R — theo lớp PLAN §3)
 
 | Lớp | Ca cần chứng minh |
 | --- | --- |
 | D | reissue trên `ACTIVE` ticket: version+1, row cũ hết `ACTIVE`, row mới `ACTIVE`, `tickets.credential_version` khớp; retry cùng Idempotency-Key → cùng response, không version thứ 3; Idempotency-Key cũ với payload khác → 409; gọi trên `USED`/`REVOKED`/`CANCELLED` → deny, không mutation; đồng thời `revokeTicket` và `reissueTicketCredential` trên cùng ticket (ticket lock serialize đúng thứ tự, không deadlock); unique partial index chặn insert hai row `ACTIVE` nếu code có bug bỏ qua bước 8. |
-| H | Thiếu permission `ticket.reissue` → 403; thiếu `Idempotency-Key` → 422; actor ngoài event assignment → 403; response không chứa token/QR thô. |
+| H | Thiếu permission `ticket.reissue` → 403; actor có `CS_EVENT` nhưng không có `SUPERVISOR_EVENT` → 403 (xác nhận CS bị loại, §0 điểm 1); thiếu `Idempotency-Key` → 422; thiếu/rỗng `reason` → 422 (§0 điểm 4); actor ngoài event assignment → 403; response không chứa token/QR thô. |
 | R | Outbox worker thật nhặt event mới, render PNG đúng version mới (không phải version cũ), gửi qua SMTP Mailpit thật; ticket bị revoke sau khi reissue nhưng trước khi outbox chạy → notification `DEAD` đúng theo nhánh `outbox.ts:350-392` hiện có (không cần sửa, đã generic theo `tickets.state`). |
 
 ## 11. Xác minh / giới hạn
@@ -168,4 +190,4 @@ Tên migration đề xuất (chưa tạo file — theo rule, coordinator xác nh
 
 ---
 
-**Người quyết định tiếp theo:** coordinator chốt 5 điểm mục 7 (có thể một phần giao product/BA nếu cần), rồi giao backend implement theo mục 3–6, 8–9; đồng thời coordinator cân nhắc mở Task GATE-03 riêng (mục 2) — không phụ thuộc cứng vào reissue nhưng cần để PRD M08 nghiệm thu đầy đủ ở cổng thật.
+**Người quyết định tiếp theo (cập nhật 2026-10-29):** 5 điểm mục 7 đã chốt (§0) — coordinator giao backend implement theo mục 3–6, 8–9 và thứ tự triển khai ở §9, không cần chờ thêm quyết định policy. Việc còn lại không phải chính sách: (a) xác nhận số thứ tự migration thật với O06-RETENTION-HANDOFF trước khi tạo file (§9 lưu ý sequencing); (b) coordinator mở Task GATE-03 riêng (mục 2) — không phụ thuộc cứng vào reissue nhưng vẫn cần để PRD M08 nghiệm thu đầy đủ ở cổng thật, chưa có quyết định/thiết kế nào giải quyết vấn đề này trong phạm vi hai handoff hiện có.

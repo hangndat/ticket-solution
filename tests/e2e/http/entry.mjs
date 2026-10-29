@@ -14,6 +14,7 @@ const cases = [
   'GATE-01',
   'GATE-03',
   'DB-03',
+  'WEB-04',
 ];
 const args = process.argv.slice(2);
 const caseFlag = args.indexOf('--case');

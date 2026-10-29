@@ -357,6 +357,21 @@ export async function previewEventImpact(
     input.body.endsAt !== undefined
       ? parseUtcInstant(input.body.endsAt, 'endsAt')
       : row.ends_at;
+  if ((endsAt?.getTime() ?? null) !== (row.ends_at?.getTime() ?? null)) {
+    const fences = await tx.$queryRaw<{
+      ticket_pii_anonymized_at: Date | null;
+      export_retention_fenced_at: Date | null;
+    }[]>`
+      SELECT ticket_pii_anonymized_at, export_retention_fenced_at FROM events
+      WHERE tenant_id = ${input.tenantId}::uuid AND id = ${input.eventId}::uuid
+    `;
+    if (fences[0]?.ticket_pii_anonymized_at || fences[0]?.export_retention_fenced_at) {
+      throw new EventError(
+        EVENT_ERROR_CODES.EVENT_RETENTION_FENCED,
+        'Event retention clock is fixed after data removal',
+      );
+    }
+  }
   assertWindowOrder(startsAt ?? null, endsAt ?? null, 'event');
   const venue =
     input.body.venue !== undefined
@@ -907,6 +922,17 @@ export async function cancelEvent(
     const detail = mapEventDetail(row);
     await completeOperation(tx, input.tenantId, op.id, { event: detail });
     return { event: detail, operationId: op.id, replayed: false };
+  }
+
+  const fences = await tx.$queryRaw<{ ticket_pii_anonymized_at: Date | null }[]>`
+    SELECT ticket_pii_anonymized_at FROM events
+    WHERE tenant_id = ${input.tenantId}::uuid AND id = ${input.eventId}::uuid
+  `;
+  if (fences[0]?.ticket_pii_anonymized_at) {
+    throw new EventError(
+      EVENT_ERROR_CODES.EVENT_RETENTION_FENCED,
+      'Event retention clock is fixed after data removal',
+    );
   }
 
   const now = await dbClock(tx);

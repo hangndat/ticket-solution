@@ -27,6 +27,7 @@ const SUPERVISOR_EVENT: readonly string[] = [
   'gate.confirm',
   'gate.undo',
   'ticket.revoke',
+  'ticket.reissue',
 ];
 
 const SCANNER_EVENT: readonly string[] = ['gate.confirm'];
