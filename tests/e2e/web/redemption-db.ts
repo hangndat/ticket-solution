@@ -204,6 +204,109 @@ export function assertIssuedExactlyOnce(
   return String(ticket.id);
 }
 
+/** Event-scoped snapshot for WEB-04 negative browser paths (ticket count, codes, quota, ops). */
+export type Web04EventSnapshot = {
+  ticketCount: number;
+  codes: Array<{ id: string; status: string }>;
+  quotas: Row[];
+  operations: Row[];
+};
+
+export async function readWeb04EventSnapshot(
+  tenantId: string,
+  eventId: string,
+  actorUserId?: string,
+): Promise<Web04EventSnapshot> {
+  if (!process.env.DATABASE_URL || !process.env.E2E_RUN_DIR)
+    throw new Error(
+      'BLOCKED: PostgreSQL assertion requires isolated E2E runtime',
+    );
+  const client = new Client({ connectionString: process.env.DATABASE_URL });
+  await client.connect();
+  try {
+    await client.query('BEGIN READ ONLY');
+    await client.query("SELECT set_config('app.tenant_id', $1, true)", [
+      tenantId,
+    ]);
+    const query = async (sql: string, values: string[]) =>
+      (await client.query(sql, values)).rows as Row[];
+    const ticketRows = await query(
+      'SELECT count(*)::int AS n FROM tickets WHERE tenant_id=$1::uuid AND event_id=$2::uuid',
+      [tenantId, eventId],
+    );
+    const codes = (await query(
+      'SELECT id, status FROM redemption_codes WHERE tenant_id=$1::uuid AND event_id=$2::uuid ORDER BY id',
+      [tenantId, eventId],
+    )) as Array<{ id: string; status: string }>;
+    const quotas = await query(
+      'SELECT id, scope, scope_id, capacity, allocated FROM quota_buckets WHERE tenant_id=$1::uuid AND event_id=$2::uuid ORDER BY scope, id',
+      [tenantId, eventId],
+    );
+    const operations = await query(
+      actorUserId
+        ? `SELECT id, actor_user_id, client_key, status, response_json FROM operations
+           WHERE tenant_id=$1::uuid AND event_id=$2::uuid AND actor_user_id=$3::uuid
+             AND command='redemption.redeem' ORDER BY created_at, id`
+        : `SELECT id, actor_user_id, client_key, status, response_json FROM operations
+           WHERE tenant_id=$1::uuid AND event_id=$2::uuid AND command='redemption.redeem'
+           ORDER BY created_at, id`,
+      actorUserId ? [tenantId, eventId, actorUserId] : [tenantId, eventId],
+    );
+    await client.query('COMMIT');
+    return {
+      ticketCount: Number(ticketRows[0]?.n ?? 0),
+      codes,
+      quotas,
+      operations,
+    };
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw error;
+  } finally {
+    await client.end();
+  }
+}
+
+export function assertWeb04NegativeUnchanged(
+  before: Web04EventSnapshot,
+  after: Web04EventSnapshot,
+  label: string,
+): void {
+  expect(after.ticketCount, `${label}: must not issue tickets`).toBe(
+    before.ticketCount,
+  );
+  expect(after.codes, `${label}: code status must not change`).toEqual(
+    before.codes,
+  );
+  expect(after.quotas, `${label}: quota must not change`).toEqual(
+    before.quotas,
+  );
+  for (const op of after.operations) {
+    expect(op.status, `${label}: no dangling IN_PROGRESS operation`).not.toBe(
+      'IN_PROGRESS',
+    );
+  }
+}
+
+export function assertRedemptionStateUnchanged(
+  before: RedemptionState,
+  after: RedemptionState,
+  label: string,
+): void {
+  expect(after.code, `${label}: code row`).toEqual(before.code);
+  expect(after.requests, `${label}: requests`).toEqual(before.requests);
+  expect(after.tickets, `${label}: tickets`).toEqual(before.tickets);
+  expect(after.quotas, `${label}: quotas`).toEqual(before.quotas);
+  expect(after.outbox.map(({ status, ...row }) => row)).toEqual(
+    before.outbox.map(({ status, ...row }) => row),
+  );
+  for (const op of after.operations) {
+    expect(op.status, `${label}: no dangling IN_PROGRESS operation`).not.toBe(
+      'IN_PROGRESS',
+    );
+  }
+}
+
 export function assertNoExtraIssue(
   expected: RedemptionState,
   actual: RedemptionState,
