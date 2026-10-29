@@ -1,7 +1,8 @@
 'use strict';
 
 // Local maintenance operator. Never run in an API or worker process.
-// Usage: node scripts/o06-offline-purge.cjs fence|purge --tenant UUID --event UUID
+// Usage: node scripts/o06-offline-purge.cjs plan|check [--limit 1..500]
+//        node scripts/o06-offline-purge.cjs fence|purge --tenant UUID --event UUID
 //        --generation UUID
 //        [--evidence /absolute/path.json]
 // Purge requires an already-fenced event and positive external process evidence.
@@ -19,19 +20,75 @@ const fail = (message) => { throw new Error(message); };
 
 function parseArgs(argv) {
   const [phase, ...rest] = argv;
-  if (!['fence', 'purge'].includes(phase)) fail('Expected fence or purge phase');
+  if (!['plan', 'check', 'fence', 'purge'].includes(phase)) fail('Expected plan, check, fence or purge phase');
   if (rest.length % 2) fail('Options require values');
   const args = { phase };
   for (let i = 0; i < rest.length; i += 2) {
     const key = rest[i];
-    if (!['--tenant', '--event', '--generation', '--evidence'].includes(key) || args[key]) fail('Unknown or duplicate option');
+    const allowed = ['plan', 'check'].includes(phase) ? ['--limit']
+      : ['--tenant', '--event', '--generation', '--evidence'];
+    if (!allowed.includes(key) || args[key]) fail('Unknown or duplicate option');
     args[key] = rest[i + 1];
+  }
+  if (phase === 'plan' || phase === 'check') {
+    const pageSize = args['--limit'] === undefined ? 200 : Number(args['--limit']);
+    if (!Number.isInteger(pageSize) || pageSize < 1 || pageSize > 500) fail('Page limit must be 1..500');
+    return { phase, pageSize };
   }
   if (!UUID.test(args['--tenant'] || '') || !UUID.test(args['--event'] || '') ||
       !UUID.test(args['--generation'] || '')) fail('Tenant, event, and stable generation UUIDs required');
   if (phase === 'purge' && !args['--evidence']) fail('Purge requires --evidence');
   return { phase, tenantId: args['--tenant'], eventId: args['--event'],
     generation: args['--generation'], evidencePath: args['--evidence'] };
+}
+
+// This is a read-only, snapshot-stable inventory. The database function checks
+// the day-89 window and includes existing overdue rows, even without exports.
+async function checkDueEvents(db, input, emit = (row) => console.log(JSON.stringify(row))) {
+  await db.query('SET ROLE ticket_retention_operator');
+  const role = await db.query('SELECT current_user AS role');
+  if (role.rows[0]?.role !== 'ticket_retention_operator') fail('Dedicated retention operator DB role required');
+  await db.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
+  try {
+    const asOf = (await db.query('SELECT transaction_timestamp() AS as_of')).rows[0]?.as_of;
+    if (!(asOf instanceof Date) || !Number.isFinite(asOf.getTime())) fail('Database clock unavailable');
+    let cursor = [null, null, null];
+    let due = 0;
+    let pending = 0;
+    let overdue = 0;
+    // Bound each DB page and fail closed if a pathological scan cannot finish.
+    for (let page = 0; page < 10000; page++) {
+      const result = await db.query(
+        'SELECT * FROM public.list_export_retention_due_events($1::timestamptz,$2::integer,$3::timestamptz,$4::uuid,$5::uuid)',
+        [asOf, input.pageSize, ...cursor]);
+      const rows = result.rows;
+      for (const row of rows) {
+        const deadline = row.deadline instanceof Date ? row.deadline.toISOString() : row.deadline;
+        const isOverdue = row.completed !== true && Date.parse(deadline) <= asOf.getTime();
+        due++;
+        if (row.completed !== true) pending++;
+        if (isOverdue) overdue++;
+        emit({ type: 'event', tenantId: row.tenant_id, eventId: row.event_id,
+          deadline, state: row.completed === true ? 'completed' : 'pending',
+          overdue: isOverdue, barrierGeneration: row.barrier_generation,
+          fencedAt: row.fenced_at, inventoryRecordedAt: row.inventory_recorded_at,
+          unpurgedCount: Number(row.unpurged_count) });
+      }
+      if (rows.length < input.pageSize) {
+        await db.query('COMMIT');
+        const summary = { type: 'summary', asOf: asOf.toISOString(), due, pending,
+          overdue, alert: overdue > 0 ? 'O06_EXPORT_RETENTION_OVERDUE'
+            : pending > 0 ? 'O06_EXPORT_RETENTION_DUE' : null };
+        emit(summary);
+        return summary;
+      }
+      const last = rows.at(-1);
+      const next = [last.deadline_cursor, last.tenant_id, last.event_id];
+      if (JSON.stringify(next) === JSON.stringify(cursor)) fail('Due-event pagination did not advance');
+      cursor = next;
+    }
+    fail('Due-event pagination exceeded 10000 pages');
+  } catch (error) { await db.query('ROLLBACK'); throw error; }
 }
 
 // Evidence is supplied by the operator from process/supervisor and credential
@@ -331,8 +388,14 @@ async function main() {
   const db = new Client({ connectionString: process.env.O06_OPERATOR_DATABASE_URL });
   await db.connect();
   try {
-    const store = input.phase === 'purge' ? s3Client(process.env) : null;
-    console.log(JSON.stringify(await purgeEvent(db, store, input)));
+    if (input.phase === 'plan' || input.phase === 'check') {
+      const summary = await checkDueEvents(db, input);
+      if (summary.overdue > 0) process.exitCode = 2;
+      else if (summary.pending > 0) process.exitCode = 3;
+    } else {
+      const store = input.phase === 'purge' ? s3Client(process.env) : null;
+      console.log(JSON.stringify(await purgeEvent(db, store, input)));
+    }
   } finally { await db.end(); }
 }
 
@@ -341,4 +404,4 @@ if (require.main === module) main().catch((error) => {
   process.exitCode = 1;
 });
 
-module.exports = { parseArgs, validateEvidence, parseListing, purgeEvent, s3Client };
+module.exports = { parseArgs, validateEvidence, parseListing, purgeEvent, s3Client, checkDueEvents };
