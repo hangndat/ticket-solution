@@ -100,7 +100,7 @@
     ],
     "layers": ["B", "H"],
     "status": "blocked",
-    "reason": "Browser matrix 7/7 PASS run mvt0wnef-960246 (working tree chưa commit): invalid/used/expired-window/quota-exhausted/ATTENDEE_LIMIT (redeem-ux-exhausted «Đã đạt giới hạn vé»)/suspended/cancelled-event, không lộ email, wallet không đổi; HTTP ATTENDEE_LIMIT đã PASS mvszl1xq-f016aa. WEB-06 browser submit path HELD/PENDING_REVIEW + quota giữ nguyên cùng run. WEB-04 vẫn blocked cho acceptance đủ AC: chưa đối soát DB từng nhánh browser và approve/reject/expiry MANUAL thuộc Portal."
+    "reason": "Run mvt54p4f-9ad957 PASS 7/7 (base SHA 9551dd8c8343, working tree chưa commit): PostgreSQL readWeb04EventSnapshot/assertWeb04NegativeUnchanged từng nhánh invalid/expired/used/cancelled/quota/limit/suspended — số ticket, code/quota không đổi, không IN_PROGRESS dangling; wallet giữ nguyên. Suspended: assertRedeemRejectedWithoutTicket (denied/error/unknown, không lộ @); HTTP TENANT_SUSPENDED riêng. Chưa đối soát request/outbox từng nhánh; MANUAL approve/reject/expiry thuộc Portal/WEB-06 vẫn thiếu, nên WEB-04 chưa đạt acceptance đầy đủ."
   },
   {
     "caseId": "WEB-05",
