@@ -25,6 +25,8 @@ import {
   assertIssuedExactlyOnce,
   assertNoExtraIssue,
   codeIdFor,
+  readEventQuotas,
+  readManualPendingHold,
   readRedemptionState,
 } from './redemption-db';
 import { withLegacyCodeCollision } from './web03-ambiguity';
@@ -350,6 +352,26 @@ test.describe('[WEB-04] negative redeem matrix', () => {
     await assertWalletUnchanged(page, manifest, f.tenantId, before);
   });
 
+  test('attendee ticket limit returns exhausted UX without issuing', async ({
+    page,
+  }) => {
+    const manifest = loadManifest();
+    const f = fixtureFor(manifest, 'WEB-04');
+    await login(page, manifest, accountFor(manifest, 'WEB-04', 'attendee'));
+    const before = await walletTicketIds(page, manifest, f.tenantId);
+    await resolveGlobalCode(page, manifest, caseData<string>(f, 'limitCode'));
+    await expect(page.getByTestId('redeem-global-context')).toBeVisible();
+    await submitGlobalRedeemForm(
+      page,
+      f.data?.answers as Record<string, string | boolean> | undefined,
+    );
+    await assertRedeemOutcomePanel(page, 'exhausted');
+    await expect(page.getByTestId('redeem-ux-exhausted')).toContainText(
+      'Đã đạt giới hạn vé',
+    );
+    await assertWalletUnchanged(page, manifest, f.tenantId, before);
+  });
+
   test('suspended tenant blocks redeem without leaking owner email', async ({
     page,
   }) => {
@@ -419,9 +441,18 @@ test('[WEB-06] manual source stays pending without a QR before approval', async 
   page,
 }) => {
   const manifest = loadManifest();
+  const f = fixtureFor(manifest, 'WEB-06');
+  const actor = accountFor(manifest, 'WEB-06', 'attendee');
+  const quotasBefore = await readEventQuotas(f);
   await redeemCode(page, manifest, 'WEB-06');
   await expect(page.getByTestId('redeem-ux-pending')).toBeVisible();
   await expect(page.getByTestId('redeem-ticket-card')).toHaveCount(0);
+  const hold = await readManualPendingHold(f, actor.userId!);
+  expect(hold.code.status).toBe('HELD');
+  expect(hold.request.status).toBe('PENDING_REVIEW');
+  expect(hold.request.actor_user_id).toBe(actor.userId);
+  expect(hold.code.active_request_id).toBe(hold.request.id);
+  expect(await readEventQuotas(f)).toEqual(quotasBefore);
 });
 
 test.describe('[WEB-07] idempotent redemption', () => {

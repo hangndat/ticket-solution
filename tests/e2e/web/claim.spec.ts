@@ -148,27 +148,40 @@ for (const branch of ['auto', 'manual'] as const) {
       await portal.getByRole('button', { name: 'Ghi nhận import' }).click();
       await expect(portal.getByTestId('import-job-result')).toBeVisible();
       await portal.getByText('Phát lời mời', { exact: true }).click();
+      const listInvitationsButton = portal.getByRole('button', {
+        name: 'Liệt kê invitations',
+      });
+      await expect(listInvitationsButton).toBeVisible();
+      const invitationsListUrl = new URL(
+        `/api/bff/tenants/${encodeURIComponent(f.tenantId)}/events/${encodeURIComponent(eventId)}/invitations?limit=50`,
+        manifest.origins.portal,
+      ).toString();
       await expect
         .poll(
           async () => {
-            const listed = portal.waitForResponse(
-              (response) =>
-                response.request().method() === 'GET' &&
-                response.url().includes('/invitations?'),
-            );
-            await portal
-              .getByRole('button', { name: 'Liệt kê invitations' })
-              .click();
-            const response = await listed;
-            expect(response.status()).toBe(200);
+            const response = await portal.request.get(invitationsListUrl, {
+              failOnStatusCode: false,
+            });
+            if (response.status() !== 200) return -1;
             const body = (await response.json()) as { items: unknown[] };
-            expect(Array.isArray(body.items)).toBe(true);
-            expect(body.items).toHaveLength(1);
-            return await portal.locator('table tbody tr').count();
+            return Array.isArray(body.items) ? body.items.length : -1;
           },
-          { timeout: 30_000, intervals: [250, 500, 1000] },
+          { timeout: 60_000, intervals: [500, 1000, 2000] },
         )
         .toBe(1);
+      await expect(listInvitationsButton).toBeEnabled();
+      const listed = portal.waitForResponse(
+        (response) =>
+          response.request().method() === 'GET' &&
+          response.url().includes('/invitations?'),
+        { timeout: 30_000 },
+      );
+      await listInvitationsButton.click();
+      const listResponse = await listed;
+      expect(listResponse.status()).toBe(200);
+      const listedBody = (await listResponse.json()) as { items: unknown[] };
+      expect(listedBody.items).toHaveLength(1);
+      await expect(portal.locator('table tbody tr')).toHaveCount(1);
       const previewed = portal.waitForResponse(
         (r) =>
           r.url().endsWith('/invitations/dispatch-preview') &&

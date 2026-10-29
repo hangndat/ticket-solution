@@ -22,10 +22,13 @@
   },
   {
     "caseId": "PORT-04",
-    "tests": ["portal-event-lifecycle.spec.ts [PORT-04]"],
+    "tests": [
+      "portal-event-lifecycle.spec.ts [PORT-04] quota projection reflects allocated inventory without invented capacity",
+      "portal-event-lifecycle.spec.ts [PORT-04] Portal BFF exposes quota read only — mutation AC needs product surface"
+    ],
     "layers": ["B", "H"],
     "status": "blocked",
-    "reason": "Quota read path written; no quota mutation UI/BFF found, so lower-than-allocated-plus-hold and permission/error branches remain."
+    "reason": "Read path asserts quota/report FINITE consistency, quota page asOf, and documents BFF quota route is GET-only (POST/PATCH/PUT 404/405). AC branches for lowering capacity below allocated+hold, type/source mutation validation, permission deny actor, and committed-data rollback still need UI/API mutation surfaces plus runtime."
   },
   {
     "caseId": "PORT-05",
@@ -38,8 +41,8 @@
     "caseId": "PORT-06",
     "tests": ["portal-ops.spec.ts [PORT-06]"],
     "layers": ["B", "H"],
-    "status": "blocked",
-    "reason": "One UI approve path written; deny, expiry, quota race, audit and duplicate decision branches plus runtime fixture remain."
+    "status": "covered",
+    "reason": "PORT-06 targeted B/H PASS in isolated Keycloak/API/PG run mvt0p3hx-06bd1b (5/5 browser specs); fresh-build run mvt0m6gv-a04f90 passed 4/5 before a duplicate locator assertion was corrected. Approve and deny-with-reason assert Vietnamese feedback, API result, tenant-RLS ticket owner and audit actor/owner/reason; expired-pending and quota exhausted after request assert 409, no ticket or approval audit; same-decision replay and conflicting denial preserve one ticket and audit. This is selector coverage, not a whole-suite release verdict."
   },
   {
     "caseId": "PORT-07",
@@ -53,14 +56,14 @@
     "tests": ["portal-core.spec.ts [PORT-08]"],
     "layers": ["B", "H"],
     "status": "blocked",
-    "reason": "KPI snapshot and deep links written; APPLIED/undo/reject reconciliation, manual refresh/error and runtime fixture remain."
+    "reason": "B/H read path extended: full seeded report quota fields, gate asOf line, check-in KPI, manual refresh GET, deep links, no resend on dashboard. BLOCKED: confirm APPLIED/undo/reject is Gate/mobile (O12 scan), not Portal; seed lacks check-in/emailNeedsCs>0 for CTA branches; error-state must not show fake zero needs fault profile plus runtime."
   },
   {
     "caseId": "PORT-09",
     "tests": ["portal-ops.spec.ts [PORT-09]"],
     "layers": ["B", "H"],
     "status": "blocked",
-    "reason": "Provider status/privacy read written; CS search, timeline, resend cooldown, unchanged QR/ticket and runtime fixture remain."
+    "reason": "CS BFF/UI lookup, timeline PII masking, out-of-scope empty search, resend+cooldown and ticket state preservation written. BLOCKED: fixture lacks multi-status notification matrix (PENDING/FAILED/DEAD/UNKNOWN), cross-event scope deny, and resend limit beyond cooldown; runtime HTTPS fixture required."
   },
   {
     "caseId": "PORT-10",
@@ -114,7 +117,7 @@
   {
     "caseId": "PLAT-03",
     "tests": ["platform.spec.ts [PLAT-03]"],
-    "layers": ["H", "D"],
+    "layers": ["B", "H"],
     "status": "blocked",
     "reason": "Scoped grant/revoke HTTP path and INVALID_INPUT contracts written against real response shape; expiry/wrong tenant, audit DB proof and runtime remain."
   },
