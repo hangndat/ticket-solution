@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { sessionCookieOptions } from '@ticket/web-session';
-import { clearSessionCookies, readRefreshToken } from './cookies';
+import { clearEstablishedSessionCookies, readRefreshToken } from './cookies';
 import { sanitizePostLoginPath } from './post-login';
 
 /** One SSR discovery 401 → refresh route; second 401 → /auth (no loop). */
@@ -46,7 +46,7 @@ export async function hasSsrRefreshAttempt(): Promise<boolean> {
 async function redirectToSsrRefreshRouteOnce(nextPath: string): Promise<void> {
   const safeNext = sanitizePostLoginPath(nextPath) ?? '/';
   if (await hasSsrRefreshAttempt()) {
-    await clearSessionCookies();
+    await clearEstablishedSessionCookies();
     await clearSsrRefreshAttempt();
     redirect(ssrTerminalAuthRejectPath(safeNext));
   }

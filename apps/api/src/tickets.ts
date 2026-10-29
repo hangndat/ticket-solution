@@ -3,6 +3,7 @@ import {
   Body,
   Controller,
   Get,
+  Header,
   Headers,
   HttpException,
   Injectable,
@@ -32,6 +33,7 @@ import {
 import {
   IdentityError,
   IssueError,
+  PlatformError,
   REDEEM_COMMAND,
   createDatabase,
   configureIssuanceLockTimeout,
@@ -56,6 +58,7 @@ import {
   type PrismaClient,
 } from '@ticket/backend';
 import { identityErrorHttpStatus } from './identity-http-status';
+import { platformRouteFail } from './platform/platform-errors';
 import {
   API_RATE_BUCKETS,
   API_RATE_LIMITS,
@@ -259,6 +262,7 @@ export class TicketIssueService {
           true,
         );
       }
+      if (error instanceof PlatformError) platformRouteFail(error);
       throw error;
     }
     if (outcome.ok === 'pending') return outcome.result;
@@ -477,6 +481,7 @@ export class TicketIssueController {
 
   @Get('me/redemptions/:requestId')
   @ApiBearerAuth()
+  @Header('Cache-Control', 'private, no-store')
   async meRedemptionStatus(
     @Headers('authorization') authorization: string | undefined,
     @Param('requestId') requestId: string,
@@ -515,6 +520,7 @@ export class TicketIssueController {
       'Optional tenant UUID; omit to list all owner tickets across tenants (W1 aggregate).',
   })
   @ApiOkResponse({ type: MeTicketsDto })
+  @Header('Cache-Control', 'private, no-store')
   async meTickets(
     @Headers('authorization') authorization: string | undefined,
     @Query('tenantId') tenantId?: string,
@@ -540,6 +546,7 @@ export class TicketIssueController {
   @Get('me/tickets/:ticketId')
   @ApiBearerAuth()
   @ApiOkResponse({ type: TicketSummaryDto })
+  @Header('Cache-Control', 'private, no-store')
   async meTicketById(
     @Headers('authorization') authorization: string | undefined,
     @Param('ticketId') ticketId: string,

@@ -20,7 +20,7 @@
     "uat:p4-oidc": "python3 scripts/uat-d1-p4-keycloak.py",
     "uat:web": "node scripts/web-uat.mjs",
     "test:rint-host": "node --test scripts/lib/tenant-host.test.mjs",
-    "test:release": "python3 scripts/release-artifact.test.py",
+    "test:release": "python3 scripts/release-artifact.test.py && python3 scripts/release-remote-build.test.py",
     "test:load-context": "node --test scripts/load/scanner-context.test.mjs",
     "test:rint-outbox": "./scripts/rint-outbox-recovery.sh",
     "test:rint-stack": "./scripts/rint-stack-smoke.sh",
@@ -47,7 +47,14 @@
     "agent:review-publish": "node scripts/agent-review-publish.mjs",
     "agent:telemetry": "node scripts/agent-role-monitor/telemetry.mjs",
     "agent:workflow:test": "node --test scripts/agent-evidence.test.mjs scripts/agent-workflow-guard.test.mjs scripts/agent-workflow-run.test.mjs scripts/agent-review-publish.test.mjs scripts/agent-role-monitor/*.test.mjs",
-    "dev:local:test": "python3 scripts/dev-local-process.test.py"
+    "dev:local:test": "python3 scripts/dev-local-process.test.py",
+    "test:e2e:smoke": "node tests/e2e/harness/run.mjs smoke",
+    "test:e2e": "node tests/e2e/harness/run.mjs e2e",
+    "test:e2e:http": "node tests/e2e/harness/run.mjs http",
+    "test:e2e:list": "node tests/e2e/harness/run.mjs list",
+    "test:integration:local": "node tests/e2e/backend/entry.mjs",
+    "test:regression:local": "node tests/e2e/harness/run.mjs regression",
+    "test:e2e:guards": "node --test tests/e2e/validation/*.test.mjs"
   },
   "devDependencies": {
     "pixelmatch": "7.1.0",
