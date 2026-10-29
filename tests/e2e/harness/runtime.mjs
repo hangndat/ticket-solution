@@ -18,7 +18,6 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { once } from 'node:events';
 import { setTimeout as delay } from 'node:timers/promises';
-import { createRunBucket } from './object-store.mjs';
 
 export const ROOT = resolve(
   dirname(fileURLToPath(import.meta.url)),
@@ -758,6 +757,161 @@ export function startProcess(state, name, binary, args, env) {
   return child;
 }
 
+function bootstrapMinio(state) {
+  const image =
+    'cgr.dev/chainguard/minio@sha256:c93745c56fccdaf0e5dcb88999a96a65a136428beb045ef5d546255a80d747a7';
+  const buckets = {
+    assets: `e2e-${state.id}-assets`,
+    imports: `e2e-${state.id}-imports`,
+    exports: `e2e-${state.id}-exports`,
+  };
+  const identities = Object.fromEntries(
+    ['shared', 'exports'].map((role) => [
+      role,
+      {
+        accessKey: `e2e-${role}-${randomBytes(8).toString('hex')}`,
+        secretKey: randomBytes(24).toString('hex'),
+      },
+    ]),
+  );
+  const host = (identity) =>
+    `http://${identity.accessKey}:${identity.secretKey}@minio:9000`;
+  const root = { accessKey: 'e2e-access', secretKey: state.secrets.minio };
+  const mc = (identity, args, options = {}) =>
+    command(
+      'docker',
+      [
+        'run',
+        '--rm',
+        '--network',
+        `${state.project}_default`,
+        '--env',
+        'MC_HOST_e2e',
+        ...(options.policyPath
+          ? ['--volume', `${options.policyPath}:/policy.json:ro`]
+          : []),
+        '--entrypoint',
+        'mc',
+        image,
+        ...args,
+      ],
+      {
+        env: { ...process.env, MC_HOST_e2e: host(identity) },
+        input: options.input,
+        stdio: ['pipe', 'pipe', 'pipe'],
+      },
+    );
+  const policy = (templateName, replacements) => {
+    const source = JSON.parse(
+      readFileSync(
+        resolve(ROOT, 'infra/deploy/minio-policies', templateName),
+        'utf8',
+      ),
+    );
+    for (const statement of source.Statement) {
+      statement.Resource = statement.Resource.map((arn) => {
+        for (const [from, to] of Object.entries(replacements))
+          arn = arn.replace(`:::${from}/`, `:::${to}/`);
+        return arn;
+      });
+    }
+    const path = resolve(state.dir, templateName);
+    privateJson(path, source);
+    return path;
+  };
+  const sharedPolicy = policy('o06-shared-assets-imports.json', {
+    'vemoki-assets': buckets.assets,
+    'vemoki-imports': buckets.imports,
+  });
+  const exportsPolicy = policy('o06-exports-writer.json', {
+    'vemoki-exports': buckets.exports,
+  });
+  const names = {
+    shared: `e2e-shared-${state.id}`,
+    exports: `e2e-exports-${state.id}`,
+  };
+  let stage = 'buckets';
+  try {
+    for (const bucket of Object.values(buckets))
+      mc(root, ['mb', `e2e/${bucket}`]);
+    stage = 'policies';
+    for (const [role, path] of [
+      ['shared', sharedPolicy],
+      ['exports', exportsPolicy],
+    ]) {
+      mc(
+        root,
+        ['admin', 'policy', 'create', 'e2e', names[role], '/policy.json'],
+        { policyPath: path },
+      );
+    }
+    stage = 'users';
+    for (const role of ['shared', 'exports']) {
+      const identity = identities[role];
+      mc(root, [
+        'admin',
+        'user',
+        'add',
+        'e2e',
+        identity.accessKey,
+        identity.secretKey,
+      ]);
+      mc(root, [
+        'admin',
+        'policy',
+        'attach',
+        'e2e',
+        names[role],
+        '--user',
+        identity.accessKey,
+      ]);
+    }
+    stage = 'policy checks';
+    const put = (role, bucket, expectAllowed) => {
+      stage = `PUT ${role} ${bucket}`;
+      let allowed = true;
+      try {
+        mc(identities[role], ['pipe', `e2e/${bucket}/bootstrap-${role}`], {
+          input: 'e2e-policy-check',
+        });
+      } catch (error) {
+        if (
+          !/Access Denied|AccessDenied|Insufficient permissions to access this path/i.test(
+            String(error.stderr),
+          )
+        )
+          throw error;
+        allowed = false;
+      }
+      if (allowed !== expectAllowed)
+        throw new Error(`unexpected PUT result for ${role} to ${bucket}`);
+    };
+    put('shared', buckets.assets, true);
+    put('shared', buckets.imports, true);
+    put('shared', buckets.exports, false);
+    put('exports', buckets.exports, true);
+    put('exports', buckets.assets, false);
+    delete state.secrets.minio;
+  } catch (error) {
+    const detail = String(error.stderr || '')
+      .replace(/https?:\/\/[^\s@]+@/g, 'http://[redacted]@')
+      .replaceAll(root.secretKey, '[redacted]')
+      .replaceAll(identities.shared.secretKey, '[redacted]')
+      .replaceAll(identities.exports.secretKey, '[redacted]');
+    writeFileSync(
+      resolve(state.dir, 'minio-bootstrap.log'),
+      `${stage}\n${detail}`,
+      {
+        mode: 0o600,
+      },
+    );
+    throw new Error(
+      `BLOCKED: MinIO ${stage} failed (${error.status ?? error.code ?? 'policy_mismatch'})`,
+    );
+  }
+  state.minio = { buckets, identities };
+}
+
 export async function createRuntime(caseIds) {
   const id = `${Date.now().toString(36)}-${randomBytes(3).toString('hex')}`;
   const state = {
@@ -849,10 +1003,11 @@ export async function createRuntime(caseIds) {
         (await fetch(`http://127.0.0.1:${state.ports.minio}/minio/health/live`))
           .status === 200,
     );
-    await createRunBucket(state);
+    bootstrapMinio(state);
     return state;
   } catch (error) {
     await destroyRuntime(state);
+    if (error.message?.startsWith('BLOCKED: MinIO ')) throw error;
     throw new Error(
       `BLOCKED: không tạo được isolated runtime (${error.code || 'setup_failed'}); log private: ${state.dir}`,
     );
