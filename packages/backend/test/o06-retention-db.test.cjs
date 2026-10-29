@@ -13,7 +13,7 @@ const docker = (...args) => execFileSync('docker', args, {
   encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'],
 }).trim();
 
-async function database(beforeDueMigration) {
+async function database(beforeDueMigration, productionAcl = false) {
   const name = 'ticket-o06-retention-' + randomBytes(5).toString('hex');
   const password = randomBytes(20).toString('hex');
   docker('run', '-d', '--name', name, '-e', 'POSTGRES_PASSWORD=' + password,
@@ -44,6 +44,17 @@ async function database(beforeDueMigration) {
     if (file.includes('202610290007_o06_operator_due_events') && beforeDueMigration) {
       await beforeDueMigration(admin);
     }
+    if (file.includes('202610290008_o06_definer_table_acl') && productionAcl) {
+      // The old local harness owns every table as migration_owner. Production
+      // owns these four as ticket_owner and grants only two preexisting ACLs.
+      await admin.query('RESET ROLE');
+      await admin.query('CREATE ROLE ticket_owner NOLOGIN NOBYPASSRLS');
+      for (const table of ['events', 'event_attendees', 'redemption_requests', 'exports']) {
+        await admin.query(`ALTER TABLE public.${table} OWNER TO ticket_owner`);
+      }
+      await admin.query('GRANT SELECT, UPDATE ON public.exports TO migration_owner');
+      await admin.query('GRANT SELECT ON public.redemption_requests TO migration_owner');
+    }
     await admin.query(readFileSync(file, 'utf8'));
   }
   await admin.query('RESET ROLE');
@@ -58,6 +69,90 @@ async function database(beforeDueMigration) {
   };
   return { name, admin, adminUrl, runtime, runtimeUrl, operatorQuery };
 }
+
+test('O06 definer ACL works on production-shaped table ownership and row-bearing paths',
+  { timeout: 240000 }, async () => {
+    let db;
+    try {
+      db = await database(undefined, true);
+      const { admin, runtime, operatorQuery } = db;
+      const tenant = randomUUID();
+      const user = randomUUID();
+      await admin.query('INSERT INTO tenants (id,slug,name) VALUES ($1,$2,$2)',
+        [tenant, 'o06-acl']);
+      await admin.query('INSERT INTO users (id,issuer,subject,email) VALUES ($1,$2,$3,$4)',
+        [user, 'o06-acl', user, 'fixture@example.test']);
+      const pii = await seedEvent(admin, tenant, user, 'acl-pii', -366 * 86400);
+      const due = await seedEvent(admin, tenant, user, 'acl-due', -91 * 86400);
+      const claimable = await seedEvent(admin, tenant, user, 'acl-claim', -10 * 86400);
+      const pending = randomUUID();
+      await admin.query(`INSERT INTO exports (tenant_id,event_id,id,actor_user_id,status)
+        VALUES ($1,$2,$3,$4,'PENDING')`, [tenant, claimable.event, pending, user]);
+
+      assert.equal((await admin.query(`SELECT count(*)::int AS n FROM pg_class c
+        WHERE c.oid IN ('public.events'::regclass, 'public.event_attendees'::regclass,
+          'public.redemption_requests'::regclass, 'public.exports'::regclass)
+          AND pg_get_userbyid(c.relowner) = 'ticket_owner' AND c.relforcerowsecurity`)).rows[0].n, 4);
+      for (const table of ['events', 'event_attendees']) {
+        assert.equal((await admin.query(`SELECT has_table_privilege('migration_owner',
+          'public.${table}', 'SELECT') AS broad_select,
+          has_table_privilege('migration_owner', 'public.${table}', 'UPDATE') AS broad_update`))
+          .rows[0].broad_select, false);
+      }
+      assert.equal((await admin.query(`SELECT has_table_privilege('migration_owner',
+        'public.redemption_requests', 'UPDATE') AS broad_update`)).rows[0].broad_update, false);
+      assert.equal((await runtime.query('SELECT count(*)::int AS n FROM events')).rows[0].n, 0,
+        'runtime cannot scan events across tenants without tenant context');
+
+      const claimed = (await runtime.query(
+        "SELECT * FROM claim_exports_batch(20,'acl-fixture',3600)")).rows;
+      assert.ok(claimed.some((row) => row.export_id === pending));
+      const piiDue = (await runtime.query(
+        'SELECT * FROM list_due_ticket_pii_anonymizations(10)')).rows;
+      assert.ok(piiDue.some((row) => row.event_id === pii.event));
+      const dueRows = (await operatorQuery(
+        'SELECT * FROM list_export_retention_due_events(clock_timestamp(),100)')).rows;
+      assert.ok(dueRows.some((row) => row.event_id === due.event && row.unpurged_count === '1'));
+      const generation = randomUUID();
+      assert.equal((await operatorQuery('SELECT fence_export_retention_event($1,$2,$3) AS ok',
+        [tenant, due.event, generation])).rows[0].ok, true);
+      assert.equal((await operatorQuery(
+        'SELECT export_retention_operator_status($1,$2,$3) AS value',
+        [tenant, due.event, generation])).rows[0].value.matched, true);
+      const hash = 'a'.repeat(64);
+      assert.equal((await operatorQuery(
+        'SELECT record_export_retention_inventory($1,$2,$3,$4::jsonb) AS ok',
+        [tenant, due.event, generation, JSON.stringify({ emptyInventory: true,
+          writerExitHash: hash, serverBarrierHash: hash, inventoryHash: hash })])).rows[0].ok, true);
+      assert.equal((await operatorQuery('SELECT finalize_export_retention_event($1,$2,$3) AS n',
+        [tenant, due.event, generation])).rows[0].n, 1);
+      assert.equal((await runtime.query('SELECT apply_ticket_pii_anonymization($1,$2) AS ok',
+        [tenant, pii.event])).rows[0].ok, true);
+      const scrubbed = (await admin.query(`SELECT a.canonical_email, r.answers_json,
+        e.ticket_pii_anonymized_at FROM events e
+        JOIN event_attendees a ON a.tenant_id=e.tenant_id AND a.event_id=e.id
+        JOIN redemption_requests r ON r.tenant_id=e.tenant_id AND r.event_id=e.id
+        WHERE e.tenant_id=$1 AND e.id=$2`, [tenant, pii.event])).rows[0];
+      assert.equal(scrubbed.canonical_email, null);
+      assert.equal(scrubbed.answers_json, null);
+      assert.ok(scrubbed.ticket_pii_anonymized_at);
+      await assert.rejects(admin.query(
+        'UPDATE event_attendees SET canonical_email=$1 WHERE id=$2',
+        ['late@example.test', pii.attendee]), /EVENT_PII_ANONYMIZED/);
+      await assert.rejects(admin.query(
+        'UPDATE redemption_requests SET answers_json=$1 WHERE id=$2',
+        [JSON.stringify({ late: true }), pii.request]), /EVENT_PII_ANONYMIZED/);
+      assert.ok((await runtime.query('SELECT * FROM worker_due_job_snapshot()')).rows.length > 0);
+      await assert.rejects(runtime.query(
+        'SELECT * FROM list_export_retention_due_events(clock_timestamp(),10)'), /permission denied/);
+      await assert.rejects(runtime.query('SELECT fence_export_retention_event($1,$2,$3)',
+        [tenant, due.event, randomUUID()]), /permission denied/);
+    } finally {
+      if (db?.runtime) await db.runtime.end().catch(() => {});
+      if (db?.admin) await db.admin.end().catch(() => {});
+      if (db?.name) docker('rm', '-f', db.name);
+    }
+  });
 
 test('O06 operator pages legacy and new due events with overdue and completion markers',
   { timeout: 240000 }, async () => {
