@@ -12,6 +12,15 @@ const tenantId = '11111111-1111-4111-8111-111111111111';
 const eventId = '22222222-2222-4222-8222-222222222222';
 const generation = '33333333-3333-4333-8333-333333333333';
 const prefix = `exports/${tenantId}/${eventId}/`;
+const attestedEvidence = () => ({
+  ...evidence(),
+  restoreAttestation: {
+    reason: 'Postgres PITR restore to 2026-10-29T05:55:00Z after storage fault',
+    attestedBy: 'ops-oncall-jane',
+    incidentRef: 'INC-4821',
+    attestedAt: '2026-10-29T06:04:00Z',
+  },
+});
 const evidence = () => ({
   tenantId, eventId, generation,
   writerIdentityDisabled: true, writerRestartInhibited: true,
@@ -240,15 +249,17 @@ test('completed generation reruns without rewriting frozen inventory evidence', 
     const store = { async health() {}, async inventory() { return []; }, async remove() { throw Error('unexpected'); } };
     const result = await purgeEvent(db, store, { phase: 'purge', tenantId, eventId, generation, evidencePath });
     assert.equal(result.alreadyFinalized, true);
+    assert.equal(result.reconciled, false, 'no objects on finalized rerun is a clean no-op');
+    assert.equal(result.pitrRestoreAttested, false);
     assert.ok(!db.queries.some((x) => x.sql.includes('record_export_retention_inventory')));
     assert.ok(!db.queries.some((x) => x.sql.includes('finalize_export_retention_event')));
   } finally { await rm(dir, { recursive: true, force: true }); }
 });
 
-test('PITR restore reconciles current, version, marker and multipart after finalized DB marker', async () => {
+test('attested PITR restore reconciles current, version, marker and multipart and emits a distinct signal', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'o06-purge-'));
   const evidencePath = join(dir, 'evidence.json');
-  await writeFile(evidencePath, JSON.stringify(evidence()));
+  await writeFile(evidencePath, JSON.stringify(attestedEvidence()));
   try {
     const db = dbMock({ status: { matched: true, fenced: true, inventoryRecorded: true,
       unpurgedCount: 0, activeLeaseCount: 0 } });
@@ -264,14 +275,61 @@ test('PITR restore reconciles current, version, marker and multipart after final
         removed.push(entry);
         entries.splice(entries.indexOf(entry), 1);
       } };
-    const result = await purgeEvent(db, store,
-      { phase: 'purge', tenantId, eventId, generation, evidencePath });
+    const errors = [];
+    const originalError = console.error;
+    console.error = (line) => errors.push(line);
+    let result;
+    try {
+      result = await purgeEvent(db, store,
+        { phase: 'purge', tenantId, eventId, generation, evidencePath });
+    } finally { console.error = originalError; }
     assert.equal(result.alreadyFinalized, true);
     assert.equal(result.reconciled, true);
+    assert.equal(result.pitrRestoreAttested, true, 'reconciliation must be distinguishable from a silent success');
+    assert.equal(result.restoreReason, attestedEvidence().restoreAttestation.reason);
+    assert.equal(result.restoreIncidentRef, 'INC-4821');
     assert.equal(removed.length, 4);
     assert.deepEqual(result.inventories.map((x) => x.count), [4, 0, 0]);
     assert.ok(!db.queries.some((x) => x.sql.includes('record_export_retention_inventory')));
+    assert.ok(errors.some((line) => line.includes('O06_PITR_RESTORE_RECONCILED') && line.includes('INC-4821')),
+      'reappearance on a finalized event must be logged at alert level even when attested');
   } finally { await rm(dir, { recursive: true, force: true }); }
+});
+
+test('reappearance on a finalized event without restore attestation fails safely and deletes nothing', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'o06-purge-'));
+  const evidencePath = join(dir, 'evidence.json');
+  await writeFile(evidencePath, JSON.stringify(evidence()));
+  try {
+    const db = dbMock({ status: { matched: true, fenced: true, inventoryRecorded: true,
+      unpurgedCount: 0, activeLeaseCount: 0 } });
+    const removed = [];
+    const store = { async health() {}, async inventory() {
+      return [{ type: 'current', key: `${prefix}unexplained.csv` }];
+    }, async remove(entry) { removed.push(entry); } };
+    await assert.rejects(purgeEvent(db, store,
+      { phase: 'purge', tenantId, eventId, generation, evidencePath }),
+      /without an operator-attested PITR restore reason/);
+    assert.equal(removed.length, 0, 'an unattested reappearance must never be quietly deleted');
+    assert.ok(!db.queries.some((x) => x.sql.includes('record_export_retention_inventory')));
+    assert.ok(!db.queries.some((x) => x.sql.includes('finalize_export_retention_event')));
+  } finally { await rm(dir, { recursive: true, force: true }); }
+});
+
+test('a bad or missing barrier still fails even when a restore reason is attested', () => {
+  const cases = [
+    (x) => { x.writerIdentityDisabled = false; },
+    (x) => { x.writers.pop(); x.expectedWriterIds.pop(); },
+    (x) => { x.restoreAttestation.reason = 'short'; },
+    (x) => { x.restoreAttestation.attestedAt = '2099-01-01T00:00:00Z'; },
+    (x) => { delete x.restoreAttestation.incidentRef; },
+  ];
+  for (const mutate of cases) {
+    const value = attestedEvidence(); mutate(value);
+    assert.throws(() => validateEvidence(value, tenantId, eventId, generation));
+  }
+  assert.equal(validateEvidence(attestedEvidence(), tenantId, eventId, generation)
+    .restoreAttestation.incidentRef, 'INC-4821');
 });
 
 test('inventory or deletion error leaves DB attestation and finalization untouched', async () => {

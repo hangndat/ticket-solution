@@ -93,8 +93,28 @@ The file must be prepared after the process-level stop, writer identity disable,
 
 The time fields must describe the observed sequence; substitute real times and records. Keep the evidence file unchanged across a failed retry until the reason is investigated. Protect it as operations evidence, without secrets or user data.
 
+### Restoring a finalized event after PostgreSQL/MinIO PITR
+
+If `purge` is rerun against an event already finalized (`alreadyFinalized`) and the fresh inventory finds any current object, version, delete marker, or multipart upload, the tool refuses to delete it unless the evidence file also carries a `restoreAttestation` block naming the operator's affirmative reason for the reappearance — never because a rerun found bytes and nothing else:
+
+```json
+"restoreAttestation": {
+  "reason": "<why these bytes legitimately reappeared, e.g. the PITR target and cause>",
+  "attestedBy": "<operator identity>",
+  "incidentRef": "<ticket or incident ID>",
+  "attestedAt": "2026-10-29T06:04:00Z"
+}
+```
+
+Add this only when you intentionally restored PostgreSQL and/or MinIO to a point before the original purge and have re-established a fresh writer/key/server barrier per the section above; never add it to make an unexplained reappearance go away. `reason` and `incidentRef` must be non-trivial (at least 8 and 3 characters) and `attestedAt` must not be in the future.
+
 ## Purge and recovery
 
 The tool checks both MinIO read and write quorum, then lists the event-derived prefix across current objects, every data version and delete marker, and incomplete multipart uploads. The pinned MinIO image returned no multipart uploads when `ListMultipartUploads` used a prefix even while an active upload existed, so this tool paginates the **whole exports bucket** for uploads and filters the exact event prefix locally. It deletes explicit version IDs and upload IDs, including keys absent from `exports.object_key`, and requires two consecutive empty full inventories. Listing, pagination, deletion, health, or DB errors exit nonzero without finalization. The JSON result includes each pass count and hash plus an aggregate inventory hash. Store stdout with the operator evidence and alarm if the event reaches `ends_at + 90 days` before completion.
 
-The DB records that aggregate hash and barrier hashes before finalization in one transaction. A successful rerun repeats empty inventory and returns `alreadyFinalized` without replacing the frozen attestation. After PostgreSQL or MinIO PITR, establish a fresh process/key/server barrier before rerunning `purge`; the rerun inventories and removes restored current objects, versions, markers, and multipart uploads even when `purged_at` was already set, and returns `reconciled: true` if it found bytes. Keep writers stopped until a successful DB commit, a fresh non-root export PUT identity, and deployed DB guards are confirmed. Never infer the barrier from an HTTP timeout or a restart response.
+The DB records that aggregate hash and barrier hashes before finalization in one transaction. A successful rerun repeats empty inventory and returns `alreadyFinalized: true, reconciled: false` (exit **0**) without replacing the frozen attestation. If that rerun instead finds bytes:
+
+- **Without `restoreAttestation`:** the run fails closed before deleting anything — exit **1**, no `reconciled` field, same as any other validation failure. Treat this as a possible writer-barrier leak from the original purge window and investigate before retrying.
+- **With a valid `restoreAttestation`:** establish a fresh process/key/server barrier first (per the section above), then the rerun inventories and removes restored current objects, versions, markers, and multipart uploads, returns `reconciled: true, pitrRestoreAttested: true, restoreReason, restoreIncidentRef`, logs an `O06_PITR_RESTORE_RECONCILED` line to stderr, and exits **4** — distinct from a clean rerun (0) or a generic failure (1), so a scheduler must alert on exit 4 the same as 1/2/3 even though the deletion succeeded.
+
+Keep writers stopped until a successful DB commit, a fresh non-root export PUT identity, and deployed DB guards are confirmed. Never infer the barrier from an HTTP timeout or a restart response.
