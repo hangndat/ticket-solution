@@ -72,12 +72,12 @@
   {
     "caseId": "WEB-03",
     "tests": [
-      "redeem.spec.ts › [WEB-03] event link and global entry resolve code to the same published event",
+      "redeem.spec.ts › [WEB-03] event link survives login and issues for the globally resolved event",
       "redeem.spec.ts › [WEB-03] invalid and ambiguous codes keep context private and state unchanged"
     ],
     "layers": ["B", "H"],
     "status": "implemented",
-    "reason": "Targeted WEB-03 PASS run mvswo3mv-e5d2f8: event/global login giữ context; invalid code cả hai entry có UX invalid, lỗi không lộ owner/tenant/event ngoài published projection; routing group AMBIGUOUS synthetic trong run cô lập trả RESOLVE_DISABLED/UX closed rồi được khôi phục. PostgreSQL runtime role xác nhận không đổi code/request/ticket/quota/outbox; event-scoped invalid ghi đúng một operation từ chối CODE_INVALID. Chưa tạo collision legacy thật giữa hai event; nhánh API ambiguity được kích qua trạng thái routing group synthetic."
+    "reason": "WEB-03 targeted mvsxbht5-863995 và WEB-03+WEB-04 cùng run mvsxo9u5-555265 PASS 8/8; full browser sau cleanup mvsxpkhf-02af2b PASS 52/52. Event link qua OIDC login giữ tenant/event, submit cấp đúng một ticket cho owner/event/type/source, code CONSUMED, quota +1, operation COMPLETED, TicketIssued outbox; global entry resolve cùng published event. Mã sai cả hai entry giữ UX/privacy và không issue. Fixture tạo event thứ hai cùng mã, backend legacy backfill hình thành group AMBIGUOUS có hai candidate; BFF/UI không lộ tenant/event/owner. Cleanup transactional phục hồi ROUTABLE và xóa event/code/candidate phụ để không ảnh hưởng case sau. PostgreSQL kiểm ambiguity không phát sinh thêm business state; event-scoped invalid chỉ ghi một operation CODE_INVALID."
   },
   {
     "caseId": "WEB-04",
