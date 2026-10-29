@@ -550,6 +550,12 @@ function startProxy(state) {
         );
         return;
       }
+      if (faultMode === 'timeout') {
+        // Never respond — client AbortSignal.timeout / fetch abort must fire.
+        req.on('data', () => {});
+        req.on('end', () => {});
+        return;
+      }
       const headers = {
         ...req.headers,
         host: req.headers.host,

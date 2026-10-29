@@ -86,12 +86,14 @@
     "caseId": "DB-09",
     "tests": [
       "D:packages/backend/test/gate.test.cjs#gate: one confirm wins",
+      "D:packages/backend/test/ticket-reissue-grants.test.cjs#reissue grant migration",
       "D:packages/backend/test/event-lifecycle.test.cjs#C-E event lifecycle",
-      "D:packages/backend/test/db09-ticket-security-invariants.test.cjs#DB-09: revoke never reuses a redemption code; no path reassigns ticket owner; allocation is gated on the current event policy, not a stale snapshot"
+      "D:packages/backend/test/db09-ticket-security-invariants.test.cjs#DB-09: revoke never reuses a redemption code; no path reassigns ticket owner; allocation is gated on the current event policy, not a stale snapshot",
+      "R:tests/e2e/backend/reissue-worker-mailpit.test.cjs#R reissue worker Mailpit"
     ],
-    "layers": ["D"],
+    "layers": ["D", "R"],
     "status": "blocked",
-    "reason": "D mới PASS trên PostgreSQL thật: revoke không tái dùng mã (code vẫn CONSUMED, active_request_id giữ nguyên, 2 lần redeem lại đều CODE_CONSUMED, chỉ 1 ticket); revoke invalidate credential hiện tại (ticket_credentials -> REVOKED) nhưng đây KHÔNG phải credential rotation — không có hàm reissue/rotate nào trong source (grep xác nhận, resend không rotate); owner_user_id bất biến qua reserve/confirm/undo/revoke bởi actor khác owner, có static guard chặn UPDATE tickets SET owner_user_id và @Patch route cho ticket; allocation (AUTO và MANUAL approve) bị chặn đúng theo policy hiện tại khi event bị cancel sau khi hold được tạo (EVENT_CANCELLED, quota=0, code không bị consume). Vẫn blocked vì credential rotate/reissue là product gap chưa build (PRD.md:198 yêu cầu nhưng chưa có endpoint) — xem .artifacts/db09-local.md. Thiếu thêm H cho generic PATCH refusal qua HTTP thật."
+    "reason": "D PostgreSQL: revoke không tái dùng mã, owner bất biến, reissue xoay credential/version với idempotency và grant Owner/Supervisor. R worker thật + Mailpit chứng minh PNG version mới đúng owner và revoke trước relay thành DEAD, không gửi. Thiếu H generic PATCH refusal; GATE-03 vẫn chưa xác thực QR credential khi scan."
   },
   {
     "caseId": "DB-10",
@@ -418,18 +420,25 @@
   {
     "caseId": "POL-02",
     "tests": [
-      "D:packages/backend/test/portal-audit-codes.test.cjs#H-A1/H-C1/H-P-AUDIT"
+      "D:packages/backend/test/portal-audit-codes.test.cjs#H-A1/H-C1/H-P-AUDIT",
+      "D:packages/backend/test/o06-retention-db.test.cjs#O06 POL-02/03",
+      "D:packages/backend/test/o06-retention-db.test.cjs#O06 PII writer"
     ],
     "layers": ["D"],
     "status": "blocked",
-    "reason": "D audit read filter 730 ngày có test; thiếu sweeper/anonymize ticket+check-in 365 ngày và audit deletion 730 ngày."
+    "reason": "D POL-02 kiểm clock ends_at NULL, CANCELLED lấy cancelled_at, PII writer/sweep hai thứ tự row lock, tenant isolation và replay. Cần ops đo event lớn, restore re-sweep. Audit TTL 730 ngày là gap policy riêng: chưa có deletion job."
   },
   {
     "caseId": "POL-03",
-    "tests": ["D:packages/backend/test/minio-real.test.cjs#MinIO"],
+    "tests": [
+      "D:packages/backend/test/minio-real.test.cjs#MinIO",
+      "D:packages/backend/test/o06-retention-db.test.cjs#O06 POL-02/03",
+      "D:packages/backend/test/o06-retention-db.test.cjs#O06 export claim",
+      "D:packages/backend/test/o06-retention-db.test.cjs#O06 delete failure"
+    ],
     "layers": ["D"],
     "status": "blocked",
-    "reason": "MinIO test chỉ chứng minh object private; thiếu cleanup 90 ngày/tenant-scope."
+    "reason": "D POL-03 kiểm clock ends_at + 90 ngày kể cả CANCELLED, event fence, lease/reclaim, delete 404 và token cũ không finalize. F01 còn mở: stale PUT sau purge có thể tái tạo bytes; chưa có MinIO barrier proof hoặc object-store write fence. Signed URL expiry và ops restore còn thiếu."
   },
   {
     "caseId": "POL-04",
