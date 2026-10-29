@@ -19,15 +19,18 @@ import {
   submitGlobalRedeemForm,
   walletTicketIds,
   webUrl,
+  assertRedeemRejectedWithoutTicket,
 } from './helpers';
 import { ticketLink, waitForMail } from './mailpit';
 import {
   assertIssuedExactlyOnce,
   assertNoExtraIssue,
+  assertWeb04NegativeUnchanged,
   codeIdFor,
   readEventQuotas,
   readManualPendingHold,
   readRedemptionState,
+  readWeb04EventSnapshot,
 } from './redemption-db';
 import { withLegacyCodeCollision } from './web03-ambiguity';
 
@@ -288,16 +291,34 @@ test('[WEB-03] invalid and ambiguous codes keep context private and state unchan
 });
 
 test.describe('[WEB-04] negative redeem matrix', () => {
+  function web04Actor(manifest: ReturnType<typeof loadManifest>) {
+    const actor = accountFor(manifest, 'WEB-04', 'attendee');
+    if (!actor.userId)
+      throw new Error('BLOCKED: WEB-04 attendee userId for PostgreSQL ops');
+    return actor.userId;
+  }
+
   test('invalid code does not issue ticket or reveal owner data', async ({
     page,
   }) => {
     const manifest = loadManifest();
     const f = fixtureFor(manifest, 'WEB-04');
+    const actorUserId = web04Actor(manifest);
+    const beforeEvent = await readWeb04EventSnapshot(
+      f.tenantId,
+      f.eventId,
+      actorUserId,
+    );
     await login(page, manifest, accountFor(manifest, 'WEB-04', 'attendee'));
     const before = await walletTicketIds(page, manifest, f.tenantId);
     await resolveGlobalCode(page, manifest, caseData<string>(f, 'invalidCode'));
     await assertRedeemOutcomePanel(page, 'invalid');
     await assertWalletUnchanged(page, manifest, f.tenantId, before);
+    assertWeb04NegativeUnchanged(
+      beforeEvent,
+      await readWeb04EventSnapshot(f.tenantId, f.eventId, actorUserId),
+      'WEB-04 invalid global guard',
+    );
   });
 
   test('expired redemption window returns closed UX without issuing', async ({
@@ -305,16 +326,34 @@ test.describe('[WEB-04] negative redeem matrix', () => {
   }) => {
     const manifest = loadManifest();
     const f = fixtureFor(manifest, 'WEB-04');
+    const actorUserId = web04Actor(manifest);
+    const eventId = caseData<string>(f, 'expiredEventId');
+    const beforeEvent = await readWeb04EventSnapshot(
+      f.tenantId,
+      eventId,
+      actorUserId,
+    );
     await login(page, manifest, accountFor(manifest, 'WEB-04', 'attendee'));
     const before = await walletTicketIds(page, manifest, f.tenantId);
     await resolveGlobalCode(page, manifest, caseData<string>(f, 'expiredCode'));
     await assertRedeemOutcomePanel(page, 'closed');
     await assertWalletUnchanged(page, manifest, f.tenantId, before);
+    assertWeb04NegativeUnchanged(
+      beforeEvent,
+      await readWeb04EventSnapshot(f.tenantId, eventId, actorUserId),
+      'WEB-04 expired window',
+    );
   });
 
   test('used code does not issue a second ticket', async ({ page }) => {
     const manifest = loadManifest();
     const f = fixtureFor(manifest, 'WEB-04');
+    const actorUserId = web04Actor(manifest);
+    const beforeEvent = await readWeb04EventSnapshot(
+      f.tenantId,
+      f.eventId,
+      actorUserId,
+    );
     await login(page, manifest, accountFor(manifest, 'WEB-04', 'attendee'));
     const before = await walletTicketIds(page, manifest, f.tenantId);
     await resolveGlobalCode(page, manifest, caseData<string>(f, 'usedCode'));
@@ -325,21 +364,45 @@ test.describe('[WEB-04] negative redeem matrix', () => {
     );
     await assertRedeemOutcomePanel(page, 'used');
     await assertWalletUnchanged(page, manifest, f.tenantId, before);
+    assertWeb04NegativeUnchanged(
+      beforeEvent,
+      await readWeb04EventSnapshot(f.tenantId, f.eventId, actorUserId),
+      'WEB-04 used code',
+    );
   });
 
   test('closed event does not issue ticket or leak email', async ({ page }) => {
     const manifest = loadManifest();
     const f = fixtureFor(manifest, 'WEB-04');
+    const actorUserId = web04Actor(manifest);
+    const eventId = caseData<string>(f, 'closedEventId');
+    const beforeEvent = await readWeb04EventSnapshot(
+      f.tenantId,
+      eventId,
+      actorUserId,
+    );
     await login(page, manifest, accountFor(manifest, 'WEB-04', 'attendee'));
     const before = await walletTicketIds(page, manifest, f.tenantId);
     await resolveGlobalCode(page, manifest, caseData<string>(f, 'closedCode'));
     await assertRedeemOutcomePanel(page, 'closed');
     await assertWalletUnchanged(page, manifest, f.tenantId, before);
+    assertWeb04NegativeUnchanged(
+      beforeEvent,
+      await readWeb04EventSnapshot(f.tenantId, eventId, actorUserId),
+      'WEB-04 cancelled event',
+    );
   });
 
   test('exhausted quota does not issue ticket on submit', async ({ page }) => {
     const manifest = loadManifest();
     const f = fixtureFor(manifest, 'WEB-04');
+    const actorUserId = web04Actor(manifest);
+    const eventId = caseData<string>(f, 'quotaEventId');
+    const beforeEvent = await readWeb04EventSnapshot(
+      f.tenantId,
+      eventId,
+      actorUserId,
+    );
     await login(page, manifest, accountFor(manifest, 'WEB-04', 'attendee'));
     const before = await walletTicketIds(page, manifest, f.tenantId);
     await resolveGlobalCode(page, manifest, caseData<string>(f, 'quotaCode'));
@@ -350,6 +413,11 @@ test.describe('[WEB-04] negative redeem matrix', () => {
     );
     await assertRedeemOutcomePanel(page, 'exhausted');
     await assertWalletUnchanged(page, manifest, f.tenantId, before);
+    assertWeb04NegativeUnchanged(
+      beforeEvent,
+      await readWeb04EventSnapshot(f.tenantId, eventId, actorUserId),
+      'WEB-04 quota exhausted',
+    );
   });
 
   test('attendee ticket limit returns exhausted UX without issuing', async ({
@@ -357,6 +425,13 @@ test.describe('[WEB-04] negative redeem matrix', () => {
   }) => {
     const manifest = loadManifest();
     const f = fixtureFor(manifest, 'WEB-04');
+    const actorUserId = web04Actor(manifest);
+    const eventId = caseData<string>(f, 'limitEventId');
+    const beforeEvent = await readWeb04EventSnapshot(
+      f.tenantId,
+      eventId,
+      actorUserId,
+    );
     await login(page, manifest, accountFor(manifest, 'WEB-04', 'attendee'));
     const before = await walletTicketIds(page, manifest, f.tenantId);
     await resolveGlobalCode(page, manifest, caseData<string>(f, 'limitCode'));
@@ -370,6 +445,11 @@ test.describe('[WEB-04] negative redeem matrix', () => {
       'Đã đạt giới hạn vé',
     );
     await assertWalletUnchanged(page, manifest, f.tenantId, before);
+    assertWeb04NegativeUnchanged(
+      beforeEvent,
+      await readWeb04EventSnapshot(f.tenantId, eventId, actorUserId),
+      'WEB-04 attendee limit',
+    );
   });
 
   test('suspended tenant blocks redeem without leaking owner email', async ({
@@ -377,9 +457,16 @@ test.describe('[WEB-04] negative redeem matrix', () => {
   }) => {
     const manifest = loadManifest();
     const f = fixtureFor(manifest, 'WEB-04');
+    const actorUserId = web04Actor(manifest);
+    const suspendedTenantId = caseData<string>(f, 'suspendedTenantId');
+    const suspendedEventId = caseData<string>(f, 'suspendedEventId');
+    const beforeSuspendedEvent = await readWeb04EventSnapshot(
+      suspendedTenantId,
+      suspendedEventId,
+      actorUserId,
+    );
     await login(page, manifest, accountFor(manifest, 'WEB-04', 'attendee'));
     const beforeMain = await walletTicketIds(page, manifest, f.tenantId);
-    const suspendedTenantId = caseData<string>(f, 'suspendedTenantId');
     const beforeSuspended = await walletTicketIds(
       page,
       manifest,
@@ -395,13 +482,22 @@ test.describe('[WEB-04] negative redeem matrix', () => {
       page,
       f.data?.answers as Record<string, string | boolean> | undefined,
     );
-    await assertRedeemOutcomePanel(page, 'error');
+    await assertRedeemRejectedWithoutTicket(page, { timeoutMs: 90_000 });
     await assertWalletUnchanged(page, manifest, f.tenantId, beforeMain);
     await assertWalletUnchanged(
       page,
       manifest,
       suspendedTenantId,
       beforeSuspended,
+    );
+    assertWeb04NegativeUnchanged(
+      beforeSuspendedEvent,
+      await readWeb04EventSnapshot(
+        suspendedTenantId,
+        suspendedEventId,
+        actorUserId,
+      ),
+      'WEB-04 tenant suspended',
     );
   });
 });

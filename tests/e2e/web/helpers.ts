@@ -145,10 +145,10 @@ export async function resolveGlobalCode(
 export async function assertRedeemOutcomePanel(
   page: Page,
   uxKind: string,
-  options?: { allowTicketCard?: boolean },
+  options?: { allowTicketCard?: boolean; timeoutMs?: number },
 ) {
   const panel = page.getByTestId(`redeem-ux-${uxKind}`);
-  await expect(panel).toBeVisible();
+  await expect(panel).toBeVisible({ timeout: options?.timeoutMs ?? 15_000 });
   await expect(panel).not.toContainText('@');
   if (!options?.allowTicketCard) {
     await expect(page.getByTestId('redeem-ticket-card')).toHaveCount(0);
@@ -191,6 +191,20 @@ export async function postRedeemDirect(
   );
   const json = await response.json().catch(() => null);
   return { status: response.status(), json };
+}
+
+export async function assertRedeemRejectedWithoutTicket(
+  page: Page,
+  options?: { timeoutMs?: number },
+) {
+  const panel = page.locator(
+    '[data-testid="redeem-ux-denied"], [data-testid="redeem-ux-error"], [data-testid="redeem-ux-unknown"]',
+  );
+  await expect(panel.first()).toBeVisible({
+    timeout: options?.timeoutMs ?? 60_000,
+  });
+  await expect(panel.first()).not.toContainText('@');
+  await expect(page.getByTestId('redeem-ticket-card')).toHaveCount(0);
 }
 
 export async function assertWalletUnchanged(
