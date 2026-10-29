@@ -20,7 +20,7 @@
     "uat:p4-oidc": "python3 scripts/uat-d1-p4-keycloak.py",
     "uat:web": "node scripts/web-uat.mjs",
     "test:rint-host": "node --test scripts/lib/tenant-host.test.mjs",
-    "test:release": "python3 scripts/release-artifact.test.py",
+    "test:release": "python3 scripts/release-artifact.test.py && python3 scripts/release-remote-build.test.py",
     "test:load-context": "node --test scripts/load/scanner-context.test.mjs",
     "test:rint-outbox": "./scripts/rint-outbox-recovery.sh",
     "test:rint-stack": "./scripts/rint-stack-smoke.sh",
