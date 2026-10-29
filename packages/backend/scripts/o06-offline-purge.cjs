@@ -340,7 +340,9 @@ async function purgeEvent(db, store, input) {
     for (let pass = 0; pass < 12 && emptyChecks < 2; pass++) {
       const entries = await store.inventory(prefix);
       inventories.push({ pass, count: entries.length, hash: sha256(JSON.stringify(entries)) });
-      if (alreadyFinalized && entries.length) fail('Object reappeared after finalized purge');
+       // A PostgreSQL PITR snapshot and MinIO snapshot can be at different
+       // points in time. Even a finalized DB event must scrub restored bytes.
+       // The caller supplied a fresh writer/key/server barrier above.
       if (!entries.length) { emptyChecks++; continue; }
       emptyChecks = 0;
       const versionedKeys = new Set(entries.filter((x) => x.versionId !== undefined).map((x) => x.key));
@@ -352,8 +354,9 @@ async function purgeEvent(db, store, input) {
     if (emptyChecks !== 2) fail('MinIO inventory did not converge to two empty reads');
     await store.health();
     const inventoryHash = sha256(JSON.stringify({ prefix, generation, inventories, emptyChecks }));
-    if (alreadyFinalized) return { phase, generation, alreadyFinalized: true,
-      inventoryHash, inventories };
+     if (alreadyFinalized) return { phase, generation, alreadyFinalized: true,
+       reconciled: inventories.some((x) => x.count > 0),
+       inventoryHash, inventories };
     const attestation = { ...proof, emptyInventory: true,
       inventoryHash, inventories, prefix, generation };
     await db.query('BEGIN');

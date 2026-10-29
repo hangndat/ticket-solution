@@ -21,6 +21,11 @@ const JOB_STATUSES = new Set(['PENDING', 'PROCESSING', 'READY', 'FAILED']);
 const DEFAULT_TTL_SECONDS = 86400;
 const STATEMENT_TIMEOUT_MS = 15_000;
 const MAX_ROWS = 20_000;
+// A deployment pause is applied to both the API admission path and worker claim
+// path. Existing processes must still be stopped before the offline purge.
+export function exportWritesPaused(env: NodeJS.ProcessEnv): boolean {
+  return env['EXPORT_WRITES_PAUSED'] === '1';
+}
 
 export type ExportFilter = {
   states?: string[];
@@ -593,8 +598,12 @@ export async function processExportJob(
 
   if (!prepared) return;
 
-  // Recheck after CSV preparation, immediately before the external PUT.
-  const mayPut = await withTenant(db, tenantId, async (tx) => {
+  // Keep the event lock from the last eligibility check until the object PUT
+  // and READY transition finish. The operator fence takes the same lock, so
+  // it cannot pass a live writer whose request is still in this transaction.
+  // Keep this below the worker's 60s relay step budget: phase 1 has a 10s
+  // transaction budget, PUT has 40s, and phase 2 has a 45s transaction cap.
+  await withTenant(db, tenantId, async (tx) => {
     const event = await tx.$queryRaw<{ allowed: boolean }[]>`
       SELECT export_retention_fenced_at IS NULL AND (
         ends_at IS NULL OR clock_timestamp() + (${ttlSeconds}::text || ' seconds')::interval
@@ -610,66 +619,27 @@ export async function processExportJob(
     `;
     const job = rows[0];
     if (!job || job.status !== 'PROCESSING' ||
-        (leaseOwner && job.lease_owner !== leaseOwner)) return false;
-    if (event[0]?.allowed) return true;
-    await tx.$executeRaw`
-      UPDATE exports SET status = 'FAILED', error_code = 'EXPORT_EXPIRED',
-        lease_owner = NULL, lease_expires_at = NULL, updated_at = clock_timestamp()
-      WHERE tenant_id = ${tenantId}::uuid AND id = ${exportId}::uuid
-    `;
-    return false;
-  });
-  if (!mayPut) return;
-
-  // Phase 2: MinIO upload outside any DB transaction.
-  try {
-    await putObject(
-      minio,
-      prepared.objectKey,
-      Buffer.from(prepared.csv, 'utf8'),
-      'text/csv; charset=utf-8',
-    );
-  } catch {
-    await withTenant(db, tenantId, async (tx) => {
-      await tx.$executeRaw`
-        UPDATE exports
-        SET status = 'FAILED',
-            error_code = 'EXPORT_FAILED',
-            lease_owner = NULL,
-            lease_expires_at = NULL,
-            updated_at = now()
-        WHERE tenant_id = ${tenantId}::uuid
-          AND id = ${exportId}::uuid
-          AND status = 'PROCESSING'
-          AND (
-            ${leaseOwner ?? null}::text IS NULL
-            OR lease_owner IS NULL
-            OR lease_owner = ${leaseOwner ?? null}
-          )
-      `;
-    });
-    return;
-  }
-
-  // Phase 3: mark READY in short txn with ownership check.
-  await withTenant(db, tenantId, async (tx) => {
-    const event = await tx.$queryRaw<{ allowed: boolean }[]>`
-      SELECT export_retention_fenced_at IS NULL AND (
-        ends_at IS NULL OR clock_timestamp() + (${ttlSeconds}::text || ' seconds')::interval
-          + interval '24 hours'
-          < ends_at + interval '90 days'
-      ) AS allowed FROM events
-      WHERE tenant_id = ${tenantId}::uuid AND id = ${prepared.eventId}::uuid
-      FOR UPDATE
-    `;
+        (leaseOwner && job.lease_owner !== leaseOwner)) return;
     if (!event[0]?.allowed) {
       await tx.$executeRaw`
         UPDATE exports SET status = 'FAILED', error_code = 'EXPORT_EXPIRED',
           lease_owner = NULL, lease_expires_at = NULL, updated_at = clock_timestamp()
         WHERE tenant_id = ${tenantId}::uuid AND id = ${exportId}::uuid
-          AND status = 'PROCESSING'
-          AND (${leaseOwner ?? null}::text IS NULL OR lease_owner = ${leaseOwner ?? null})
-          AND purged_at IS NULL
+          AND status = 'PROCESSING' AND purged_at IS NULL
+      `;
+      return;
+    }
+    try {
+      await putObject(minio, prepared.objectKey,
+        Buffer.from(prepared.csv, 'utf8'), 'text/csv; charset=utf-8', 40_000);
+    } catch {
+      // A request timeout can have an ambiguous server outcome. Offline
+      // inventory removes any orphan, version, or partial multipart upload.
+      await tx.$executeRaw`
+        UPDATE exports SET status = 'FAILED', error_code = 'EXPORT_FAILED',
+          lease_owner = NULL, lease_expires_at = NULL, updated_at = clock_timestamp()
+        WHERE tenant_id = ${tenantId}::uuid AND id = ${exportId}::uuid
+          AND status = 'PROCESSING' AND purged_at IS NULL
       `;
       return;
     }
@@ -690,13 +660,10 @@ export async function processExportJob(
       WHERE tenant_id = ${tenantId}::uuid
         AND id = ${exportId}::uuid
         AND status = 'PROCESSING'
-        AND (
-          ${leaseOwner ?? null}::text IS NULL
-          OR lease_owner IS NULL
-          OR lease_owner = ${leaseOwner ?? null}
-        )
+        AND lease_owner IS NOT DISTINCT FROM ${leaseOwner ?? null}::text
+        AND purged_at IS NULL
     `;
-  });
+  }, { transactionTimeoutMs: 45_000 });
 }
 
 export async function relayExportsOnce(
@@ -705,6 +672,7 @@ export async function relayExportsOnce(
   leaseOwner: string,
   limit = 5,
 ): Promise<{ claimed: number; completed: number; failed: number }> {
+  if (exportWritesPaused(env)) return { claimed: 0, completed: 0, failed: 0 };
   const minio = requireMinioExportsConfig(env);
   const ttl = parseTtlSeconds(env);
   const claimed = await db.$queryRaw<
