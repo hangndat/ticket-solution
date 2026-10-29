@@ -5,7 +5,7 @@ Wraps scripts/release-artifact.py (the committed version at --sha) without editi
   1. `git bundle` of the exact SHA is streamed to a dedicated build dir (never /opt/vemoki/src).
   2. On the VPS the bundle is cloned and release-artifact.py `build` runs there, publishing
      into --release-root (same layout as a local build; verify runs inside build).
-  3. A `docker` shim on PATH adds --cpus/--memory/--cpu-shares/--blkio-weight to `docker run`
+  3. A `docker` shim on PATH adds resource limits and a unique build label to `docker run`
      and runs it under nice/ionice, so production is not starved.
   4. While building, prod health (public /v1/health) and available memory are polled;
      the remote build is killed if either degrades.
@@ -18,6 +18,7 @@ import sys
 import tempfile
 import time
 import urllib.request
+import uuid
 from pathlib import Path
 
 HEALTH_URL = "https://api.vemoki.com/v1/health"
@@ -50,10 +51,22 @@ REAL=/usr/bin/docker
 if [ "$1" = run ]; then
   shift
   exec nice -n 19 ionice -c3 $REAL run --cpus {cpus} --memory {mem}m --memory-swap {mem}m \\
-    --cpu-shares 64 --user "$(id -u):$(id -g)" -e HOME=/tmp "$@"
+    --cpu-shares 64 --label vemoki.release-build={token} \\
+    --user "$(id -u):$(id -g)" -e HOME=/tmp "$@"
 fi
 exec nice -n 19 ionice -c3 $REAL "$@"
 """
+
+
+def abort_command(work, token):
+    # The runtime image also runs all four production app containers. Never
+    # select by ancestor: only containers launched by this exact build token
+    # may be stopped by the health/memory abort path.
+    # Bracketed first character prevents pkill from matching its own shell.
+    runner = shlex.quote(f"{work}/[r]un.sh")
+    artifact = shlex.quote(f"{work}/[r]elease-artifact.py")
+    return (f"docker ps -q --filter label=vemoki.release-build={token} | xargs -r docker kill; "
+            f"pkill -f {runner}; pkill -f {artifact}; true")
 
 RUNNER = """#!/bin/bash
 set -u
@@ -90,7 +103,8 @@ def main():
         p.add_argument("--" + name, type=int, required=True)
     a = p.parse_args()
 
-    work = f"{a.build_root}/{a.sha[:12]}"
+    token = uuid.uuid4().hex
+    work = f"{a.build_root}/{a.sha[:12]}-{token[:8]}"
     started = time.monotonic()
     if not health_ok():
         sys.exit("prod health is not 200 before build; aborting")
@@ -100,7 +114,7 @@ def main():
         t0 = time.monotonic()
         with tempfile.TemporaryDirectory() as tmp:
             bundle = Path(tmp) / "src.bundle"
-            ref = "refs/release-tmp/" + a.sha[:12]
+            ref = "refs/release-tmp/" + a.sha[:12] + "-" + token[:8]
             subprocess.run(["git", "update-ref", ref, a.sha], check=True)
             try:
                 subprocess.run(["git", "bundle", "create", str(bundle), ref], check=True, capture_output=True)
@@ -111,7 +125,7 @@ def main():
             t0 = time.monotonic()
             subprocess.run(["scp", "-q", str(bundle), f"{a.host}:{work}/src.bundle"], check=True)
             log(f"bundle uploaded ({time.monotonic() - t0:.0f}s)")
-        shim = SHIM.format(cpus=a.cpus, mem=a.memory_mb)
+        shim = SHIM.format(cpus=a.cpus, mem=a.memory_mb, token=token)
         runner = RUNNER.format(work=work, sha=a.sha, platform=a.platform, root=a.release_root,
                                smin=a.schema_min, smax=a.schema_max, imin=a.migrate_input_min,
                                imax=a.migrate_input_max, target=a.migrate_target)
@@ -134,8 +148,7 @@ def main():
             bad_health = 0 if health_ok() else bad_health + 1
             if bad_health >= 2 or avail < a.min_available_mb:
                 log(f"ABORT: prod degraded (health failures={bad_health}, available RAM={avail} MB); killing build")
-                ssh(a.host, f"pkill -f '{work}/run.sh'; pkill -f '{work}/release-artifact.py'; "
-                            f"docker ps -q --filter ancestor=vemoki-runtime:local | xargs -r docker kill")
+                ssh(a.host, abort_command(work, token))
                 break
             if "EXIT=" in out:
                 ok = "EXIT=0" in out
