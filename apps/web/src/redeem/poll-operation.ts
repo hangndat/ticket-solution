@@ -126,6 +126,12 @@ export async function pollOperation(
 
       const op = result.json as OperationStatusResponse | ApiError;
       if (isApiError(op) && !('status' in (op as object))) {
+        // The POST can still be committing when the first lookup runs.
+        // A retryable NOT_FOUND does not settle the operation or its key.
+        if (result.status === 404 && op.code === 'NOT_FOUND' && op.retryable) {
+          await sleep(pollIntervalMs);
+          continue;
+        }
         handlers.onDecision(
           decideRedeemBody(result.status, op, key, false),
         );
