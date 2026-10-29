@@ -167,7 +167,7 @@ if (mode === 'list' || args.includes('--list')) {
       if (await exitCode(core))
         throw new Error('BLOCKED: core build thất bại; xem core-build.log');
     }
-    const { children, proxy, ...seedState } = state;
+    const { children, proxy, minio, ...seedState } = state;
     seedState.caseIds = caseIds;
     const seedPath = resolve(state.dir, 'seed-state.json');
     privateJson(seedPath, seedState);
@@ -220,9 +220,13 @@ if (mode === 'list' || args.includes('--list')) {
     });
     const common = processEnvironment(state, {
       MINIO_ENDPOINT: `http://127.0.0.1:${state.ports.minio}`,
-      MINIO_ACCESS_KEY: 'e2e-access',
-      MINIO_SECRET_KEY: state.secrets.minio,
-      MINIO_BUCKET_ASSETS: `e2e-${state.id}`,
+      MINIO_ACCESS_KEY: state.minio.identities.shared.accessKey,
+      MINIO_SECRET_KEY: state.minio.identities.shared.secretKey,
+      MINIO_EXPORTS_ACCESS_KEY: state.minio.identities.exports.accessKey,
+      MINIO_EXPORTS_SECRET_KEY: state.minio.identities.exports.secretKey,
+      MINIO_BUCKET_ASSETS: state.minio.buckets.assets,
+      MINIO_BUCKET_IMPORTS: state.minio.buckets.imports,
+      MINIO_BUCKET_EXPORTS: state.minio.buckets.exports,
       MINIO_REGION: 'us-east-1',
       API_BASE_URL: state.origins.api,
       MARKETING_HOSTS: state.suffix,
