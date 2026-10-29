@@ -6,7 +6,7 @@ const { createServer } = require('node:http');
 const { mkdtemp, writeFile, rm } = require('node:fs/promises');
 const { tmpdir } = require('node:os');
 const { join } = require('node:path');
-const { parseArgs, validateEvidence, parseListing, purgeEvent, s3Client } = require('../scripts/o06-offline-purge.cjs');
+const { parseArgs, validateEvidence, parseListing, purgeEvent, s3Client, checkDueEvents } = require('../scripts/o06-offline-purge.cjs');
 
 const tenantId = '11111111-1111-4111-8111-111111111111';
 const eventId = '22222222-2222-4222-8222-222222222222';
@@ -55,6 +55,84 @@ test('CLI requires explicit stable generation and evidence for purge', () => {
   assert.throws(() => parseArgs(['fence', '--tenant', tenantId, '--event', eventId]), /generation/);
   assert.throws(() => parseArgs(['purge', '--tenant', tenantId, '--event', eventId, '--generation', generation]), /evidence/);
   assert.equal(parseArgs(['fence', '--tenant', tenantId, '--event', eventId, '--generation', generation]).generation, generation);
+});
+test('daily plan/check pages due events and raises a machine-readable overdue alert', async () => {
+ assert.deepEqual(parseArgs(['check', '--limit', '2']), { phase: 'check', pageSize: 2 });
+ assert.deepEqual(parseArgs(['plan']), { phase: 'plan', pageSize: 200 });
+ assert.throws(() => parseArgs(['check', '--limit', '0']), /Page limit/);
+ assert.throws(() => parseArgs(['check', '--tenant', tenantId]), /Unknown/);
+ const now = new Date('2026-10-29T12:00:00Z');
+ const old = new Date('2026-10-28T12:00:00Z');
+ const next = new Date('2026-10-29T18:00:00Z');
+ const rows = [
+  { tenant_id: tenantId, event_id: eventId, deadline: old,
+    deadline_cursor: old.toISOString(), completed: false,
+    barrier_generation: null, fenced_at: null, inventory_recorded_at: null,
+    unpurged_count: '0' },
+  { tenant_id: tenantId, event_id: generation, deadline: next,
+    deadline_cursor: next.toISOString(), completed: false,
+    barrier_generation: generation, fenced_at: now, inventory_recorded_at: null,
+    unpurged_count: '1' },
+ ];
+ const queries = [];
+ const db = { async query(sql, args) {
+  queries.push({ sql, args });
+  if (sql === 'SELECT current_user AS role') return { rows: [{ role: 'ticket_retention_operator' }] };
+  if (sql === 'SELECT transaction_timestamp() AS as_of') return { rows: [{ as_of: now }] };
+  if (sql.includes('list_export_retention_due_events')) return { rows: args[2] ? [] : rows };
+  return { rows: [] };
+ } };
+ const emitted = [];
+ const summary = await checkDueEvents(db, { pageSize: 2 }, (value) => emitted.push(value));
+ assert.deepEqual(summary, { type: 'summary', asOf: now.toISOString(), due: 2,
+  pending: 2, overdue: 1, alert: 'O06_EXPORT_RETENTION_OVERDUE' });
+ assert.deepEqual(emitted.map((value) => value.type), ['event', 'event', 'summary']);
+ assert.equal(emitted[0].unpurgedCount, 0);
+ assert.equal(emitted[0].state, 'pending', 'zero export rows still need orphan inventory');
+ assert.equal(emitted[0].overdue, true);
+ assert.equal(emitted[1].overdue, false);
+ assert.ok(queries.some((value) => value.sql === 'BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY'));
+ assert.ok(queries.some((value) => value.sql === 'COMMIT'));
+ assert.ok(!queries.some((value) => /fence_export|finalize_export|UPDATE|DELETE/.test(value.sql)));
+});
+test('completed overdue events do not raise alert and operator role is required', async () => {
+ const now = new Date('2026-10-29T12:00:00Z');
+ const db = { async query(sql) {
+  if (sql === 'SELECT current_user AS role') return { rows: [{ role: 'ticket_retention_operator' }] };
+  if (sql === 'SELECT transaction_timestamp() AS as_of') return { rows: [{ as_of: now }] };
+  if (sql.includes('list_export_retention_due_events')) return { rows: [{
+   tenant_id: tenantId, event_id: eventId, deadline: new Date('2026-10-28T12:00:00Z'),
+   completed: true, barrier_generation: generation, fenced_at: now,
+   inventory_recorded_at: now, unpurged_count: '0',
+  }] };
+  return { rows: [] };
+ } };
+ // Page limit exceeds the one row so the scan terminates after one page.
+ const output = [];
+ const summary = await checkDueEvents(db, { pageSize: 2 }, (value) => output.push(value));
+ assert.equal(summary.overdue, 0);
+ assert.equal(summary.alert, null);
+ assert.equal(output[0].state, 'completed');
+ const wrongRole = { async query(sql) { return { rows: sql === 'SELECT current_user AS role'
+  ? [{ role: 'ticket_runtime' }] : [] }; } };
+ await assert.rejects(checkDueEvents(wrongRole, { pageSize: 2 }, () => {}), /operator DB role/);
+});
+test('pending day-89 event raises a due alert before day-90 overdue', async () => {
+ const now = new Date('2026-10-29T12:00:00Z');
+ const db = { async query(sql) {
+  if (sql === 'SELECT current_user AS role') return { rows: [{ role: 'ticket_retention_operator' }] };
+  if (sql === 'SELECT transaction_timestamp() AS as_of') return { rows: [{ as_of: now }] };
+  if (sql.includes('list_export_retention_due_events')) return { rows: [{
+   tenant_id: tenantId, event_id: eventId, deadline: new Date('2026-10-30T12:00:00Z'),
+   completed: false, barrier_generation: null, fenced_at: null,
+   inventory_recorded_at: null, unpurged_count: '0',
+  }] };
+  return { rows: [] };
+ } };
+ const summary = await checkDueEvents(db, { pageSize: 2 }, () => {});
+ assert.equal(summary.pending, 1);
+ assert.equal(summary.overdue, 0);
+ assert.equal(summary.alert, 'O06_EXPORT_RETENTION_DUE');
 });
 
 test('advisory lock rejects concurrent operator before any fence function call', async () => {
