@@ -3,12 +3,11 @@ import {
   cleanupExpiredImportFiles,
   collectWorkerDueJobSnapshot,
   createMinioObjectStore,
-  readMinioEnvironment,
+  readMinioExportsEnvironment,
   readMinioImportsEnvironment,
   reconcileDuePendingRedemptions,
   processDueAccountAnonymizations,
   processDueTicketPiiAnonymizations,
-  processDueObjectRetentions,
   relayExportsOnce,
   relayOutboxOnce,
   metricsInc,
@@ -235,19 +234,13 @@ export class WorkerRelay implements OnModuleDestroy {
     await this.step('process_ticket_pii_anonymizations', () =>
       processDueTicketPiiAnonymizations(this.db!, 10),
     );
-    const exportsConfig = readMinioEnvironment(this.env);
+    const exportsConfig = readMinioExportsEnvironment(this.env);
     if (exportsConfig) {
       await this.step('relay_exports', () =>
         relayExportsOnce(this.db!, this.env, this.leaseOwner, 1),
       );
-      await this.step('process_export_object_retentions', () =>
-        processDueObjectRetentions(
-          this.db!,
-          createMinioObjectStore(exportsConfig),
-          this.leaseOwner,
-          1,
-        ),
-      );
+      // Export object purge requires the offline operator barrier. The online
+      // worker must not retry a DELETE/finalize loop while writers are live.
     }
     const importsCfg = readMinioImportsEnvironment(this.env);
     if (importsCfg) {
@@ -387,15 +380,9 @@ export class WorkerRelay implements OnModuleDestroy {
       1,
       this.relayOpts(),
     );
-    const exportsConfig = readMinioEnvironment(this.env);
+    const exportsConfig = readMinioExportsEnvironment(this.env);
     if (exportsConfig) {
       await relayExportsOnce(this.db, this.env, this.leaseOwner, 1);
-      await processDueObjectRetentions(
-        this.db,
-        createMinioObjectStore(exportsConfig),
-        this.leaseOwner,
-        1,
-      );
     }
     return outbox;
   }

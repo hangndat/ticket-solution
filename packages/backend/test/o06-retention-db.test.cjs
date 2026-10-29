@@ -30,12 +30,13 @@ async function database() {
   }
   assert.ok(ready, 'isolated Postgres must become ready');
   const port = docker('port', name, '5432/tcp').split(':').at(-1);
-  const admin = new Client({ connectionString:
-    `postgresql://postgres:${password}@127.0.0.1:${port}/o06_retention` });
+  const adminUrl = `postgresql://postgres:${password}@127.0.0.1:${port}/o06_retention`;
+  const admin = new Client({ connectionString: adminUrl });
   const runtimeUrl = `postgresql://o06_login:${password}@127.0.0.1:${port}/o06_retention`;
   await admin.connect();
   await admin.query('CREATE ROLE ticket_runtime NOLOGIN NOSUPERUSER NOBYPASSRLS');
   await admin.query('CREATE ROLE ticket_platform_runtime NOLOGIN NOSUPERUSER NOBYPASSRLS');
+  await admin.query('CREATE ROLE ticket_retention_operator NOLOGIN NOSUPERUSER NOBYPASSRLS');
   await admin.query('CREATE ROLE migration_owner NOLOGIN NOSUPERUSER NOBYPASSRLS');
   await admin.query('GRANT CREATE, USAGE ON SCHEMA public TO migration_owner');
   await admin.query('SET ROLE migration_owner');
@@ -45,7 +46,12 @@ async function database() {
   await admin.query('GRANT ticket_runtime TO o06_login');
   const runtime = new Client({ connectionString: runtimeUrl });
   await runtime.connect();
-  return { name, admin, runtime, runtimeUrl };
+  const operatorQuery = async (sql, params = []) => {
+    await admin.query('SET ROLE ticket_retention_operator');
+    try { return await admin.query(sql, params); }
+    finally { await admin.query('RESET ROLE'); }
+  };
+  return { name, admin, adminUrl, runtime, runtimeUrl, operatorQuery };
 }
 
 async function seedEvent(db, tenant, user, label, endsOffset, cancelledOffset = null) {
@@ -82,7 +88,7 @@ async function seedEvent(db, tenant, user, label, endsOffset, cancelledOffset = 
   return { tenant, event, attendee, request, exported };
 }
 
-test('O06 POL-02/03: clocks, tenant scope, replay, fenced leases and claim race',
+test('O06 DB clocks, tenant scope, operator fence and no-finalize gates',
   { timeout: 240000 }, async () => {
     let db;
     try {
@@ -108,6 +114,8 @@ test('O06 POL-02/03: clocks, tenant scope, replay, fenced leases and claim race'
         'cancelled-future', -365 * day - 10, -10 * day);
       const otherTenant = await seedEvent(admin, tenantB, user,
         'other-tenant', -365 * day - 10);
+      const beforeFence = await seedEvent(admin, tenantA, user,
+        'before-day-89', -89 * day + 60);
       // Simulate a corrupt/legacy CANCELLED row; normal schema disallows this state.
       await admin.query('ALTER TABLE events DROP CONSTRAINT events_cancel_fields_chk');
       await admin.query('UPDATE events SET cancelled_at = NULL WHERE tenant_id = $1 AND id = $2',
@@ -160,56 +168,104 @@ test('O06 POL-02/03: clocks, tenant scope, replay, fenced leases and claim race'
         [tenantB])).rowCount, 0);
       await runtime.query('ROLLBACK');
 
-      const claims = (await runtime.query(
-        "SELECT * FROM claim_expired_retention_objects(20,'worker-a')")).rows;
-      assert.deepEqual(new Set(claims.map((row) => row.export_id)),
-        new Set([due.exported, future.exported, cancelledFuture.exported, otherTenant.exported]));
-      assert.equal((await runtime.query(
-        "SELECT count(*)::int AS n FROM claim_expired_retention_objects(20,'worker-b')"))
-        .rows[0].n, 0);
-      const first = claims.find((row) => row.export_id === due.exported);
-      assert.equal((await runtime.query(
-        'SELECT apply_export_object_purge($1,$2,$3,$4) AS applied',
-        [first.tenant_id, first.export_id, 'worker-a', first.lease_token])).rows[0].applied, true);
-      assert.equal((await runtime.query(
-        'SELECT apply_export_object_purge($1,$2,$3,$4) AS applied',
-        [first.tenant_id, first.export_id, 'worker-a', first.lease_token])).rows[0].applied, false);
-      const purged = (await admin.query('SELECT object_key,purged_at,row_count,status FROM exports WHERE id=$1',
+      await assert.rejects(runtime.query(
+        "SELECT * FROM claim_expired_retention_objects(1,'worker-a')"), /permission denied/);
+      await assert.rejects(runtime.query(
+        'SELECT apply_export_object_purge($1,$2,$3,$4)',
+        [tenantA, due.exported, 'worker-a', randomUUID()]), /permission denied/);
+      assert.equal((await db.operatorQuery('SELECT finalize_export_retention_event($1,$2,$3) AS n',
+        [tenantA, due.event, randomUUID()])).rows[0].n, 0);
+      const earlyGeneration = randomUUID();
+      assert.equal((await db.operatorQuery('SELECT fence_export_retention_event($1,$2,$3) AS ok',
+        [tenantA, beforeFence.event, earlyGeneration])).rows[0].ok, false,
+      'fence cannot begin before day 89');
+      assert.equal((await db.operatorQuery('SELECT fence_export_retention_event($1,$2,$3) AS ok',
+        [tenantA, cancelledDue.event, randomUUID()])).rows[0].ok, false,
+      'cancelled_at does not replace ends_at');
+      assert.equal((await db.operatorQuery('SELECT fence_export_retention_event($1,$2,$3) AS ok',
+        [tenantA, cancelledNoEnd.event, randomUUID()])).rows[0].ok, false,
+      'null ends_at remains outside the sweep');
+      await admin.query(`UPDATE events SET ends_at=clock_timestamp()-interval '89 days 2 seconds'
+        WHERE tenant_id=$1 AND id=$2`, [tenantA, beforeFence.event]);
+      await admin.query(`UPDATE exports SET expires_at=clock_timestamp()+interval '5 days'
+        WHERE tenant_id=$1 AND id=$2`, [tenantA, beforeFence.exported]);
+      assert.equal((await db.operatorQuery('SELECT fence_export_retention_event($1,$2,$3) AS ok',
+        [tenantA, beforeFence.event, earlyGeneration])).rows[0].ok, true);
+      const earlyHash = 'b'.repeat(64);
+      assert.equal((await db.operatorQuery(
+        'SELECT record_export_retention_inventory($1,$2,$3,$4::jsonb) AS ok',
+        [tenantA, beforeFence.event, earlyGeneration, JSON.stringify({
+          emptyInventory: true, writerExitHash: earlyHash,
+          serverBarrierHash: earlyHash, inventoryHash: earlyHash,
+        })])).rows[0].ok, true, 'inventory may be recorded on day 89');
+      assert.equal((await db.operatorQuery('SELECT finalize_export_retention_event($1,$2,$3) AS n',
+        [tenantA, beforeFence.event, earlyGeneration])).rows[0].n, 1,
+      'legacy READY expiry must not postpone purge beyond day 90');
+      const earlyPurge = (await admin.query(`SELECT x.purged_at, x.expires_at,
+        e.ends_at + interval '90 days' AS deadline FROM exports x
+        JOIN events e ON e.tenant_id=x.tenant_id AND e.id=x.event_id
+        WHERE x.tenant_id=$1 AND x.id=$2`, [tenantA, beforeFence.exported])).rows[0];
+      assert.ok(earlyPurge.purged_at < earlyPurge.deadline);
+      assert.ok(earlyPurge.expires_at > earlyPurge.deadline,
+        'old download TTL can be cut short by mandatory retention');
+      const generation = randomUUID();
+      assert.equal((await db.operatorQuery('SELECT fence_export_retention_event($1,$2,$3) AS ok',
+        [tenantA, due.event, generation])).rows[0].ok, true);
+      const pendingId = randomUUID();
+      await admin.query(`INSERT INTO exports (tenant_id,event_id,id,actor_user_id,status)
+        VALUES ($1,$2,$3,$4,'PENDING')`, [tenantA, due.event, pendingId, user]);
+      const claimedAfterFence = (await runtime.query(
+        "SELECT * FROM claim_exports_batch(20,'export-worker',3600)")).rows;
+      assert.ok(!claimedAfterFence.some((row) => row.export_id === pendingId));
+      assert.equal((await db.operatorQuery('SELECT finalize_export_retention_event($1,$2,$3) AS n',
+        [tenantA, due.event, generation])).rows[0].n, 0, 'fence alone cannot finalize');
+      const beforeInventory = (await admin.query('SELECT object_key,purged_at FROM exports WHERE id=$1',
+        [due.exported])).rows[0];
+      assert.ok(beforeInventory.object_key);
+      assert.equal(beforeInventory.purged_at, null);
+      const hash = 'a'.repeat(64);
+      const evidence = { emptyInventory: true, writerExitHash: hash,
+        serverBarrierHash: hash, inventoryHash: hash };
+      await assert.rejects(db.operatorQuery(
+        'SELECT record_export_retention_inventory($1,$2,$3,$4::jsonb)',
+        [tenantA, due.event, generation, JSON.stringify({ emptyInventory: true })]),
+      /invalid retention inventory attestation/);
+      assert.equal((await db.operatorQuery('SELECT fence_export_retention_event($1,$2,$3) AS ok',
+        [tenantB, due.event, randomUUID()])).rows[0].ok, false,
+      'operator functions still require exact tenant/event identity');
+      assert.equal((await db.operatorQuery(
+        'SELECT record_export_retention_inventory($1,$2,$3,$4::jsonb) AS ok',
+        [tenantA, due.event, generation, JSON.stringify(evidence)])).rows[0].ok, true);
+      assert.equal((await db.operatorQuery('SELECT finalize_export_retention_event($1,$2,$3) AS n',
+        [tenantA, due.event, randomUUID()])).rows[0].n, 0, 'generation must match');
+      await admin.query(`UPDATE exports SET lease_expires_at=clock_timestamp()+interval '1 minute'
+        WHERE tenant_id=$1 AND id=$2`, [tenantA, due.exported]);
+      assert.equal((await db.operatorQuery('SELECT finalize_export_retention_event($1,$2,$3) AS n',
+        [tenantA, due.event, generation])).rows[0].n, 0, 'live lease blocks finalize');
+      const blockedStatus = (await db.operatorQuery(
+        'SELECT export_retention_operator_status($1,$2,$3) AS value',
+        [tenantA, due.event, generation])).rows[0].value;
+      assert.equal(blockedStatus.matched, true);
+      assert.equal(Number(blockedStatus.activeLeaseCount), 1);
+      assert.equal(Number(blockedStatus.unpurgedCount), 2);
+      await admin.query(`UPDATE exports SET lease_expires_at=clock_timestamp()-interval '1 second'
+        WHERE tenant_id=$1 AND id=$2`, [tenantA, due.exported]);
+      assert.equal((await db.operatorQuery('SELECT finalize_export_retention_event($1,$2,$3) AS n',
+        [tenantA, due.event, generation])).rows[0].n, 2);
+      const completeStatus = (await db.operatorQuery(
+        'SELECT export_retention_operator_status($1,$2,$3) AS value',
+        [tenantA, due.event, generation])).rows[0].value;
+      assert.equal(completeStatus.inventoryRecorded, true);
+      assert.equal(Number(completeStatus.unpurgedCount), 0);
+      assert.equal(Number(completeStatus.activeLeaseCount), 0);
+      const purged = (await admin.query('SELECT object_key,purged_at FROM exports WHERE id=$1',
         [due.exported])).rows[0];
       assert.equal(purged.object_key, null);
       assert.ok(purged.purged_at);
-      assert.equal(purged.row_count, 1);
-      assert.equal(purged.status, 'READY');
-
-      const stale = claims.find((row) => row.export_id === otherTenant.exported);
-      await admin.query(`UPDATE exports SET object_purge_lease_expires_at=clock_timestamp()-interval '1 second'
-        WHERE tenant_id=$1 AND id=$2`, [stale.tenant_id, stale.export_id]);
-      const reclaimed = (await runtime.query(
-        "SELECT * FROM claim_expired_retention_objects(20,'worker-b')")).rows;
-      const fresh = reclaimed.find((row) => row.export_id === otherTenant.exported);
-      assert.ok(fresh);
-      assert.notEqual(fresh.lease_token, stale.lease_token);
-      assert.equal((await runtime.query('SELECT apply_export_object_purge($1,$2,$3,$4) AS applied',
-        [stale.tenant_id, stale.export_id, 'worker-a', stale.lease_token])).rows[0].applied, false);
-      assert.equal((await runtime.query('SELECT apply_export_object_purge($1,$2,$3,$4) AS applied',
-        [fresh.tenant_id, fresh.export_id, 'worker-b', fresh.lease_token])).rows[0].applied, true);
-
-      const raceExport = randomUUID();
-      await admin.query(`INSERT INTO exports (tenant_id,event_id,id,actor_user_id,status,object_key)
-        VALUES ($1,$2,$3,$4,'READY',$5)`,
-      [tenantA, due.event, raceExport, user, 'exports/' + raceExport]);
-      const competitor = new Client({ connectionString: db.runtimeUrl });
-      await competitor.connect();
-      try {
-        const [a, b] = await Promise.all([
-          runtime.query("SELECT * FROM claim_expired_retention_objects(1,'race-a')"),
-          competitor.query("SELECT * FROM claim_expired_retention_objects(1,'race-b')"),
-        ]);
-        assert.equal(a.rows.length + b.rows.length, 1);
-        assert.equal([...a.rows, ...b.rows][0].export_id, raceExport);
-      } finally {
-        await competitor.end();
-      }
+      const pendingPurged = (await admin.query('SELECT status,purged_at FROM exports WHERE id=$1',
+        [pendingId])).rows[0];
+      assert.equal(pendingPurged.status, 'FAILED');
+      assert.ok(pendingPurged.purged_at);
       const untouched = (await admin.query('SELECT object_key,purged_at FROM exports WHERE id=$1',
         [noEnd.exported])).rows[0];
       assert.ok(untouched.object_key);
@@ -287,7 +343,7 @@ test('O06 PII writer and sweep serialize on event lock in both orders',
     }
   });
 
-test('O06 export claim fences the clock before a late editor can commit',
+test('O06 operator fence locks the event clock before a late editor can commit',
   { timeout: 240000 }, async () => {
     let db;
     try {
@@ -303,34 +359,37 @@ test('O06 export claim fences the clock before a late editor can commit',
       await admin.query('BEGIN');
       await admin.query('UPDATE events SET ends_at=clock_timestamp()+interval \'1 day\' WHERE id=$1',
         [row.event]);
-      assert.equal((await runtime.query("SELECT * FROM claim_expired_retention_objects(1,'worker-a')")).rows.length,
-        0, 'claim skips an event with a concurrent clock change');
+      assert.equal((await db.operatorQuery('SELECT fence_export_retention_event($1,$2,$3) AS ok',
+        [tenant, row.event, randomUUID()])).rows[0].ok, false);
       await admin.query('COMMIT');
-      assert.equal((await runtime.query("SELECT * FROM claim_expired_retention_objects(1,'worker-a')")).rows.length, 0);
+      assert.equal((await db.operatorQuery('SELECT fence_export_retention_event($1,$2,$3) AS ok',
+        [tenant, row.event, randomUUID()])).rows[0].ok, false);
       await admin.query('UPDATE events SET ends_at=clock_timestamp()-interval \'91 days\' WHERE id=$1',
         [row.event]);
 
-      await runtime.query('BEGIN');
-      const claims = (await runtime.query("SELECT * FROM claim_expired_retention_objects(1,'worker-a')")).rows;
-      assert.equal(claims.length, 1);
+      await admin.query('BEGIN');
+      const generation = randomUUID();
+      assert.equal((await db.operatorQuery('SELECT fence_export_retention_event($1,$2,$3) AS ok',
+        [tenant, row.event, generation])).rows[0].ok, true);
+      const competitor = new Client({ connectionString: db.adminUrl });
+      await competitor.connect();
       let editorDone = false;
-      const editor = admin.query('UPDATE events SET ends_at=clock_timestamp()+interval \'1 day\' WHERE id=$1',
+      const editor = competitor.query('UPDATE events SET ends_at=clock_timestamp()+interval \'1 day\' WHERE id=$1',
         [row.event]).catch((error) => {
         editorDone = true;
         assert.match(error.message, /EVENT_RETENTION_FENCED/);
       });
       await pause();
       assert.equal(editorDone, false, 'editor waits for claim transaction');
-      await runtime.query('COMMIT');
+      await admin.query('COMMIT');
       await editor;
+      await competitor.end();
       assert.equal(editorDone, true);
       const state = (await admin.query('SELECT export_retention_fenced_at FROM events WHERE id=$1',
         [row.event])).rows[0];
       assert.ok(state.export_retention_fenced_at);
-      assert.equal((await runtime.query('SELECT apply_export_object_purge($1,$2,$3,$4) AS applied',
-        [tenant, row.exported, 'worker-a', claims[0].lease_token])).rows[0].applied, true);
-      await assert.rejects(admin.query('UPDATE exports SET status=\'PROCESSING\', object_key=\'retry\' WHERE id=$1',
-        [row.exported]), /EXPORT_OBJECT_PURGED/);
+      assert.equal((await db.operatorQuery('SELECT finalize_export_retention_event($1,$2,$3) AS n',
+        [tenant, row.event, generation])).rows[0].n, 0);
     } finally {
       if (db?.runtime) await db.runtime.end().catch(() => {});
       if (db?.admin) await db.admin.end().catch(() => {});
@@ -338,7 +397,7 @@ test('O06 export claim fences the clock before a late editor can commit',
     }
   });
 
-test('O06 delete failure and crash-after-delete reclaim with a new lease token',
+test('O06 online retention worker refuses deletion and finalization',
   { timeout: 240000 }, async () => {
     let db;
     try {
@@ -351,40 +410,17 @@ test('O06 delete failure and crash-after-delete reclaim with a new lease token',
       await admin.query('INSERT INTO users (id,issuer,subject,email) VALUES ($1,$2,$3,$4)',
         [user, 'o06-delete', user, 'fixture@example.test']);
       const row = await seedEvent(admin, tenant, user, 'delete-retry', -91 * 86400);
-      const queryDb = { $queryRaw: async (parts, ...values) => {
-        const sql = parts.reduce((text, part, i) => text + (i ? '$' + i : '') + part, '');
-        return (await runtime.query(sql, values)).rows;
-      } };
       let deletes = 0;
-      const failingStore = { deleteObject: async (key) => {
+      const store = { deleteObject: async () => {
         deletes += 1;
-        assert.equal(key, 'exports/' + row.exported);
-        const state = (await admin.query('SELECT export_retention_fenced_at FROM events WHERE id=$1',
-          [row.event])).rows[0];
-        assert.ok(state.export_retention_fenced_at, 'fence committed before DELETE');
-        throw new Error('isolated object store unavailable');
       } };
-      assert.deepEqual(await processDueObjectRetentions(queryDb, failingStore, 'worker-a', 1),
-        { scanned: 1, applied: 0, failed: 1 });
-      assert.equal(deletes, 1);
-      const old = (await admin.query('SELECT object_purge_lease_token FROM exports WHERE id=$1',
-        [row.exported])).rows[0].object_purge_lease_token;
-      await admin.query(`UPDATE exports SET object_purge_lease_expires_at=clock_timestamp()-interval '1 second'
-        WHERE id=$1`, [row.exported]);
-      const missingStore = { deleteObject: async (key) => {
-        deletes += 1;
-        assert.equal(key, 'exports/' + row.exported);
-        // Simulates MinIO returning 404 after a worker deleted bytes then crashed.
-      } };
-      assert.deepEqual(await processDueObjectRetentions(queryDb, missingStore, 'worker-b', 1),
-        { scanned: 1, applied: 1, failed: 0 });
-      assert.equal(deletes, 2);
-      assert.equal((await runtime.query('SELECT apply_export_object_purge($1,$2,$3,$4) AS applied',
-        [tenant, row.exported, 'worker-a', old])).rows[0].applied, false);
+      await assert.rejects(processDueObjectRetentions({}, store, 'worker-a', 1),
+        /EXPORT_RETENTION_OFFLINE_BARRIER_REQUIRED/);
+      assert.equal(deletes, 0);
       const purged = (await admin.query('SELECT object_key,purged_at,row_count FROM exports WHERE id=$1',
         [row.exported])).rows[0];
-      assert.equal(purged.object_key, null);
-      assert.ok(purged.purged_at);
+      assert.ok(purged.object_key);
+      assert.equal(purged.purged_at, null);
       assert.equal(purged.row_count, 1);
     } finally {
       if (db?.runtime) await db.runtime.end().catch(() => {});

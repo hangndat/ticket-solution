@@ -35,8 +35,8 @@ import {
   getExportJob,
   listExportJobs,
   parseTtlSeconds,
-  readMinioEnvironment,
-  requireMinioConfig,
+  readMinioExportsEnvironment,
+  requireMinioExportsConfig,
   withTenant,
   type ExportJob,
   type IdentityUserRepository,
@@ -115,7 +115,7 @@ export class ExportApiService {
     idempotencyKey: string | undefined,
     body: ExportCreateBodyDto,
   ) {
-    if (!readMinioEnvironment(this.deps.env)) {
+    if (!readMinioExportsEnvironment(this.deps.env)) {
       throw new ExportError(
         EXPORT_ERROR_CODES.MINIO_MISCONFIGURED,
         'MinIO is not configured',
@@ -184,7 +184,7 @@ export class ExportApiService {
     eventId: string,
     exportId: string,
   ) {
-    const minio = requireMinioConfig(this.deps.env);
+    const minio = requireMinioExportsConfig(this.deps.env);
     const user = await this.actor(authorization);
     return downloadExport(this.deps.db!, minio, {
       tenantId,
