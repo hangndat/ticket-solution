@@ -132,6 +132,22 @@ function validateEvidence(value, tenantId, eventId, generation) {
       value.writers.some((x) => Date.parse(x.exitedAt) > disabledAt) ||
       value.minioNodes.some((x) => Date.parse(x.exitedAt) >= restartedAt) ||
       disabledAt >= restartedAt) fail('Barrier evidence chronology invalid');
+  // Optional: an explicit operator attestation that bytes found on an
+  // already-finalized event come from a genuine PostgreSQL/MinIO PITR
+  // restore, not an undetected writer-barrier leak. Absent this, a rerun
+  // that finds bytes on a finalized event must refuse to delete them.
+  let restoreAttestation = null;
+  if (value.restoreAttestation !== undefined) {
+    const attestation = value.restoreAttestation;
+    const attestedAt = attestation && Date.parse(attestation.attestedAt);
+    if (!attestation || typeof attestation !== 'object' ||
+        typeof attestation.reason !== 'string' || attestation.reason.trim().length < 8 ||
+        typeof attestation.attestedBy !== 'string' || attestation.attestedBy.trim().length < 2 ||
+        typeof attestation.incidentRef !== 'string' || attestation.incidentRef.trim().length < 3 ||
+        !Number.isFinite(attestedAt) || attestedAt > Date.now()) fail('Invalid PITR restore attestation');
+    restoreAttestation = { reason: attestation.reason, attestedBy: attestation.attestedBy,
+      incidentRef: attestation.incidentRef, attestedAt: attestation.attestedAt };
+  }
   return {
     writerExitHash: sha256(JSON.stringify({ writers: value.writers, expected: value.expectedWriterIds,
       disabled: value.writerIdentityDisableProof, restart: value.writerRestartInhibitProof,
@@ -139,6 +155,7 @@ function validateEvidence(value, tenantId, eventId, generation) {
     serverBarrierHash: sha256(JSON.stringify({ nodes: value.minioNodes,
       expected: value.expectedMinioNodeIds, restart: value.sameVolumesRestartProof,
       restartedAt, observedAt })),
+    restoreAttestation,
   };
 }
 
@@ -340,10 +357,16 @@ async function purgeEvent(db, store, input) {
     for (let pass = 0; pass < 12 && emptyChecks < 2; pass++) {
       const entries = await store.inventory(prefix);
       inventories.push({ pass, count: entries.length, hash: sha256(JSON.stringify(entries)) });
-       // A PostgreSQL PITR snapshot and MinIO snapshot can be at different
-       // points in time. Even a finalized DB event must scrub restored bytes.
-       // The caller supplied a fresh writer/key/server barrier above.
       if (!entries.length) { emptyChecks++; continue; }
+      // A PostgreSQL PITR snapshot and MinIO snapshot can be at different
+      // points in time, so a finalized event can still legitimately regain
+      // bytes after a genuine restore. But the same symptom is indistinguishable
+      // from an undetected writer-barrier leak, so refuse to delete anything
+      // on an already-finalized event unless the operator attested a restore
+      // reason in the barrier evidence file above.
+      if (alreadyFinalized && !proof.restoreAttestation) {
+        fail('Objects reappeared on a finalized export retention event without an operator-attested PITR restore reason; refusing to delete');
+      }
       emptyChecks = 0;
       const versionedKeys = new Set(entries.filter((x) => x.versionId !== undefined).map((x) => x.key));
       for (const entry of entries) {
@@ -354,9 +377,20 @@ async function purgeEvent(db, store, input) {
     if (emptyChecks !== 2) fail('MinIO inventory did not converge to two empty reads');
     await store.health();
     const inventoryHash = sha256(JSON.stringify({ prefix, generation, inventories, emptyChecks }));
-     if (alreadyFinalized) return { phase, generation, alreadyFinalized: true,
-       reconciled: inventories.some((x) => x.count > 0),
-       inventoryHash, inventories };
+    if (alreadyFinalized) {
+      const reappeared = inventories.some((x) => x.count > 0);
+      // Distinct from a clean no-op rerun: logged at alert level and signaled
+      // back to main() as a non-zero exit, so an attested PITR reconciliation
+      // still demands operator/alerting attention rather than exiting 0 silently.
+      if (reappeared) console.error(`O06_PITR_RESTORE_RECONCILED tenant=${tenantId} event=${eventId} ` +
+        `generation=${generation} reason=${JSON.stringify(proof.restoreAttestation.reason)} ` +
+        `incident=${JSON.stringify(proof.restoreAttestation.incidentRef)}`);
+      return { phase, generation, alreadyFinalized: true, reconciled: reappeared,
+        pitrRestoreAttested: reappeared,
+        ...(reappeared ? { restoreReason: proof.restoreAttestation.reason,
+          restoreIncidentRef: proof.restoreAttestation.incidentRef } : {}),
+        inventoryHash, inventories };
+    }
     const attestation = { ...proof, emptyInventory: true,
       inventoryHash, inventories, prefix, generation };
     await db.query('BEGIN');
@@ -397,7 +431,12 @@ async function main() {
       else if (summary.pending > 0) process.exitCode = 3;
     } else {
       const store = input.phase === 'purge' ? s3Client(process.env) : null;
-      console.log(JSON.stringify(await purgeEvent(db, store, input)));
+      const result = await purgeEvent(db, store, input);
+      console.log(JSON.stringify(result));
+      // Exit 4 is distinct from 0 (clean run), 1 (query/validation failure),
+      // and plan/check's 2/3, so an attested PITR reconciliation can never be
+      // mistaken for a silent success by an alerting scheduler.
+      if (result.pitrRestoreAttested === true) process.exitCode = 4;
     }
   } finally { await db.end(); }
 }
