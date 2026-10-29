@@ -579,19 +579,28 @@ export function RedeemForm({
       if (isStale(generation)) return;
 
       if (result.timedOut || result.networkError) {
+        const hungWithoutResponse = result.timedOut && !result.networkError;
         setUx(
           result.networkError
             ? networkMessage(locale)
             : timeoutMessage(locale),
         );
         setRaw(null);
-        await runPoll(
+        const pollOutcome = await runPoll(
           key,
           payload.tenantId,
           payload.eventId,
           generation,
           fingerprint,
         );
+        if (
+          hungWithoutResponse &&
+          (pollOutcome === 'error' || pollOutcome === 'timeout')
+        ) {
+          setUx(timeoutMessage(locale));
+          setAttempt(null);
+          setDecision(null);
+        }
         return;
       }
 

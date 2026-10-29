@@ -51,6 +51,10 @@ export const catalog = {
   ],
   'DB-09': [
     b('gate', 'gate: one confirm wins'),
+    b('ticket-reissue-grants', 'reissue grant migration', 'D'),
+    b('db09-ticket-security-invariants', 'DB-09: revoke never reuses a redemption code'),
+    { file: 'tests/e2e/backend/reissue-worker-mailpit.test.cjs',
+      name: 'R reissue worker Mailpit', layer: 'R' },
     b('event-lifecycle', 'C-E event lifecycle'),
   ],
   'DB-10': [b('import-invitations', 'H-I1/H-I2/H-I3 import jobs')],
@@ -161,8 +165,17 @@ export const catalog = {
       layer: 'D',
     },
   ],
-  'POL-02': [b('portal-audit-codes', 'H-A1/H-C1/H-P-AUDIT')],
-  'POL-03': [b('minio-real', 'MinIO')],
+  'POL-02': [
+    b('portal-audit-codes', 'H-A1/H-C1/H-P-AUDIT'),
+    b('o06-retention-db', 'O06 POL-02/03'),
+    b('o06-retention-db', 'O06 PII writer'),
+  ],
+  'POL-03': [
+    b('minio-real', 'MinIO'),
+    b('o06-retention-db', 'O06 POL-02/03'),
+    b('o06-retention-db', 'O06 export claim'),
+    b('o06-retention-db', 'O06 delete failure'),
+  ],
   'POL-04': [b('account-idp-erasure', 'SEC-2 T4/T14')],
 };
 
@@ -181,7 +194,7 @@ export const notes = {
   'DB-07': 'D pending/approve; thiếu H expiry/reject race và TTL cấu hình.',
   'DB-08':
     'Thiếu fault injection trước commit và lost-response sau commit theo command scope.',
-  'DB-09': 'D revoke; thiếu credential rotate và generic PATCH refusal H.',
+  'DB-09': 'D revoke, owner invariant, allocation policy và reissue credential/version/grant; R worker/Mailpit PNG v2 + revoke-before-relay DEAD. Thiếu generic PATCH refusal H; GATE-03 vẫn thiếu QR credential validation tại Gate.',
   'DB-10': 'D import; thiếu H preview/commit race và file ownership.',
   'DB-11': 'D import/invite; thiếu H 48h/claim host và wrong-owner matrix.',
   'DB-12':
@@ -240,8 +253,8 @@ export const notes = {
   'POL-01':
     'D scrub/retry/tombstone đạt; metric slaOverdue fail 0 vs admin count 1 do runtime RLS; chưa đủ kết luận toàn bộ SLA.',
   'POL-02':
-    'D audit read filter 730 ngày có test; thiếu sweeper/anonymize ticket+check-in 365 ngày và audit deletion 730 ngày.',
+    'D clock ends_at NULL, CANCELLED dùng cancelled_at, PII writer/sweep row lock hai thứ tự, tenant isolation và replay. Cần ops đo event lớn và restore re-sweep. Audit TTL 730 ngày là gap policy riêng, chưa có deletion job.',
   'POL-03':
-    'MinIO test chỉ chứng minh object private; thiếu cleanup 90 ngày/tenant-scope.',
+    'D clock ends_at + 90 ngày kể cả CANCELLED, event fence, lease/reclaim, delete 404 và token cũ không finalize. F01 còn mở: stale PUT sau purge có thể tái tạo bytes; thiếu MinIO barrier/object-store write fence, signed URL expiry và ops restore.',
   'POL-04': 'Privacy copy và restore/RPO/RTO cần bằng chứng browser/ops riêng.',
 };
