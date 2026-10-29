@@ -237,6 +237,14 @@ export async function seedRuntime(state, caseIds) {
           invalidCode: `INVALID-${state.id}`,
         },
       };
+      if (caseId === 'AUTH-05') {
+        fixture.data.shortWebClientSecret =
+          state.clientSecrets['ticket-web-short'];
+      }
+      if (caseId === 'AUTH-06') {
+        // Private, run-scoped control. The test uses ticket_runtime + tenant RLS.
+        fixture.data.controlDatabaseUrl = state.databaseUrl;
+      }
       if (caseId === 'PORT-12') {
         fixture.data.registrationName = `New Tenant ${state.id}`;
         fixture.data.registrationSlug = `new-${slug}`;
@@ -929,6 +937,7 @@ export async function seedRuntime(state, caseIds) {
       if (
         [
           'AUTH-07',
+          'AUTH-06',
           'WEB-09',
           'WEB-11',
           'PORT-03',
@@ -943,6 +952,7 @@ export async function seedRuntime(state, caseIds) {
         const answers =
           fixture.data.answers ?? formAnswers(accounts.attendee.username);
         if (caseId === 'SEC-05') fixture.data.answers = answers;
+        const operationKey = randomUUID();
         const outcome = await backend.withTenant(db, tenantId, (tx) =>
           backend.redeemAndIssueTicket(tx, hmac, state.secrets.credential, {
             tenantId,
@@ -951,7 +961,7 @@ export async function seedRuntime(state, caseIds) {
             actorEmail: accounts.attendee.username,
             emailVerified: true,
             rawCode: codes[0],
-            idempotencyKey: randomUUID(),
+            idempotencyKey: operationKey,
             formVersion: 'form-v1',
             termsVersion: 'terms-v1',
             termsAccepted: true,
@@ -960,6 +970,121 @@ export async function seedRuntime(state, caseIds) {
         );
         const ticket = backend.unwrapRedeemOutcome(outcome);
         fixture.ticketId = ticket.ticketId;
+        if (caseId === 'WEB-09') {
+          fixture.requestId = ticket.requestId;
+          fixture.data.operationKey = operationKey;
+          const otherTenantId = randomUUID();
+          const otherEventId = randomUUID();
+          const otherSlug = `other-${slug}`;
+          const states = ['ACTIVE', 'REVOKED', 'CANCELLED'];
+          const otherCodes = states.map(
+            (stateName) => `E2E-${state.id}-${caseId}-${stateName}`,
+          );
+          const otherTickets = {};
+          await backend.withTenant(db, otherTenantId, async (tx) => {
+            await tx.tenant.create({
+              data: {
+                id: otherTenantId,
+                slug: otherSlug,
+                name: `Other Tenant ${caseId}`,
+              },
+            });
+            await tx.event.create({
+              data: {
+                tenantId: otherTenantId,
+                id: otherEventId,
+                slug: 'event',
+                name: `Other Event ${caseId}`,
+                status: 'PUBLISHED',
+                visibility: 'PUBLIC',
+              },
+            });
+            const ownerMembership = await backend.grantMembership(tx, {
+              tenantId: otherTenantId,
+              userId: accounts.owner.userId,
+              role: 'Owner',
+              permissions: backend.tenantPermissionsForRole('Owner'),
+            });
+            await backend.grantEventAssignment(tx, {
+              tenantId: otherTenantId,
+              eventId: otherEventId,
+              membershipId: ownerMembership.membershipId,
+              permissions: backend.eventPermissionsForRole('Owner'),
+            });
+            const inventory = await backend.seedEventInventory(tx, hmac, {
+              tenantId: otherTenantId,
+              eventId: otherEventId,
+              eventQuota: 100,
+              rawCodes: otherCodes,
+              ticketTypeLabel: 'E2E Other General',
+              sourceName: 'E2E Other Auto',
+            });
+            for (let index = 0; index < otherCodes.length; index++) {
+              await backend.attachCodeRoutingOnInsert(tx, {
+                peppers: [hmac],
+                fpSecret: state.secrets.hmac,
+                tenantId: otherTenantId,
+                eventId: otherEventId,
+                redemptionCodeId: inventory.codeIds[index],
+                rawCode: otherCodes[index],
+                codeStatus: 'AVAILABLE',
+                insertPepperVersion: 1,
+                insertHmac: backend.hashRedemptionCode(hmac, otherCodes[index]),
+              });
+            }
+            const saved = await backend.saveEventConfigVersion(tx, {
+              tenantId: otherTenantId,
+              eventId: otherEventId,
+              actorUserId: accounts.owner.userId,
+              payload: eventPayload(
+                `Other Tenant ${caseId}`,
+                `Other Event ${caseId}`,
+              ),
+            });
+            await backend.publishEventConfig(tx, {
+              tenantId: otherTenantId,
+              eventId: otherEventId,
+              actorUserId: accounts.owner.userId,
+              expectedVersion: saved.version,
+            });
+          });
+          for (const [index, stateName] of states.entries()) {
+            const issued = await backend.withTenant(db, otherTenantId, (tx) =>
+              backend.redeemAndIssueTicket(tx, hmac, state.secrets.credential, {
+                tenantId: otherTenantId,
+                eventId: otherEventId,
+                actorUserId: accounts.attendee.userId,
+                actorEmail: accounts.attendee.username,
+                emailVerified: true,
+                rawCode: otherCodes[index],
+                idempotencyKey: randomUUID(),
+                formVersion: 'form-v1',
+                termsVersion: 'terms-v1',
+                termsAccepted: true,
+                answers,
+              }),
+            );
+            const issuedTicket = backend.unwrapRedeemOutcome(issued);
+            otherTickets[stateName] = issuedTicket.ticketId;
+            if (stateName !== 'ACTIVE') {
+              await backend.withTenant(db, otherTenantId, (tx) =>
+                tx.ticket.update({
+                  where: {
+                    tenantId_id: {
+                      tenantId: otherTenantId,
+                      id: issuedTicket.ticketId,
+                    },
+                  },
+                  data: { state: stateName },
+                }),
+              );
+            }
+          }
+          fixture.data.otherTenantId = otherTenantId;
+          fixture.data.otherTenantSlug = otherSlug;
+          fixture.data.otherEventId = otherEventId;
+          fixture.data.otherTickets = otherTickets;
+        }
       }
       if (caseId === 'PORT-06') {
         const outcome = await backend.withTenant(db, tenantId, (tx) =>

@@ -166,6 +166,7 @@ export function OwnerTicketReady({
   const qrPayload = buildDisplayQrPayload(ticket);
   const stateBlocked =
     ticket.state === 'REVOKED' ||
+    ticket.state === 'CANCELLED' ||
     ticket.state === 'EXPIRED' ||
     ticket.state === 'USED' ||
     ticket.state === 'CHECKED_IN';

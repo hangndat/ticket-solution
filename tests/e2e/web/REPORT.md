@@ -1,5 +1,17 @@
 # Báo cáo Web E2E — 28/10/2026
 
+## Bổ sung AUTH-05/06 — 29/10/2026
+
+HTTP run `mvsyhf8g-55a61e` (`node tests/e2e/harness/run.mjs http --case=AUTH-06`) PASS 1/1; browser run `mvsyhvyb-0f40bb` (`node tests/e2e/harness/run.mjs e2e --case=AUTH-05,AUTH-06`) PASS 3/3, trên working tree chưa commit dựa trên HEAD `d63b4eb`, dùng Keycloak/PostgreSQL/API thật, không skip-build.
+
+- **AUTH-05** (`auth.spec.ts:114`, `:149`): test đầu xác nhận access token TTL ngắn tự rotate qua BFF. Test thứ hai revoke refresh token thật qua Keycloak `/protocol/openid-connect/revoke`, chờ đúng `exp` thật của access token hết hạn rồi mới gọi `/api/auth/refresh`: actor bị revoke nhận redirect `/auth`, mất cả ba cookie `oidc_access_token`/`oidc_refresh_token`/`web_oidc_sub`, `/api/bff/me` trả 401. Actor khác (context/cookie-jar riêng) vẫn refresh thành công, `/api/bff/me` 200 và body không lộ `userId` của actor bị revoke. Test còn phân biệt rõ: gọi trực tiếp API bằng access token đã hết hạn vẫn 200 trong 5 phút vì JWT verification của API cho phép clock skew theo thiết kế (không phải lỗi) — đường BFF cookie-refresh dùng refresh token nên fail-closed ngay khi bị revoke, hai đường này độc lập.
+- **AUTH-06** (`auth.spec.ts:252` + `http/live.test.mjs#[AUTH-06]`): browser xác nhận attendee session không tự có Portal `/api/bff/me/subject` (401). HTTP test revoke thật ba lớp dưới `SET LOCAL ROLE ticket_runtime` + tenant RLS (yêu cầu `rowCount=1` mỗi lần revoke, không revoke rộng): `memberships.revoked_at` → scanner tạo gate-session kế tiếp bị deny; `event_assignments.revoked_at` → manager tạo gate bị deny; owner revoke staff session đang mở qua API → supervisor confirm reservation đang chờ trả `409 SESSION_NOT_ACTIVE`, báo cáo `checkInSuccessCount` không tăng (không có false-success).
+- Gap còn lại: AUTH-06 chưa kiểm "UI không báo thành công từ capability cũ" ở tầng UI. AUTH-05 chưa có case H riêng cho actor tự để access token hết hạn rồi không refresh. Các entry coverage vẫn `blocked`; các run trên chứng minh những nhánh đã kiểm.
+
+## Bổ sung WEB-09 — 29/10/2026
+
+Run cô lập `mvsy2fr7-514bd0`: `pnpm test:e2e:smoke --case=WEB-09` PASS 1/1 browser test, dùng Keycloak/API/PostgreSQL thật. Fixture X có bốn vé ở hai tenant và không có staff membership; Y không có membership hoặc vé. Test đối soát DB qua runtime role + transaction-local RLS, ví/list/detail/QR, request và operation owner isolation, cùng nhãn/cảnh báo REVOKED/CANCELLED. `pnpm test:e2e:guards` PASS 8/8; Web `typecheck` và `lint`, typecheck test Web, Prettier đều PASS. Coverage WEB-09 đổi thành `implemented`; các nhận định WEB-09 ở phần báo cáo baseline bên dưới là lịch sử.
+
 Baseline `022cb80fd159dad2a7ebd0eeeea07fd64391f90a`; branch `hangndat/local-e2e-regression`. Chỉ sửa `tests/e2e/web/**`. Có 21 Playwright test trong bốn spec, ánh xạ đủ AUTH-01–08 và WEB-01–13; `coverage.json` phân biệt phần đã mã hóa với phần AC còn thiếu. `WEB-13` có hai test AUTO/MANUAL, dùng sự kiện và CSV riêng, thao tác Portal import/preview/commit/dispatch, worker Mailpit, claim, rồi Manager approve ở nhánh MANUAL. Không dùng auth mock hoặc `route.fulfill`.
 
 ## Kiểm tra đã chạy

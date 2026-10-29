@@ -146,6 +146,109 @@ test('[AUTH-05] expired access token refreshes inside BFF', async ({
     .toBe(true);
 });
 
+test('[AUTH-05] revoked Keycloak refresh fails closed and actors stay isolated', async ({
+  browser,
+}) => {
+  test.setTimeout(90_000);
+  const base = loadManifest();
+  if (!base.origins.shortWeb)
+    throw new Error('BLOCKED: AUTH-05 short-lived isolated Web missing');
+  const manifest = {
+    ...base,
+    origins: { ...base.origins, web: base.origins.shortWeb },
+  };
+  const fixture = fixtureFor(manifest, 'AUTH-05');
+  const first = accountFor(manifest, 'AUTH-05', 'attendee');
+  const second = accountFor(manifest, 'AUTH-05', 'otherAttendee');
+  const firstContext = await browser.newContext();
+  const secondContext = await browser.newContext();
+  try {
+    const firstPage = await firstContext.newPage();
+    const secondPage = await secondContext.newPage();
+    await Promise.all([
+      login(firstPage, manifest, first),
+      login(secondPage, manifest, second),
+    ]);
+    const origin = manifest.origins.web;
+    const access = (await secondContext.cookies(origin)).find(
+      (cookie) => cookie.name === 'oidc_access_token',
+    );
+    const refresh = (await secondContext.cookies(origin)).find(
+      (cookie) => cookie.name === 'oidc_refresh_token',
+    );
+    expect(access).toBeTruthy();
+    expect(refresh).toBeTruthy();
+    const accessPayload = JSON.parse(
+      Buffer.from(access!.value.split('.')[1], 'base64url').toString('utf8'),
+    ) as { exp: number };
+    const tokenUrl = new URL(
+      `/realms/e2e-${manifest.runId}/protocol/openid-connect/revoke`,
+      manifest.origins.auth,
+    );
+    const revoke = await secondPage.request.post(tokenUrl.toString(), {
+      form: {
+        token: refresh!.value,
+        token_type_hint: 'refresh_token',
+        client_id: 'ticket-web-short',
+        client_secret: String(fixture.data?.shortWebClientSecret ?? ''),
+      },
+    });
+    expect(revoke.status()).toBe(200);
+    const delayMs = Math.max(0, accessPayload.exp * 1000 - Date.now() + 1200);
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+    expect(Date.now()).toBeGreaterThan(accessPayload.exp * 1000);
+    const apiDuringClockSkew = await secondPage.request.get(
+      new URL(
+        `/v1/me/tickets?tenantId=${fixture.tenantId}`,
+        manifest.origins.api,
+      ).toString(),
+      { headers: { authorization: `Bearer ${access!.value}` } },
+    );
+    // API JWT verification deliberately permits five minutes of clock skew.
+    // BFF cookie renewal is a separate path; it must reject the revoked refresh.
+    expect(apiDuringClockSkew.status()).toBe(200);
+    // Each browser context owns its own host-only cookie jar. A fresh request
+    // after expiry must never borrow the other actor's in-flight refresh.
+    const [firstRefresh, secondRefresh] = await Promise.all([
+      firstPage.request.get(
+        webUrl(manifest, '/api/auth/refresh?next=%2Fwallet'),
+        { maxRedirects: 0 },
+      ),
+      secondPage.request.get(
+        webUrl(manifest, '/api/auth/refresh?next=%2Fwallet'),
+        { maxRedirects: 0 },
+      ),
+    ]);
+    expect([302, 307]).toContain(firstRefresh.status());
+    expect([302, 307]).toContain(secondRefresh.status());
+    expect(new URL(firstRefresh.headers().location, origin).pathname).toBe(
+      '/wallet',
+    );
+    expect(new URL(secondRefresh.headers().location, origin).pathname).toBe(
+      '/auth',
+    );
+    const [firstMe, secondMe] = await Promise.all([
+      firstPage.request.get(webUrl(manifest, '/api/bff/me')),
+      secondPage.request.get(webUrl(manifest, '/api/bff/me')),
+    ]);
+    expect(firstMe.status()).toBe(200);
+    const firstBody = JSON.stringify(await firstMe.json());
+    expect(firstBody).toContain(first.userId);
+    expect(firstBody).not.toContain(second.userId);
+    expect(secondMe.status()).toBe(401);
+    const secondCookies = await secondContext.cookies(origin);
+    expect(
+      secondCookies.some((cookie) =>
+        ['oidc_access_token', 'oidc_refresh_token', 'web_oidc_sub'].includes(
+          cookie.name,
+        ),
+      ),
+    ).toBe(false);
+  } finally {
+    await Promise.all([firstContext.close(), secondContext.close()]);
+  }
+});
+
 test('[AUTH-06] attendee session grants no staff Portal identity', async ({
   page,
 }) => {
@@ -178,10 +281,18 @@ test('[AUTH-07] another attendee cannot see prior actor ticket after login switc
   page.on('response', (res) => {
     const url = new URL(res.url());
     if (url.origin !== new URL(manifest.origins.web).origin) return;
-    if (!url.pathname.startsWith('/api/auth/') && !url.pathname.startsWith('/api/bff/')) return;
+    if (
+      !url.pathname.startsWith('/api/auth/') &&
+      !url.pathname.startsWith('/api/bff/')
+    )
+      return;
     const setCookie = res.headers()['set-cookie'] ?? '';
-    const touched = pendingNames.filter((name) => setCookie.includes(`${name}=`));
-    cookieOrder.push(`${url.pathname}:${res.status()}:${touched.join(',') || 'none'}`);
+    const touched = pendingNames.filter((name) =>
+      setCookie.includes(`${name}=`),
+    );
+    cookieOrder.push(
+      `${url.pathname}:${res.status()}:${touched.join(',') || 'none'}`,
+    );
     if (cookieOrder.length > 40) cookieOrder.shift();
   });
   try {
@@ -201,12 +312,18 @@ test('[AUTH-07] another attendee cannot see prior actor ticket after login switc
     // subject anchor. Its late Set-Cookie must not resurrect the old actor.
     let releaseRefresh!: () => void;
     let refreshReady!: () => void;
-    const refreshReleased = new Promise<void>((resolve) => { releaseRefresh = resolve; });
-    const refreshFetched = new Promise<void>((resolve) => { refreshReady = resolve; });
+    const refreshReleased = new Promise<void>((resolve) => {
+      releaseRefresh = resolve;
+    });
+    const refreshFetched = new Promise<void>((resolve) => {
+      refreshReady = resolve;
+    });
     let refreshSetAccess = false;
     await context.route('**/api/auth/refresh?*', async (route) => {
       const upstream = await route.fetch({ maxRedirects: 0 });
-      refreshSetAccess = (upstream.headers()['set-cookie'] ?? '').includes('oidc_access_token=');
+      refreshSetAccess = (upstream.headers()['set-cookie'] ?? '').includes(
+        'oidc_access_token=',
+      );
       refreshReady();
       await refreshReleased;
       await route.fulfill({ response: upstream });
@@ -225,27 +342,50 @@ test('[AUTH-07] another attendee cannot see prior actor ticket after login switc
     await staleRefresh;
     await context.unroute('**/api/auth/refresh?*');
     const lateCookies = await context.cookies(manifest.origins.web);
-    expect(lateCookies.some((cookie) => cookie.name === 'oidc_access_token')).toBe(true);
-    expect(lateCookies.some((cookie) => cookie.name === 'web_oidc_sub')).toBe(false);
-    expect((await page.request.get(webUrl(manifest, '/api/bff/me'))).status()).toBe(401);
+    expect(
+      lateCookies.some((cookie) => cookie.name === 'oidc_access_token'),
+    ).toBe(true);
+    expect(lateCookies.some((cookie) => cookie.name === 'web_oidc_sub')).toBe(
+      false,
+    );
+    expect(
+      (await page.request.get(webUrl(manifest, '/api/bff/me'))).status(),
+    ).toBe(401);
     const afterLogout = await context.cookies(manifest.origins.web);
-    expect(afterLogout.some((cookie) => pendingNames.includes(cookie.name))).toBe(false);
+    expect(
+      afterLogout.some((cookie) => pendingNames.includes(cookie.name)),
+    ).toBe(false);
     const other = accountFor(manifest, 'AUTH-07', 'otherAttendee');
     try {
       await login(page, manifest, other, '/wallet', async () => {
-        const names = new Set((await context.cookies(manifest.origins.web)).map((cookie) => cookie.name));
+        const names = new Set(
+          (await context.cookies(manifest.origins.web)).map(
+            (cookie) => cookie.name,
+          ),
+        );
         for (const name of pendingNames) {
-          expect(names.has(name), `pending ${name}; cookie order=${cookieOrder.join(' > ')}`).toBe(true);
+          expect(
+            names.has(name),
+            `pending ${name}; cookie order=${cookieOrder.join(' > ')}`,
+          ).toBe(true);
         }
       });
     } catch (error) {
       // Only route/status/cookie names: no tokens, authorization code or state values.
-      throw new Error(`AUTH-07 login switch; cookie order=${cookieOrder.join(' > ')}`, { cause: error });
+      throw new Error(
+        `AUTH-07 login switch; cookie order=${cookieOrder.join(' > ')}`,
+        { cause: error },
+      );
     }
-    const guestBffPendingDelete = cookieOrder.some((entry) =>
-      entry.startsWith('/api/bff/') && pendingNames.some((name) => entry.includes(name)),
+    const guestBffPendingDelete = cookieOrder.some(
+      (entry) =>
+        entry.startsWith('/api/bff/') &&
+        pendingNames.some((name) => entry.includes(name)),
     );
-    expect(guestBffPendingDelete, `cookie order=${cookieOrder.join(' > ')}`).toBe(false);
+    expect(
+      guestBffPendingDelete,
+      `cookie order=${cookieOrder.join(' > ')}`,
+    ).toBe(false);
     await page.goto(detail);
     await expect(page.getByTestId('owner-ticket-ready')).toHaveCount(0);
     await expect(
