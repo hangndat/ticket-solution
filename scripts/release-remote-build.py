@@ -65,8 +65,24 @@ def abort_command(work, token):
     # Bracketed first character prevents pkill from matching its own shell.
     runner = shlex.quote(f"{work}/[r]un.sh")
     artifact = shlex.quote(f"{work}/[r]elease-artifact.py")
-    return (f"docker ps -q --filter label=vemoki.release-build={token} | xargs -r docker kill; "
-            f"pkill -f {runner}; pkill -f {artifact}; true")
+    selector = f"docker ps -q --filter label=vemoki.release-build={token}"
+    return (f"{selector} | xargs -r docker kill >/dev/null; "
+            f"pkill -f {runner} 2>/dev/null || true; pkill -f {artifact} 2>/dev/null || true; "
+            f"for i in 1 2 3 4 5 6 7 8 9 10; do "
+            f"if ! pgrep -f {runner} >/dev/null && ! pgrep -f {artifact} >/dev/null "
+            f"&& [ -z \"$({selector})\" ]; then exit 0; fi; sleep 1; done; "
+            f"pkill -KILL -f {runner} 2>/dev/null || true; "
+            f"pkill -KILL -f {artifact} 2>/dev/null || true; "
+            f"[ -z \"$({selector})\" ] && ! pgrep -f {runner} >/dev/null "
+            f"&& ! pgrep -f {artifact} >/dev/null")
+
+
+def start_command(work):
+    # Use the same absolute path that abort_command matches. In particular,
+    # an abort during git clone/show must stop the runner before cleanup.
+    runner = shlex.quote(f"{work}/run.sh")
+    log_path = shlex.quote(f"{work}/build.log")
+    return f"cd {shlex.quote(work)} && setsid nohup nice -n 19 ionice -c3 {runner} > {log_path} 2>&1 < /dev/null &"
 
 RUNNER = """#!/bin/bash
 set -u
@@ -110,6 +126,7 @@ def main():
         sys.exit("prod health is not 200 before build; aborting")
     log(f"preflight ok; available RAM {mem_available_mb(a.host)} MB")
     ok = False
+    cleanup_allowed = True
     try:
         t0 = time.monotonic()
         with tempfile.TemporaryDirectory() as tmp:
@@ -133,8 +150,8 @@ def main():
                        input=shim, text=True, check=True)
         subprocess.run(["ssh", a.host, f"cat > {work}/run.sh && chmod 755 {work}/run.sh"],
                        input=runner, text=True, check=True)
-        ssh(a.host, f"cd {work} && setsid nohup nice -n 19 ionice -c3 ./run.sh > {work}/build.log 2>&1 < /dev/null &",
-            check=True)
+        cleanup_allowed = False
+        ssh(a.host, start_command(work), check=True)
         log(f"remote build started (log {work}/build.log, cpus={a.cpus}, mem={a.memory_mb}m)")
         offset, bad_health = 0, 0
         while True:
@@ -148,19 +165,25 @@ def main():
             bad_health = 0 if health_ok() else bad_health + 1
             if bad_health >= 2 or avail < a.min_available_mb:
                 log(f"ABORT: prod degraded (health failures={bad_health}, available RAM={avail} MB); killing build")
-                ssh(a.host, abort_command(work, token))
+                cleanup_allowed = ssh(a.host, abort_command(work, token)).returncode == 0
+                if not cleanup_allowed:
+                    log(f"ABORT INCOMPLETE: build processes may remain; retaining {work} for inspection")
                 break
             if "EXIT=" in out:
                 ok = "EXIT=0" in out
+                cleanup_allowed = True
                 break
         log(f"{'OK' if ok else 'FAILED'}; total {time.monotonic() - started:.0f}s; "
             f"health={'200' if health_ok() else 'NOT 200'}; available RAM {mem_available_mb(a.host)} MB")
     finally:
-        # keep only the build log (no secrets: the build never reads .env), drop the rest
-        ssh(a.host, f"mkdir -p {a.build_root}/logs && cp {shlex.quote(work)}/build.log "
-                    f"{a.build_root}/logs/{a.sha[:12]}-$(date +%Y%m%dT%H%M%S).log 2>/dev/null; "
-                    f"chmod -R u+w {shlex.quote(work)} 2>/dev/null; rm -rf {shlex.quote(work)}")
-        log("remote build dir removed")
+        if cleanup_allowed:
+            # keep only the build log (no secrets: the build never reads .env)
+            ssh(a.host, f"mkdir -p {a.build_root}/logs && cp {shlex.quote(work)}/build.log "
+                        f"{a.build_root}/logs/{a.sha[:12]}-$(date +%Y%m%dT%H%M%S).log 2>/dev/null; "
+                        f"chmod -R u+w {shlex.quote(work)} 2>/dev/null; rm -rf {shlex.quote(work)}")
+            log("remote build dir removed")
+        else:
+            log(f"remote build dir retained: {work}")
     sys.exit(0 if ok else 1)
 
 
