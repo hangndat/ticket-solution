@@ -30,39 +30,16 @@ export async function processDueTicketPiiAnonymizations(
 }
 
 export async function processDueObjectRetentions(
-  db: PrismaClient,
-  store: Pick<ObjectStore, 'deleteObject'>,
-  leaseOwner: string,
-  limit = 1,
+  _db: PrismaClient,
+  _store: Pick<ObjectStore, 'deleteObject'>,
+  _leaseOwner: string,
+  _limit?: number,
 ): Promise<{ scanned: number; applied: number; failed: number }> {
-  const claimed = await db.$queryRaw<{
-    tenant_id: string;
-    export_id: string;
-    object_key: string;
-    lease_token: string;
-  }[]>`
-    SELECT tenant_id, export_id, object_key, lease_token
-    FROM public.claim_expired_retention_objects(${limit}::integer, ${leaseOwner}::text)
-  `;
-  let applied = 0;
-  let failed = 0;
-  for (const row of claimed) {
-    try {
-      // Claim commits its event fence before external I/O. The adapter treats
-      // 404 as success, including crash-after-DELETE retries.
-      await store.deleteObject(row.object_key);
-      const result = await db.$queryRaw<{ applied: boolean }[]>`
-        SELECT public.apply_export_object_purge(
-          ${row.tenant_id}::uuid, ${row.export_id}::uuid,
-          ${leaseOwner}::text, ${row.lease_token}::uuid
-        ) AS applied
-      `;
-      if (result[0]?.applied) applied += 1;
-      else failed += 1;
-    } catch {
-      // Leave the claim for lease-expiry retry; never mark bytes deleted here.
-      failed += 1;
-    }
-  }
-  return { scanned: claimed.length, applied, failed };
+  void _db;
+  void _store;
+  void _leaseOwner;
+  void _limit;
+  // A single DELETE cannot prove absence of older versions or in-flight PUTs.
+  // The separate offline operator must attest its barrier and full inventory.
+  throw new Error('EXPORT_RETENTION_OFFLINE_BARRIER_REQUIRED');
 }

@@ -35,13 +35,10 @@ export function readMinioEnvironment(
   env: NodeJS.ProcessEnv,
 ): MinioConfig | null {
   const endpoint = env['MINIO_ENDPOINT']?.trim();
-  const accessKey =
-    env['MINIO_ACCESS_KEY']?.trim() || env['MINIO_ROOT_USER']?.trim();
-  const secretKey =
-    env['MINIO_SECRET_KEY']?.trim() || env['MINIO_ROOT_PASSWORD']?.trim();
-  // Prefer explicit export/assets names from ENV-MANIFEST; keep legacy aliases.
+  const accessKey = env['MINIO_ACCESS_KEY']?.trim();
+  const secretKey = env['MINIO_SECRET_KEY']?.trim();
+  // Shared identity serves assets by default; exports use the dedicated helper.
   const bucket =
-    env['MINIO_BUCKET_EXPORTS']?.trim() ||
     env['MINIO_BUCKET_ASSETS']?.trim() ||
     env['MINIO_ASSETS_BUCKET']?.trim() ||
     env['MINIO_BUCKET']?.trim() ||
@@ -49,6 +46,30 @@ export function readMinioEnvironment(
   const region = env['MINIO_REGION']?.trim() || 'us-east-1';
   if (!endpoint || !accessKey || !secretKey) return null;
   return { endpoint, accessKey, secretKey, bucket, region };
+}
+
+/** Dedicated export identity. It must never fall back to the shared or root key. */
+export function readMinioExportsEnvironment(
+  env: NodeJS.ProcessEnv,
+): MinioConfig | null {
+  const endpoint = env['MINIO_ENDPOINT']?.trim();
+  const accessKey = env['MINIO_EXPORTS_ACCESS_KEY']?.trim();
+  const secretKey = env['MINIO_EXPORTS_SECRET_KEY']?.trim();
+  const bucket = env['MINIO_BUCKET_EXPORTS']?.trim();
+  const region = env['MINIO_REGION']?.trim() || 'us-east-1';
+  if (!endpoint || !accessKey || !secretKey || !bucket) return null;
+  return { endpoint, accessKey, secretKey, bucket, region };
+}
+
+export function requireMinioExportsConfig(env: NodeJS.ProcessEnv): MinioConfig {
+  const cfg = readMinioExportsEnvironment(env);
+  if (!cfg) {
+    throw new ConfigError(
+      CONFIG_ERROR_CODES.MINIO_MISCONFIGURED,
+      'MinIO exports identity is not configured',
+    );
+  }
+  return cfg;
 }
 
 /** Prefer `MINIO_BUCKET_IMPORTS` for CSV quarantine (falls back to shared MinIO cfg). */
