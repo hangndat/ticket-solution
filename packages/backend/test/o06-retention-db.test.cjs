@@ -13,7 +13,7 @@ const docker = (...args) => execFileSync('docker', args, {
   encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'],
 }).trim();
 
-async function database() {
+async function database(beforeDueMigration) {
   const name = 'ticket-o06-retention-' + randomBytes(5).toString('hex');
   const password = randomBytes(20).toString('hex');
   docker('run', '-d', '--name', name, '-e', 'POSTGRES_PASSWORD=' + password,
@@ -40,7 +40,12 @@ async function database() {
   await admin.query('CREATE ROLE migration_owner NOLOGIN NOSUPERUSER NOBYPASSRLS');
   await admin.query('GRANT CREATE, USAGE ON SCHEMA public TO migration_owner');
   await admin.query('SET ROLE migration_owner');
-  for (const file of migrationFiles()) await admin.query(readFileSync(file, 'utf8'));
+  for (const file of migrationFiles()) {
+    if (file.includes('202610290007_o06_operator_due_events') && beforeDueMigration) {
+      await beforeDueMigration(admin);
+    }
+    await admin.query(readFileSync(file, 'utf8'));
+  }
   await admin.query('RESET ROLE');
   await admin.query(`CREATE ROLE o06_login LOGIN PASSWORD '${password}' NOSUPERUSER NOBYPASSRLS INHERIT`);
   await admin.query('GRANT ticket_runtime TO o06_login');
@@ -53,6 +58,86 @@ async function database() {
   };
   return { name, admin, adminUrl, runtime, runtimeUrl, operatorQuery };
 }
+
+test('O06 operator pages legacy and new due events with overdue and completion markers',
+  { timeout: 240000 }, async () => {
+    let db;
+    const legacyTenant = randomUUID();
+    const legacyEvent = randomUUID();
+    try {
+      db = await database(async (admin) => {
+        await admin.query('INSERT INTO tenants (id,slug,name) VALUES ($1,$2,$2)',
+          [legacyTenant, 'o06-legacy-due']);
+        await admin.query(`INSERT INTO events (tenant_id,id,slug,name,ends_at)
+          VALUES ($1,$2,'legacy-due','legacy-due',clock_timestamp()-interval '91 days')`,
+        [legacyTenant, legacyEvent]);
+      });
+      const { admin, runtime, operatorQuery } = db;
+      const tenant = randomUUID();
+      const user = randomUUID();
+      await admin.query('INSERT INTO tenants (id,slug,name) VALUES ($1,$2,$2)',
+        [tenant, 'o06-inventory']);
+      await admin.query('INSERT INTO users (id,issuer,subject,email) VALUES ($1,$2,$3,$4)',
+        [user, 'o06-inventory', user, 'fixture@example.test']);
+      const due = await seedEvent(admin, tenant, user, 'inventory-due', -89 * 86400 - 60);
+      const overdue = await seedEvent(admin, tenant, user, 'inventory-overdue', -91 * 86400);
+      const cancelled = await seedEvent(admin, tenant, user, 'inventory-cancelled',
+        -91 * 86400, -1 * 86400);
+      const noEnd = await seedEvent(admin, tenant, user, 'inventory-no-end', null);
+      const tooEarly = await seedEvent(admin, tenant, user, 'inventory-early', -88 * 86400);
+      const generation = randomUUID();
+      const hash = 'c'.repeat(64);
+      assert.equal((await operatorQuery('SELECT fence_export_retention_event($1,$2,$3) AS ok',
+        [tenant, overdue.event, generation])).rows[0].ok, true);
+      assert.equal((await operatorQuery('SELECT record_export_retention_inventory($1,$2,$3,$4::jsonb) AS ok',
+        [tenant, overdue.event, generation, JSON.stringify({ emptyInventory: true,
+          writerExitHash: hash, serverBarrierHash: hash, inventoryHash: hash })])).rows[0].ok, true);
+      assert.equal((await operatorQuery('SELECT finalize_export_retention_event($1,$2,$3) AS n',
+        [tenant, overdue.event, generation])).rows[0].n, 1);
+
+      await assert.rejects(runtime.query(
+        'SELECT * FROM list_export_retention_due_events(clock_timestamp(),10)'), /permission denied/);
+      await assert.rejects(operatorQuery(
+        'SELECT * FROM list_export_retention_due_events(clock_timestamp(),0)'), /invalid retention due-event page/);
+      await assert.rejects(operatorQuery(
+        'SELECT * FROM list_export_retention_due_events(clock_timestamp(),1,clock_timestamp())'),
+      /invalid retention due-event page/);
+      const asOf = (await admin.query('SELECT clock_timestamp() AS value')).rows[0].value;
+      const all = [];
+      let cursor = [null, null, null];
+      for (let page = 0; page < 10; page++) {
+        const rows = (await operatorQuery(
+          'SELECT * FROM list_export_retention_due_events($1,$2,$3,$4,$5)',
+          [asOf, 2, ...cursor])).rows;
+        all.push(...rows);
+        if (rows.length < 2) break;
+        const last = rows.at(-1);
+        cursor = [last.deadline_cursor, last.tenant_id, last.event_id];
+      }
+      assert.equal(all.length, 4);
+      assert.equal(new Set(all.map((row) => row.event_id)).size, 4);
+      assert.deepEqual(new Set(all.map((row) => row.event_id)),
+        new Set([legacyEvent, due.event, overdue.event, cancelled.event]));
+      assert.ok(!all.some((row) => [noEnd.event, tooEarly.event].includes(row.event_id)));
+      const legacy = all.find((row) => row.event_id === legacyEvent);
+      assert.equal(legacy.unpurged_count, '0');
+      assert.equal(legacy.completed, false, 'no export rows cannot prove an empty object prefix');
+      assert.ok(legacy.deadline < asOf, 'pre-migration overdue event appears immediately');
+      assert.equal(all.find((row) => row.event_id === due.event).completed, false);
+      assert.equal(all.find((row) => row.event_id === overdue.event).completed, true);
+      assert.equal(all.find((row) => row.event_id === cancelled.event).completed, false);
+      for (let i = 1; i < all.length; i++) {
+        const previous = all[i - 1];
+        const current = all[i];
+        assert.ok(`${previous.deadline.toISOString()}/${previous.tenant_id}/${previous.event_id}` <
+          `${current.deadline.toISOString()}/${current.tenant_id}/${current.event_id}`);
+      }
+    } finally {
+      if (db?.runtime) await db.runtime.end().catch(() => {});
+      if (db?.admin) await db.admin.end().catch(() => {});
+      if (db?.name) docker('rm', '-f', db.name);
+    }
+  });
 
 async function seedEvent(db, tenant, user, label, endsOffset, cancelledOffset = null) {
   const event = randomUUID();

@@ -2,6 +2,42 @@
 
 This is an **unaccepted local maintenance candidate**. It is not a scheduled worker job. Do not run it during normal service, deployment, or UAT. The operator must first identify every API, worker, other export PUT signer, operations tool, and MinIO server process from the actual deployment topology. Missing inventory, positive process exit, credential disable, same-volume server restart, or quorum proof stops the run. The JSON file is an operator attestation; this script cannot independently verify process or supervisor state.
 
+## Due-event discovery and ownership
+
+The **retention operations on-call** owns the recurring `check` run, its alert, and the
+per-event maintenance ticket. Run the first check immediately after migration
+`202610290007_o06_operator_due_events`; its set-based scan includes events that
+were already overdue before deployment. Schedule a check at least once every
+15 minutes on an operations host with the dedicated DB login, and retain its
+NDJSON stdout and exit status in the operations log. The DB login must be able
+to `SET ROLE ticket_retention_operator`. This schedule is an operator task;
+neither the API nor the worker invokes the command.
+
+```sh
+O06_OPERATOR_DATABASE_URL='postgresql://<operator>...' \
+  node packages/backend/scripts/o06-offline-purge.cjs check --limit 200
+```
+
+`plan` has the same read-only output for an ad hoc inventory. Each `event` line
+contains tenant/event IDs, the day-90 deadline, `pending` or `completed`, fence
+generation, inventory marker, unpurged row count, and an overdue flag. The final
+`summary` line contains `O06_EXPORT_RETENTION_OVERDUE` when any pending event is
+at or past the deadline, or `O06_EXPORT_RETENTION_DUE` when a day-89 event needs
+maintenance. Both commands exit **2** for overdue, **3** for pending due, **0**
+when all scanned events are complete, and **1** on query/role failure. The
+scheduler must alert the on-call for exits 1, 2, or 3 and for missing runs. A pending
+event with zero export rows still needs a full prefix inventory: DB rows cannot
+prove that orphaned MinIO objects are absent. `ends_at IS NULL` is excluded;
+cancelled events use `ends_at`, never `cancelled_at`.
+
+For each pending event, the on-call records a stable generation, arranges an
+approved maintenance window before the deadline, and follows the fence and
+purge procedure below. If already overdue, escalate immediately and keep the
+alert open until the event is completed and a fresh check clears it. The check
+does not stop processes, disable credentials, touch MinIO, fence, or finalize.
+The operator must arrange and verify those actions separately with the actual
+deployment owner; an unattended scheduler must never invoke `fence` or `purge`.
+
 ## Invocation
 
 Use a dedicated login principal that can `SET ROLE ticket_retention_operator`, not `ticket_runtime` or the migration owner. The migration grants the role only the F01 definer functions. Keep the same UUID generation across retries. Run `fence` before stopping writers, then keep writers stopped through `purge` and the final DB commit.
