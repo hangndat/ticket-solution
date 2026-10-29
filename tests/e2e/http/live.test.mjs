@@ -3,6 +3,7 @@ import { createHmac, randomUUID } from 'node:crypto';
 import http from 'node:http';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
+import { chromium } from 'playwright';
 
 const CASE_IDS = [
   'SEC-01',
@@ -21,6 +22,8 @@ const EVIL_ORIGIN = 'https://evil.example';
 const OAUTH_COOKIE = /oidc|oauth|pkce|nonce|state/i;
 const PORTAL_CSRF_COOKIE = 'portal_csrf';
 const PORTAL_CSRF_HEADER = 'x-portal-csrf';
+const WEB_CSRF_COOKIE = 'vemoki_csrf';
+const WEB_CSRF_HEADER = 'x-csrf-token';
 const chosen = process.env.E2E_HTTP_CASE;
 if (chosen && !CASE_IDS.includes(chosen))
   throw new Error(`Unknown HTTP case: ${chosen}`);
@@ -217,6 +220,40 @@ async function bffJson(url, init = {}) {
     body = {};
   }
   return { status: response.status, body };
+}
+
+function cookieHeader(cookies) {
+  return cookies.map(({ name, value }) => `${name}=${value}`).join('; ');
+}
+
+async function oidcBrowserSession(browser, ctx, origin, otherOrigin, loginPath, probePath, actor) {
+  const account = required(ctx.fixture.accounts?.[actor], `SEC-02 ${actor} account`);
+  const browserContext = await browser.newContext();
+  try {
+    const page = await browserContext.newPage();
+    await page.goto(new URL(loginPath, origin).toString());
+    await page.locator('#username').fill(account.username);
+    await page.locator('#password').fill(account.password);
+    await page.locator('#kc-login').click();
+    await page.waitForURL((url) => url.origin === new URL(origin).origin, {
+      timeout: 30_000,
+    });
+    const probe = await browserContext.request.get(new URL(probePath, origin).toString());
+    assert.equal(probe.status(), 200, `SEC-02 ${actor}: authenticated BFF probe`);
+    const cookies = await browserContext.cookies(origin);
+    assert.ok(cookies.length > 0, `SEC-02 ${actor}: OIDC did not issue cookies`);
+    assert.ok(
+      !(await browserContext.cookies(otherOrigin)).some(({ name }) => name === 'oidc_access_token'),
+      `SEC-02 ${actor}: session cookie crossed host boundary`,
+    );
+    const otherHostProbe = await browserContext.request.get(
+      new URL('/api/bff/me/tenants', otherOrigin).toString(),
+    );
+    assert.equal(otherHostProbe.status(), 401, `SEC-02 ${actor}: other host must stay anonymous`);
+    return cookies;
+  } finally {
+    await browserContext.close();
+  }
 }
 
 async function bearer(ctx, actor) {
@@ -804,6 +841,134 @@ for (const caseId of CASE_IDS) {
       );
       if (portalCsrfOnly.status === 403) {
         assert.equal(portalCsrfOnly.body.code, 'CSRF_TOKEN_MISMATCH');
+      }
+
+      const platformTenantsUrl = new URL('/api/bff/platform/tenants', ctx.portal);
+      const platformBootstrap = await fetch(platformTenantsUrl);
+      assert.equal(platformBootstrap.status, 401, 'platform BFF needs a session');
+      const platformCsrf = setCookieHeaders(platformBootstrap)
+        .map(parseSetCookie)
+        .find(({ name }) => name === PORTAL_CSRF_COOKIE);
+      assert.ok(platformCsrf, 'platform BFF must bootstrap CSRF cookie');
+      assert.equal(platformCsrf.attrs.domain, undefined);
+      assert.equal(platformCsrf.attrs.secure, true);
+      assert.equal(String(platformCsrf.attrs.samesite).toLowerCase(), 'lax');
+      const platformCsrfToken = required(
+        setCookieHeaders(platformBootstrap)
+          .find((header) => header.startsWith(`${PORTAL_CSRF_COOKIE}=`))
+          ?.split(';', 1)[0].slice(PORTAL_CSRF_COOKIE.length + 1),
+        'platform CSRF token',
+      );
+      const platformPayload = {
+        idempotencyKey: randomUUID(), slug: `sec02-${randomUUID()}`,
+        name: 'Synthetic SEC-02 anonymous probe', defaultTimezone: 'UTC',
+        ownerEmail: 'owner@example.test', limits: {}, flags: {},
+      };
+      const platformPost = (headers) => bffJson(platformTenantsUrl, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          Cookie: `${PORTAL_CSRF_COOKIE}=${platformCsrfToken}`,
+          [PORTAL_CSRF_HEADER]: platformCsrfToken,
+          ...headers,
+        },
+        body: JSON.stringify(platformPayload),
+      });
+      expectStatus(await platformPost({}), 403, 'CSRF_ORIGIN_REQUIRED');
+      expectStatus(await platformPost({ Origin: EVIL_ORIGIN }), 403, 'CSRF_ORIGIN_MISMATCH');
+      expectStatus(await platformPost({ Origin: portalOrigin }), 401);
+
+      const suffix = required(process.env.E2E_HOST_SUFFIX, 'E2E_HOST_SUFFIX');
+      const trust = required(process.env.E2E_TLS_SPKI, 'E2E_TLS_SPKI');
+      const browser = await chromium.launch({
+        headless: true,
+        args: [
+          `--host-resolver-rules=MAP *.${suffix} 127.0.0.1, MAP ${suffix} 127.0.0.1`,
+          `--ignore-certificate-errors-spki-list=${trust}`,
+        ],
+      });
+      try {
+        const surfaces = [
+          {
+            label: 'web attendee', origin: ctx.web, login: '/api/auth/login?return=/',
+            probe: '/api/bff/me/tenants', actor: 'attendee', csrfName: WEB_CSRF_COOKIE,
+            csrfHeader: WEB_CSRF_HEADER, mutation: '/api/bff/redeem/resolve',
+            payload: { code: '' }, positiveCode: 'CODE_INVALID',
+            anonymousPayload: { code: 'INVALID-PROBE' },
+          },
+          {
+            label: 'portal staff', origin: ctx.portal, login: '/api/auth/login?return=/',
+            probe: '/api/bff/me/tenants', actor: 'owner', csrfName: PORTAL_CSRF_COOKIE,
+            csrfHeader: PORTAL_CSRF_HEADER,
+            mutation: `/api/bff/tenants/${tenantId}/events/${eventId}/ticket-types`,
+            payload: { label: '' }, positiveCode: 'LABEL_REQUIRED',
+            anonymousPayload: { label: 'Synthetic SEC-02 anonymous probe' },
+          },
+        ];
+        for (const surface of surfaces) {
+          surface.cookies = await oidcBrowserSession(
+            browser, ctx, surface.origin,
+            surface.origin === ctx.web ? ctx.portal : ctx.web,
+            surface.login, surface.probe, surface.actor,
+          );
+          const host = new URL(surface.origin).hostname;
+          const sessionCookies = surface.cookies.filter(({ name }) =>
+            /^(oidc_(access|refresh|id)_|platform_oidc_(access|refresh))/.test(name),
+          );
+          assert.ok(sessionCookies.length > 0, `${surface.label}: session cookie required`);
+          for (const cookie of sessionCookies) {
+            assert.equal(cookie.domain, host, `${surface.label}: host-only session cookie`);
+            assert.equal(cookie.httpOnly, true, `${surface.label}: HttpOnly session cookie`);
+            assert.equal(cookie.secure, true, `${surface.label}: Secure session cookie`);
+            assert.equal(cookie.sameSite, 'Lax', `${surface.label}: SameSite session cookie`);
+          }
+          const csrf = required(
+            surface.cookies.find(({ name }) => name === surface.csrfName)?.value,
+            `${surface.label} CSRF cookie`,
+          );
+          const url = new URL(surface.mutation, surface.origin);
+          const body = JSON.stringify(surface.payload);
+          const base = { method: 'POST', body };
+          const send = (headers) => bffJson(url, { ...base, headers: {
+            'content-type': 'application/json', Cookie: cookieHeader(surface.cookies),
+            ...headers,
+          } });
+          for (const [headers, code] of [
+            [{ [surface.csrfHeader]: csrf }, 'CSRF_ORIGIN_REQUIRED'],
+            [{ Origin: EVIL_ORIGIN, [surface.csrfHeader]: csrf }, 'CSRF_ORIGIN_MISMATCH'],
+            [{ Origin: new URL(surface.origin).origin },
+              surface.label === 'web attendee' ? 'CSRF_TOKEN_INVALID' : 'CSRF_TOKEN_MISMATCH'],
+            [{ Origin: new URL(surface.origin).origin,
+              [surface.csrfHeader]: 'wrong-token' },
+              surface.label === 'web attendee' ? 'CSRF_TOKEN_INVALID' : 'CSRF_TOKEN_MISMATCH'],
+          ]) {
+            const result = await send(headers);
+            expectStatus(result, 403, code);
+          }
+          expectStatus(await send({
+            Origin: new URL(surface.origin).origin,
+            [surface.csrfHeader]: csrf,
+          }), 422, surface.positiveCode);
+          const beforeSession = await bffJson(url, {
+            method: 'POST',
+            headers: {
+              'content-type': 'application/json',
+              Origin: new URL(surface.origin).origin,
+              Cookie: `${surface.csrfName}=${csrf}`,
+              [surface.csrfHeader]: csrf,
+            },
+            body: JSON.stringify(surface.anonymousPayload),
+          });
+          expectStatus(beforeSession, 401);
+        }
+
+        const staffOnPlatformBff = await bffJson(
+          new URL('/api/bff/platform/me', ctx.portal),
+          { headers: { Cookie: cookieHeader(surfaces[1].cookies) } },
+        );
+        assert.equal(staffOnPlatformBff.status, 401, 'staff session cannot enter platform BFF');
+      } finally {
+        await browser.close();
       }
 
       return;

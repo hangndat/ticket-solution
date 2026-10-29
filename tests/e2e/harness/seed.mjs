@@ -292,6 +292,9 @@ export async function seedRuntime(state, caseIds) {
         });
         fixture.ticketTypeId = inventory.ticketTypeId;
         fixture.sourceId = inventory.sourceId;
+        if (['WEB-02', 'WEB-03', 'WEB-07'].includes(caseId)) {
+          fixture.data.codeIds = { primary: inventory.codeIds[0] };
+        }
         fixture.data.ticketTypeLabel = 'E2E General';
         fixture.data.autoSourceLabel = 'E2E Auto';
         for (let index = 0; index < codes.length; index++) {
@@ -452,15 +455,23 @@ export async function seedRuntime(state, caseIds) {
           const lostResponseCode = `E2E-${state.id}-${caseId}-LR`;
           const reloadCode = `E2E-${state.id}-${caseId}-RL`;
           const conflictCode = `E2E-${state.id}-${caseId}-CF`;
+          const raceCode = `E2E-${state.id}-${caseId}-RC`;
           fixture.data.lostResponseCode = lostResponseCode;
           fixture.data.reloadCode = reloadCode;
           fixture.data.conflictCode = conflictCode;
+          fixture.data.raceCode = raceCode;
           fixture.data.conflictAnswersAlt = {
             ...formAnswers(accounts.attendee.username),
             phone: '+639171234568',
           };
-          for (const raw of [lostResponseCode, reloadCode, conflictCode]) {
+          for (const [name, raw] of Object.entries({
+            lostResponse: lostResponseCode,
+            reload: reloadCode,
+            conflict: conflictCode,
+            race: raceCode,
+          })) {
             const codeId = randomUUID();
+            fixture.data.codeIds[name] = codeId;
             const codeHmac = backend.hashRedemptionCode(hmac, raw);
             await tx.$executeRaw`
               INSERT INTO redemption_codes (

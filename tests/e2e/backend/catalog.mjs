@@ -131,7 +131,10 @@ export const catalog = {
     b('cs-export', 'CS lookup/export/events'),
     b('role-presets', 'P2-ROLES-PRESET'),
   ],
-  'SEC-02': [],
+  'SEC-02': [
+    'H:tests/e2e/http/live.test.mjs#[SEC-02]',
+    'B:tests/e2e/harness/security.spec.ts#[SEC-02]',
+  ],
   'SEC-03': [],
   'SEC-04': [
     a('redemptions-resolve-rls', 'resolve rate limit', 'D'),
@@ -225,7 +228,8 @@ export const notes = {
     'OUT: không có HTTP callback/transport nhận provider event trong API hiện hành.',
   'SEC-01':
     'D isolation; thiếu H URL/body/query/job/file read+mutate+list/export/operation matrix.',
-  'SEC-02': 'Thiếu H real cookie/CSRF/OIDC audience/host matrix.',
+  'SEC-02':
+    'H real attendee/staff session, host-cookie, Origin/CSRF deny + positive controls; Platform anonymous boundary PASS. Platform authenticated branch BLOCKED do Keycloak OTP synthetic, chưa phủ mọi BFF mutate/session revoke.',
   'SEC-03':
     'Thiếu HTTP integration với host/forwarded headers và redirect; chưa có test được chọn.',
   'SEC-04':

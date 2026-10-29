@@ -21,6 +21,13 @@ import {
   webUrl,
 } from './helpers';
 import { ticketLink, waitForMail } from './mailpit';
+import {
+  assertIssuedExactlyOnce,
+  assertNoExtraIssue,
+  codeIdFor,
+  readRedemptionState,
+} from './redemption-db';
+import { withAmbiguousRoutingGroup } from './web03-ambiguity';
 
 async function redeemCode(
   page: import('playwright/test').Page,
@@ -45,12 +52,23 @@ test('[WEB-02] verified attendee redeems auto code and reloads QR', async ({
   page,
 }) => {
   const manifest = loadManifest();
+  const fixture = fixtureFor(manifest, 'WEB-02');
+  const codeId = codeIdFor(fixture);
+  const before = await readRedemptionState(fixture, codeId);
   const f = await redeemCode(page, manifest, 'WEB-02');
   await expect(page.getByTestId('redeem-ux-success')).toBeVisible();
   const card = page.getByTestId('redeem-ticket-card');
   await expect(card).toBeVisible();
   const ticketId = (await card.locator('dd').first().textContent())?.trim();
   expect(ticketId).toMatch(/^[0-9a-f-]{36}$/i);
+  const issued = await readRedemptionState(f, codeId);
+  assertIssuedExactlyOnce(
+    before,
+    issued,
+    f,
+    accountFor(manifest, 'WEB-02', 'attendee').userId!,
+    ticketId,
+  );
   const ids = await walletTicketIds(page, manifest, f.tenantId);
   expect(ids.filter((id) => id === ticketId)).toHaveLength(1);
   await page.goto(webUrl(manifest, '/wallet'));
@@ -59,6 +77,7 @@ test('[WEB-02] verified attendee redeems auto code and reloads QR', async ({
   await expect(page.getByTestId('owner-ticket-qr-figure')).toBeVisible();
   await page.reload();
   await expect(page.getByTestId('owner-ticket-qr-figure')).toBeVisible();
+  assertNoExtraIssue(issued, await readRedemptionState(f, codeId));
 });
 
 test('[WEB-03] event link and global entry resolve code to the same published event', async ({
@@ -103,6 +122,119 @@ test('[WEB-03] event link and global entry resolve code to the same published ev
   ).toBeVisible();
 });
 
+test('[WEB-03] invalid and ambiguous codes keep context private and state unchanged', async ({
+  page,
+}) => {
+  const manifest = loadManifest();
+  const f = fixtureFor(manifest, 'WEB-03');
+  if (!f.code) throw new Error('BLOCKED: WEB-03 cần code');
+  const codeId = codeIdFor(f);
+  const before = await readRedemptionState(f, codeId);
+
+  // The global entry must also survive login without putting the raw code in URL.
+  await page.goto(webUrl(manifest, '/redeem'));
+  await expect(page.getByTestId('redeem-auth-gate')).toBeVisible();
+  await page
+    .getByTestId('redeem-auth-gate')
+    .getByRole('link', { name: 'Tiếp tục đăng nhập' })
+    .click();
+  const actor = accountFor(manifest, 'WEB-03', 'attendee');
+  const ownerEmail = accountFor(manifest, 'WEB-03', 'owner').username;
+  await page.locator('#username').fill(actor.username);
+  await page.locator('#password').fill(actor.password);
+  await page.locator('#kc-login').click();
+  await expect(page).toHaveURL(webUrl(manifest, '/redeem'));
+  await expect(page.getByTestId('redeem-global-code')).toBeVisible();
+  const walletSignedIn = await walletTicketIds(page, manifest, f.tenantId);
+
+  const invalidCode = caseData<string>(f, 'invalidCode');
+  const [invalidGlobalResponse] = await Promise.all([
+    page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname === '/api/bff/redeem/resolve',
+    ),
+    resolveGlobalCode(page, manifest, invalidCode),
+  ]);
+  expect(invalidGlobalResponse.status()).toBe(422);
+  expect(await invalidGlobalResponse.text()).not.toContain(f.eventId);
+  expect(await invalidGlobalResponse.text()).not.toContain(f.tenantId);
+  expect(await invalidGlobalResponse.text()).not.toContain(ownerEmail);
+  await assertRedeemOutcomePanel(page, 'invalid');
+  await expect(page.getByTestId('redeem-global-context')).toHaveCount(0);
+  await expect(page.locator('main')).not.toContainText(`E2E WEB-03`);
+  await expect(page.locator('main')).not.toContainText(ownerEmail);
+  expect(await readRedemptionState(f, codeId)).toEqual(before);
+  await assertWalletUnchanged(page, manifest, f.tenantId, walletSignedIn);
+
+  // The event link may show its published event, but a wrong code cannot issue.
+  await page.goto(webUrl(manifest, eventPath(f)));
+  await page
+    .getByTestId('event-sidebox')
+    .getByRole('link', { name: 'Đổi mã lấy vé' })
+    .click();
+  await expect(page.locator('input[name="tenantSlug"]')).toHaveValue(
+    f.tenantSlug,
+  );
+  await expect(page.locator('input[name="eventSlug"]')).toHaveValue(
+    f.eventSlug,
+  );
+  await page.locator('#redeem-code-confirm').fill(invalidCode);
+  await fillPublishedForm(
+    page,
+    f.data?.answers as Record<string, string | boolean>,
+  );
+  const [invalidEventResponse] = await Promise.all([
+    page.waitForResponse(
+      (response) => new URL(response.url()).pathname === '/api/bff/redeem',
+    ),
+    page.getByRole('button', { name: 'Đổi mã lấy vé', exact: true }).click(),
+  ]);
+  expect(invalidEventResponse.status()).toBe(422);
+  expect(await invalidEventResponse.text()).not.toContain(ownerEmail);
+  await assertRedeemOutcomePanel(page, 'invalid');
+  await expect(page).toHaveURL(/\/redeem\?tenantSlug=/);
+  const afterInvalidEvent = await readRedemptionState(f, codeId);
+  expect(afterInvalidEvent.code).toEqual(before.code);
+  expect(afterInvalidEvent.requests).toEqual(before.requests);
+  expect(afterInvalidEvent.tickets).toEqual(before.tickets);
+  expect(afterInvalidEvent.quotas).toEqual(before.quotas);
+  expect(afterInvalidEvent.outbox).toEqual(before.outbox);
+  expect(afterInvalidEvent.operations).toHaveLength(
+    before.operations.length + 1,
+  );
+  expect(
+    afterInvalidEvent.operations.filter(
+      (row) =>
+        (row.response_json as { code?: string } | null)?.code ===
+        'CODE_INVALID',
+    ),
+  ).toHaveLength(1);
+  await assertWalletUnchanged(page, manifest, f.tenantId, walletSignedIn);
+
+  // Legacy ambiguity disables global lookup for every code, with no target data.
+  await withAmbiguousRoutingGroup(f, codeId, async () => {
+    const [ambiguousResponse] = await Promise.all([
+      page.waitForResponse(
+        (response) =>
+          new URL(response.url()).pathname === '/api/bff/redeem/resolve',
+      ),
+      resolveGlobalCode(page, manifest, f.code!),
+    ]);
+    expect(((await ambiguousResponse.json()) as { code?: string }).code).toBe(
+      'RESOLVE_DISABLED',
+    );
+    expect(await ambiguousResponse.text()).not.toContain(f.eventId);
+    expect(await ambiguousResponse.text()).not.toContain(f.tenantId);
+    expect(await ambiguousResponse.text()).not.toContain(ownerEmail);
+    await assertRedeemOutcomePanel(page, 'closed');
+    await expect(page.getByTestId('redeem-global-context')).toHaveCount(0);
+    await expect(page.locator('main')).not.toContainText(`E2E WEB-03`);
+    await expect(page.locator('main')).not.toContainText(ownerEmail);
+    expect(await readRedemptionState(f, codeId)).toEqual(afterInvalidEvent);
+    await assertWalletUnchanged(page, manifest, f.tenantId, walletSignedIn);
+  });
+});
+
 test.describe('[WEB-04] negative redeem matrix', () => {
   test('invalid code does not issue ticket or reveal owner data', async ({
     page,
@@ -111,11 +243,7 @@ test.describe('[WEB-04] negative redeem matrix', () => {
     const f = fixtureFor(manifest, 'WEB-04');
     await login(page, manifest, accountFor(manifest, 'WEB-04', 'attendee'));
     const before = await walletTicketIds(page, manifest, f.tenantId);
-    await resolveGlobalCode(
-      page,
-      manifest,
-      caseData<string>(f, 'invalidCode'),
-    );
+    await resolveGlobalCode(page, manifest, caseData<string>(f, 'invalidCode'));
     await assertRedeemOutcomePanel(page, 'invalid');
     await assertWalletUnchanged(page, manifest, f.tenantId, before);
   });
@@ -127,11 +255,7 @@ test.describe('[WEB-04] negative redeem matrix', () => {
     const f = fixtureFor(manifest, 'WEB-04');
     await login(page, manifest, accountFor(manifest, 'WEB-04', 'attendee'));
     const before = await walletTicketIds(page, manifest, f.tenantId);
-    await resolveGlobalCode(
-      page,
-      manifest,
-      caseData<string>(f, 'expiredCode'),
-    );
+    await resolveGlobalCode(page, manifest, caseData<string>(f, 'expiredCode'));
     await assertRedeemOutcomePanel(page, 'closed');
     await assertWalletUnchanged(page, manifest, f.tenantId, before);
   });
@@ -156,11 +280,7 @@ test.describe('[WEB-04] negative redeem matrix', () => {
     const f = fixtureFor(manifest, 'WEB-04');
     await login(page, manifest, accountFor(manifest, 'WEB-04', 'attendee'));
     const before = await walletTicketIds(page, manifest, f.tenantId);
-    await resolveGlobalCode(
-      page,
-      manifest,
-      caseData<string>(f, 'closedCode'),
-    );
+    await resolveGlobalCode(page, manifest, caseData<string>(f, 'closedCode'));
     await assertRedeemOutcomePanel(page, 'closed');
     await assertWalletUnchanged(page, manifest, f.tenantId, before);
   });
@@ -255,12 +375,12 @@ test('[WEB-06] manual source stays pending without a QR before approval', async 
 });
 
 test.describe('[WEB-07] idempotent redemption', () => {
-  test('double submit issues one ticket for a fresh code', async ({
-    page,
-  }) => {
+  test('double submit issues one ticket for a fresh code', async ({ page }) => {
     const manifest = loadManifest();
     const f = fixtureFor(manifest, 'WEB-07');
     if (!f.code) throw new Error('BLOCKED: WEB-07 cần code');
+    const codeId = codeIdFor(f);
+    const dbBefore = await readRedemptionState(f, codeId);
     await login(page, manifest, accountFor(manifest, 'WEB-07', 'attendee'));
     const before = await walletTicketIds(page, manifest, f.tenantId);
     await openCodeConfirmation(page, manifest, f.code);
@@ -276,6 +396,13 @@ test.describe('[WEB-07] idempotent redemption', () => {
     await expect(page.getByTestId('redeem-ux-success')).toBeVisible();
     const after = await walletTicketIds(page, manifest, f.tenantId);
     expect(after.filter((id) => !before.includes(id))).toHaveLength(1);
+    assertIssuedExactlyOnce(
+      dbBefore,
+      await readRedemptionState(f, codeId),
+      f,
+      accountFor(manifest, 'WEB-07', 'attendee').userId!,
+      after.find((id) => !before.includes(id)),
+    );
   });
 
   test('lost response after server commit reconciles to one ticket via poll', async ({
@@ -285,6 +412,8 @@ test.describe('[WEB-07] idempotent redemption', () => {
     const manifest = loadManifest();
     const f = fixtureFor(manifest, 'WEB-07');
     const lostResponseCode = caseData<string>(f, 'lostResponseCode');
+    const codeId = codeIdFor(f, 'lostResponse');
+    const dbBefore = await readRedemptionState(f, codeId);
     await login(page, manifest, accountFor(manifest, 'WEB-07', 'attendee'));
     const before = await walletTicketIds(page, manifest, f.tenantId);
     await openCodeConfirmation(page, manifest, lostResponseCode);
@@ -317,6 +446,13 @@ test.describe('[WEB-07] idempotent redemption', () => {
     const after = await walletTicketIds(page, manifest, f.tenantId);
     expect(after).toContain(committedTicketId);
     expect(after.filter((id) => !before.includes(id))).toHaveLength(1);
+    assertIssuedExactlyOnce(
+      dbBefore,
+      await readRedemptionState(f, codeId),
+      f,
+      accountFor(manifest, 'WEB-07', 'attendee').userId!,
+      committedTicketId,
+    );
   });
 
   test('reload after success cannot replay a second ticket for the same code', async ({
@@ -325,6 +461,8 @@ test.describe('[WEB-07] idempotent redemption', () => {
     const manifest = loadManifest();
     const f = fixtureFor(manifest, 'WEB-07');
     const reloadCode = caseData<string>(f, 'reloadCode');
+    const codeId = codeIdFor(f, 'reload');
+    const dbBefore = await readRedemptionState(f, codeId);
     await login(page, manifest, accountFor(manifest, 'WEB-07', 'attendee'));
     const before = await walletTicketIds(page, manifest, f.tenantId);
     await openCodeConfirmation(page, manifest, reloadCode);
@@ -338,6 +476,14 @@ test.describe('[WEB-07] idempotent redemption', () => {
     await expect(page.getByTestId('redeem-ux-success')).toBeVisible();
     const afterFirst = await walletTicketIds(page, manifest, f.tenantId);
     expect(afterFirst.filter((id) => !before.includes(id))).toHaveLength(1);
+    const issued = await readRedemptionState(f, codeId);
+    assertIssuedExactlyOnce(
+      dbBefore,
+      issued,
+      f,
+      accountFor(manifest, 'WEB-07', 'attendee').userId!,
+      afterFirst.find((id) => !before.includes(id)),
+    );
 
     // Reload drops the in-memory idempotency key — resubmitting the same
     // code now mints a fresh key with no record of the earlier success.
@@ -349,6 +495,7 @@ test.describe('[WEB-07] idempotent redemption', () => {
     );
     await assertRedeemOutcomePanel(page, 'used');
     await assertWalletUnchanged(page, manifest, f.tenantId, afterFirst);
+    assertNoExtraIssue(issued, await readRedemptionState(f, codeId));
   });
 
   test('same idempotency key with a changed payload is rejected without issuing a second ticket', async ({
@@ -357,6 +504,8 @@ test.describe('[WEB-07] idempotent redemption', () => {
     const manifest = loadManifest();
     const f = fixtureFor(manifest, 'WEB-07');
     const conflictCode = caseData<string>(f, 'conflictCode');
+    const codeId = codeIdFor(f, 'conflict');
+    const dbBefore = await readRedemptionState(f, codeId);
     const altAnswers = caseData<Record<string, string | boolean>>(
       f,
       'conflictAnswersAlt',
@@ -394,6 +543,74 @@ test.describe('[WEB-07] idempotent redemption', () => {
     const after = await walletTicketIds(page, manifest, f.tenantId);
     expect(after).toContain(ticketId);
     expect(after.filter((id) => !before.includes(id))).toHaveLength(1);
+    const issued = await readRedemptionState(f, codeId);
+    assertIssuedExactlyOnce(
+      dbBefore,
+      issued,
+      f,
+      accountFor(manifest, 'WEB-07', 'attendee').userId!,
+      ticketId,
+    );
+    expect(
+      issued.operations.filter((row) => row.client_key === idempotencyKey),
+    ).toHaveLength(1);
+  });
+
+  test('two concurrent requests for one code issue only one ticket', async ({
+    page,
+  }) => {
+    const manifest = loadManifest();
+    const f = fixtureFor(manifest, 'WEB-07');
+    const raceCode = caseData<string>(f, 'raceCode');
+    const codeId = codeIdFor(f, 'race');
+    await login(page, manifest, accountFor(manifest, 'WEB-07', 'attendee'));
+    const before = await readRedemptionState(f, codeId);
+    const payload = {
+      tenantId: f.tenantId,
+      eventId: f.eventId,
+      code: raceCode,
+      formVersion: 'form-v1',
+      termsVersion: 'terms-v1',
+      answers: f.data?.answers,
+      termsAccepted: true,
+    };
+    await page.request.get(webUrl(manifest, '/api/bff/csrf'));
+    const cookies = await page.context().cookies(manifest.origins.web);
+    const csrfToken = cookies.find(
+      (cookie) => cookie.name === 'vemoki_csrf',
+    )?.value;
+    expect(csrfToken).toBeTruthy();
+    const post = async () => {
+      const response = await page.request.post(
+        webUrl(manifest, '/api/bff/redeem'),
+        {
+          headers: {
+            'content-type': 'application/json',
+            origin: manifest.origins.web,
+            'x-csrf-token': csrfToken!,
+          },
+          data: { ...payload, idempotencyKey: randomUUID() },
+        },
+      );
+      return {
+        status: response.status(),
+        json: await response.json().catch(() => null),
+      };
+    };
+    const [a, b] = await Promise.all([post(), post()]);
+    expect([a.status, b.status].sort()).toEqual([201, 409]);
+    const winner = a.status === 201 ? a : b;
+    const loser = a.status === 409 ? a : b;
+    expect((loser.json as { code?: string }).code).toBe('CODE_CONSUMED');
+    const ticketId = (winner.json as { ticketId?: string }).ticketId;
+    expect(ticketId).toMatch(/^[0-9a-f-]{36}$/i);
+    assertIssuedExactlyOnce(
+      before,
+      await readRedemptionState(f, codeId),
+      f,
+      accountFor(manifest, 'WEB-07', 'attendee').userId!,
+      ticketId,
+    );
   });
 });
 
