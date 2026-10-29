@@ -245,18 +245,31 @@ test('completed generation reruns without rewriting frozen inventory evidence', 
   } finally { await rm(dir, { recursive: true, force: true }); }
 });
 
-test('previously finalized generation fails if any object reappears', async () => {
+test('PITR restore reconciles current, version, marker and multipart after finalized DB marker', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'o06-purge-'));
   const evidencePath = join(dir, 'evidence.json');
   await writeFile(evidencePath, JSON.stringify(evidence()));
   try {
     const db = dbMock({ status: { matched: true, fenced: true, inventoryRecorded: true,
       unpurgedCount: 0, activeLeaseCount: 0 } });
-    const store = { async health() {}, async inventory() {
-      return [{ type: 'current', key: `${prefix}late.csv` }];
-    }, async remove() { throw Error('must not hide late object'); } };
-    await assert.rejects(purgeEvent(db, store,
-      { phase: 'purge', tenantId, eventId, generation, evidencePath }), /reappeared/);
+    const entries = [
+      { type: 'current', key: `${prefix}late.csv` },
+      { type: 'version', key: `${prefix}old.csv`, versionId: 'v1' },
+      { type: 'marker', key: `${prefix}old.csv`, versionId: 'm1' },
+      { type: 'upload', key: `${prefix}partial.csv`, uploadId: 'u1' },
+    ];
+    const removed = [];
+    const store = { async health() {}, async inventory() { return [...entries]; },
+      async remove(entry) {
+        removed.push(entry);
+        entries.splice(entries.indexOf(entry), 1);
+      } };
+    const result = await purgeEvent(db, store,
+      { phase: 'purge', tenantId, eventId, generation, evidencePath });
+    assert.equal(result.alreadyFinalized, true);
+    assert.equal(result.reconciled, true);
+    assert.equal(removed.length, 4);
+    assert.deepEqual(result.inventories.map((x) => x.count), [4, 0, 0]);
     assert.ok(!db.queries.some((x) => x.sql.includes('record_export_retention_inventory')));
   } finally { await rm(dir, { recursive: true, force: true }); }
 });
