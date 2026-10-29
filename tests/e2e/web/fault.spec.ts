@@ -15,7 +15,39 @@ import {
   webUrl,
 } from './helpers';
 
-type FaultMode = 'unavailable' | 'error500' | 'lostResponse';
+type FaultMode = 'unavailable' | 'error500' | 'lostResponse' | 'timeout';
+
+function catalogListPaths(manifest: ReturnType<typeof loadManifest>): string[] {
+  return [
+    ...new Set(
+      Object.values(manifest.cases)
+        .map((entry) => entry.tenantSlug)
+        .filter(Boolean)
+        .map((slug) => `/v1/public/tenants/${slug}/events`),
+    ),
+  ];
+}
+
+function setFaultRoutes(
+  control: string,
+  ownerRunId: string,
+  paths: string[],
+  mode: FaultMode | null,
+) {
+  let current: { ownerRunId: string; routes: Record<string, string> };
+  try {
+    current = JSON.parse(readFileSync(control, 'utf8'));
+  } catch {
+    current = { ownerRunId, routes: {} };
+  }
+  current.ownerRunId = ownerRunId;
+  current.routes = current.routes ?? {};
+  for (const path of paths) {
+    if (mode) current.routes[path] = mode;
+    else delete current.routes[path];
+  }
+  writeFileSync(control, JSON.stringify(current), { mode: 0o600 });
+}
 
 function faultControlPathFor(manifest: ReturnType<typeof loadManifest>) {
   const control = manifest.runtime?.faultControlPath;
@@ -66,6 +98,44 @@ test('[WEB-10] public detail shows upstream failure and recovers after transport
   }
 });
 
+test('[WEB-10] home catalog distinguishes upstream unavailable from filter empty and recovers', async ({
+  page,
+}) => {
+  const manifest = loadManifest();
+  const fixture = fixtureFor(manifest, 'WEB-10');
+  const control = faultControlPathFor(manifest);
+  const listPaths = catalogListPaths(manifest);
+  const setCatalogFault = (mode: FaultMode | null) =>
+    setFaultRoutes(control, manifest.runId, listPaths, mode);
+  try {
+    await page.goto(webUrl(manifest, '/'));
+    await expect(page.getByTestId('home-catalog-grid')).toBeVisible();
+    await expect(page.getByTestId(`home-event-${fixture.eventId}`)).toBeVisible();
+
+    await page.getByTestId('home-catalog-filter-past').click();
+    await expect(page.getByTestId('home-catalog-empty')).toBeVisible();
+    await expect(page.getByTestId('home-events-unreachable')).toHaveCount(0);
+    await expect(page.getByTestId('home-catalog-grid')).toHaveCount(0);
+
+    await page.getByTestId('home-catalog-filter-upcoming').click();
+    await expect(page.getByTestId('home-catalog-grid')).toBeVisible();
+
+    setCatalogFault('unavailable');
+    await page.reload();
+    await expect(page.getByTestId('home-events-unreachable')).toBeVisible();
+    await expect(page.getByTestId('home-catalog-empty')).toHaveCount(0);
+    await expect(page.getByTestId('home-catalog-grid')).toHaveCount(0);
+    await expect(page.getByTestId('home-events-empty')).toHaveCount(0);
+
+    setCatalogFault(null);
+    await page.reload();
+    await expect(page.getByTestId('home-catalog-grid')).toBeVisible();
+    await expect(page.getByTestId('home-events-unreachable')).toHaveCount(0);
+  } finally {
+    setCatalogFault(null);
+  }
+});
+
 test('[WEB-10] owner wallet distinguishes upstream unavailable from real empty and recovers with real data', async ({
   page,
 }) => {
@@ -108,6 +178,46 @@ test('[WEB-10] owner wallet distinguishes upstream unavailable from real empty a
     await expect(page.getByTestId('wallet-ready')).toBeVisible();
     await expect(page.getByTestId('wallet-empty')).toBeVisible();
     await expect(page.getByTestId('wallet-unreachable')).toHaveCount(0);
+  } finally {
+    setFault(null);
+  }
+});
+
+test('[WEB-10] redeem shows client timeout when upstream hangs without committing or faking success', async ({
+  page,
+}) => {
+  const manifest = loadManifest();
+  const fixture = fixtureFor(manifest, 'WEB-10');
+  if (!fixture.code)
+    throw new Error('BLOCKED: WEB-10 cần code cho timeout branch');
+  const control = faultControlPathFor(manifest);
+  const path = `/v1/tenants/${fixture.tenantId}/events/${fixture.eventId}/redemptions`;
+  const setFault = (mode: FaultMode | null) =>
+    setFaultRoute(control, manifest.runId, path, mode);
+  const answers = fixture.data?.answers as
+    | Record<string, string | boolean>
+    | undefined;
+
+  try {
+    await login(page, manifest, accountFor(manifest, 'WEB-10', 'attendee'));
+    expect(
+      await walletTicketIds(page, manifest, fixture.tenantId),
+    ).toHaveLength(0);
+
+    setFault('timeout');
+    await openCodeConfirmation(page, manifest, fixture.code);
+    await fillPublishedForm(page, answers);
+    await page
+      .getByRole('button', { name: 'Đổi mã lấy vé', exact: true })
+      .click();
+    await expect(page.getByTestId('redeem-ux-timeout')).toBeVisible({
+      timeout: 35_000,
+    });
+    await expect(page.getByTestId('redeem-ux-success')).toHaveCount(0);
+    await expect(page.getByTestId('redeem-ticket-card')).toHaveCount(0);
+    expect(
+      await walletTicketIds(page, manifest, fixture.tenantId),
+    ).toHaveLength(0);
   } finally {
     setFault(null);
   }

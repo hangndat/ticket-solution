@@ -187,9 +187,18 @@ if (mode === 'list' || args.includes('--list')) {
     const rawManifest = JSON.parse(readFileSync(state.manifestPath, 'utf8'));
     if (rawManifest.cases['WEB-10']) {
       const fixture = rawManifest.cases['WEB-10'];
+      const catalogListPaths = [
+        ...new Set(
+          Object.values(rawManifest.cases)
+            .map((entry) => entry.tenantSlug)
+            .filter(Boolean)
+            .map((slug) => `/v1/public/tenants/${slug}/events`),
+        ),
+      ];
       state.faultControlPath = resolve(state.dir, 'fault-control.json');
       state.faultPaths = [
         `/v1/public/tenants/${fixture.tenantSlug}/events/${fixture.eventSlug}`,
+        ...catalogListPaths,
         '/v1/me/tenants',
         '/v1/me/tickets',
         `/v1/tenants/${fixture.tenantId}/events/${fixture.eventId}/redemptions`,

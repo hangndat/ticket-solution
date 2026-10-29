@@ -100,6 +100,8 @@ if (!args.includes('--no-build')) {
     run('pnpm', ['--filter', '@ticket/api', 'build']);
   if (selectors.some((s) => s.file.startsWith('apps/worker/')))
     run('pnpm', ['--filter', '@ticket/worker', 'build']);
+  if (selectors.some((s) => s.file === 'tests/e2e/backend/reissue-worker-mailpit.test.cjs'))
+    run('pnpm', ['--filter', '@ticket/worker', 'build']);
 }
 for (const s of selectors) {
   if (!existsSync(resolve(root, s.file)))

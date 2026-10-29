@@ -148,12 +148,14 @@
     "caseId": "WEB-10",
     "tests": [
       "fault.spec.ts › [WEB-10] public detail shows upstream failure and recovers after transport restoration",
+      "fault.spec.ts › [WEB-10] home catalog distinguishes upstream unavailable from filter empty and recovers",
       "fault.spec.ts › [WEB-10] owner wallet distinguishes upstream unavailable from real empty and recovers with real data",
+      "fault.spec.ts › [WEB-10] redeem shows client timeout when upstream hangs without committing or faking success",
       "fault.spec.ts › [WEB-10] redeem distinguishes a request that never reached the server from a lost response that already committed, and never fakes success"
     ],
     "layers": ["B", "H"],
     "status": "implemented",
-    "reason": "WEB-10 targeted PASS run mvszxd25-519747 (3/3 browser). Fault proxy run-scoped routes map (unavailable/error500/lostResponse) cho public-detail, owner wallet /v1/me/tickets và redeem /v1/tenants/.../redemptions; không sửa seed/fixture. Owner-wallet test giờ có positive control (vé thật rỗng trước khi fault) rồi khẳng định unavailable (503) và error500 (500 non-retryable) đều hiện wallet-unreachable, không wallet-empty/wallet-ready giả, và phục hồi thật về wallet-ready+wallet-empty khi gỡ fault — xác nhận riêng negative-control run (đổi assertion mong đợi wallet-empty) FAIL trước khi phục hồi để chứng minh assertion không vô nghĩa. lostResponse forward thật tới API rồi cắt kết nối cho UI tự poll /v1/operations/{key} đối soát operation thật, không fixture fallback/fake success. error500 trên redeem/public-detail chưa có test riêng dùng nó (wallet đã đủ đại diện cho nhánh 5xx không-retryable, status map chung sang 'unreachable')."
+    "reason": "F03 fix lượt 2: home catalog dùng revalidateSeconds:0 trên loadPublishedEventList để reload sau fault không dính Next fetch cache (mvt23wo0 grid stale); redeem sau client timeout giữ redeem-ux-timeout khi poll xác nhận không có operation (tránh overwrite bằng Operation not found). Browser PASS mvt28b4s-58bd32 5/5 fault.spec WEB-10."
   },
   {
     "caseId": "WEB-11",
