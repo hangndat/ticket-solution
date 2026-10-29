@@ -523,7 +523,8 @@ function startProxy(state) {
       if (
         route === 'api' &&
         state.faultControlPath &&
-        state.faultPaths?.includes(reqPath) &&
+        (state.faultPaths?.includes(reqPath) ||
+          reqPath.startsWith('/v1/operations/')) &&
         existsSync(state.faultControlPath)
       ) {
         let fault;
@@ -547,6 +548,20 @@ function startProxy(state) {
               ? { code: 'E2E_UPSTREAM_UNAVAILABLE', retryable: true }
               : { code: 'E2E_UPSTREAM_ERROR', retryable: false },
           ),
+        );
+        return;
+      }
+      if (faultMode === 'operation404') {
+        res.writeHead(404, {
+          'content-type': 'application/json',
+          'cache-control': 'no-store',
+        });
+        res.end(
+          JSON.stringify({
+            code: 'NOT_FOUND',
+            message: 'Operation not found',
+            retryable: true,
+          }),
         );
         return;
       }
@@ -582,6 +597,36 @@ function startProxy(state) {
           },
         );
         target.on('error', () => res.destroy());
+        req.pipe(target);
+        return;
+      }
+      if (faultMode === 'earlyTimeout') {
+        // The API keeps processing the forwarded POST while the client sees
+        // an upstream timeout. A deferred DB trigger in WEB-10 holds COMMIT.
+        const timer = setTimeout(() => {
+          if (res.destroyed) return;
+          res.writeHead(504, {
+            'content-type': 'application/json',
+            'cache-control': 'no-store',
+          });
+          res.end(
+            JSON.stringify({ code: 'E2E_UPSTREAM_TIMEOUT', retryable: true }),
+          );
+        }, 700);
+        const target = httpRequest(
+          {
+            hostname: '127.0.0.1',
+            port: upstream,
+            path: req.url,
+            method: req.method,
+            headers,
+          },
+          (reply) => reply.resume(),
+        );
+        target.on('error', () => {
+          clearTimeout(timer);
+          if (!res.destroyed) res.destroy();
+        });
         req.pipe(target);
         return;
       }
