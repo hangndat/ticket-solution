@@ -1,0 +1,185 @@
+[
+  {
+    "caseId": "AUTH-01",
+    "tests": ["auth.spec.ts › [AUTH-01]"],
+    "layers": ["B", "H"],
+    "status": "blocked",
+    "reason": "Có login attendee, BFF /me, PKCE/state/nonce assertion; smoke mvs7d4db-259457 FAIL vì OIDC nonce null. Chưa kiểm staff client và scope."
+  },
+  {
+    "caseId": "AUTH-02",
+    "tests": ["auth.spec.ts › [AUTH-02]"],
+    "layers": ["B", "H"],
+    "status": "blocked",
+    "reason": "Có sai mật khẩu/callback thực sự thiếu state và xác nhận BFF không tạo session; chưa có issuer/audience/expiry/upstream matrix."
+  },
+  {
+    "caseId": "AUTH-03",
+    "tests": ["auth.spec.ts › [AUTH-03]"],
+    "layers": ["B"],
+    "status": "blocked",
+    "reason": "Có guest gate và unverified submit bị chặn trước issue; chưa đối soát DB code/quota/pending."
+  },
+  {
+    "caseId": "AUTH-04",
+    "tests": ["auth.spec.ts › [AUTH-04]"],
+    "layers": ["B", "H"],
+    "status": "blocked",
+    "reason": "Có Web logout; thiếu Portal/Platform host-cookie boundary."
+  },
+  {
+    "caseId": "AUTH-05",
+    "tests": [
+      "B:auth.spec.ts › [AUTH-05] expired access token refreshes inside BFF",
+      "B:auth.spec.ts › [AUTH-05] revoked Keycloak refresh fails closed and actors stay isolated"
+    ],
+    "layers": ["B"],
+    "status": "blocked",
+    "reason": "Run mvsyhvyb-0f40bb (working tree chưa commit dựa trên d63b4eb, 2026-10-29): TTL ngắn refresh xoay cookie thành công; revoke refresh token thật qua Keycloak /revoke rồi chờ access token hết hạn theo exp thật — actor bị revoke nhận refresh redirect /auth, mất toàn bộ oidc_access_token/oidc_refresh_token/web_oidc_sub, /api/bff/me 401; actor khác trong context riêng vẫn refresh/wallet/me 200 và không lộ userId chéo. Phân biệt rõ: API bearer vẫn 200 trong 5 phút clock-skew theo thiết kế xác minh JWT (không phải bug), còn BFF cookie-refresh path dùng refresh token nên fail-closed ngay khi bị revoke. Chưa có case H riêng cho AUTH-05 (API 401 khi access token tự hết hạn không refresh) — không trong scope dispatch này."
+  },
+  {
+    "caseId": "AUTH-06",
+    "tests": [
+      "B:auth.spec.ts › [AUTH-06] attendee session grants no staff Portal identity",
+      "B:auth.spec.ts › [AUTH-06] redeem UI does not claim success after session capability is cleared",
+      "B:auth.spec.ts › [AUTH-06] wallet does not show ticket grid after session capability is cleared",
+      "H:live.test.mjs#[AUTH-06]"
+    ],
+    "layers": ["B", "H"],
+    "status": "blocked",
+    "reason": "Browser run mvt12lek-958d34 (working tree, 2026-10-29): 3/3 AUTH-06 browser PASS — attendee không có Portal subject; redeem sau clear session → redeem-ux-auth, không redeem-ux-success/ticket card; wallet sau clear session → wallet-need-login, không wallet-ready/grid, /api/bff/me 401. H vẫn revoke membership/assignment/staff-session qua API (live.test.mjs). Gaps: gate/check-in UI false-success thuộc Portal; access-token tự hết hạn trên Web UI cần shortWeb (harness chỉ bật với AUTH-05) — self-expiry UI chưa phủ trong run --case=AUTH-06; AUTH-05 H API 401 không refresh ngoài scope."
+  },
+  {
+    "caseId": "AUTH-07",
+    "tests": ["auth.spec.ts › [AUTH-07]"],
+    "layers": ["B", "H"],
+    "status": "blocked",
+    "reason": "Có đổi account, reload detail, HTTP owner 200 rồi 403/404, no-store; thiếu in-flight request/back-cache và admin data."
+  },
+  {
+    "caseId": "AUTH-08",
+    "tests": ["auth.spec.ts › [AUTH-08]"],
+    "layers": ["B"],
+    "status": "blocked",
+    "reason": "Có consent, một POST browser, HTTP ACK 200/201/202 với requestId/REQUESTED và copy không hứa xóa ngay; thiếu DB one-open-request, retry sau unknown, revoke/job/IdP failure."
+  },
+  {
+    "caseId": "WEB-01",
+    "tests": ["public.spec.ts › [WEB-01]"],
+    "layers": ["B"],
+    "status": "blocked",
+    "reason": "Có published trên catalog/detail, draft vắng catalog và detail HTTP 404, private/unlisted vắng catalog nhưng direct link HTTP 200 theo PRD M03; source hiện tại chặn private direct link. Thiếu API projection trực tiếp và nonexistent event."
+  },
+  {
+    "caseId": "WEB-02",
+    "tests": ["redeem.spec.ts › [WEB-02]"],
+    "layers": ["B", "H"],
+    "status": "implemented",
+    "reason": "Browser UI auto, wallet, QR/reload và ticket list; PostgreSQL runtime role + tenant transaction-local RLS xác nhận code CONSUMED, đúng một request/ticket/operation và TicketIssued outbox, event/type/source/owner cùng mọi quota bucket tăng đúng một. Targeted WEB-02/07 PASS run mvsw7lum-c9f6a7."
+  },
+  {
+    "caseId": "WEB-03",
+    "tests": [
+      "redeem.spec.ts › [WEB-03] event link survives login and issues for the globally resolved event",
+      "redeem.spec.ts › [WEB-03] invalid and ambiguous codes keep context private and state unchanged"
+    ],
+    "layers": ["B", "H"],
+    "status": "implemented",
+    "reason": "WEB-03 targeted mvsxbht5-863995 và WEB-03+WEB-04 cùng run mvsxo9u5-555265 PASS 8/8; full browser sau cleanup mvsxpkhf-02af2b PASS 52/52. Event link qua OIDC login giữ tenant/event, submit cấp đúng một ticket cho owner/event/type/source, code CONSUMED, quota +1, operation COMPLETED, TicketIssued outbox; global entry resolve cùng published event. Mã sai cả hai entry giữ UX/privacy và không issue. Fixture tạo event thứ hai cùng mã, backend legacy backfill hình thành group AMBIGUOUS có hai candidate; BFF/UI không lộ tenant/event/owner. Cleanup transactional phục hồi ROUTABLE và xóa event/code/candidate phụ để không ảnh hưởng case sau. PostgreSQL kiểm ambiguity không phát sinh thêm business state; event-scoped invalid chỉ ghi một operation CODE_INVALID."
+  },
+  {
+    "caseId": "WEB-04",
+    "tests": [
+      "redeem.spec.ts › [WEB-04] negative redeem matrix › invalid code does not issue ticket or reveal owner data",
+      "redeem.spec.ts › [WEB-04] negative redeem matrix › expired redemption window returns closed UX without issuing",
+      "redeem.spec.ts › [WEB-04] negative redeem matrix › used code does not issue a second ticket",
+      "redeem.spec.ts › [WEB-04] negative redeem matrix › closed event does not issue ticket or leak email",
+      "redeem.spec.ts › [WEB-04] negative redeem matrix › exhausted quota does not issue ticket on submit",
+      "redeem.spec.ts › [WEB-04] negative redeem matrix › attendee ticket limit returns exhausted UX without issuing",
+      "redeem.spec.ts › [WEB-04] negative redeem matrix › suspended tenant blocks redeem without leaking owner email"
+    ],
+    "layers": ["B", "H"],
+    "status": "blocked",
+    "reason": "Run mvt54p4f-9ad957 PASS 7/7 (base SHA 9551dd8c8343, working tree chưa commit): PostgreSQL readWeb04EventSnapshot/assertWeb04NegativeUnchanged từng nhánh invalid/expired/used/cancelled/quota/limit/suspended — số ticket, code/quota không đổi, không IN_PROGRESS dangling; wallet giữ nguyên. Suspended: assertRedeemRejectedWithoutTicket (denied/error/unknown, không lộ @); HTTP TENANT_SUSPENDED riêng. Chưa đối soát request/outbox từng nhánh; MANUAL approve/reject/expiry thuộc Portal/WEB-06 vẫn thiếu, nên WEB-04 chưa đạt acceptance đầy đủ."
+  },
+  {
+    "caseId": "WEB-05",
+    "tests": ["redeem.spec.ts › [WEB-05]"],
+    "layers": ["B"],
+    "status": "blocked",
+    "reason": "Có terms/required client gate; thiếu field-type/allowlist/server version assertions."
+  },
+  {
+    "caseId": "WEB-06",
+    "tests": ["redeem.spec.ts › [WEB-06]"],
+    "layers": ["B"],
+    "status": "blocked",
+    "reason": "Browser PASS run mvt0wnef-960246: pending UX, không QR/ticket; PostgreSQL HELD + PENDING_REVIEW, quota không allocate (readManualPendingHold). Thiếu Portal approve/reject/expiry và ticket/quota sau approve."
+  },
+  {
+    "caseId": "WEB-07",
+    "tests": [
+      "redeem.spec.ts › [WEB-07] idempotent redemption › double submit issues one ticket for a fresh code",
+      "redeem.spec.ts › [WEB-07] idempotent redemption › lost response after server commit reconciles to one ticket via poll",
+      "redeem.spec.ts › [WEB-07] idempotent redemption › reload after success cannot replay a second ticket for the same code",
+      "redeem.spec.ts › [WEB-07] idempotent redemption › same idempotency key with a changed payload is rejected without issuing a second ticket",
+      "redeem.spec.ts › [WEB-07] idempotent redemption › two concurrent requests for one code issue only one ticket"
+    ],
+    "layers": ["B", "H"],
+    "status": "implemented",
+    "reason": "Double submit, lost-response sau commit rồi UI poll, reload/resubmit CODE_CONSUMED, same-key đổi payload IDEMPOTENCY_CONFLICT và hai POST BFF thật đồng thời với key khác cho cùng mã (201/409). PostgreSQL runtime role + tenant transaction-local RLS đối soát đúng một request/ticket/operation thành công, code CONSUMED, quota +1 mỗi bucket và một TicketIssued outbox; reload không tăng state. Targeted WEB-02/07 PASS run mvsw7lum-c9f6a7; race gửi Promise.all qua mạng, không có barrier bảo đảm hai transaction cùng lúc giữ lock."
+  },
+  {
+    "caseId": "WEB-08",
+    "tests": ["redeem.spec.ts › [WEB-08]"],
+    "layers": ["B", "H", "R"],
+    "status": "implemented"
+  },
+  {
+    "caseId": "WEB-09",
+    "tests": [
+      "public.spec.ts › [WEB-09] multi-tenant owner wallet and private detail/QR/request/operation"
+    ],
+    "layers": ["B", "H"],
+    "status": "implemented",
+    "reason": "WEB-09 targeted PASS run mvsy2fr7-514bd0. PostgreSQL runtime role + transaction-local RLS xác nhận X/Y không có staff membership ở hai tenant, bốn vé đều thuộc X, gồm ACTIVE/REVOKED/CANCELLED. Keycloak thật: ví X hiển thị vé cả hai tenant; ví/list Y rỗng, detail URL không có QR, ticket API 403/404; request và operation của X trả 200 nhưng Y bị 403/404. Detail X hiển thị nhãn và cảnh báo đúng cho vé thu hồi/hủy. Fixture đặt REVOKED/CANCELLED trực tiếp trong DB; test không chứng minh luồng chuyển trạng thái hoặc cascade. Reviewer chưa tìm thấy luồng backend tạo trạng thái CANCELLED."
+  },
+  {
+    "caseId": "WEB-10",
+    "tests": [
+      "fault.spec.ts › [WEB-10] public detail shows upstream failure and recovers after transport restoration",
+      "fault.spec.ts › [WEB-10] home catalog distinguishes upstream unavailable from filter empty and recovers",
+      "fault.spec.ts › [WEB-10] owner wallet distinguishes upstream unavailable from real empty and recovers with real data",
+      "fault.spec.ts › [WEB-10] redeem keeps a retryable timeout attempt when upstream hangs without committing or faking success",
+      "fault.spec.ts › [WEB-10] redeem distinguishes an uncommitted request from a lost response that committed, and never fakes success",
+      "fault.spec.ts › [WEB-10] redeem reconciles retryable 404 before delayed commit with the original key"
+    ],
+    "layers": ["B", "H"],
+    "status": "implemented",
+    "reason": "F03 catalog fault/recovery được giữ. F05: poll giữ retryable operation 404 ở trạng thái chưa rõ; E2E dùng trigger commit muộn trong DB cô lập, proxy 504 sớm, xác nhận GET 404 trước commit, recovery cùng key và đúng một vé; timeout không tạo vé giả và giữ đường kiểm tra lại."
+  },
+  {
+    "caseId": "WEB-11",
+    "tests": ["public.spec.ts › [WEB-11]"],
+    "layers": ["B"],
+    "status": "blocked",
+    "reason": "Có 390px event/redeem/ticket CTA và overflow; thiếu desktop/form/menu/modal state."
+  },
+  {
+    "caseId": "WEB-12",
+    "tests": ["public.spec.ts › [WEB-12]"],
+    "layers": ["B", "H"],
+    "status": "blocked",
+    "reason": "Có VI/EN, demo CTA, privacy/support; thiếu lead submit và tenant ACTIVE/Owner negative đối soát."
+  },
+  {
+    "caseId": "WEB-13",
+    "tests": [
+      "claim.spec.ts › [WEB-13] AUTO",
+      "claim.spec.ts › [WEB-13] MANUAL"
+    ],
+    "layers": ["B", "H", "R"],
+    "status": "blocked",
+    "reason": "Có import/preview/commit/dispatch/Mailpit/claim/approve happy paths; thiếu reject/expiry/wrong-email/unverified/token replay/idempotency/quota DB assertions."
+  }
+]

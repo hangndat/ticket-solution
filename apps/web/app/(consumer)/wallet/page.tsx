@@ -19,10 +19,8 @@ import {
   WalletNeedLogin,
   WalletUnreachable,
 } from '../../../src/owner-ticket/wallet-chrome';
-import {
-  buildWalletEventFilters,
-  WalletEventFilters,
-} from '../../../src/owner-ticket/wallet-event-filters';
+import { buildWalletEventFilters } from '../../../src/owner-ticket/wallet-event-filter-data';
+import { WalletEventFilters } from '../../../src/owner-ticket/wallet-event-filters';
 import { WalletTicketCard } from '../../../src/owner-ticket/wallet-ticket-card';
 import { ConsumerPageShell } from '../../../src/consumer-page-shell';
 

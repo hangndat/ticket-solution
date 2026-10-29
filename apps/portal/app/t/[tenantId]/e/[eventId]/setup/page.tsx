@@ -25,6 +25,15 @@ import {
 import { useIntentMutation } from '../../../../../../src/client/use-intent-mutation';
 import { intentBlockMessageKey, intentBlockPresentation } from '../../../../../../src/client/intent-mutation';
 
+function clonedEventId(json: unknown): string | null {
+  if (!json || typeof json !== 'object' || !('event' in json)) return null;
+  const event = json.event;
+  if (!event || typeof event !== 'object' || !('eventId' in event)) return null;
+  return typeof event.eventId === 'string' && event.eventId.trim()
+    ? event.eventId.trim()
+    : null;
+}
+
 export default function EventSetupPage() {
   const { t } = usePortalLocale();
   const params = useParams<{ tenantId: string; eventId: string }>();
@@ -216,7 +225,7 @@ export default function EventSetupPage() {
           copyConfig: true,
         },
         (body) => portalMutate(bffEventAction(tenantId, eventId, 'clone'), body),
-        (res) => !!(res.json && typeof res.json === 'object' && typeof (res.json as { eventId?: unknown }).eventId === 'string' && (res.json as { eventId: string }).eventId.trim()),
+        (res) => clonedEventId(res.json) !== null,
       );
       if (outcome.kind === 'blocked') {
         setNotice(t(intentBlockMessageKey(outcome.reason)));
@@ -228,12 +237,7 @@ export default function EventSetupPage() {
       }
       const res = outcome.response;
       if (outcome.kind === 'confirmed') {
-        const newId =
-          res.json &&
-          typeof res.json === 'object' &&
-          typeof (res.json as { eventId?: unknown }).eventId === 'string'
-            ? ((res.json as { eventId: string }).eventId as string)
-            : null;
+        const newId = clonedEventId(res.json);
         if (newId) {
           cloneDirtyRef.current = false;
           setCloneDirty(false);
