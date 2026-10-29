@@ -7,6 +7,8 @@ import {
   readMinioImportsEnvironment,
   reconcileDuePendingRedemptions,
   processDueAccountAnonymizations,
+  processDueTicketPiiAnonymizations,
+  processDueObjectRetentions,
   relayExportsOnce,
   relayOutboxOnce,
   metricsInc,
@@ -48,6 +50,8 @@ const STEP_BUDGET_MS: Record<WorkerTickStep, number> = {
   reconcile_pending_redemptions: 5_000,
   relay_outbox: 20_000,
   process_account_anonymizations: 30_000,
+  process_ticket_pii_anonymizations: 60_000,
+  process_export_object_retentions: 60_000,
   relay_exports: 60_000,
   cleanup_import_files: 30_000,
 };
@@ -56,6 +60,8 @@ const OLDEST_DUE_BUDGET_SECONDS: Record<WorkerJobClass, number> = {
   reconcile_pending_redemptions: 10,
   relay_outbox: 60,
   process_account_anonymizations: 15 * 60,
+  process_ticket_pii_anonymizations: 60 * 60,
+  process_export_object_retentions: 60 * 60,
   relay_exports: 5 * 60,
   cleanup_import_files: 30 * 60,
 };
@@ -226,9 +232,21 @@ export class WorkerRelay implements OnModuleDestroy {
         leaseOwner: this.leaseOwner,
       }),
     );
-    if (readMinioEnvironment(this.env)) {
+    await this.step('process_ticket_pii_anonymizations', () =>
+      processDueTicketPiiAnonymizations(this.db!, 10),
+    );
+    const exportsConfig = readMinioEnvironment(this.env);
+    if (exportsConfig) {
       await this.step('relay_exports', () =>
         relayExportsOnce(this.db!, this.env, this.leaseOwner, 1),
+      );
+      await this.step('process_export_object_retentions', () =>
+        processDueObjectRetentions(
+          this.db!,
+          createMinioObjectStore(exportsConfig),
+          this.leaseOwner,
+          1,
+        ),
       );
     }
     const importsCfg = readMinioImportsEnvironment(this.env);
@@ -361,6 +379,7 @@ export class WorkerRelay implements OnModuleDestroy {
       env: this.env,
       leaseOwner: this.leaseOwner,
     });
+    await processDueTicketPiiAnonymizations(this.db, 10);
     const outbox = await relayOutboxOnce(
       this.db,
       this.email,
@@ -368,8 +387,15 @@ export class WorkerRelay implements OnModuleDestroy {
       1,
       this.relayOpts(),
     );
-    if (readMinioEnvironment(this.env)) {
+    const exportsConfig = readMinioEnvironment(this.env);
+    if (exportsConfig) {
       await relayExportsOnce(this.db, this.env, this.leaseOwner, 1);
+      await processDueObjectRetentions(
+        this.db,
+        createMinioObjectStore(exportsConfig),
+        this.leaseOwner,
+        1,
+      );
     }
     return outbox;
   }

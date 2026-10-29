@@ -88,6 +88,9 @@ test('[PORT-08] event report shows seeded KPI, asOf and work links', async ({
         pendingApprovalCount: number;
         checkInSuccessCount: number;
         emailNeedsCsCount: number;
+        quotaCapacityState?: string;
+        quotaRemaining?: number | null;
+        quota?: { capacity: number | null; allocated: number };
       }
     | undefined;
   if (!expected) throw new Error('BLOCKED: PORT-08 report fixture missing');
@@ -98,13 +101,31 @@ test('[PORT-08] event report shows seeded KPI, asOf and work links', async ({
   expect(report.pendingApprovalCount).toBe(expected.pendingApprovalCount);
   expect(report.checkInSuccessCount).toBe(expected.checkInSuccessCount);
   expect(report.emailNeedsCsCount).toBe(expected.emailNeedsCsCount);
+  if (expected.quotaCapacityState != null) {
+    expect(report.quotaCapacityState).toBe(expected.quotaCapacityState);
+  }
+  if (expected.quotaRemaining !== undefined) {
+    expect(report.quotaRemaining).toBe(expected.quotaRemaining);
+  }
+  if (expected.quota) {
+    expect(report.quota).toEqual(expected.quota);
+  }
   expect(Date.parse(String(report.asOf))).not.toBeNaN();
   await page.goto(portalUrl(m, eventPath(f, '/gate')));
+  await expect(page.getByTestId('event-report-as-of')).toBeVisible();
+  await expect(
+    page
+      .getByText(String(expected.checkInSuccessCount), { exact: true })
+      .first(),
+  ).toBeVisible();
   await expect(
     page
       .getByText(String(expected.pendingApprovalCount), { exact: true })
       .first(),
   ).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Resend email', exact: true }),
+  ).toHaveCount(0);
   if (expected.pendingApprovalCount > 0) {
     await expect(
       page.getByTestId('event-report-cta-pending-approval').locator('xpath=..'),
@@ -115,6 +136,17 @@ test('[PORT-08] event report shows seeded KPI, asOf and work links', async ({
       page.getByTestId('event-report-cta-email-cs').locator('xpath=..'),
     ).toHaveAttribute('href', `${eventPath(f, '/support')}#cs`);
   }
+  const refreshed = page.waitForResponse(
+    (r) =>
+      r.url().includes('/report') &&
+      r.request().method() === 'GET' &&
+      r.status() === 200,
+  );
+  await page
+    .getByRole('button', { name: /Làm mới|Refresh/i })
+    .first()
+    .click();
+  await refreshed;
 });
 
 test('[PORT-10] portfolio only returns assigned report events', async ({

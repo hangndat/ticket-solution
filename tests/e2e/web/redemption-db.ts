@@ -30,6 +30,74 @@ export function codeIdFor(fixture: CaseFixture, name = 'primary'): string {
   return id;
 }
 
+export async function readEventQuotas(fixture: CaseFixture): Promise<Row[]> {
+  if (!process.env.DATABASE_URL || !process.env.E2E_RUN_DIR)
+    throw new Error(
+      'BLOCKED: PostgreSQL assertion requires isolated E2E runtime',
+    );
+  const client = new Client({ connectionString: process.env.DATABASE_URL });
+  await client.connect();
+  try {
+    await client.query('BEGIN READ ONLY');
+    await client.query("SELECT set_config('app.tenant_id', $1, true)", [
+      fixture.tenantId,
+    ]);
+    const rows = await client.query(
+      'SELECT id, scope, scope_id, capacity, allocated FROM quota_buckets WHERE tenant_id=$1::uuid AND event_id=$2::uuid ORDER BY scope, id',
+      [fixture.tenantId, fixture.eventId],
+    );
+    await client.query('COMMIT');
+    return rows.rows as Row[];
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw error;
+  } finally {
+    await client.end();
+  }
+}
+
+/** Manual redeem: locate HELD code + PENDING_REVIEW request for the actor on the fixture event. */
+export async function readManualPendingHold(
+  fixture: CaseFixture,
+  actorUserId: string,
+): Promise<{ code: Row; request: Row }> {
+  if (!process.env.DATABASE_URL || !process.env.E2E_RUN_DIR)
+    throw new Error(
+      'BLOCKED: PostgreSQL assertion requires isolated E2E runtime',
+    );
+  const client = new Client({ connectionString: process.env.DATABASE_URL });
+  await client.connect();
+  try {
+    await client.query('BEGIN READ ONLY');
+    await client.query("SELECT set_config('app.tenant_id', $1, true)", [
+      fixture.tenantId,
+    ]);
+    const pending = await client.query(
+      `SELECT id, status, actor_user_id, redemption_code_id
+       FROM redemption_requests
+       WHERE tenant_id=$1::uuid
+         AND event_id=$2::uuid
+         AND actor_user_id=$3::uuid
+         AND status = 'PENDING_REVIEW'
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [fixture.tenantId, fixture.eventId, actorUserId],
+    );
+    await client.query('COMMIT');
+    expect(pending.rows).toHaveLength(1);
+    const request = pending.rows[0] as Row;
+    const codeId = String(request.redemption_code_id);
+    const state = await readRedemptionState(fixture, codeId);
+    expect(state.tickets).toHaveLength(0);
+    return { code: state.code, request };
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw error;
+  } finally {
+    await client.end();
+  }
+}
+
 /** Read the run-local database as e2e_runtime under transaction-local tenant RLS. */
 export async function readRedemptionState(
   fixture: CaseFixture,

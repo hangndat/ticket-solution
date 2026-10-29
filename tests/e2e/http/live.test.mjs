@@ -18,6 +18,7 @@ const CASE_IDS = [
   'GATE-01',
   'GATE-03',
   'DB-03',
+  'WEB-04',
 ];
 const EVIL_HOST = 'evil.example';
 const EVIL_ORIGIN = 'https://evil.example';
@@ -648,6 +649,112 @@ async function auth06Revoke(f, statement, values) {
   } finally {
     await client.end();
   }
+}
+
+async function web04Query(f, tenantId, statement, values) {
+  const requireBackend = createRequire(
+    new URL('../../../packages/backend/package.json', import.meta.url),
+  );
+  const { Client } = requireBackend('pg');
+  const client = new Client({
+    connectionString: required(
+      f.data?.controlDatabaseUrl,
+      'WEB-04 controlDatabaseUrl',
+    ),
+  });
+  await client.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query('SET LOCAL ROLE ticket_runtime');
+    await client.query("SELECT set_config('app.tenant_id', $1, true)", [
+      tenantId,
+    ]);
+    const result = await client.query(statement, values);
+    await client.query('COMMIT');
+    return result.rows;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    await client.end();
+  }
+}
+
+async function web04AssertRejected(ctx, {
+  label,
+  tenantId,
+  eventId,
+  code,
+  errorStatus,
+  errorCode,
+}) {
+  const f = ctx.fixture;
+  const attendee = await bearer(ctx, 'attendee');
+  const path = `/tenants/${tenantId}/events/${eventId}/redemptions`;
+  const body = {
+    code,
+    formVersion: required(f.data?.formVersion, `${label} formVersion`),
+    termsVersion: required(f.data?.termsVersion, `${label} termsVersion`),
+    answers: required(f.data?.answers, `${label} answers`),
+    termsAccepted: true,
+  };
+  const beforeCodeRows = await web04Query(
+    f,
+    tenantId,
+    `SELECT id, status FROM redemption_codes
+     WHERE tenant_id = $1::uuid AND event_id = $2::uuid`,
+    [tenantId, eventId],
+  );
+  const beforeTicketCount = await web04Query(
+    f,
+    tenantId,
+    `SELECT count(*)::int AS n FROM tickets WHERE tenant_id = $1::uuid AND event_id = $2::uuid`,
+    [tenantId, eventId],
+  );
+  const result = await request(ctx, 'POST', path, attendee, body, {
+    'idempotency-key': randomUUID(),
+  });
+  expectStatus(result, errorStatus, errorCode);
+  assert.equal(result.body.retryable, false, `${label}: must be terminal`);
+  const afterTicketCount = await web04Query(
+    f,
+    tenantId,
+    `SELECT count(*)::int AS n FROM tickets WHERE tenant_id = $1::uuid AND event_id = $2::uuid`,
+    [tenantId, eventId],
+  );
+  assert.equal(
+    afterTicketCount[0].n,
+    beforeTicketCount[0].n,
+    `${label}: must not issue a ticket`,
+  );
+  const afterCodeRows = await web04Query(
+    f,
+    tenantId,
+    `SELECT status FROM redemption_codes
+     WHERE tenant_id = $1::uuid AND event_id = $2::uuid`,
+    [tenantId, eventId],
+  );
+  assert.deepEqual(
+    afterCodeRows.map((r) => r.status).sort(),
+    beforeCodeRows.map((r) => r.status).sort(),
+    `${label}: code status must not change`,
+  );
+  const opRows = await web04Query(
+    f,
+    tenantId,
+    `SELECT status, response_json FROM operations
+     WHERE tenant_id = $1::uuid AND event_id = $2::uuid
+       AND actor_user_id = $3::uuid AND command = 'redemption.redeem'`,
+    [tenantId, eventId, f.accounts.attendee.userId],
+  );
+  for (const op of opRows) {
+    assert.notEqual(
+      op.status,
+      'IN_PROGRESS',
+      `${label}: must not leave a dangling IN_PROGRESS operation`,
+    );
+  }
+  return result;
 }
 
 for (const caseId of CASE_IDS) {
@@ -2455,6 +2562,92 @@ for (const caseId of CASE_IDS) {
       assert.equal(
         afterReport.body.quota.allocated,
         beforeReport.body.quota.allocated + 1,
+      );
+    }
+    if (caseId === 'WEB-04') {
+      await web04AssertRejected(ctx, {
+        label: 'WEB-04 invalid',
+        tenantId: f.tenantId,
+        eventId: f.eventId,
+        code: required(f.data?.invalidCode, 'WEB-04 invalidCode'),
+        errorStatus: 422,
+        errorCode: 'CODE_INVALID',
+      });
+      await web04AssertRejected(ctx, {
+        label: 'WEB-04 expired',
+        tenantId: f.tenantId,
+        eventId: required(f.data?.expiredEventId, 'WEB-04 expiredEventId'),
+        code: required(f.data?.expiredCode, 'WEB-04 expiredCode'),
+        errorStatus: 409,
+        errorCode: 'REDEMPTION_WINDOW_CLOSED',
+      });
+      await web04AssertRejected(ctx, {
+        label: 'WEB-04 closed/cancelled event',
+        tenantId: f.tenantId,
+        eventId: required(f.data?.closedEventId, 'WEB-04 closedEventId'),
+        code: required(f.data?.closedCode, 'WEB-04 closedCode'),
+        errorStatus: 409,
+        errorCode: 'EVENT_CANCELLED',
+      });
+      await web04AssertRejected(ctx, {
+        label: 'WEB-04 used code',
+        tenantId: f.tenantId,
+        eventId: f.eventId,
+        code: required(f.data?.usedCode, 'WEB-04 usedCode'),
+        errorStatus: 409,
+        errorCode: 'CODE_CONSUMED',
+      });
+      await web04AssertRejected(ctx, {
+        label: 'WEB-04 quota exhausted',
+        tenantId: f.tenantId,
+        eventId: required(f.data?.quotaEventId, 'WEB-04 quotaEventId'),
+        code: required(f.data?.quotaCode, 'WEB-04 quotaCode'),
+        errorStatus: 409,
+        errorCode: 'QUOTA_EXHAUSTED',
+      });
+      await web04AssertRejected(ctx, {
+        label: 'WEB-04 attendee limit',
+        tenantId: f.tenantId,
+        eventId: required(f.data?.limitEventId, 'WEB-04 limitEventId'),
+        code: required(f.data?.limitCode, 'WEB-04 limitCode'),
+        errorStatus: 409,
+        errorCode: 'ATTENDEE_LIMIT',
+      });
+      await web04AssertRejected(ctx, {
+        label: 'WEB-04 tenant suspended',
+        tenantId: required(
+          f.data?.suspendedTenantId,
+          'WEB-04 suspendedTenantId',
+        ),
+        eventId: required(
+          f.data?.suspendedEventId,
+          'WEB-04 suspendedEventId',
+        ),
+        code: required(f.data?.suspendedCode, 'WEB-04 suspendedCode'),
+        errorStatus: 503,
+        errorCode: 'TENANT_SUSPENDED',
+      });
+
+      // Positive control: a fresh valid code on the same event still issues
+      // normally, proving the negative branches above are real rejections
+      // and not a broken redeem endpoint.
+      const owner = await bearer(ctx, 'owner');
+      const attendee = await bearer(ctx, 'attendee');
+      const path = redemptionPath(f);
+      const body = redemptionBody(f, caseId);
+      const beforeReport = await request(ctx, 'GET', reportPath(f), owner);
+      expectStatus(beforeReport, 200);
+      const issued = await request(ctx, 'POST', path, attendee, body, {
+        'idempotency-key': randomUUID(),
+      });
+      expectStatus(issued, 201);
+      assert.equal(issued.body.state, 'ACTIVE');
+      const afterReport = await request(ctx, 'GET', reportPath(f), owner);
+      expectStatus(afterReport, 200);
+      assert.equal(
+        afterReport.body.quota.allocated,
+        beforeReport.body.quota.allocated + 1,
+        'WEB-04 positive control: valid code must still allocate quota',
       );
     }
   });

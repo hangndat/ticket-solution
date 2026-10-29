@@ -153,8 +153,43 @@ test('[PORT-04] quota projection reflects allocated inventory without invented c
   const quota = response.json as { capacity: number; allocated: number };
   expect(quota.capacity).toBe(expectedCapacity);
   expect(quota.allocated).toBeGreaterThan(0);
+  expect(quota.allocated).toBeLessThanOrEqual(quota.capacity);
+  const report = await bffGet(page, m, eventBff(f, '/report'));
+  expect(report.status).toBe(200);
+  const reportBody = report.json as {
+    quota: { capacity: number | null; allocated: number };
+    quotaCapacityState: string;
+    quotaRemaining: number | null;
+  };
+  expect(reportBody.quota.capacity).toBe(quota.capacity);
+  expect(reportBody.quota.allocated).toBe(quota.allocated);
+  expect(reportBody.quotaCapacityState).toBe('FINITE');
+  expect(reportBody.quotaRemaining).toBe(
+    expectedCapacity - quota.allocated,
+  );
   await page.goto(portalUrl(m, eventPath(f, '/quota')));
   await expect(
     page.getByText(String(expectedCapacity), { exact: true }).first(),
   ).toBeVisible();
+  await expect(page.getByTestId('event-report-as-of')).toBeVisible();
+});
+
+test('[PORT-04] Portal BFF exposes quota read only — mutation AC needs product surface', async ({
+  page,
+}) => {
+  const m = loadManifest();
+  const f = fixtureFor(m, 'PORT-04');
+  if (typeof f.data?.capacity !== 'number')
+    throw new Error('BLOCKED: PORT-04 finite quota fixture missing');
+  await login(page, m, 'PORT-04', 'owner');
+  const before = await bffGet(page, m, eventBff(f, '/quota'));
+  expect(before.status).toBe(200);
+  const path = eventBff(f, '/quota');
+  for (const method of ['POST', 'PATCH', 'PUT'] as const) {
+    const attempt = await bffMutate(page, path, { capacity: 1 }, method);
+    expect([404, 405]).toContain(attempt.status);
+  }
+  const after = await bffGet(page, m, path);
+  expect(after.status).toBe(200);
+  expect(after.json).toEqual(before.json);
 });

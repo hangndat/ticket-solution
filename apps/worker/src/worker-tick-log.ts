@@ -1,6 +1,8 @@
 export type WorkerTickStep =
   | 'reconcile_pending_redemptions'
   | 'process_account_anonymizations'
+  | 'process_ticket_pii_anonymizations'
+  | 'process_export_object_retentions'
   | 'relay_outbox'
   | 'relay_exports'
   | 'cleanup_import_files';

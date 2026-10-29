@@ -5,7 +5,12 @@ import {
   fixtureFor,
   accountFor,
 } from '../harness/fixtures';
-import { login, webUrl, fillPublishedForm } from './helpers';
+import {
+  login,
+  webUrl,
+  fillPublishedForm,
+  openCodeConfirmation,
+} from './helpers';
 
 test('[AUTH-01] attendee OIDC callback and BFF identity', async ({ page }) => {
   const manifest = loadManifest();
@@ -261,6 +266,49 @@ test('[AUTH-06] attendee session grants no staff Portal identity', async ({
     new URL('/api/bff/me/subject', manifest.origins.portal).toString(),
   );
   expect(portalSubject.status()).toBe(401);
+});
+
+test('[AUTH-06] redeem UI does not claim success after session capability is cleared', async ({
+  page,
+}) => {
+  const manifest = loadManifest();
+  const fixture = fixtureFor(manifest, 'AUTH-06');
+  const code = fixture.secondCode;
+  if (!code) throw new Error('BLOCKED: AUTH-06 secondCode');
+  const answers = fixture.data?.answers as
+    | Record<string, string | boolean>
+    | undefined;
+  await login(page, manifest, accountFor(manifest, 'AUTH-06', 'attendee'));
+  await openCodeConfirmation(page, manifest, code);
+  await fillPublishedForm(page, answers);
+  await page.context().clearCookies();
+  await page
+    .getByRole('button', { name: 'Đổi mã lấy vé', exact: true })
+    .click();
+  await expect(page.getByTestId('redeem-ux-success')).toHaveCount(0);
+  await expect(page.getByTestId('redeem-ticket-card')).toHaveCount(0);
+  await expect(page.getByTestId('redeem-ux-auth')).toBeVisible({
+    timeout: 15_000,
+  });
+});
+
+test('[AUTH-06] wallet does not show ticket grid after session capability is cleared', async ({
+  page,
+}) => {
+  const manifest = loadManifest();
+  fixtureFor(manifest, 'AUTH-06');
+  await login(page, manifest, accountFor(manifest, 'AUTH-06', 'attendee'));
+  await page.goto(webUrl(manifest, '/wallet'));
+  await expect(page.getByTestId('wallet-ready')).toBeVisible();
+  await expect(page.getByTestId('wallet-ticket-grid')).toBeVisible();
+  await page.context().clearCookies();
+  await page.goto(webUrl(manifest, '/wallet'));
+  await expect(page.getByTestId('wallet-need-login')).toBeVisible();
+  await expect(page.getByTestId('wallet-ready')).toHaveCount(0);
+  await expect(page.getByTestId('wallet-ticket-grid')).toHaveCount(0);
+  expect(
+    (await page.request.get(webUrl(manifest, '/api/bff/me'))).status(),
+  ).toBe(401);
 });
 
 test('[AUTH-07] another attendee cannot see prior actor ticket after login switch', async ({

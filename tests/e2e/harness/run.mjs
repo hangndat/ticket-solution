@@ -44,6 +44,7 @@ const httpCases = [
   'GATE-01',
   'GATE-03',
   'DB-03',
+  'WEB-04',
 ];
 const match = args.find((arg) => arg.startsWith('--case='));
 const allBrowserCases = [
@@ -189,10 +190,13 @@ if (mode === 'list' || args.includes('--list')) {
       state.faultControlPath = resolve(state.dir, 'fault-control.json');
       state.faultPaths = [
         `/v1/public/tenants/${fixture.tenantSlug}/events/${fixture.eventSlug}`,
+        '/v1/me/tenants',
+        '/v1/me/tickets',
+        `/v1/tenants/${fixture.tenantId}/events/${fixture.eventId}/redemptions`,
       ];
       privateJson(state.faultControlPath, {
         ownerRunId: state.id,
-        apiUnavailable: false,
+        routes: {},
       });
       rawManifest.runtime.faultControlPath = state.faultControlPath;
     }

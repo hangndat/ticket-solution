@@ -33,6 +33,7 @@ import {
 import {
   IdentityError,
   IssueError,
+  PlatformError,
   REDEEM_COMMAND,
   createDatabase,
   configureIssuanceLockTimeout,
@@ -57,6 +58,7 @@ import {
   type PrismaClient,
 } from '@ticket/backend';
 import { identityErrorHttpStatus } from './identity-http-status';
+import { platformRouteFail } from './platform/platform-errors';
 import {
   API_RATE_BUCKETS,
   API_RATE_LIMITS,
@@ -260,6 +262,7 @@ export class TicketIssueService {
           true,
         );
       }
+      if (error instanceof PlatformError) platformRouteFail(error);
       throw error;
     }
     if (outcome.ok === 'pending') return outcome.result;

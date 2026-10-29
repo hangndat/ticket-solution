@@ -58,6 +58,7 @@ const selectors = [
   ...new Map(
     selected
       .flatMap((x) => catalog[x.caseId] ?? [])
+      .filter((s) => typeof s === 'object' && s !== null && typeof s.file === 'string')
       .filter((s) => !suite || s.layer === suite)
       .map((s) => [`${s.file}#${s.name}`, s]),
   ).values(),

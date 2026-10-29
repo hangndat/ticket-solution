@@ -245,11 +245,15 @@ export async function seedRuntime(state, caseIds) {
         // Private, run-scoped control. The test uses ticket_runtime + tenant RLS.
         fixture.data.controlDatabaseUrl = state.databaseUrl;
       }
+      if (caseId === 'WEB-04') {
+        // Private, run-scoped control for H/DB reconciliation under tenant RLS.
+        fixture.data.controlDatabaseUrl = state.databaseUrl;
+      }
       if (caseId === 'PORT-12') {
         fixture.data.registrationName = `New Tenant ${state.id}`;
         fixture.data.registrationSlug = `new-${slug}`;
       }
-      if (['AUTH-03', 'DB-03', 'SEC-04', 'SEC-05'].includes(caseId)) {
+      if (['AUTH-03', 'DB-03', 'SEC-04', 'SEC-05', 'WEB-04'].includes(caseId)) {
         fixture.data.formVersion = 'form-v1';
         fixture.data.termsVersion = 'terms-v1';
         if (caseId === 'AUTH-03')
@@ -580,15 +584,22 @@ export async function seedRuntime(state, caseIds) {
           const expiredEventId = randomUUID();
           const closedEventId = randomUUID();
           const quotaEventId = randomUUID();
+          const limitEventId = randomUUID();
           const expiredCode = `E2E-${state.id}-${caseId}-X`;
           const closedCode = `E2E-${state.id}-${caseId}-C`;
           const quotaCode = `E2E-${state.id}-${caseId}-Q`;
           const quotaConsumedCode = `E2E-${state.id}-${caseId}-QF`;
+          const limitConsumedCode = `E2E-${state.id}-${caseId}-LF`;
+          const limitCode = `E2E-${state.id}-${caseId}-L`;
           fixture.data.expiredCode = expiredCode;
           fixture.data.closedCode = closedCode;
           fixture.data.quotaCode = quotaCode;
           fixture.data.usedCode = codes[1];
+          fixture.data.expiredEventId = expiredEventId;
+          fixture.data.closedEventId = closedEventId;
           fixture.data.quotaEventId = quotaEventId;
+          fixture.data.limitEventId = limitEventId;
+          fixture.data.limitCode = limitCode;
 
           async function seedNegativeEvent(
             eventId,
@@ -688,6 +699,20 @@ export async function seedRuntime(state, caseIds) {
             [quotaConsumedCode, quotaCode],
             1,
           );
+          await seedNegativeEvent(
+            limitEventId,
+            'limit-event',
+            `Limit ${caseId}`,
+            [limitConsumedCode, limitCode],
+            10,
+            async (eventId) => {
+              await tx.$executeRaw`
+                UPDATE events
+                SET max_tickets_per_attendee = 1
+                WHERE tenant_id = ${tenantId}::uuid AND id = ${eventId}::uuid
+              `;
+            },
+          );
         }
       });
       if (caseId === 'WEB-04') {
@@ -722,6 +747,21 @@ export async function seedRuntime(state, caseIds) {
             answers,
           }),
         );
+        await backend.withTenant(db, tenantId, (tx) =>
+          backend.redeemAndIssueTicket(tx, hmac, state.secrets.credential, {
+            tenantId,
+            eventId: fixture.data.limitEventId,
+            actorUserId: accounts.attendee.userId,
+            actorEmail: accounts.attendee.username,
+            emailVerified: true,
+            rawCode: `E2E-${state.id}-${caseId}-LF`,
+            idempotencyKey: randomUUID(),
+            formVersion: 'form-v1',
+            termsVersion: 'terms-v1',
+            termsAccepted: true,
+            answers,
+          }),
+        );
         const suspendedTenantId = randomUUID();
         const suspendedEventId = randomUUID();
         const suspendedSlug = `${slug}-suspended`;
@@ -729,6 +769,7 @@ export async function seedRuntime(state, caseIds) {
         fixture.data.suspendedTenantId = suspendedTenantId;
         fixture.data.suspendedTenantSlug = suspendedSlug;
         fixture.data.suspendedCode = suspendedCode;
+        fixture.data.suspendedEventId = suspendedEventId;
         await backend.withTenant(db, suspendedTenantId, async (tx) => {
           await tx.tenant.create({
             data: {
@@ -1105,6 +1146,248 @@ export async function seedRuntime(state, caseIds) {
         if (outcome.ok !== 'pending')
           throw new Error('PORT-06 seed expected a pending MANUAL redemption');
         fixture.requestId = outcome.result.requestId;
+        await backend.withTenant(db, tenantId, async (tx) => {
+          await backend.configureIssuanceLockTimeout(tx);
+
+          // Deny-with-reason fixture: a fourth code held under the main
+          // source, independent of the approve-path requestId above.
+          const denyCode = `E2E-${state.id}-${caseId}-DENY`;
+          const denyCodeId = randomUUID();
+          const denyHmac = backend.hashRedemptionCode(hmac, denyCode);
+          await tx.$executeRaw`
+            INSERT INTO redemption_codes (
+              tenant_id, event_id, id, code_hmac, code_pepper_version,
+              source_id, ticket_type_id, status, created_at, updated_at
+            ) VALUES (
+              ${tenantId}::uuid, ${eventId}::uuid, ${denyCodeId}::uuid,
+              ${denyHmac}, ${hmac.version},
+              ${fixture.sourceId}::uuid, ${fixture.ticketTypeId}::uuid,
+              'AVAILABLE', now(), now()
+            )
+          `;
+          await backend.attachCodeRoutingOnInsert(tx, {
+            peppers: [hmac],
+            fpSecret: state.secrets.hmac,
+            tenantId,
+            eventId,
+            redemptionCodeId: denyCodeId,
+            rawCode: denyCode,
+            codeStatus: 'AVAILABLE',
+            insertPepperVersion: 1,
+            insertHmac: denyHmac,
+          });
+          const denyOutcome = await backend.redeemAndIssueTicket(
+            tx,
+            hmac,
+            state.secrets.credential,
+            {
+              tenantId,
+              eventId,
+              actorUserId: accounts.attendee.userId,
+              actorEmail: accounts.attendee.username,
+              emailVerified: true,
+              rawCode: denyCode,
+              idempotencyKey: randomUUID(),
+              formVersion: 'form-v1',
+              termsVersion: 'terms-v1',
+              termsAccepted: true,
+              answers: fixture.data.answers,
+            },
+          );
+          if (denyOutcome.ok !== 'pending')
+            throw new Error(
+              'PORT-06 seed expected a deny-path pending MANUAL redemption',
+            );
+          fixture.data.denyRequestId = denyOutcome.result.requestId;
+          fixture.data.denyReason = 'Thông tin không khớp hồ sơ sự kiện';
+
+          // Duplicate-decision fixture: decide now so the spec can replay the
+          // same decision with a fresh Idempotency-Key (lost-response retry).
+          const decidedOutcome = await backend.redeemAndIssueTicket(
+            tx,
+            hmac,
+            state.secrets.credential,
+            {
+              tenantId,
+              eventId,
+              actorUserId: accounts.otherAttendee.userId,
+              actorEmail: accounts.otherAttendee.username,
+              emailVerified: true,
+              rawCode: fixture.secondCode,
+              idempotencyKey: randomUUID(),
+              formVersion: 'form-v1',
+              termsVersion: 'terms-v1',
+              termsAccepted: true,
+              answers: fixture.data.manualAnswers,
+            },
+          );
+          if (decidedOutcome.ok !== 'pending')
+            throw new Error(
+              'PORT-06 seed expected a second pending MANUAL redemption',
+            );
+          const decidedRequestId = decidedOutcome.result.requestId;
+          const approved = backend.unwrapApprovalOutcome(
+            await backend.decideRedemption(tx, state.secrets.credential, {
+              tenantId,
+              eventId,
+              requestId: decidedRequestId,
+              actorUserId: accounts.manager.userId,
+              decision: 'approve',
+              idempotencyKey: randomUUID(),
+              reason: null,
+            }),
+          );
+          fixture.data.decidedRequestId = decidedRequestId;
+          fixture.data.decidedTicketId = approved.ticketId;
+
+          // Expired-pending fixture: a third code held, then pushed past TTL.
+          const expiredCode = `E2E-${state.id}-${caseId}-EXP`;
+          const expiredCodeId = randomUUID();
+          const expiredHmac = backend.hashRedemptionCode(hmac, expiredCode);
+          await tx.$executeRaw`
+            INSERT INTO redemption_codes (
+              tenant_id, event_id, id, code_hmac, code_pepper_version,
+              source_id, ticket_type_id, status, created_at, updated_at
+            ) VALUES (
+              ${tenantId}::uuid, ${eventId}::uuid, ${expiredCodeId}::uuid,
+              ${expiredHmac}, ${hmac.version},
+              ${fixture.sourceId}::uuid, ${fixture.ticketTypeId}::uuid,
+              'AVAILABLE', now(), now()
+            )
+          `;
+          await backend.attachCodeRoutingOnInsert(tx, {
+            peppers: [hmac],
+            fpSecret: state.secrets.hmac,
+            tenantId,
+            eventId,
+            redemptionCodeId: expiredCodeId,
+            rawCode: expiredCode,
+            codeStatus: 'AVAILABLE',
+            insertPepperVersion: 1,
+            insertHmac: expiredHmac,
+          });
+          const expiredOutcome = await backend.redeemAndIssueTicket(
+            tx,
+            hmac,
+            state.secrets.credential,
+            {
+              tenantId,
+              eventId,
+              actorUserId: accounts.unverified.userId,
+              actorEmail: accounts.unverified.username,
+              emailVerified: true,
+              rawCode: expiredCode,
+              idempotencyKey: randomUUID(),
+              formVersion: 'form-v1',
+              termsVersion: 'terms-v1',
+              termsAccepted: true,
+              answers: fixture.data.answers,
+            },
+          );
+          if (expiredOutcome.ok !== 'pending')
+            throw new Error(
+              'PORT-06 seed expected an expiring pending MANUAL redemption',
+            );
+          fixture.data.expiredRequestId = expiredOutcome.result.requestId;
+          // The browser spec expires this row only after rendering it, so a
+          // stale pending row can exercise the real decision and UI feedback.
+
+          // Quota-exhausted fixture: dedicated type/source at capacity 1,
+          // consumed by a decoy approval before the spec's own decision.
+          const quotaExhaustedDecoyCode = `E2E-${state.id}-${caseId}-QX-DECOY`;
+          const quotaExhaustedCode = `E2E-${state.id}-${caseId}-QX`;
+          const exhausted = await backend.seedEventInventory(tx, hmac, {
+            tenantId,
+            eventId,
+            eventQuota: 100,
+            typeQuota: 1,
+            sourceQuota: 1,
+            rawCodes: [quotaExhaustedDecoyCode, quotaExhaustedCode],
+            ticketTypeLabel: 'E2E PORT-06 Quota Exhausted',
+            sourceName: 'E2E PORT-06 Quota Exhausted',
+          });
+          // The event already has its shared quota bucket. Remove the helper's
+          // extra EVENT bucket so this branch exhausts only its own type/source.
+          await tx.$executeRaw`
+            DELETE FROM quota_buckets
+            WHERE tenant_id = ${tenantId}::uuid
+              AND id = ${exhausted.eventBucketId}::uuid
+          `;
+          await tx.$executeRaw`UPDATE issuance_sources SET approval_mode='MANUAL' WHERE tenant_id=${tenantId}::uuid AND id=${exhausted.sourceId}::uuid`;
+          for (const [index, raw] of [
+            quotaExhaustedDecoyCode,
+            quotaExhaustedCode,
+          ].entries()) {
+            const codeHmac = backend.hashRedemptionCode(hmac, raw);
+            await backend.attachCodeRoutingOnInsert(tx, {
+              peppers: [hmac],
+              fpSecret: state.secrets.hmac,
+              tenantId,
+              eventId,
+              redemptionCodeId: exhausted.codeIds[index],
+              rawCode: raw,
+              codeStatus: 'AVAILABLE',
+              insertPepperVersion: 1,
+              insertHmac: codeHmac,
+            });
+          }
+          const decoyOutcome = await backend.redeemAndIssueTicket(
+            tx,
+            hmac,
+            state.secrets.credential,
+            {
+              tenantId,
+              eventId,
+              actorUserId: accounts.scanner.userId,
+              actorEmail: accounts.scanner.username,
+              emailVerified: true,
+              rawCode: quotaExhaustedDecoyCode,
+              idempotencyKey: randomUUID(),
+              formVersion: 'form-v1',
+              termsVersion: 'terms-v1',
+              termsAccepted: true,
+              answers: fixture.data.autoAnswers,
+            },
+          );
+          if (decoyOutcome.ok !== 'pending')
+            throw new Error(
+              'PORT-06 seed expected a decoy pending MANUAL redemption',
+            );
+          const quotaOutcome = await backend.redeemAndIssueTicket(
+            tx,
+            hmac,
+            state.secrets.credential,
+            {
+              tenantId,
+              eventId,
+              actorUserId: accounts.supervisor.userId,
+              actorEmail: accounts.supervisor.username,
+              emailVerified: true,
+              rawCode: quotaExhaustedCode,
+              idempotencyKey: randomUUID(),
+              formVersion: 'form-v1',
+              termsVersion: 'terms-v1',
+              termsAccepted: true,
+              answers: fixture.data.manualAnswers,
+            },
+          );
+          if (quotaOutcome.ok !== 'pending')
+            throw new Error(
+              'PORT-06 seed expected a quota-exhausted pending MANUAL redemption',
+            );
+          fixture.data.quotaExhaustedRequestId = quotaOutcome.result.requestId;
+          backend.unwrapApprovalOutcome(
+            await backend.decideRedemption(tx, state.secrets.credential, {
+              tenantId,
+              eventId,
+              requestId: decoyOutcome.result.requestId,
+              actorUserId: accounts.manager.userId,
+              decision: 'approve',
+              idempotencyKey: randomUUID(),
+              reason: null,
+            }),
+          );
+        });
       }
       if (caseId === 'PORT-08') {
         fixture.data.report = await backend.withTenant(db, tenantId, (tx) =>

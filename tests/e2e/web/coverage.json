@@ -41,11 +41,13 @@
     "caseId": "AUTH-06",
     "tests": [
       "B:auth.spec.ts › [AUTH-06] attendee session grants no staff Portal identity",
+      "B:auth.spec.ts › [AUTH-06] redeem UI does not claim success after session capability is cleared",
+      "B:auth.spec.ts › [AUTH-06] wallet does not show ticket grid after session capability is cleared",
       "H:live.test.mjs#[AUTH-06]"
     ],
     "layers": ["B", "H"],
     "status": "blocked",
-    "reason": "Browser run mvsyhvyb-0f40bb + HTTP run mvsyhf8g-55a61e (working tree chưa commit dựa trên d63b4eb, 2026-10-29): B xác nhận attendee session không tự có Portal /api/bff/me/subject (401). H (tests/e2e/http/live.test.mjs, dùng ticket_runtime + tenant RLS qua auth06Revoke) revoke thật memberships.revoked_at rồi scanner tạo gate session tiếp theo bị deny; revoke event_assignments.revoked_at rồi manager tạo gate bị deny; revoke staff session qua API rồi supervisor confirm reservation đang mở trả 409 SESSION_NOT_ACTIVE và report checkInSuccessCount không tăng. UI-false-success không kiểm riêng ở lớp này (không có UI gate trong gói browser); đã chứng minh ở tầng API là nguồn sự thật."
+    "reason": "Browser run mvt12lek-958d34 (working tree, 2026-10-29): 3/3 AUTH-06 browser PASS — attendee không có Portal subject; redeem sau clear session → redeem-ux-auth, không redeem-ux-success/ticket card; wallet sau clear session → wallet-need-login, không wallet-ready/grid, /api/bff/me 401. H vẫn revoke membership/assignment/staff-session qua API (live.test.mjs). Gaps: gate/check-in UI false-success thuộc Portal; access-token tự hết hạn trên Web UI cần shortWeb (harness chỉ bật với AUTH-05) — self-expiry UI chưa phủ trong run --case=AUTH-06; AUTH-05 H API 401 không refresh ngoài scope."
   },
   {
     "caseId": "AUTH-07",
@@ -93,11 +95,12 @@
       "redeem.spec.ts › [WEB-04] negative redeem matrix › used code does not issue a second ticket",
       "redeem.spec.ts › [WEB-04] negative redeem matrix › closed event does not issue ticket or leak email",
       "redeem.spec.ts › [WEB-04] negative redeem matrix › exhausted quota does not issue ticket on submit",
+      "redeem.spec.ts › [WEB-04] negative redeem matrix › attendee ticket limit returns exhausted UX without issuing",
       "redeem.spec.ts › [WEB-04] negative redeem matrix › suspended tenant blocks redeem without leaking owner email"
     ],
     "layers": ["B", "H"],
     "status": "blocked",
-    "reason": "Browser: invalid/used/expired-window/quota-exhausted/suspended/cancelled-event với UX closed đúng nhóm, không lộ email và wallet không đổi trên fixture WEB-04; cancelled event dùng business_status=CANCELLED. Targeted 6/6 PASS run mvsis2hr-4a64e9. Thiếu H DB code/quota/operation đối soát và ATTENDEE_LIMIT nhánh limit riêng."
+    "reason": "Browser matrix 7/7 PASS run mvt0wnef-960246 (working tree chưa commit): invalid/used/expired-window/quota-exhausted/ATTENDEE_LIMIT (redeem-ux-exhausted «Đã đạt giới hạn vé»)/suspended/cancelled-event, không lộ email, wallet không đổi; HTTP ATTENDEE_LIMIT đã PASS mvszl1xq-f016aa. WEB-06 browser submit path HELD/PENDING_REVIEW + quota giữ nguyên cùng run. WEB-04 vẫn blocked cho acceptance đủ AC: chưa đối soát DB từng nhánh browser và approve/reject/expiry MANUAL thuộc Portal."
   },
   {
     "caseId": "WEB-05",
@@ -111,7 +114,7 @@
     "tests": ["redeem.spec.ts › [WEB-06]"],
     "layers": ["B"],
     "status": "blocked",
-    "reason": "Có manual pending/no ticket; thiếu Portal approve/reject/expiry và quota allocation đối soát."
+    "reason": "Browser PASS run mvt0wnef-960246: pending UX, không QR/ticket; PostgreSQL HELD + PENDING_REVIEW, quota không allocate (readManualPendingHold). Thiếu Portal approve/reject/expiry và ticket/quota sau approve."
   },
   {
     "caseId": "WEB-07",
@@ -143,10 +146,14 @@
   },
   {
     "caseId": "WEB-10",
-    "tests": ["fault.spec.ts › [WEB-10]"],
+    "tests": [
+      "fault.spec.ts › [WEB-10] public detail shows upstream failure and recovers after transport restoration",
+      "fault.spec.ts › [WEB-10] owner wallet distinguishes upstream unavailable from real empty and recovers with real data",
+      "fault.spec.ts › [WEB-10] redeem distinguishes a request that never reached the server from a lost response that already committed, and never fakes success"
+    ],
     "layers": ["B", "H"],
-    "status": "blocked",
-    "reason": "Có fault proxy đúng event của run và public-detail failure/recovery; chưa kiểm owner tickets/redeem timeout, 500 và unknown reconciliation."
+    "status": "implemented",
+    "reason": "WEB-10 targeted PASS run mvszxd25-519747 (3/3 browser). Fault proxy run-scoped routes map (unavailable/error500/lostResponse) cho public-detail, owner wallet /v1/me/tickets và redeem /v1/tenants/.../redemptions; không sửa seed/fixture. Owner-wallet test giờ có positive control (vé thật rỗng trước khi fault) rồi khẳng định unavailable (503) và error500 (500 non-retryable) đều hiện wallet-unreachable, không wallet-empty/wallet-ready giả, và phục hồi thật về wallet-ready+wallet-empty khi gỡ fault — xác nhận riêng negative-control run (đổi assertion mong đợi wallet-empty) FAIL trước khi phục hồi để chứng minh assertion không vô nghĩa. lostResponse forward thật tới API rồi cắt kết nối cho UI tự poll /v1/operations/{key} đối soát operation thật, không fixture fallback/fake success. error500 trên redeem/public-detail chưa có test riêng dùng nó (wallet đã đủ đại diện cho nhánh 5xx không-retryable, status map chung sang 'unreachable')."
   },
   {
     "caseId": "WEB-11",

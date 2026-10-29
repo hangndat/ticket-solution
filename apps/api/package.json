@@ -9,6 +9,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src",
     "test": "pnpm build && node --test test/*.test.cjs",
+    "test:reissue": "node --test test/gate-reissue.test.cjs",
     "test:architecture-quota": "pnpm --filter @ticket/contracts build && pnpm --filter @ticket/backend build && pnpm build && node --test test/issuance-conflict.test.cjs",
     "test:tenant-limits": "pnpm --filter @ticket/contracts build && pnpm --filter @ticket/backend build && pnpm build && node --test test/tenant-limits.test.cjs",
     "dev": "pnpm build && node --watch dist/main.js",

@@ -4,6 +4,24 @@
 - Phạm vi sửa: chỉ `tests/e2e/portal/**`. Không sửa product, harness, root package/lockfile/CI hoặc `PLAN.md`.
 - Architecture impact: Không. Spec dùng Playwright browser thật, BFF same-origin và Keycloak login/TOTP; không mock token/cookie/auth.
 
+## Kiểm tra đã chạy (worker task_bc250bdc551b — PORT-04/08/09)
+
+| Lệnh                                                                                                                                                                              | Kết quả                                                                                                                   |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm exec playwright test tests/e2e/portal --list`                                                                                                                               | PASS discovery: 20 test trong 5 file (thêm PORT-04 mutation guard).                                                         |
+| `pnpm exec tsc --noEmit … tests/e2e/portal/*.ts`                                                                                                                                    | PASS sau bổ sung PORT-04/08/09.                                                                                           |
+| Runtime browser HTTPS                                                                                                                                                             | **Không chạy** — chờ coordinator cấp slot; chỉ source review + typecheck/list.                                            |
+
+### PORT-04/08/09 — đối chiếu AC (28/10 PLAN)
+
+| ID      | Đã viết thêm trong spec                                                                                         | Blocker còn lại                                                                                                                                    |
+| ------- | --------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| PORT-04 | Quota/report FINITE đồng bộ; UI quota + `event-report-as-of`; BFF quota từ chối POST/PATCH/PUT, snapshot không đổi | Không có UI/BFF sửa capacity; nhánh giảm dưới allocated+hold, validate type/source, actor thiếu quyền cần product + seed `allocatedPlusHold`/editor deny |
+| PORT-08 | KPI BFF đủ quotaRemaining/state; gate asOf, check-in count, refresh GET, deep link, không nút resend trên dashboard | `confirm APPLIED/undo/reject` thuộc Gate app (O12), không Portal; seed không có check-in/emailNeedsCs>0 → CTA nhánh; lỗi upstream không render 0 cần fault profile |
+| PORT-09 | Timeline masking; tra cứu UUID lạ rỗng; resend + cooldown 429 giữ ticket/state                               | Seed thiếu ma trận provider PENDING/FAILED/DEAD/UNKNOWN; chưa assert deny cross-event; giới hạn resend ngoài cooldown cần fixture riêng            |
+
+Không sửa `tests/e2e/harness/**` — cần coordinator nếu bổ sung PORT-09 notification states hoặc PORT-08 counters >0.
+
 ## Kiểm tra đã chạy
 
 | Lệnh                                                                                                                                                                              | Kết quả                                                                                                                   |
