@@ -139,7 +139,7 @@
     ],
     "layers": ["B", "H"],
     "status": "implemented",
-    "reason": "WEB-09 targeted PASS run mvsy2fr7-514bd0. PostgreSQL runtime role + transaction-local RLS xác nhận X/Y không có staff membership ở hai tenant, bốn vé đều thuộc X, gồm ACTIVE/REVOKED/CANCELLED. Keycloak thật: ví X hiển thị vé cả hai tenant; ví/list Y rỗng, detail URL không có QR, ticket API 403/404; request và operation của X trả 200 nhưng Y bị 403/404. Detail X hiển thị nhãn và cảnh báo đúng cho vé thu hồi/hủy."
+    "reason": "WEB-09 targeted PASS run mvsy2fr7-514bd0. PostgreSQL runtime role + transaction-local RLS xác nhận X/Y không có staff membership ở hai tenant, bốn vé đều thuộc X, gồm ACTIVE/REVOKED/CANCELLED. Keycloak thật: ví X hiển thị vé cả hai tenant; ví/list Y rỗng, detail URL không có QR, ticket API 403/404; request và operation của X trả 200 nhưng Y bị 403/404. Detail X hiển thị nhãn và cảnh báo đúng cho vé thu hồi/hủy. Fixture đặt REVOKED/CANCELLED trực tiếp trong DB; test không chứng minh luồng chuyển trạng thái hoặc cascade. Reviewer chưa tìm thấy luồng backend tạo trạng thái CANCELLED."
   },
   {
     "caseId": "WEB-10",
