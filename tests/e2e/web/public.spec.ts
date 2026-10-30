@@ -5,7 +5,14 @@ import {
   fixtureFor,
   accountFor,
 } from '../harness/fixtures';
-import { caseData, eventPath, login, webUrl } from './helpers';
+import {
+  assertNoHorizontalOverflow,
+  assertPrimaryButtonOperable,
+  caseData,
+  eventPath,
+  login,
+  webUrl,
+} from './helpers';
 import { readWeb09Database } from './web09-db';
 
 test('[WEB-01] only published projection is discoverable', async ({ page }) => {
@@ -165,26 +172,65 @@ test('[WEB-09] multi-tenant owner wallet and private detail/QR/request/operation
   }
 });
 
-test('[WEB-11] 390px event, redemption and ticket CTA stay operable', async ({
-  page,
-}) => {
-  const manifest = loadManifest();
-  const f = fixtureFor(manifest, 'WEB-11');
-  if (!f.ticketId)
-    throw new Error('BLOCKED: WEB-11 cần ticketId thuộc attendee');
-  await page.setViewportSize({ width: 390, height: 844 });
-  await login(page, manifest, accountFor(manifest, 'WEB-11', 'attendee'));
+async function assertWeb11ResponsiveSlice(
+  page: import('playwright/test').Page,
+  manifest: import('../harness/contract').E2EManifest,
+  f: import('../harness/contract').CaseFixture,
+  viewport: { width: number; height: number },
+  mobile: boolean,
+  options?: { skipLogin?: boolean },
+) {
+  await page.setViewportSize(viewport);
+  if (!options?.skipLogin) {
+    await login(page, manifest, accountFor(manifest, 'WEB-11', 'attendee'));
+  }
+
+  await page.goto(webUrl(manifest, '/'));
+  const headerNav = page
+    .locator('header[data-testid="site-header"]')
+    .getByTestId('site-nav');
+  await expect(headerNav).toBeVisible();
+  if (mobile) {
+    await headerNav.getByTestId('nav-menu-toggle').click();
+    await expect(page.getByTestId('nav-mobile-menu')).toBeVisible();
+    await page.getByTestId('nav-mobile-menu').getByTestId('nav-wallet').click();
+    await expect(page).toHaveURL(/\/wallet$/);
+    await expect(page.getByTestId('nav-mobile-menu')).toHaveCount(0);
+  } else {
+    await headerNav.getByTestId('nav-wallet').click();
+    await expect(page).toHaveURL(/\/wallet$/);
+  }
+  await assertNoHorizontalOverflow(page);
+  await expect(page.getByTestId(`wallet-ticket-${f.ticketId}`)).toBeVisible();
+
   await page.goto(webUrl(manifest, eventPath(f)));
-  await expect(
-    page
-      .getByTestId('event-sidebox')
-      .getByRole('link', { name: 'Đổi mã lấy vé' }),
-  ).toBeVisible();
-  await page
+  await assertNoHorizontalOverflow(page);
+  const eventRedeem = page
     .getByTestId('event-sidebox')
-    .getByRole('link', { name: 'Đổi mã lấy vé' })
-    .click();
+    .getByRole('link', { name: 'Đổi mã lấy vé' });
+  await expect(eventRedeem).toBeVisible();
+  await eventRedeem.click();
   await expect(page.locator('#redeem-code-confirm')).toBeVisible();
+  await expect(page.getByTestId('redeem-terms-consent')).toBeVisible();
+  const answers = f.data?.answers as
+    Record<string, string | boolean> | undefined;
+  if (answers) {
+    for (const [id, value] of Object.entries(answers)) {
+      const field = page.locator(`[name=${JSON.stringify(id)}]`);
+      if (typeof value === 'boolean') {
+        if (value) await field.check();
+        else await field.uncheck();
+      } else if (await field.evaluate((el) => el.tagName === 'SELECT')) {
+        await field.selectOption(value);
+      } else {
+        await field.fill(value);
+      }
+    }
+  }
+  await page.locator('#terms-accepted').check();
+  await assertPrimaryButtonOperable(page, 'Đổi mã lấy vé');
+  await assertNoHorizontalOverflow(page);
+
   await page.goto(
     webUrl(
       manifest,
@@ -192,11 +238,40 @@ test('[WEB-11] 390px event, redemption and ticket CTA stay operable', async ({
     ),
   );
   await expect(page.getByTestId('owner-ticket-qr-figure')).toBeVisible();
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= window.innerWidth + 1,
-    ),
-  ).toBe(true);
+  await assertNoHorizontalOverflow(page);
+
+  if (mobile) {
+    await headerNav.getByTestId('nav-menu-toggle').click();
+    await expect(page.getByTestId('nav-mobile-menu')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.getByTestId('nav-mobile-menu')).toHaveCount(0);
+  }
+}
+
+test('[WEB-11] desktop and 390px form, menu sheet, redeem and ticket CTAs operable', async ({
+  page,
+}) => {
+  const manifest = loadManifest();
+  const f = fixtureFor(manifest, 'WEB-11');
+  if (!f.ticketId)
+    throw new Error('BLOCKED: WEB-11 cần ticketId thuộc attendee');
+  await login(page, manifest, accountFor(manifest, 'WEB-11', 'attendee'));
+  await assertWeb11ResponsiveSlice(
+    page,
+    manifest,
+    f,
+    { width: 1280, height: 720 },
+    false,
+    { skipLogin: true },
+  );
+  await assertWeb11ResponsiveSlice(
+    page,
+    manifest,
+    f,
+    { width: 390, height: 844 },
+    true,
+    { skipLogin: true },
+  );
 });
 
 test('[WEB-12] marketing VI/EN, demo CTA, and public links', async ({
