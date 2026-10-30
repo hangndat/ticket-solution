@@ -44,6 +44,8 @@ const httpCases = [
   'AUTH-06',
   'GATE-01',
   'GATE-03',
+  'DB-01',
+  'DB-02',
   'DB-03',
   'WEB-04',
 ];

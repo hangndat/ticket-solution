@@ -246,7 +246,7 @@ export async function seedRuntime(state, caseIds) {
         // Private, run-scoped control. The test uses ticket_runtime + tenant RLS.
         fixture.data.controlDatabaseUrl = state.databaseUrl;
       }
-      if (caseId === 'WEB-04' || caseId === 'DB-03') {
+      if (caseId === 'WEB-04' || caseId === 'DB-03' || caseId === 'DB-02') {
         // Private, run-scoped control for H/DB reconciliation under tenant RLS.
         fixture.data.controlDatabaseUrl = state.databaseUrl;
       }
@@ -1483,7 +1483,7 @@ export async function seedRuntime(state, caseIds) {
           redeemLimit: API_RATE_LIMITS.redeemPerUser,
         };
       }
-      if (caseId === 'SEC-01' || caseId === 'SEC-02') {
+      if (caseId === 'SEC-01' || caseId === 'SEC-02' || caseId === 'DB-01') {
         const foreignTenantId = randomUUID();
         const foreignEventId = randomUUID();
         await backend.withTenant(db, foreignTenantId, async (tx) => {
