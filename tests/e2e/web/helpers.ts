@@ -239,6 +239,7 @@ export async function assertPrimaryButtonOperable(page: Page, name: string) {
 export async function fillPublishedForm(
   page: Page,
   answers: Record<string, string | boolean> = {},
+  options?: { acceptTerms?: boolean },
 ) {
   for (const [id, value] of Object.entries(answers)) {
     const field = page.locator(`[name=${JSON.stringify(id)}]`);
@@ -251,7 +252,9 @@ export async function fillPublishedForm(
       await field.fill(value);
     }
   }
-  await page.locator('#terms-accepted').check();
+  if (options?.acceptTerms !== false) {
+    await page.locator('#terms-accepted').check();
+  }
 }
 
 export async function openCodeConfirmation(

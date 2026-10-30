@@ -248,7 +248,7 @@ export async function seedRuntime(state, caseIds) {
         // Private, run-scoped control. The test uses ticket_runtime + tenant RLS.
         fixture.data.controlDatabaseUrl = state.databaseUrl;
       }
-      if (['AUTH-03', 'WEB-04', 'DB-03', 'DB-04', 'DB-07', 'DB-02', 'DB-09', 'DB-10', 'DB-11', 'DB-12', 'DB-14'].includes(caseId)) {
+      if (['AUTH-03', 'WEB-04', 'WEB-05', 'DB-03', 'DB-04', 'DB-07', 'DB-02', 'DB-09', 'DB-10', 'DB-11', 'DB-12', 'DB-14'].includes(caseId)) {
         // Private, run-scoped control for H/DB reconciliation under tenant RLS.
         fixture.data.controlDatabaseUrl = state.databaseUrl;
       }
@@ -264,7 +264,7 @@ export async function seedRuntime(state, caseIds) {
         fixture.data.registrationName = `New Tenant ${state.id}`;
         fixture.data.registrationSlug = `new-${slug}`;
       }
-      if (['AUTH-03', 'DB-03', 'DB-04', 'DB-07', 'DB-10', 'DB-11', 'DB-14', 'SEC-04', 'SEC-05', 'WEB-04'].includes(caseId)) {
+      if (['AUTH-03', 'DB-03', 'DB-04', 'DB-07', 'DB-10', 'DB-11', 'DB-14', 'SEC-04', 'SEC-05', 'WEB-04', 'WEB-05'].includes(caseId)) {
         fixture.data.formVersion = 'form-v1';
         fixture.data.termsVersion = 'terms-v1';
         if (caseId === 'AUTH-03')
@@ -355,9 +355,12 @@ export async function seedRuntime(state, caseIds) {
           `;
         }
         if (
-          ['AUTH-03', 'WEB-02', 'WEB-03', 'WEB-07', 'WEB-08', 'WEB-10'].includes(caseId)
+          ['AUTH-03', 'WEB-02', 'WEB-03', 'WEB-05', 'WEB-07', 'WEB-08', 'WEB-10'].includes(caseId)
         ) {
           fixture.data.codeIds = { primary: inventory.codeIds[0] };
+          if (caseId === 'WEB-05') {
+            fixture.data.codeIds.secondary = inventory.codeIds[1];
+          }
         }
         fixture.data.ticketTypeLabel = 'E2E General';
         fixture.data.autoSourceLabel = 'E2E Auto';
