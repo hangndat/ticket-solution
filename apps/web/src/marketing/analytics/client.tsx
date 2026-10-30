@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect } from 'react';
-import type { MarketingAnalyticsEventName } from './events';
+import type { MarketingAnalyticsEventName, JourneyMilestone } from './events';
+import type { MarketingLocale } from '../hosts';
 import { shouldSkipMarketingAnalyticsClient } from './privacy-signals';
 
 function sendEvent(
@@ -20,10 +21,14 @@ function sendEvent(
       headers: { 'content-type': 'application/json' },
       body: payload,
       keepalive: true,
-    });
+    }).catch(() => { /* analytics must never interrupt the experience */ });
   } catch {
     /* fail-silent */
   }
+}
+
+export function trackJourneyMilestone(milestone: JourneyMilestone, locale: MarketingLocale) {
+  sendEvent('journey_progress', { milestone, locale });
 }
 
 function localeFromDom(): 'vi' | 'en' {
@@ -44,7 +49,12 @@ export function MarketingAnalyticsClient() {
       if (!cta) return;
       const id = cta.getAttribute('data-testid');
       if (id !== 'cta-demo' && id !== 'cta-interest') return;
-      sendEvent('cta_click', { cta_id: id, locale: localeFromDom() });
+      const journey = cta.closest('[data-analytics-surface="journey"]');
+      sendEvent('cta_click', {
+        cta_id: id,
+        locale: localeFromDom(),
+        ...(journey ? { surface: 'journey' } : {}),
+      });
     };
 
     const form = document.querySelector('[data-testid="interest-form"]');
