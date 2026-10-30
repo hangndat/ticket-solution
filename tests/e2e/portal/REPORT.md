@@ -4,6 +4,33 @@
 - Phạm vi sửa: chỉ `tests/e2e/portal/**`. Không sửa product, harness, root package/lockfile/CI hoặc `PLAN.md`.
 - Architecture impact: Không. Spec dùng Playwright browser thật, BFF same-origin và Keycloak login/TOTP; không mock token/cookie/auth.
 
+## Kiểm tra đã chạy (worker task_f43f26c1cfc5 — PORT-07 sortOrder H / Issue #1035)
+
+| Lệnh | Kết quả |
+| --- | --- |
+| `node tests/e2e/harness/run.mjs e2e --case=PORT-07` | **PASS** run `mvusk9f6-1ab717`, browser 1/1; artifact `tests/e2e/.artifacts/mvusk9f6-1ab717/summary.json`. |
+| SHA | `1597891a9ed9724e53f726dfb4e4db17ce93c660` (clean tree, evidenceExactShaEligible). |
+
+PORT-07: giữ owner/scanner/reader; BFF owner path thêm sortOrder `0`/`9999` chấp nhận (min gate qua POST), `-1`/`10000` → 422 `SCOPE_REQUIRED` (upstream envelope qua BFF passthrough, message `between 0 and 9999`); non-int vẫn `SORT_INVALID` tại BFF. Gap sortOrder upstream: đóng trên nhánh H.
+
+## Kiểm tra đã chạy (worker task_563b98d49ff0 — PORT-07 fix iter 1/2 / Issue #1035)
+
+| Lệnh | Kết quả |
+| --- | --- |
+| `node tests/e2e/harness/run.mjs e2e --case=PORT-07` | **PASS** run `mvur8f0q-148a80`, browser 1/1; artifact `tests/e2e/.artifacts/mvur8f0q-148a80/summary.json`. |
+| SHA | `e577cdb49a0f8cb37131bc39b3cf0775db943995` (clean tree, evidenceExactShaEligible). |
+
+PORT-07: giữ toàn bộ assertion owner/scanner trước; seed fixture gán `cs` trên event `report.read`+`gate.confirm` (không `event.update`); browser reader thấy bảng cổng, không nút Thêm cổng, BFF GET list OK và POST 403. Gap còn lại: max sortOrder 9999 chỉ kiểm ở Portal InputNumber/BFF owner path — chưa assert upstream API reject >9999 (điều phối coordinator).
+
+## Kiểm tra đã chạy (worker task_ac6fd382f590 — PORT-07 / Issue #1035)
+
+| Lệnh | Kết quả |
+| --- | --- |
+| `node tests/e2e/harness/run.mjs e2e --case=PORT-07` | **PASS** run `mvuqvewt-f6a776`, browser 1/1; artifact `tests/e2e/.artifacts/mvuqvewt-f6a776/summary.json`. |
+| SHA | `c45632602b4dfe820a6d42d2f7fe86931b755b22` (clean tree, run `mvuqvewt-f6a776`, evidenceEligible). |
+
+PORT-07: zero-gate hướng dẫn VI, create/list đúng event, tên 1–80 và order 0/9999 (UI+ BFF), `GATE_NAME_CONFLICT` UI tiếng Việt + HTTP 409, scanner POST 403 (thiếu `event.update`), không scan/confirm/undo/rename/delete/link Web `/gate`. Gap: chưa có actor Portal read-only trên panel (CS thiếu `report.read`; manager có `event.update`).
+
 ## Kiểm tra đã chạy (worker task_bc250bdc551b — PORT-04/08/09)
 
 | Lệnh                                                                                                                                                                              | Kết quả                                                                                                                   |
