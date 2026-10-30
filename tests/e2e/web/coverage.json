@@ -29,8 +29,8 @@
     "caseId": "AUTH-03",
     "tests": ["auth.spec.ts › [AUTH-03]"],
     "layers": ["B"],
-    "status": "blocked",
-    "reason": "Có guest gate và unverified submit bị chặn trước issue; chưa đối soát DB code/quota/pending."
+    "status": "implemented",
+    "reason": "Guest và attendee chưa verified đều thấy ô mã local-only; CTA chỉ dẫn tới login/Account, không gửi mã qua URL hoặc gọi BFF redeem. Browser so sánh PostgreSQL code/request/ticket/operation/quota/outbox trước-sau; HTTP selector xác nhận anonymous 401, unverified 403 EMAIL_NOT_VERIFIED và không đổi quota/pending. Exact-SHA run ID và CI nằm ở comment PR #1044/issue #1029."
   },
   {
     "caseId": "AUTH-04",
@@ -43,6 +43,7 @@
     "caseId": "AUTH-05",
     "tests": [
       "B:auth.spec.ts › [AUTH-05] expired access token refreshes inside BFF",
+      "B:auth.spec.ts › [AUTH-05] redeem verifies email after refreshing an expired access token",
       "B:auth.spec.ts › [AUTH-05] revoked Keycloak refresh fails closed and actors stay isolated"
     ],
     "layers": ["B"],

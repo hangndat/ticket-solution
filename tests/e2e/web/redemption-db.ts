@@ -296,6 +296,7 @@ export function assertRedemptionStateUnchanged(
   expect(after.code, `${label}: code row`).toEqual(before.code);
   expect(after.requests, `${label}: requests`).toEqual(before.requests);
   expect(after.tickets, `${label}: tickets`).toEqual(before.tickets);
+  expect(after.operations, `${label}: operations`).toEqual(before.operations);
   expect(after.quotas, `${label}: quotas`).toEqual(before.quotas);
   expect(after.outbox.map(({ status, ...row }) => row)).toEqual(
     before.outbox.map(({ status, ...row }) => row),
