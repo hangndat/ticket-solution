@@ -8,6 +8,7 @@ type MailSummary = {
   Subject?: string;
 };
 type MailDetail = { Text?: string; HTML?: string; Subject?: string };
+export type CapturedMail = MailDetail & { messageId: string };
 
 /** Poll the run-owned SMTP sink. Message IDs and claim tokens stay in memory only. */
 export async function waitForMail(
@@ -15,7 +16,7 @@ export async function waitForMail(
   manifest: E2EManifest,
   recipient: string,
   subjectPart: string,
-): Promise<MailDetail> {
+): Promise<CapturedMail> {
   let found: MailSummary | undefined;
   await expect
     .poll(
@@ -45,7 +46,37 @@ export async function waitForMail(
     ).toString(),
   );
   expect(response.status()).toBe(200);
-  return (await response.json()) as MailDetail;
+  return {
+    messageId: found!.ID,
+    ...((await response.json()) as MailDetail),
+  };
+}
+
+/** Mailpit raw MIME — inline PNG for cid:ticket-qr, not HTML CID alone. */
+export async function assertTicketQrInlineAttachment(
+  page: Page,
+  manifest: E2EManifest,
+  messageId: string,
+): Promise<void> {
+  const rawResponse = await page.request.get(
+    new URL(
+      `/api/v1/message/${encodeURIComponent(messageId)}/raw`,
+      manifest.origins.mailpit,
+    ).toString(),
+  );
+  expect(rawResponse.status()).toBe(200);
+  const rawMime = await rawResponse.text();
+  expect(rawMime).toMatch(/Content-Type:\s*image\/png/i);
+  expect(rawMime).toMatch(/Content-ID:\s*<ticket-qr@vemoki>/i);
+  const part = rawMime.match(
+    /Content-Type:\s*image\/png[^\r\n]*[\s\S]*?Content-Transfer-Encoding:\s*base64\s*\r?\n[\s\S]*?\r?\n\r?\n([A-Za-z0-9+/=\r\n]+)\r?\n--/i,
+  );
+  expect(part, 'Mailpit MIME must carry inline ticket-qr PNG bytes').toBeTruthy();
+  const png = Buffer.from(part![1].replace(/\s/g, ''), 'base64');
+  expect(png.length).toBeGreaterThan(0);
+  expect(png.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))).toBe(
+    true,
+  );
 }
 
 export function claimLink(mail: MailDetail, webOrigin: string): string {
@@ -71,15 +102,18 @@ export function ticketLink(mail: MailDetail, webOrigin: string): string {
 }
 
 /** Mailpit body evidence for TicketIssued — not SMTP ACCEPTED alone. */
-export function assertTicketIssuedMail(
-  mail: MailDetail,
+export async function assertTicketIssuedMail(
+  page: Page,
+  manifest: E2EManifest,
+  mail: CapturedMail,
   opts: { eventName: string; ticketId: string; webOrigin: string },
-): string {
+): Promise<string> {
   expect(mail.Subject ?? '').toContain(opts.eventName);
   const url = ticketLink(mail, opts.webOrigin);
   const mailTicketId = url.match(/\/tickets\/([0-9a-f-]{36})/i)?.[1];
   expect(mailTicketId).toBe(opts.ticketId);
   expect(mail.Text ?? '').toContain(opts.ticketId);
   expect(mail.HTML ?? '').toContain('cid:ticket-qr');
+  await assertTicketQrInlineAttachment(page, manifest, mail.messageId);
   return url;
 }
