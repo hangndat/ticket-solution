@@ -140,7 +140,14 @@ export const catalog = {
       layer: 'R',
     },
   ],
-  'JOB-02': [b('outbox-fence', 'outbox fence: MembershipInvite')],
+  'JOB-02': [
+    b('outbox-fence', 'outbox fence: MembershipInvite'),
+    {
+      file: 'tests/e2e/backend/job-02-lease-fence.test.cjs',
+      name: '[JOB-02] R lease fence',
+      layer: 'R',
+    },
+  ],
   'JOB-03': [
     b('issue', 'issue: last-seat'),
     b('worker-provider-deadline', 'stalled SMTP transport', 'U'),
@@ -261,7 +268,8 @@ export const notes = {
     'D receipt matrix và H validation; thiếu H real authz/ownership/rate matrix.',
   'JOB-01':
     'D ticket/outbox atomic; R worker stop + Redis restart + Mailpit once (ADR-17 PG SoT, không assert exactly-once SMTP/inbox).',
-  'JOB-02': 'D fence; thiếu R kill worker/lease reclaim.',
+  'JOB-02':
+    'D fence + R process kill sau claim, lease PG hết hạn/reclaim, stale ack fenced; một logical email (ADR-17 at-least-once SMTP).',
   'JOB-03':
     'D retry và U deadline; thiếu R SMTP timeout/accept-before-ack crash.',
   'JOB-04':

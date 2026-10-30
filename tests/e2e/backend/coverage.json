@@ -295,11 +295,12 @@
   {
     "caseId": "JOB-02",
     "tests": [
-      "D:packages/backend/test/outbox-fence.test.cjs#outbox fence: MembershipInvite"
+      "D:packages/backend/test/outbox-fence.test.cjs#outbox fence: MembershipInvite",
+      "R:tests/e2e/backend/job-02-lease-fence.test.cjs#[JOB-02] R lease fence"
     ],
-    "layers": ["D"],
-    "status": "blocked",
-    "reason": "D fence; thiếu R kill worker/lease reclaim."
+    "layers": ["D", "R"],
+    "status": "implemented",
+    "reason": "D PostgreSQL: stale lease owner không gọi provider; reclaim expired lease. R process thật: worker claim với SMTP treo, SIGKILL sau claim, lease hết hạn tự nhiên, worker thay thế + Mailpit một logical job; stale processClaimedOutbox không COMPLETE lại hay gửi thêm. Không assert exactly-once SMTP delivery."
   },
   {
     "caseId": "JOB-03",

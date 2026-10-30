@@ -94,6 +94,12 @@ Thêm `tests/e2e/backend/job-01-durable-outbox.test.cjs` (R) và `redis-fixture.
 
 Checks: `node tests/e2e/backend/entry.mjs --case JOB-01 --no-build` PASS 3/3 selector; artifact `tests/e2e/.artifacts/mvuj01-579677a/summary.json`. Không assert exactly-once SMTP/inbox/read.
 
+## Cập nhật JOB-02 (Issue #1032, worktree `f04-job02-lease-fence`)
+
+Thêm `tests/e2e/backend/job-02-lease-fence.test.cjs` (R): cấp vé khi worker tắt → outbox PENDING; worker A claim với SMTP treo, SIGKILL sau claim; lease PG hết hạn tự nhiên (~30s); snapshot due/reclaim; worker B + Mailpit relay một logical email; `processClaimedOutbox` với lease token worker A chết không gọi provider và không COMPLETE lại. D giữ `outbox-fence.test.cjs#MembershipInvite`. `coverage.json` JOB-02 → `implemented`, layers D+R.
+
+Checks: `node tests/e2e/backend/entry.mjs --case JOB-02` PASS 2/2 selector (D+R, ~54s build+run). Không assert exactly-once SMTP delivery.
+
 ## Giới hạn còn mở
 
 - Các ca H cần HTTPS hostname run, Keycloak issuer/JWT thật và manifest case riêng từ harness; local verifier hay `app.inject` fixture không đủ. Các ca R cần worker process, Mailpit, restart/kill/lease và tài nguyên run riêng. Xem `FIXTURES.md`.
