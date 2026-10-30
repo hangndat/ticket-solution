@@ -14,6 +14,12 @@ import {
   mintCrossClientAccessToken,
   mintSecondaryIssuerAccessToken,
 } from './helpers';
+import {
+  codeIdFor,
+  readRedemptionState,
+  assertRedemptionStateUnchanged,
+} from './redemption-db';
+import { login as portalLogin, portalUrl } from '../portal/helpers';
 
 type WebRuntime = {
   httpPlatformClientId?: string;
@@ -471,30 +477,46 @@ test('[AUTH-03] guest is gated and unverified identity cannot issue a ticket', a
 }) => {
   const manifest = loadManifest();
   const fixture = fixtureFor(manifest, 'AUTH-03');
+  const codeId = codeIdFor(fixture);
+  const before = await readRedemptionState(fixture, codeId);
+  const redeemRequests: string[] = [];
+  page.on('request', (request) => {
+    if (new URL(request.url()).pathname.startsWith('/api/bff/redeem')) {
+      redeemRequests.push(request.url());
+    }
+  });
   await page.goto(webUrl(manifest, '/redeem'));
   await expect(page.getByTestId('redeem-auth-gate')).toBeVisible();
   await expect(
-    page.getByRole('heading', { name: 'Đăng nhập để đổi mã' }),
+    page.getByRole('heading', { name: 'Cần đăng nhập' }),
   ).toBeVisible();
-  await expect(page.getByTestId('redeem-global-code')).toHaveCount(0);
+  await page.getByTestId('redeem-global-code').fill(fixture.code ?? 'INVALID');
+  await page.getByTestId('redeem-auth-continue').click();
+  await expect(page).toHaveURL(new RegExp(`^${manifest.origins.auth}`));
+  expect(page.url()).not.toContain(fixture.code);
+  expect(redeemRequests, 'guest must not look up or mutate code').toEqual([]);
+  assertRedemptionStateUnchanged(
+    before,
+    await readRedemptionState(fixture, codeId),
+    'AUTH-03 guest',
+  );
   await login(
     page,
     manifest,
     accountFor(manifest, 'AUTH-03', 'unverified'),
     '/redeem',
   );
+  await expect(page.getByTestId('redeem-auth-gate')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Xác minh email' })).toBeVisible();
   await page.getByTestId('redeem-global-code').fill(fixture.code ?? 'INVALID');
-  await page.getByTestId('redeem-global-resolve').click();
-  await expect(page.getByTestId('redeem-global-context')).toBeVisible();
-  await fillPublishedForm(
-    page,
-    fixture.data?.answers as Record<string, string | boolean>,
-  );
-  await page
-    .getByRole('button', { name: 'Đổi mã lấy vé', exact: true })
-    .click();
-  await expect(page.getByTestId('redeem-ux-auth')).toContainText(
-    'xác minh email',
+  await page.getByTestId('redeem-auth-continue').click();
+  await expect(page).toHaveURL(new RegExp(`${manifest.origins.web}/account`));
+  expect(redeemRequests, 'unverified attendee must not resolve code').toEqual([]);
+  await expect(page.getByTestId('redeem-ticket-card')).toHaveCount(0);
+  assertRedemptionStateUnchanged(
+    before,
+    await readRedemptionState(fixture, codeId),
+    'AUTH-03 unverified',
   );
 });
 
@@ -504,12 +526,154 @@ test('[AUTH-04] web logout clears web session and protected wallet', async ({
   const manifest = loadManifest();
   fixtureFor(manifest, 'AUTH-04');
   await login(page, manifest, accountFor(manifest, 'AUTH-04', 'attendee'));
+  const before = await page.context().cookies(manifest.origins.web);
+  expect(before.some((cookie) => cookie.name === 'oidc_access_token')).toBe(
+    true,
+  );
   await page.goto(webUrl(manifest, '/api/auth/logout'));
+  const after = await page.context().cookies(manifest.origins.web);
+  expect(after.filter((cookie) => cookie.name.startsWith('oidc_'))).toEqual([]);
   await page.goto(webUrl(manifest, '/wallet'));
   await expect(page.getByTestId('wallet-need-login')).toBeVisible();
   expect(
     (await page.request.get(webUrl(manifest, '/api/bff/me'))).status(),
   ).toBe(401);
+});
+
+test('[AUTH-04] Portal and Platform logout clear only their own host cookie families', async ({
+  browser,
+}) => {
+  test.setTimeout(120_000);
+  const manifest = loadManifest();
+  fixtureFor(manifest, 'AUTH-04');
+  const webContext = await browser.newContext();
+  const portalContext = await browser.newContext();
+  const platformContext = await browser.newContext();
+  try {
+    const webPage = await webContext.newPage();
+    const portalPage = await portalContext.newPage();
+    const platformPage = await platformContext.newPage();
+    await login(webPage, manifest, accountFor(manifest, 'AUTH-04', 'attendee'));
+    await portalLogin(portalPage, manifest, 'AUTH-04', 'owner');
+    await portalLogin(
+      platformPage,
+      manifest,
+      'AUTH-04',
+      'operator',
+      'platform',
+    );
+
+    const webCookies = await webContext.cookies();
+    const staffCookies = await portalContext.cookies();
+    const platformCookies = await platformContext.cookies();
+    const webHost = new URL(manifest.origins.web).hostname;
+    const portalHost = new URL(manifest.origins.portal).hostname;
+    expect(
+      webCookies.some(
+        (cookie) =>
+          cookie.name === 'oidc_access_token' && cookie.domain === webHost,
+      ),
+    ).toBe(true);
+    expect(
+      staffCookies.some(
+        (cookie) =>
+          cookie.name === 'oidc_access_token' && cookie.domain === portalHost,
+      ),
+    ).toBe(true);
+    expect(
+      platformCookies.some(
+        (cookie) =>
+          cookie.name === 'platform_oidc_access' &&
+          cookie.domain === portalHost,
+      ),
+    ).toBe(true);
+    expect(
+      staffCookies.some((cookie) => cookie.name.startsWith('platform_oidc_')),
+    ).toBe(false);
+    expect(
+      platformCookies.some((cookie) => cookie.name === 'oidc_access_token'),
+    ).toBe(false);
+    expect(
+      (
+        await portalPage.request.get(portalUrl(manifest, '/api/bff/me/subject'))
+      ).status(),
+    ).toBe(200);
+    expect(
+      (
+        await platformPage.request.get(
+          portalUrl(manifest, '/api/bff/platform/me'),
+        )
+      ).status(),
+    ).toBe(200);
+
+    // Put the two independently issued, real Portal sessions into one host
+    // jar to exercise each logout route's cookie-name boundary.
+    const staffSession = staffCookies.filter(
+      (cookie) =>
+        cookie.domain === portalHost && !cookie.name.startsWith('platform_'),
+    );
+    const platformSession = platformCookies.filter(
+      (cookie) =>
+        cookie.domain === portalHost && cookie.name.startsWith('platform_'),
+    );
+    await portalContext.addCookies(platformSession);
+    await platformContext.addCookies(staffSession);
+    await portalPage.goto(portalUrl(manifest, '/api/auth/logout'));
+    expect(
+      (await portalContext.cookies(manifest.origins.portal)).some(
+        (cookie) => cookie.name === 'oidc_access_token',
+      ),
+    ).toBe(false);
+    expect(
+      (await portalContext.cookies(manifest.origins.portal)).some(
+        (cookie) => cookie.name === 'platform_oidc_access',
+      ),
+    ).toBe(true);
+    expect(
+      (
+        await portalPage.request.get(portalUrl(manifest, '/api/bff/me/subject'))
+      ).status(),
+    ).toBe(401);
+
+    await platformPage.goto(portalUrl(manifest, '/api/auth/platform/logout'));
+    expect(
+      (await platformContext.cookies(manifest.origins.portal)).some(
+        (cookie) => cookie.name === 'platform_oidc_access',
+      ),
+    ).toBe(false);
+    expect(
+      (await platformContext.cookies(manifest.origins.portal)).some(
+        (cookie) => cookie.name === 'oidc_access_token',
+      ),
+    ).toBe(true);
+    expect(
+      (
+        await platformPage.request.get(
+          portalUrl(manifest, '/api/bff/platform/me'),
+        )
+      ).status(),
+    ).toBe(401);
+    await platformPage.goto(portalUrl(manifest, '/platform'));
+    await expect(
+      platformPage.getByTestId('platform-tenants-table'),
+    ).toHaveCount(0);
+
+    // Logging out of the other host cannot delete the attendee's host-only jar.
+    expect(
+      (await webContext.cookies(manifest.origins.web)).some(
+        (cookie) => cookie.name === 'oidc_access_token',
+      ),
+    ).toBe(true);
+    expect(
+      (await webPage.request.get(webUrl(manifest, '/api/bff/me'))).status(),
+    ).toBe(200);
+  } finally {
+    await Promise.all([
+      webContext.close(),
+      portalContext.close(),
+      platformContext.close(),
+    ]);
+  }
 });
 
 test('[AUTH-05] expired access token refreshes inside BFF', async ({
@@ -528,7 +692,11 @@ test('[AUTH-05] expired access token refreshes inside BFF', async ({
   const first = (await page.context().cookies(manifest.origins.web)).find(
     (cookie) => cookie.name === 'oidc_access_token',
   );
+  const firstRefresh = (
+    await page.context().cookies(manifest.origins.web)
+  ).find((cookie) => cookie.name === 'oidc_refresh_token');
   expect(first).toBeTruthy();
+  expect(firstRefresh).toBeTruthy();
   await expect
     .poll(
       async () => {
@@ -537,14 +705,62 @@ test('[AUTH-05] expired access token refreshes inside BFF', async ({
           page.request.get(webUrl(manifest, '/api/bff/me')),
         ]);
         if (pair.some((response) => response.status() !== 200)) return false;
-        const now = (await page.context().cookies(manifest.origins.web)).find(
+        for (const response of pair) {
+          if (
+            !JSON.stringify(await response.json()).includes(
+              accountFor(manifest, 'AUTH-05', 'attendee').userId!,
+            )
+          )
+            return false;
+        }
+        const cookies = await page.context().cookies(manifest.origins.web);
+        const access = cookies.find(
           (cookie) => cookie.name === 'oidc_access_token',
         );
-        return Boolean(now && now.value !== first!.value);
+        const refresh = cookies.find(
+          (cookie) => cookie.name === 'oidc_refresh_token',
+        );
+        return Boolean(
+          access &&
+          access.value !== first!.value &&
+          refresh &&
+          refresh.value !== firstRefresh!.value,
+        );
       },
       { timeout: 45_000, intervals: [1000] },
     )
     .toBe(true);
+});
+
+test('[AUTH-05] redeem verifies email after refreshing an expired access token', async ({
+  page,
+}) => {
+  test.setTimeout(70_000);
+  const base = loadManifest();
+  if (!base.origins.shortWeb)
+    throw new Error('BLOCKED: AUTH-05 short-lived isolated Web missing');
+  const manifest = {
+    ...base,
+    origins: { ...base.origins, web: base.origins.shortWeb },
+  };
+  fixtureFor(manifest, 'AUTH-05');
+  await login(page, manifest, accountFor(manifest, 'AUTH-05', 'attendee'));
+  const first = (await page.context().cookies(manifest.origins.web)).find(
+    (cookie) => cookie.name === 'oidc_access_token',
+  );
+  expect(first).toBeTruthy();
+  const exp = Number(decodeJwtPayload(first!.value).exp);
+  expect(Number.isFinite(exp)).toBe(true);
+  await new Promise((resolve) =>
+    setTimeout(resolve, Math.max(0, exp * 1000 - Date.now() + 1200)),
+  );
+  await page.goto(webUrl(manifest, '/redeem'));
+  await expect(page.getByTestId('redeem-global-code')).toBeVisible();
+  await expect(page.getByTestId('redeem-auth-gate')).toHaveCount(0);
+  const current = (await page.context().cookies(manifest.origins.web)).find(
+    (cookie) => cookie.name === 'oidc_access_token',
+  );
+  expect(current?.value).not.toBe(first!.value);
 });
 
 test('[AUTH-05] revoked Keycloak refresh fails closed and actors stay isolated', async ({

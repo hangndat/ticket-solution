@@ -52,6 +52,7 @@ export const catalog = {
   'DB-08': [
     b('issue', 'issue: last-seat'),
     b('issue', 'issue: terminal QUOTA_EXHAUSTED'),
+    b('db08-fault-rollback', 'DB-08:'),
   ],
   'DB-09': [
     b('gate', 'gate: one confirm wins'),
