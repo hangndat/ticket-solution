@@ -12,6 +12,8 @@ import {
   countTicketsForOwner,
   expireDispatchedInvitations,
   readInvitationEventSnapshot,
+  revokeDispatchedInvitations,
+  assertInvitationQuotaDelta,
 } from './invitation-db';
 import { walletTicketIds } from './helpers';
 import { randomUUID } from 'node:crypto';
@@ -172,6 +174,72 @@ test('[WEB-13] second claim with a new idempotency key is rejected after AUTO su
   }
 });
 
+test('[WEB-13] same idempotency key replay returns the first AUTO ticket without extra mutation', async ({
+  browser,
+}) => {
+  test.setTimeout(180_000);
+  const manifest = loadManifest();
+  const portalContext = await browser.newContext();
+  const attendeeContext = await browser.newContext();
+  try {
+    const portal = await portalContext.newPage();
+    const attendee = await attendeeContext.newPage();
+    const { f, answers, recipient, claimUrl, eventId } =
+      await dispatchWeb13Invitation(
+        portal,
+        manifest,
+        'auto',
+        'idempotencyReplay',
+      );
+    await openClaimAsRecipient(attendee, manifest, claimUrl, recipient);
+    await fillClaim(attendee, answers);
+    const quotaBefore = await readInvitationEventSnapshot(f, eventId);
+    const first = attendee.waitForResponse(
+      (response) =>
+        response.url().endsWith('/api/bff/claim') &&
+        response.request().method() === 'POST',
+    );
+    await attendee.getByRole('button', { name: 'Nhận vé mời' }).click();
+    const firstResponse = await first;
+    expect([200, 201, 202]).toContain(firstResponse.status());
+    const firstBody = (await firstResponse.json()) as {
+      ticketId?: string;
+      replayed?: boolean;
+    };
+    expect(firstBody.ticketId).toBeTruthy();
+    const ownerId = recipient.userId!;
+    expect(await countTicketsForOwner(f, ownerId, eventId)).toBe(1);
+    const afterFirst = await readInvitationEventSnapshot(f, eventId);
+    assertInvitationQuotaDelta(quotaBefore, afterFirst, 1, 'AUTO claim');
+    const firstPayload = firstResponse.request().postDataJSON() as Record<
+      string,
+      unknown
+    >;
+    const replayResponse = await attendee.request.post(
+      new URL('/api/bff/claim', manifest.origins.web).toString(),
+      {
+        data: firstPayload,
+        headers: { Origin: manifest.origins.web },
+        failOnStatusCode: false,
+      },
+    );
+    expect([200, 201, 202]).toContain(replayResponse.status());
+    const replayBody = (await replayResponse.json()) as {
+      ticketId?: string;
+      replayed?: boolean;
+    };
+    expect(replayBody.ticketId).toBe(firstBody.ticketId);
+    expect(replayBody.replayed).toBe(true);
+    expect(await countTicketsForOwner(f, ownerId, eventId)).toBe(1);
+    expect(await readInvitationEventSnapshot(f, eventId)).toEqual(afterFirst);
+  } finally {
+    await Promise.allSettled([
+      portalContext.close(),
+      attendeeContext.close(),
+    ]);
+  }
+});
+
 test('[WEB-13] MANUAL manager reject leaves attendee without ticket', async ({
   browser,
 }) => {
@@ -193,6 +261,7 @@ test('[WEB-13] MANUAL manager reject leaves attendee without ticket', async ({
     await openClaimAsRecipient(attendee, manifest, claimUrl, recipient);
     await fillClaim(attendee, answers);
     const before = await walletTicketIds(attendee, manifest, f.tenantId);
+    const quotaBeforeClaim = await readInvitationEventSnapshot(f, eventId);
     const claimResponsePromise = attendee.waitForResponse(
       (response) =>
         response.url().endsWith('/api/bff/claim') &&
@@ -204,6 +273,12 @@ test('[WEB-13] MANUAL manager reject leaves attendee without ticket', async ({
     const result = (await claimResponse.json()) as { requestId?: string };
     expect(result.requestId).toBeTruthy();
     const pendingState = await readInvitationEventSnapshot(f, eventId);
+    assertInvitationQuotaDelta(
+      quotaBeforeClaim,
+      pendingState,
+      0,
+      'MANUAL claim pending',
+    );
     expect(
       pendingState.requests.find((request) => request.id === result.requestId)
         ?.status,
@@ -297,6 +372,45 @@ test('[WEB-13] expired invitation token is rejected at claim', async ({
     expect(claimResponse.status()).toBe(410);
     expect(((await claimResponse.json()) as { code?: string }).code).toBe(
       'INVITATION_EXPIRED',
+    );
+    expect(await walletTicketIds(attendee, manifest, f.tenantId)).toEqual(before);
+    expect(await readInvitationEventSnapshot(f, eventId)).toEqual(stateBefore);
+  } finally {
+    await Promise.allSettled([
+      portalContext.close(),
+      attendeeContext.close(),
+    ]);
+  }
+});
+
+test('[WEB-13] revoked invitation token is rejected at claim', async ({
+  browser,
+}) => {
+  test.setTimeout(180_000);
+  const manifest = loadManifest();
+  const portalContext = await browser.newContext();
+  const attendeeContext = await browser.newContext();
+  try {
+    const portal = await portalContext.newPage();
+    const attendee = await attendeeContext.newPage();
+    const { f, eventId, answers, recipient, claimUrl } =
+      await dispatchWeb13Invitation(portal, manifest, 'auto', 'revoked');
+    const revoked = await revokeDispatchedInvitations(f, eventId);
+    expect(revoked).toBeGreaterThan(0);
+    await openClaimAsRecipient(attendee, manifest, claimUrl, recipient);
+    await fillClaim(attendee, answers);
+    const before = await walletTicketIds(attendee, manifest, f.tenantId);
+    const stateBefore = await readInvitationEventSnapshot(f, eventId);
+    const claimResponsePromise = attendee.waitForResponse(
+      (response) =>
+        response.url().endsWith('/api/bff/claim') &&
+        response.request().method() === 'POST',
+    );
+    await attendee.getByRole('button', { name: 'Nhận vé mời' }).click();
+    const claimResponse = await claimResponsePromise;
+    expect(claimResponse.status()).toBe(410);
+    expect(((await claimResponse.json()) as { code?: string }).code).toBe(
+      'INVITATION_REVOKED',
     );
     expect(await walletTicketIds(attendee, manifest, f.tenantId)).toEqual(before);
     expect(await readInvitationEventSnapshot(f, eventId)).toEqual(stateBefore);
