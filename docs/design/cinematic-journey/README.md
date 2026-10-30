@@ -1,6 +1,6 @@
-# Vemoki — Cinematic Ticket Journey · Visual spike v2 (2.5D + AI assets)
+# Vemoki — Cinematic Ticket Journey · MVP chờ review
 
-> Trạng thái: **chờ review visual**. Không phải Phase 2. Route `noindex`; chưa đổi public routing/sitemap.
+> Trạng thái: **MVP chờ review**, không deploy. Public `/experience` và `/en/experience`, vẫn noindex và ngoài sitemap. Bàn giao hiện tại: [MVP-REVIEW.md](MVP-REVIEW.md). Các phần dưới giữ lịch sử visual spike.
 > Nền marketing đã đồng bộ lại ngày 30/10: VD-09 + chỉnh sửa VD-10, nguồn `95a5d8a354da349c186e3137a9644c1fb31d96f4`. Ảnh trong `frames/after/` thuộc lượt spike trước đồng bộ; ảnh header/logo hiện tại ở `frames/brand-sync/`.
 > Tham chiếu nguyên tắc: [MengTo/kage](https://github.com/MengTo/kage) — chỉ nguyên tắc (sticky stage, layer depth, caption theo chương); không dùng source/artwork.
 
@@ -8,10 +8,10 @@
 
 | Locale | URL |
 |--------|-----|
-| vi | `http://127.0.0.1:3010/marketing/journey` |
-| en | `http://127.0.0.1:3010/marketing/en/journey` |
+| vi | `http://127.0.0.1:3011/experience` |
+| en | `http://127.0.0.1:3011/en/experience` |
 
-(Port 3010 nằm trong allow-list dev của `/api/marketing/events`, nên analytics chạy thật khi review.)
+(Port3011 phục vụ production build local; điều kiện analytics/performance trong báo cáo MVP.)
 
 ## Hướng visual
 
@@ -137,4 +137,4 @@ Evidence mới: [landing desktop](frames/brand-sync/landing-desktop.png), [landi
 
 Browser page `e95ca31e-c935-4025-b275-9da439a8aad4`, lệnh Orca `tab create`, `exec set viewport`, `snapshot`, `click`, `wait --url`, `eval`, `screenshot`, `keypress Escape`. Port scan: execution host `local`, port `3010`, PID `79923`, `kind=workspace`, `owner.confidence=cwd`, owner path là worktree này. Evidence là working tree chưa commit, không phải verdict exact-SHA độc lập. Chưa chạy lại toàn bộ UAT chuyển cảnh/analytics, Safari hoặc performance trong lượt đồng bộ này.
 
-Xem landing đúng phiên bản tại `http://127.0.0.1:3010/marketing`; xem spike tại `http://127.0.0.1:3010/marketing/journey`.
+Xem landing đúng phiên bản tại `http://127.0.0.1:3010/marketing`; xem spike tại `http://127.0.0.1:3011/experience`.

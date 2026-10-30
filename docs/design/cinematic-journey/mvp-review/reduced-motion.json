@@ -1,0 +1,22 @@
+{
+  "animations": 0,
+  "chapters": [
+    "invitation",
+    "arrival",
+    "gateway",
+    "moment",
+    "complete"
+  ],
+  "cta": [
+    {
+      "inert": false,
+      "text": "M\u1edf demo tr\u00ean \u1ee9ng d\u1ee5ng"
+    },
+    {
+      "inert": false,
+      "text": "\u0110\u0103ng k\u00fd t\u01b0 v\u1ea5n"
+    }
+  ],
+  "reduced": true,
+  "track": false
+}
