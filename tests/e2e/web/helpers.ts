@@ -213,6 +213,28 @@ export function caseData<T>(fixture: CaseFixture, key: string): T {
   return value as T;
 }
 
+/** Functional layout guard — not pixel-perfect scoring (WEB-11). */
+export async function assertNoHorizontalOverflow(page: Page) {
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth + 1,
+    ),
+  ).toBe(true);
+}
+
+/** Primary CTA must be visible, enabled, and fit the viewport width. */
+export async function assertPrimaryButtonOperable(page: Page, name: string) {
+  const button = page.getByRole('button', { name, exact: true });
+  await expect(button).toBeVisible();
+  await expect(button).toBeEnabled();
+  const box = await button.boundingBox();
+  expect(box).not.toBeNull();
+  const viewport = page.viewportSize();
+  expect(viewport).not.toBeNull();
+  expect(box!.x).toBeGreaterThanOrEqual(-1);
+  expect(box!.x + box!.width).toBeLessThanOrEqual(viewport!.width + 1);
+}
+
 /** Form fields are defined by the published server schema. Fixture values use field IDs, not labels. */
 export async function fillPublishedForm(
   page: Page,
