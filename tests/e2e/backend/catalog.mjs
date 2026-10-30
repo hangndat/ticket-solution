@@ -134,6 +134,11 @@ export const catalog = {
   'JOB-01': [
     b('issue', 'issue: last-seat'),
     b('outbox-fence', 'TicketIssued: email outside tx'),
+    {
+      file: 'tests/e2e/backend/job-01-durable-outbox.test.cjs',
+      name: '[JOB-01] R durable outbox',
+      layer: 'R',
+    },
   ],
   'JOB-02': [b('outbox-fence', 'outbox fence: MembershipInvite')],
   'JOB-03': [
@@ -255,7 +260,7 @@ export const notes = {
   'GATE-09':
     'D receipt matrix và H validation; thiếu H real authz/ownership/rate matrix.',
   'JOB-01':
-    'D ticket/outbox atomic; thiếu R worker stop/restart + Mailpit và Redis restart.',
+    'D ticket/outbox atomic; R worker stop + Redis restart + Mailpit once (ADR-17 PG SoT, không assert exactly-once SMTP/inbox).',
   'JOB-02': 'D fence; thiếu R kill worker/lease reclaim.',
   'JOB-03':
     'D retry và U deadline; thiếu R SMTP timeout/accept-before-ack crash.',
