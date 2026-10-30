@@ -305,7 +305,9 @@ export async function seedRuntime(state, caseIds) {
         });
         fixture.ticketTypeId = inventory.ticketTypeId;
         fixture.sourceId = inventory.sourceId;
-        if (['WEB-02', 'WEB-03', 'WEB-07', 'WEB-10'].includes(caseId)) {
+        if (
+          ['AUTH-03', 'WEB-02', 'WEB-03', 'WEB-07', 'WEB-10'].includes(caseId)
+        ) {
           fixture.data.codeIds = { primary: inventory.codeIds[0] };
         }
         fixture.data.ticketTypeLabel = 'E2E General';
