@@ -1381,9 +1381,9 @@ test('[AUTH-07] cross-tab nav clears A and drops held A profile after B login', 
       observer.observe(document, { subtree: true, childList: true, characterData: true });
     }, actorA.username);
     release();
-    await expect(heldTab.getByTestId('nav-avatar')).toContainText(actorB.username);
+    await expect(heldTab.getByTestId('nav-avatar')).toContainText(actorB.username.toLowerCase());
     expect(await heldTab.evaluate(() => (window as typeof window & { staleProfileRendered?: boolean }).staleProfileRendered ?? false)).toBe(false);
-    await expect(oldTab.getByTestId('nav-avatar')).toContainText(actorB.username);
+    await expect(oldTab.getByTestId('nav-avatar')).toContainText(actorB.username.toLowerCase());
   } finally {
     release();
     await context.close();
