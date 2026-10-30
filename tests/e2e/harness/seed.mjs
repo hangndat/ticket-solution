@@ -2087,11 +2087,7 @@ export async function seedRuntime(state, caseIds) {
             accounts.attendee.userId,
             accounts.attendee.username,
           );
-          await insertSyntheticNotification(
-            unknownTicket.ticketId,
-            'UNKNOWN',
-            'unknown-projection',
-          );
+          await setLatestNotificationState(unknownTicket.ticketId, 'UNKNOWN');
           unknownTicketId = unknownTicket.ticketId;
           await tx.$executeRaw`
             UPDATE outbox SET status = 'COMPLETE', updated_at = now()
