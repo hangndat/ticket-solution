@@ -117,11 +117,13 @@
   {
     "caseId": "DB-11",
     "tests": [
-      "D:packages/backend/test/import-invitations.test.cjs#H-I1/H-I2/H-I3 import jobs"
+      "D:packages/backend/test/import-invitations.test.cjs#H-I1/H-I2/H-I3 import jobs",
+      "D:packages/backend/test/db11-invite-ttl-claim.test.cjs#DB-11: staff invite TTL/one-use/email + attendee claim host separation/expired/replay/wrong-owner",
+      "H:tests/e2e/http/live.test.mjs#[DB-11] live HTTP"
     ],
-    "layers": ["D"],
-    "status": "blocked",
-    "reason": "D import/invite; thiếu H 48h/claim host và wrong-owner matrix."
+    "layers": ["D", "H"],
+    "status": "implemented",
+    "reason": "D PostgreSQL PASS trên SHA sạch: staff invite TTL 48h đúng cấu hình, hết hạn thật không tạo membership, email không khớp bị chặn, một lần dùng (actor khác token cũ bị INVITE_ALREADY_USED). Attendee claim: token staff/attendee tách biệt hoàn toàn (cross-use bị chặn, không mutate quota/membership), expired/revoked không mint code/ticket, wrong-owner (actor khác cùng email) replay invitation đã CLAIMED không tạo vé thứ hai — đúng một ticket/owner cho invitation. H Keycloak/HTTP PASS qua endpoint thật (POST /tenants/:id/invites, POST /me/membership-invites/accept, import GUESTS commit/dispatch, POST invitations/claim) với bearer token Keycloak thật cho owner/attendee/otherAttendee: TTL 48h, accept + idempotent same-actor replay, expired (backdate qua control DB) từ chối không membership, email-mismatch từ chối không đổi membership hiện có, cross-use staff↔attendee token bị chặn cả hai chiều; claim happy-path mint đúng 1 ticket/+1 quota, same-key replay idempotent, new-key replay trên invitation đã CLAIMED không mint vé thứ hai, wrong-owner (email khác) bị EMAIL_MISMATCH không mutation. Evidence: SHA sạch `730c78fea5745947bcf0d5a209acee5cb3869b14`, `pnpm test:e2e:http -- --case=DB-11` run `mvuob2lw-a7465e` (evidenceExactShaEligible=true); regression `--case=DB-09,DB-10` PASS cả hai sau khi sửa harness dùng chung. Chờ DoD độc lập trên SHA cuối."
   },
   {
     "caseId": "DB-12",
