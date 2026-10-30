@@ -1576,6 +1576,7 @@ export async function seedRuntime(state, caseIds) {
     httpClientSecret: state.clientSecrets['e2e-http'],
     httpPlatformClientId: 'e2e-http-platform',
     httpPlatformClientSecret: state.clientSecrets['e2e-http-platform'],
+    sourceProvenance: state.sourceProvenance,
   };
   state.manifest = manifest;
   state.manifestPath = resolve(state.dir, 'manifest.json');
