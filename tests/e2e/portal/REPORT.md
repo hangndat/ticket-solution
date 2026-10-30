@@ -5,7 +5,7 @@
 | Lệnh | Kết quả |
 | --- | --- |
 | `node tests/e2e/harness/run.mjs e2e --case=PORT-08` | **PASS** run `mvuss75q-554aba` (baseline), **PASS** `mvustvib-8df4b9` sau bổ sung assertion; browser 1/1; artifact `tests/e2e/.artifacts/mvustvib-8df4b9/summary.json`. |
-| SHA | Exact SHA evidence ghi ở commit PR (tree sạch, evidenceExactShaEligible). |
+| SHA | `7db762b15f50aeb9cd8d0cf1d0e870dd2680393e` (clean tree, run `mvustvib-8df4b9`, evidenceExactShaEligible). |
 
 PORT-08 (phần Portal dashboard O12 read): BFF GET `/report` khớp snapshot seed thật (ticket ACTIVE=1, quota FINITE allocated/remaining, counters 0); UI gate `event-report-as-of`, KPI, refresh GET, không Resend trên thẻ; không nút quét/confirm/undo; CTA pending/email CS ẩn khi count=0; quota remaining hiển thị số thật khi FINITE. **Gap giữ BLOCKED:** confirm APPLIED/undo/reject theo dictionary O12 → Gate scan + `DB-15`, không Portal; nhánh deep-link khi pending/emailNeedsCs>0 cần seed harness (tránh đụng WEB-13); lỗi upstream không render 0 giả cần fault profile runtime.
 
