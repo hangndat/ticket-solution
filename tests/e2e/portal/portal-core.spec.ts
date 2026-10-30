@@ -132,6 +132,26 @@ test('[PORT-07] gate create, duplicate and HTTP validation', async ({
   expect(badSort.status).toBe(422);
   expect((badSort.json as { code?: string }).code).toBe('SORT_INVALID');
 
+  const minSort = await bffMutate(page, eventBff(f, '/gates'), {
+    name: `Min ${m.runId}`,
+    sortOrder: 0,
+  });
+  expect(minSort.status).toBeGreaterThanOrEqual(200);
+  expect(minSort.status).toBeLessThan(300);
+  expect((minSort.json as { sortOrder?: number }).sortOrder).toBe(0);
+
+  for (const outOfRange of [-1, 10000] as const) {
+    const rejected = await bffMutate(page, eventBff(f, '/gates'), {
+      name: `Range ${outOfRange} ${m.runId}`,
+      sortOrder: outOfRange,
+    });
+    expect(rejected.status).toBe(422);
+    expect((rejected.json as { code?: string }).code).toBe('SCOPE_REQUIRED');
+    expect(String((rejected.json as { message?: string }).message)).toMatch(
+      /between 0 and 9999/,
+    );
+  }
+
   const scannerContext = await browser.newContext();
   const scannerPage = await scannerContext.newPage();
   try {
