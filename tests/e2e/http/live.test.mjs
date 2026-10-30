@@ -843,25 +843,29 @@ async function db04ControlledRequests(ctx, path, token, body, codes) {
       observed.push({ status: result.status, code: result.body.code });
       return result;
     }));
-    const deadline = Date.now() + 15000;
+    const deadline = Date.now() + 3000;
     let blocked = [];
-    const sampled = new Map();
     while (Date.now() < deadline) {
       const { rows } = await observer.query(`SELECT pid, wait_event_type,
         pg_blocking_pids(pid) AS blockers, left(query, 160) AS query
         FROM pg_stat_activity WHERE pid <> pg_backend_pid()
           AND wait_event_type = 'Lock'`);
-      for (const row of rows) sampled.set(row.pid, row);
-      blocked = rows.filter((row) => row.blockers.includes(blockerPid));
+      const waiters = new Map(rows.filter((row) =>
+        row.query.includes('FROM attendee_counters')).map((row) => [row.pid, row]));
+      const reachesLocker = (pid, seen = new Set()) => {
+        if (pid === blockerPid) return true;
+        if (seen.has(pid)) return false;
+        const waiter = waiters.get(pid);
+        if (!waiter) return false;
+        seen.add(pid);
+        return waiter.blockers.some((blocker) => reachesLocker(blocker, seen));
+      };
+      blocked = [...waiters.values()].filter((row) => reachesLocker(row.pid));
       if (blocked.length === codes.length) break;
       await new Promise((resolve) => setTimeout(resolve, 30));
     }
-    const activity = blocked.length === codes.length ? [] : (await observer.query(`
-      SELECT pid, state, wait_event_type, pg_blocking_pids(pid) AS blockers
-      FROM pg_stat_activity WHERE datname = current_database() AND pid <> pg_backend_pid()
-    `)).rows;
     assert.equal(blocked.length, codes.length,
-      `all HTTP requests must reach the same owner counter while it is locked; activity=${JSON.stringify(activity)} waits=${JSON.stringify([...sampled.values()])} outcomes=${JSON.stringify(observed)}`);
+      `all HTTP requests must wait on the owner counter before release; outcomes=${JSON.stringify(observed)}`);
   } catch (error) {
     requests.forEach((pending) => pending.catch(() => undefined));
     throw error;
