@@ -82,6 +82,7 @@ export const catalog = {
   'DB-12': [
     b('config-publish', 'config publish is versioned'),
     b('published-events', 'public published events'),
+    { file: 'tests/e2e/http/live.test.mjs', name: '[DB-12] live HTTP', layer: 'H' },
   ],
   'DB-13': [b('event-lifecycle', 'C-E event lifecycle')],
   'DB-14': [
@@ -219,7 +220,7 @@ export const notes = {
   'DB-11':
     'D PostgreSQL PASS trên SHA sạch: staff invite TTL 48h đúng cấu hình, hết hạn thật không tạo membership, email không khớp bị chặn, một lần dùng (actor khác token cũ bị INVITE_ALREADY_USED). Attendee claim: token staff/attendee tách biệt hoàn toàn (cross-use bị chặn, không mutate quota/membership), expired/revoked không mint code/ticket, wrong-owner (actor khác cùng email) replay invitation đã CLAIMED không tạo vé thứ hai — đúng một ticket/owner cho invitation. Thiếu H Keycloak/HTTP: cần seed fixture + live.test.mjs case mới, đề xuất Dispatch riêng để không rủi ro harness dùng chung cho các ID khác.',
   'DB-12':
-    'D publish/projection; thiếu H cache version/locale/no-store và rollback.',
+    'D publish/projection/rollback optimistic concurrency PASS; H publish/rollback/draft-non-leak qua Keycloak/HTTP thật PASS run mvuphcyf-88857a. BLOCKED thật (không phải thiếu test): public cache key host+tenant+event+published version+locale và Cache-Control no-store trên preview không có ở runtime (apps/api/src/published-events.ts, apps/api/src/config.ts ~L374) — đã báo coordinator, chờ review sản phẩm riêng trước khi mở Task runtime.',
   'DB-13':
     'D lifecycle; thiếu UTC/IANA/deadline sau lock và archived ticket policy.',
   'DB-14':
