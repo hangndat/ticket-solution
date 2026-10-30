@@ -37,21 +37,24 @@
     "caseId": "DB-04",
     "tests": [
       "D:packages/backend/test/issue.test.cjs#issue: last-seat",
-      "D:packages/backend/test/approval.test.cjs#manual redeem does not allocate"
+      "D:packages/backend/test/approval.test.cjs#manual redeem does not allocate",
+      "D:packages/backend/test/db04-db05-acceptance.test.cjs#DB-04:",
+      "H:tests/e2e/http/live.test.mjs#[DB-04]"
     ],
-    "layers": ["D"],
-    "status": "blocked",
-    "reason": "D unverified; thiếu canonicalization IdP và tranh per-email limit."
+    "layers": ["D", "H"],
+    "status": "implemented",
+    "reason": "D PostgreSQL và H Keycloak/HTTP thật: guest/unverified không có code/quota/pending/operation mutation; IdP email có dot/plus giữ nguyên; ba mã cùng owner tranh limit=1 chỉ một ticket, quota/counter/audit/outbox nhất quán. Reviewer độc lập cần nghiệm thu trên SHA cuối."
   },
   {
     "caseId": "DB-05",
     "tests": [
       "D:packages/backend/test/issue.test.cjs#issue: last-seat",
-      "D:packages/backend/test/approval.test.cjs#F01: mixed auto/manual"
+      "D:packages/backend/test/approval.test.cjs#F01: mixed auto/manual",
+      "D:packages/backend/test/db04-db05-acceptance.test.cjs#DB-05:"
     ],
     "layers": ["D"],
-    "status": "blocked",
-    "reason": "D last-seat; thiếu quota nullable và fault rollback ở cả type/source."
+    "status": "implemented",
+    "reason": "D PostgreSQL thật: mỗi event/type/source hữu hạn lần lượt tranh suất cuối khi hai scope khác nullable; allocated không âm/vượt capacity, code/request/ticket/operation/audit/outbox nhất quán. Fault sau cả ba allocation rollback mọi mutation, retry cùng key thành công. Reviewer độc lập cần nghiệm thu trên SHA cuối."
   },
   {
     "caseId": "DB-06",

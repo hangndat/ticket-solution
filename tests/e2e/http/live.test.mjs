@@ -20,6 +20,7 @@ const CASE_IDS = [
   'DB-01',
   'DB-02',
   'DB-03',
+  'DB-04',
   'WEB-04',
 ];
 const EVIL_HOST = 'evil.example';
@@ -316,29 +317,43 @@ async function bearer(ctx, actor) {
 }
 
 async function secondaryBearer(ctx) {
-  const issuer = required(ctx.runtime.secondaryIssuer, 'runtime.secondaryIssuer');
+  const issuer = required(
+    ctx.runtime.secondaryIssuer,
+    'runtime.secondaryIssuer',
+  );
   const actor = required(ctx.secondaryActor, 'secondaryActor');
   const response = await fetch(`${issuer}/protocol/openid-connect/token`, {
     method: 'POST',
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
       grant_type: 'password',
-      client_id: required(ctx.runtime.secondaryHttpClientId, 'secondaryHttpClientId'),
-      client_secret: required(ctx.runtime.secondaryHttpClientSecret, 'secondaryHttpClientSecret'),
+      client_id: required(
+        ctx.runtime.secondaryHttpClientId,
+        'secondaryHttpClientId',
+      ),
+      client_secret: required(
+        ctx.runtime.secondaryHttpClientSecret,
+        'secondaryHttpClientSecret',
+      ),
       username: required(actor.username, 'secondaryActor.username'),
       password: required(actor.password, 'secondaryActor.password'),
       scope: 'openid profile email',
     }),
   });
   assert.equal(response.status, 200, 'BLOCKED: secondary Keycloak grant');
-  const token = required((await response.json()).access_token, 'secondary access token');
+  const token = required(
+    (await response.json()).access_token,
+    'secondary access token',
+  );
   const requireBackend = createRequire(
     new URL('../../../packages/backend/package.json', import.meta.url),
   );
   const jose = requireBackend('jose');
   const { payload } = await jose.jwtVerify(
     token,
-    jose.createRemoteJWKSet(new URL(required(ctx.runtime.secondaryJwksUrl, 'secondaryJwksUrl'))),
+    jose.createRemoteJWKSet(
+      new URL(required(ctx.runtime.secondaryJwksUrl, 'secondaryJwksUrl')),
+    ),
     { issuer, audience: 'ticket-api', algorithms: ['RS256', 'ES256'] },
   );
   assert.equal(payload.sub, required(actor.subject, 'secondaryActor.subject'));
@@ -352,7 +367,10 @@ async function db02MutationSnapshot(f, ctx) {
   );
   const { Client } = requireBackend('pg');
   const client = new Client({
-    connectionString: required(f.data?.controlDatabaseUrl, 'DB-02 controlDatabaseUrl'),
+    connectionString: required(
+      f.data?.controlDatabaseUrl,
+      'DB-02 controlDatabaseUrl',
+    ),
   });
   await client.connect();
   try {
@@ -366,7 +384,9 @@ async function db02MutationSnapshot(f, ctx) {
     );
     await client.query('BEGIN');
     await client.query('SET LOCAL ROLE ticket_runtime');
-    await client.query("SELECT set_config('app.tenant_id', $1, true)", [f.tenantId]);
+    await client.query("SELECT set_config('app.tenant_id', $1, true)", [
+      f.tenantId,
+    ]);
     const counts = await client.query(
       `SELECT
          (SELECT count(*)::int FROM staff_sessions WHERE tenant_id = $1 AND event_id = $2) AS sessions,
@@ -735,7 +755,7 @@ async function web04Query(f, tenantId, statement, values) {
   const client = new Client({
     connectionString: required(
       f.data?.controlDatabaseUrl,
-      'WEB-04 controlDatabaseUrl',
+      'controlDatabaseUrl',
     ),
   });
   await client.connect();
@@ -783,6 +803,126 @@ async function db03Query(f, statement, values) {
   } finally {
     await client.end();
   }
+}
+
+async function auth03Snapshot(f) {
+  const [state] = await web04Query(
+    f,
+    f.tenantId,
+    `SELECT
+       (SELECT jsonb_agg(jsonb_build_object('id', id, 'status', status,
+         'activeRequestId', active_request_id) ORDER BY id)
+        FROM redemption_codes WHERE tenant_id = $1 AND event_id = $2) AS codes,
+       (SELECT jsonb_agg(jsonb_build_object('id', id, 'allocated', allocated) ORDER BY id)
+        FROM quota_buckets WHERE tenant_id = $1 AND event_id = $2) AS quota,
+       (SELECT count(*)::int FROM redemption_requests WHERE tenant_id = $1 AND event_id = $2) AS requests,
+       (SELECT count(*)::int FROM tickets WHERE tenant_id = $1 AND event_id = $2) AS tickets,
+       (SELECT count(*)::int FROM operations WHERE tenant_id = $1 AND event_id = $2) AS operations,
+       (SELECT count(*)::int FROM audit_logs WHERE tenant_id = $1 AND event_id = $2) AS audit,
+       (SELECT count(*)::int FROM outbox WHERE tenant_id = $1 AND event_id = $2) AS outbox`,
+    [f.tenantId, f.eventId],
+  );
+  const [rate] = await web04Query(
+    f,
+    f.accounts.unverified.userId,
+    `SELECT coalesce(jsonb_agg(jsonb_build_object('bucket', bucket_key,
+      'window', window_started_at, 'count', count) ORDER BY bucket_key, window_started_at), '[]'::jsonb) AS counters
+     FROM notification_rate_counters
+     WHERE tenant_id = $1 AND bucket_key IN ('redemption.resolve', 'api.redeem')`,
+    [f.accounts.unverified.userId],
+  );
+  return { ...state, rateCounters: rate.counters };
+}
+
+async function db04Snapshot(f) {
+  const tables = {
+    codes: 'SELECT id, status, active_request_id FROM redemption_codes WHERE tenant_id = $1::uuid AND event_id = $2::uuid ORDER BY id',
+    quotas: 'SELECT id, capacity, allocated FROM quota_buckets WHERE tenant_id = $1::uuid AND event_id = $2::uuid ORDER BY id',
+    requests: 'SELECT id, status FROM redemption_requests WHERE tenant_id = $1::uuid AND event_id = $2::uuid ORDER BY id',
+    tickets: 'SELECT id, owner_user_id FROM tickets WHERE tenant_id = $1::uuid AND event_id = $2::uuid ORDER BY id',
+    operations: 'SELECT id, client_key, status, response_json FROM operations WHERE tenant_id = $1::uuid AND event_id = $2::uuid ORDER BY id',
+    audits: 'SELECT id, action FROM audit_logs WHERE tenant_id = $1::uuid AND event_id = $2::uuid ORDER BY id',
+    outbox: 'SELECT id, type FROM outbox WHERE tenant_id = $1::uuid AND event_id = $2::uuid ORDER BY id',
+    attendees: 'SELECT id, user_id, canonical_email FROM event_attendees WHERE tenant_id = $1::uuid AND event_id = $2::uuid ORDER BY id',
+    counters: 'SELECT attendee_id, issued_count, max_tickets FROM attendee_counters WHERE tenant_id = $1::uuid AND event_id = $2::uuid ORDER BY attendee_id',
+  };
+  const state = {};
+  for (const [name, sql] of Object.entries(tables))
+    state[name] = await db03Query(f, sql, [f.tenantId, f.eventId]);
+  return state;
+}
+
+async function db04ControlledRequests(ctx, path, token, body, codes) {
+  const f = ctx.fixture;
+  const requireBackend = createRequire(
+    new URL('../../../packages/backend/package.json', import.meta.url),
+  );
+  const { Client } = requireBackend('pg');
+  const locker = new Client({
+    connectionString: required(f.data?.controlDatabaseUrl, 'DB-04 controlDatabaseUrl'),
+  });
+  const observer = new Client({
+    connectionString: required(f.data?.controlDatabaseUrl, 'DB-04 controlDatabaseUrl'),
+  });
+  const attendeeId = randomUUID();
+  await db03Query(f, `INSERT INTO event_attendees
+    (tenant_id, event_id, id, user_id, canonical_email, created_at, updated_at)
+    VALUES ($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5, now(), now())`,
+  [f.tenantId, f.eventId, attendeeId, f.accounts.attendee.userId, f.accounts.attendee.username]);
+  await db03Query(f, `INSERT INTO attendee_counters
+    (tenant_id, event_id, attendee_id, issued_count, max_tickets, updated_at)
+    VALUES ($1::uuid, $2::uuid, $3::uuid, 0, 1, now())`,
+  [f.tenantId, f.eventId, attendeeId]);
+  await locker.connect();
+  await observer.connect();
+  let requests = [];
+  const observed = [];
+  try {
+    await locker.query('BEGIN');
+    await locker.query('SET LOCAL ROLE ticket_runtime');
+    await locker.query("SELECT set_config('app.tenant_id', $1, true)", [f.tenantId]);
+    const locked = await locker.query(`SELECT pg_backend_pid() AS pid FROM attendee_counters
+      WHERE tenant_id = $1::uuid AND attendee_id = $2::uuid FOR UPDATE`,
+    [f.tenantId, attendeeId]);
+    assert.equal(locked.rows.length, 1);
+    const blockerPid = locked.rows[0].pid;
+    requests = codes.map((code) => request(ctx, 'POST', path, token, { ...body, code },
+      { 'idempotency-key': randomUUID() }).then((result) => {
+      observed.push({ status: result.status, code: result.body.code });
+      return result;
+    }));
+    const deadline = Date.now() + 3000;
+    let blocked = [];
+    while (Date.now() < deadline) {
+      const { rows } = await observer.query(`SELECT pid, wait_event_type,
+        pg_blocking_pids(pid) AS blockers, left(query, 160) AS query
+        FROM pg_stat_activity WHERE pid <> pg_backend_pid()
+          AND wait_event_type = 'Lock'`);
+      const waiters = new Map(rows.filter((row) =>
+        row.query.includes('FROM attendee_counters')).map((row) => [row.pid, row]));
+      const reachesLocker = (pid, seen = new Set()) => {
+        if (pid === blockerPid) return true;
+        if (seen.has(pid)) return false;
+        const waiter = waiters.get(pid);
+        if (!waiter) return false;
+        seen.add(pid);
+        return waiter.blockers.some((blocker) => reachesLocker(blocker, seen));
+      };
+      blocked = [...waiters.values()].filter((row) => reachesLocker(row.pid));
+      if (blocked.length === codes.length) break;
+      await new Promise((resolve) => setTimeout(resolve, 30));
+    }
+    assert.equal(blocked.length, codes.length,
+      `all HTTP requests must wait on the owner counter before release; outcomes=${JSON.stringify(observed)}`);
+  } catch (error) {
+    requests.forEach((pending) => pending.catch(() => undefined));
+    throw error;
+  } finally {
+    await locker.query('ROLLBACK');
+    await locker.end();
+    await observer.end();
+  }
+  return Promise.all(requests);
 }
 
 async function web04AssertRejected(ctx, {
@@ -2350,6 +2490,18 @@ for (const caseId of CASE_IDS) {
       const owner = await bearer(ctx, 'owner');
       const before = await request(ctx, 'GET', reportPath(f), owner);
       expectStatus(before, 200);
+      const beforeState = await auth03Snapshot(f);
+      const resolveBody = { code: body.code };
+      expectStatus(
+        await request(ctx, 'POST', '/redemptions/resolve', null, resolveBody),
+        401,
+      );
+      const afterGuest = await auth03Snapshot(f);
+      assert.deepEqual(
+        afterGuest,
+        beforeState,
+        'guest resolve must not mutate redeem state',
+      );
       const key = randomUUID();
       expectStatus(
         await request(ctx, 'POST', path, null, body, {
@@ -2358,12 +2510,97 @@ for (const caseId of CASE_IDS) {
         401,
       );
       const unverified = await bearer(ctx, 'unverified');
-      expectStatus(
-        await request(ctx, 'POST', path, unverified, body, {
-          'idempotency-key': key,
-        }),
-        403,
-        'EMAIL_NOT_VERIFIED',
+      for (const candidate of [body.code, `INVALID-${randomUUID()}`]) {
+        const denied = await request(
+          ctx,
+          'POST',
+          '/redemptions/resolve',
+          unverified,
+          {
+            code: candidate,
+          },
+        );
+        expectStatus(denied, 403, 'EMAIL_NOT_VERIFIED');
+        assert.equal(denied.body.retryable, false);
+        assert.equal(denied.body.resolveToken, undefined);
+        for (const field of [
+          'tenantId',
+          'eventId',
+          'ticketTypeId',
+          'sourceId',
+        ]) {
+          assert.equal(
+            denied.body[field],
+            undefined,
+            `resolve leaked ${field}`,
+          );
+        }
+        assert.equal(
+          JSON.stringify(denied.body).includes(candidate),
+          false,
+          'resolve leaked code',
+        );
+      }
+      const suffix = required(process.env.E2E_HOST_SUFFIX, 'E2E_HOST_SUFFIX');
+      const trust = required(process.env.E2E_TLS_SPKI, 'E2E_TLS_SPKI');
+      const browser = await chromium.launch({
+        headless: true,
+        args: [
+          `--host-resolver-rules=MAP *.${suffix} 127.0.0.1, MAP ${suffix} 127.0.0.1`,
+          `--ignore-certificate-errors-spki-list=${trust}`,
+        ],
+      });
+      try {
+        const cookies = await oidcBrowserSession(
+          browser,
+          ctx,
+          ctx.web,
+          ctx.portal,
+          '/api/auth/login?return=/',
+          '/api/bff/me/tenants',
+          'unverified',
+        );
+        const csrf = cookies.find(
+          ({ name }) => name === WEB_CSRF_COOKIE,
+        )?.value;
+        assert.ok(csrf, 'unverified Web session must include CSRF cookie');
+        const bffDenied = await bffJson(
+          new URL('/api/bff/redeem/resolve', ctx.web),
+          {
+            method: 'POST',
+            headers: {
+              'content-type': 'application/json',
+              Origin: new URL(ctx.web).origin,
+              Cookie: cookieHeader(cookies),
+              [WEB_CSRF_HEADER]: csrf,
+            },
+            body: JSON.stringify(resolveBody),
+          },
+        );
+        expectStatus(bffDenied, 403, 'EMAIL_NOT_VERIFIED');
+        assert.equal(bffDenied.body.resolveToken, undefined);
+        assert.equal(
+          JSON.stringify(bffDenied.body).includes(body.code),
+          false,
+          'BFF leaked code',
+        );
+      } finally {
+        await browser.close();
+      }
+      const deniedIssue = await request(ctx, 'POST', path, unverified, body, {
+        'idempotency-key': key,
+      });
+      expectStatus(deniedIssue, 403, 'EMAIL_NOT_VERIFIED');
+      assert.equal(deniedIssue.body.resolveToken, undefined);
+      assert.equal(
+        JSON.stringify(deniedIssue.body).includes(body.code),
+        false,
+        'issue leaked code',
+      );
+      assert.deepEqual(
+        await auth03Snapshot(f),
+        beforeState,
+        'unverified resolve/issue must not change code, quota, pending, request, ticket, operation, audit, outbox or rate counters',
       );
       const deniedSnapshot = await request(ctx, 'GET', reportPath(f), owner);
       expectStatus(deniedSnapshot, 200);
@@ -2376,6 +2613,20 @@ for (const caseId of CASE_IDS) {
         before.body.pendingApprovalCount,
       );
       const attendee = await bearer(ctx, 'attendee');
+      const resolved = await request(
+        ctx,
+        'POST',
+        '/redemptions/resolve',
+        attendee,
+        resolveBody,
+      );
+      assert.ok(
+        [200, 201].includes(resolved.status),
+        `verified resolve HTTP ${resolved.status}`,
+      );
+      assert.equal(resolved.body.tenantId, f.tenantId);
+      assert.equal(resolved.body.eventId, f.eventId);
+      assert.equal(typeof resolved.body.resolveToken, 'string');
       const issued = await request(ctx, 'POST', path, attendee, body, {
         'idempotency-key': randomUUID(),
       });
@@ -2384,6 +2635,45 @@ for (const caseId of CASE_IDS) {
       const after = await request(ctx, 'GET', reportPath(f), owner);
       expectStatus(after, 200);
       assert.equal(after.body.quota.allocated, before.body.quota.allocated + 1);
+      return;
+    }
+    if (caseId === 'DB-04') {
+      const path = redemptionPath(f);
+      const body = redemptionBody(f, caseId);
+      const before = await db04Snapshot(f);
+      const anonymous = await request(ctx, 'POST', path, null, body, {
+        'idempotency-key': randomUUID(),
+      });
+      expectStatus(anonymous, 401);
+      assert.deepEqual(await db04Snapshot(f), before, 'guest must not hold code, quota or pending state');
+      const unverified = await bearer(ctx, 'unverified');
+      const denied = await request(ctx, 'POST', path, unverified, body, {
+        'idempotency-key': randomUUID(),
+      });
+      expectStatus(denied, 403, 'EMAIL_NOT_VERIFIED');
+      assert.deepEqual(await db04Snapshot(f), before, 'unverified must not leave operation, hold or pending state');
+      const attendee = await bearer(ctx, 'attendee');
+      const codes = [f.code, f.secondCode, required(f.data?.raceCode, 'DB-04 thirdCode')];
+      const outcomes = await db04ControlledRequests(ctx, path, attendee, body, codes);
+      assert.equal(outcomes.filter((x) => x.status === 201).length, 1);
+      assert.equal(outcomes.filter((x) => x.status === 409 && x.body.code === 'ATTENDEE_LIMIT').length, 2);
+      const after = await db04Snapshot(f);
+      assert.equal(after.attendees.length, 1);
+      assert.equal(after.attendees[0].canonical_email, f.accounts.attendee.username);
+      assert.ok(after.attendees[0].canonical_email.includes('.last+label.'));
+      assert.equal(after.counters.length, 1);
+      assert.equal(after.counters[0].issued_count, 1);
+      assert.equal(after.counters[0].max_tickets, 1);
+      assert.equal(after.tickets.length, 1);
+      assert.equal(after.requests.length, 1);
+      assert.equal(after.codes.filter((x) => x.status === 'CONSUMED').length, 1);
+      assert.equal(after.codes.filter((x) => x.status === 'AVAILABLE').length, 2);
+      assert.ok(after.codes.every((x) => x.status !== 'HELD'));
+      assert.ok(after.quotas.every((x) => x.allocated === 1));
+      assert.equal(after.operations.length, 3);
+      assert.ok(after.operations.every((x) => x.status === 'COMPLETED'));
+      assert.equal(after.audits.filter((x) => x.action === 'ticket.issued').length, 1);
+      assert.equal(after.outbox.filter((x) => x.type === 'TicketIssued').length, 1);
       return;
     }
     if (caseId === 'AUTH-06') {
@@ -2644,13 +2934,25 @@ for (const caseId of CASE_IDS) {
         ),
       );
       deny(
-        await request(ctx, 'GET', reportPath(f, f.tenantId, foreignEventId), owner),
+        await request(
+          ctx,
+          'GET',
+          reportPath(f, f.tenantId, foreignEventId),
+          owner,
+        ),
       );
       const exportsPath = `/tenants/${f.tenantId}/events/${f.eventId}/exports`;
-      const ownExport = await request(ctx, 'POST', exportsPath, manager, {
-        format: 'csv',
-        filter: { states: ['ACTIVE'] },
-      }, { 'idempotency-key': randomUUID() });
+      const ownExport = await request(
+        ctx,
+        'POST',
+        exportsPath,
+        manager,
+        {
+          format: 'csv',
+          filter: { states: ['ACTIVE'] },
+        },
+        { 'idempotency-key': randomUUID() },
+      );
       expectStatus(ownExport, 201);
       const exportId = required(ownExport.body.exportId, 'DB-01 exportId');
       await waitExportReady(ctx, f, manager, exportId);
@@ -2659,10 +2961,17 @@ for (const caseId of CASE_IDS) {
 
       const foreignExportsPath = `/tenants/${foreignTenantId}/events/${foreignEventId}/exports`;
       deny(
-        await request(ctx, 'POST', foreignExportsPath, manager, {
-          format: 'csv',
-          filter: { states: ['ACTIVE'] },
-        }, { 'idempotency-key': randomUUID() }),
+        await request(
+          ctx,
+          'POST',
+          foreignExportsPath,
+          manager,
+          {
+            format: 'csv',
+            filter: { states: ['ACTIVE'] },
+          },
+          { 'idempotency-key': randomUUID() },
+        ),
       );
       deny(
         await request(
@@ -2693,10 +3002,22 @@ for (const caseId of CASE_IDS) {
       const alternate = await secondaryBearer(ctx);
       assert.equal(ctx.secondaryActor.username, f.accounts.attendee.username);
       const beforeAlternate = await db02MutationSnapshot(f, ctx);
-      assert.equal(beforeAlternate.identity, 0, 'secondary identity must start absent');
-      assert.ok(beforeAlternate.sameEmailUsers > 0, 'primary same-email identity must exist');
+      assert.equal(
+        beforeAlternate.identity,
+        0,
+        'secondary identity must start absent',
+      );
+      assert.ok(
+        beforeAlternate.sameEmailUsers > 0,
+        'primary same-email identity must exist',
+      );
       expectStatus(
-        await request(ctx, 'GET', `/me/tickets?tenantId=${f.tenantId}`, alternate),
+        await request(
+          ctx,
+          'GET',
+          `/me/tickets?tenantId=${f.tenantId}`,
+          alternate,
+        ),
         401,
       );
       expectStatus(
@@ -2835,7 +3156,10 @@ for (const caseId of CASE_IDS) {
       // Same-request concurrent retry: two HTTP requests racing the same
       // idempotency key/body, not a sequential replay, must still collapse
       // onto one business outcome (ON CONFLICT DO NOTHING + wait-for-first).
-      const raceBody = { ...body, code: required(f.secondCode, 'DB-03 secondCode') };
+      const raceBody = {
+        ...body,
+        code: required(f.secondCode, 'DB-03 secondCode'),
+      };
       const raceKey = randomUUID();
       const beforeRaceReport = await request(ctx, 'GET', reportPath(f), owner);
       expectStatus(beforeRaceReport, 200);
@@ -2988,10 +3312,7 @@ for (const caseId of CASE_IDS) {
           f.data?.suspendedTenantId,
           'WEB-04 suspendedTenantId',
         ),
-        eventId: required(
-          f.data?.suspendedEventId,
-          'WEB-04 suspendedEventId',
-        ),
+        eventId: required(f.data?.suspendedEventId, 'WEB-04 suspendedEventId'),
         code: required(f.data?.suspendedCode, 'WEB-04 suspendedCode'),
         errorStatus: 503,
         errorCode: 'TENANT_SUSPENDED',
