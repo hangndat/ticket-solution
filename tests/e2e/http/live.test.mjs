@@ -95,6 +95,7 @@ function context(caseId) {
     ),
     platformClientId: manifest.runtime?.httpPlatformClientId,
     platformClientSecret: manifest.runtime?.httpPlatformClientSecret,
+    secondaryActor: manifest.secondaryActor,
   };
 }
 
@@ -312,6 +313,71 @@ async function bearer(ctx, actor) {
   );
   const payload = await response.json();
   return required(payload.access_token, `access token for ${actor}`);
+}
+
+async function secondaryBearer(ctx) {
+  const issuer = required(ctx.runtime.secondaryIssuer, 'runtime.secondaryIssuer');
+  const actor = required(ctx.secondaryActor, 'secondaryActor');
+  const response = await fetch(`${issuer}/protocol/openid-connect/token`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'password',
+      client_id: required(ctx.runtime.secondaryHttpClientId, 'secondaryHttpClientId'),
+      client_secret: required(ctx.runtime.secondaryHttpClientSecret, 'secondaryHttpClientSecret'),
+      username: required(actor.username, 'secondaryActor.username'),
+      password: required(actor.password, 'secondaryActor.password'),
+      scope: 'openid profile email',
+    }),
+  });
+  assert.equal(response.status, 200, 'BLOCKED: secondary Keycloak grant');
+  const token = required((await response.json()).access_token, 'secondary access token');
+  const requireBackend = createRequire(
+    new URL('../../../packages/backend/package.json', import.meta.url),
+  );
+  const jose = requireBackend('jose');
+  const { payload } = await jose.jwtVerify(
+    token,
+    jose.createRemoteJWKSet(new URL(required(ctx.runtime.secondaryJwksUrl, 'secondaryJwksUrl'))),
+    { issuer, audience: 'ticket-api', algorithms: ['RS256', 'ES256'] },
+  );
+  assert.equal(payload.sub, required(actor.subject, 'secondaryActor.subject'));
+  assert.notEqual(issuer, ctx.tokenUrl.href.split('/protocol/')[0]);
+  return token;
+}
+
+async function db02MutationSnapshot(f, ctx) {
+  const requireBackend = createRequire(
+    new URL('../../../packages/backend/package.json', import.meta.url),
+  );
+  const { Client } = requireBackend('pg');
+  const client = new Client({
+    connectionString: required(f.data?.controlDatabaseUrl, 'DB-02 controlDatabaseUrl'),
+  });
+  await client.connect();
+  try {
+    const identity = await client.query(
+      'SELECT count(*)::int AS n FROM users WHERE issuer = $1 AND subject = $2',
+      [ctx.runtime.secondaryIssuer, ctx.secondaryActor.subject],
+    );
+    await client.query('BEGIN');
+    await client.query('SET LOCAL ROLE ticket_runtime');
+    await client.query("SELECT set_config('app.tenant_id', $1, true)", [f.tenantId]);
+    const counts = await client.query(
+      `SELECT
+         (SELECT count(*)::int FROM staff_sessions WHERE tenant_id = $1 AND event_id = $2) AS sessions,
+         (SELECT count(*)::int FROM gates WHERE tenant_id = $1 AND event_id = $2) AS gates,
+         (SELECT count(*)::int FROM tickets WHERE tenant_id = $1 AND event_id = $2) AS tickets`,
+      [f.tenantId, f.eventId],
+    );
+    await client.query('COMMIT');
+    return { identity: identity.rows[0].n, ...counts.rows[0] };
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    await client.end();
+  }
 }
 
 const FORGED_FORWARDED = {
@@ -2613,19 +2679,35 @@ for (const caseId of CASE_IDS) {
       // DB, even for an access token that is still cryptographically valid
       // and was cached before the revoke (PG is the source of truth, not
       // whatever role/tenant claim the token carried at mint time).
-      //
-      // Cross-issuer identity (two different Keycloak issuers + subjects
-      // sharing one email must not auto-link) is covered at D by
-      // db02-identity-issuer-subject.test.cjs. It stays BLOCKED for H: this
-      // harness provisions exactly one Keycloak realm/issuer per run
-      // (tests/e2e/harness/runtime.mjs seedKeycloak), so there is no second
-      // live issuer to mint a token from. Opening it needs a second
-      // provisioned realm in runtime.mjs, which is an architecture-impact
-      // harness change outside this task's scope, not something to fake
-      // with a crafted/mock JWT.
       const owner = await bearer(ctx, 'owner');
       const manager = await bearer(ctx, 'manager');
       const gates = gatePath(f, 'gates');
+      const alternate = await secondaryBearer(ctx);
+      assert.equal(ctx.secondaryActor.username, f.accounts.attendee.username);
+      const beforeAlternate = await db02MutationSnapshot(f, ctx);
+      assert.equal(beforeAlternate.identity, 0, 'secondary identity must start absent');
+      expectStatus(
+        await request(ctx, 'GET', `/me/tickets?tenantId=${f.tenantId}`, alternate),
+        401,
+      );
+      expectStatus(
+        await request(ctx, 'POST', gatePath(f, 'sessions'), alternate, {
+          tenantId: f.tenantId,
+        }),
+        401,
+      );
+      expectStatus(
+        await request(ctx, 'POST', gates, alternate, {
+          tenantId: f.tenantId,
+          name: `DB-02 alternate issuer ${randomUUID()}`,
+        }),
+        401,
+      );
+      assert.deepEqual(
+        await db02MutationSnapshot(f, ctx),
+        beforeAlternate,
+        'alternate issuer must not create identity, staff session, gate or ticket',
+      );
       expectStatus(
         await request(ctx, 'POST', gates, manager, {
           tenantId: f.tenantId,
