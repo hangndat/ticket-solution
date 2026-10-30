@@ -797,8 +797,22 @@ test('[WEB-08] real worker delivers issued ticket email to run Mailpit', async (
 }) => {
   test.setTimeout(75_000);
   const manifest = loadManifest();
-  const f = await redeemCode(page, manifest, 'WEB-08');
+  const f = fixtureFor(manifest, 'WEB-08');
+  const codeId = codeIdFor(f);
+  const before = await readRedemptionState(f, codeId);
+  await redeemCode(page, manifest, 'WEB-08');
   await expect(page.getByTestId('redeem-ux-success')).toBeVisible();
+  const card = page.getByTestId('redeem-ticket-card');
+  const ticketId = (await card.locator('dd').first().textContent())?.trim();
+  expect(ticketId).toMatch(/^[0-9a-f-]{36}$/i);
+  const issued = await readRedemptionState(f, codeId);
+  assertIssuedExactlyOnce(
+    before,
+    issued,
+    f,
+    accountFor(manifest, 'WEB-08', 'attendee').userId!,
+    ticketId,
+  );
   const actor = accountFor(manifest, 'WEB-08', 'attendee');
   const mail = await waitForMail(
     page,
@@ -807,9 +821,9 @@ test('[WEB-08] real worker delivers issued ticket email to run Mailpit', async (
     caseData<string>(f, 'eventName'),
   );
   const url = ticketLink(mail, manifest.origins.web);
-  const ticketId = url.match(/\/tickets\/([0-9a-f-]{36})/i)?.[1];
-  expect(ticketId).toBeTruthy();
-  expect(mail.Text ?? '').toContain(ticketId!);
+  const mailTicketId = url.match(/\/tickets\/([0-9a-f-]{36})/i)?.[1];
+  expect(mailTicketId).toBe(ticketId);
+  expect(mail.Text ?? '').toContain(mailTicketId!);
   expect(mail.HTML ?? '').toContain('cid:ticket-qr');
   const guest = await browser.newContext();
   try {
