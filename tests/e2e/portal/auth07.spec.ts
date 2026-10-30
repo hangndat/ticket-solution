@@ -7,6 +7,7 @@ const noStore = (value: string | undefined) => expect(value).toMatch(/private.*n
 test('[AUTH-07] Portal drops held staff document and audit JSON after another staff login', async ({ browser }) => {
   const manifest = loadManifest();
   const fixture = fixtureFor(manifest, 'AUTH-07');
+  expect(process.env.E2E_AUTH07_BFCACHE).toBe('1');
   const auditPath = eventPath(fixture, '/audit');
   const auditUrl = portalUrl(manifest, auditPath);
   const auditBff = eventBff(fixture, '/audit');
@@ -29,6 +30,13 @@ test('[AUTH-07] Portal drops held staff document and audit JSON after another st
     expect(actorA.surface).toBe('staff');
 
     const oldTab = await context.newPage();
+    await oldTab.addInitScript(() => {
+      (window as Window & { __auth07Restored?: boolean }).__auth07Restored = false;
+      window.addEventListener('pageshow', (event) => {
+        if (event.persisted) (window as Window & { __auth07Restored?: boolean }).__auth07Restored = true;
+      });
+    });
+    await oldTab.goto(portalUrl(manifest, '/auth'));
     const oldDocument = await oldTab.goto(auditUrl);
     expect(oldDocument?.status()).toBe(200);
     noStore(oldDocument?.headers()['cache-control']);
@@ -89,8 +97,15 @@ test('[AUTH-07] Portal drops held staff document and audit JSON after another st
       await expect(tab.getByTestId('audit-table')).toHaveCount(0);
     }
     await oldTab.goBack();
-    await oldTab.goForward();
-    await oldTab.reload();
+    const forwardDocument = await oldTab.goForward();
+    if (forwardDocument) noStore(forwardDocument.headers()['cache-control']);
+    await expect(oldTab).toHaveURL(auditUrl);
+    await oldTab.waitForLoadState('domcontentloaded');
+    const restored = await oldTab.evaluate(() =>
+      (window as Window & { __auth07Restored?: boolean }).__auth07Restored === true);
+    test.info().annotations.push({ type: 'portal-bfcache', description: restored ? 'restored' : 'new-document' });
+    const reloaded = await oldTab.reload();
+    noStore(reloaded?.headers()['cache-control']);
     await expect(oldTab.getByTestId('audit-table')).toHaveCount(0);
     const freshTab = await context.newPage();
     await freshTab.goto(auditUrl);
@@ -167,6 +182,70 @@ test('[AUTH-07] late real Keycloak refresh cannot replace a same-sub callback to
   }
 });
 
+test('[AUTH-07] held audit JSON from a prior same-sub login never commits', async ({ browser }) => {
+  const manifest = loadManifest();
+  const fixture = fixtureFor(manifest, 'AUTH-07');
+  const auditUrl = portalUrl(manifest, eventPath(fixture, '/audit'));
+  const auditBff = eventBff(fixture, '/audit');
+  const context = await browser.newContext();
+  const switchPage = await context.newPage();
+  let releaseOld!: () => void;
+  let releaseNew!: () => void;
+  let oldFetched!: () => void;
+  let oldFulfilled!: () => void;
+  const oldReleased = new Promise<void>((resolve) => { releaseOld = resolve; });
+  const newReleased = new Promise<void>((resolve) => { releaseNew = resolve; });
+  const oldReady = new Promise<void>((resolve) => { oldFetched = resolve; });
+  const oldDone = new Promise<void>((resolve) => { oldFulfilled = resolve; });
+  try {
+    await login(switchPage, manifest, 'AUTH-07', 'owner');
+    const first = await bffGet(switchPage, manifest, '/api/auth/identity?surface=staff');
+    expect(first.status).toBe(200);
+    const actorA = first.json as { actorId: string; authEpoch: string };
+    let firstRequest = true;
+    await context.route((url) => url.pathname === auditBff, async (route) => {
+      if (!firstRequest) {
+        await newReleased;
+        await route.continue();
+        return;
+      }
+      firstRequest = false;
+      const upstream = await route.fetch();
+      expect(upstream.status()).toBe(200);
+      noStore(upstream.headers()['cache-control']);
+      expect(upstream.headers()['x-portal-auth-epoch']).toBe(actorA.authEpoch);
+      oldFetched();
+      await oldReleased;
+      try { await route.fulfill({ response: upstream }); }
+      finally { oldFulfilled(); }
+    });
+    const oldTab = await context.newPage();
+    await oldTab.goto(portalUrl(manifest, '/auth'));
+    const oldNavigation = oldTab.goto(auditUrl);
+    await oldReady;
+
+    await switchPage.goto(portalUrl(manifest, '/api/auth/logout'));
+    await switchPage.goto(portalUrl(manifest, '/auth'));
+    await login(switchPage, manifest, 'AUTH-07', 'owner');
+    const second = await bffGet(switchPage, manifest, '/api/auth/identity?surface=staff');
+    expect(second.status).toBe(200);
+    const actorB = second.json as typeof actorA;
+    expect(actorB.actorId).toBe(actorA.actorId);
+    expect(actorB.authEpoch).not.toBe(actorA.authEpoch);
+
+    releaseOld();
+    await oldDone;
+    await oldNavigation;
+    await expect(oldTab.getByTestId('audit-table')).toHaveCount(0);
+    releaseNew();
+    await expect(oldTab.getByTestId('audit-table')).toBeVisible();
+  } finally {
+    releaseOld();
+    releaseNew();
+    await context.close();
+  }
+});
+
 test('[AUTH-07] held staff CSV download cannot commit after platform login', async ({ browser }) => {
   const manifest = loadManifest();
   const fixture = fixtureFor(manifest, 'AUTH-07');
@@ -175,13 +254,16 @@ test('[AUTH-07] held staff CSV download cannot commit after platform login', asy
   const exportsPath = eventBff(fixture, '/exports');
   let release!: () => void;
   let fetched!: () => void;
+  let routeSettled!: () => void;
   const released = new Promise<void>((resolve) => { release = resolve; });
   const ready = new Promise<void>((resolve) => { fetched = resolve; });
+  const settled = new Promise<void>((resolve) => { routeSettled = resolve; });
   try {
     await login(staffPage, manifest, 'AUTH-07', 'owner');
+    await expect.poll(() => staffPage.evaluate(() => document.cookie.includes('portal_csrf='))).toBe(true);
     const created = await bffMutate(staffPage, exportsPath,
       { format: 'csv', filter: {}, idempotencyKey: randomUUID() });
-    expect([200, 201]).toContain(created.status);
+    expect([200, 201], JSON.stringify(created.json)).toContain(created.status);
     const exportId = (created.json as { exportId?: string }).exportId;
     expect(exportId).toMatch(/^[0-9a-f-]{36}$/);
     const statusPath = `${exportsPath}/${exportId}`;
@@ -206,14 +288,13 @@ test('[AUTH-07] held staff CSV download cannot commit after platform login', asy
       expect(upstream.headers()['content-type']).toMatch(/text\/csv/i);
       fetched();
       await released;
-      await route.fulfill({ response: upstream });
+      try { await route.fulfill({ response: upstream }); }
+      finally { routeSettled(); }
     });
     let downloads = 0;
     staffPage.on('download', () => { downloads++; });
     await staffPage.getByRole('button', { name: 'Tải CSV' }).click();
     await ready;
-    const finished = staffPage.waitForEvent('requestfinished',
-      (request) => new URL(request.url()).pathname === downloadPath);
 
     const platformPage = await context.newPage();
     await platformPage.goto(portalUrl(manifest, '/api/auth/logout'));
@@ -227,7 +308,8 @@ test('[AUTH-07] held staff CSV download cannot commit after platform login', asy
     noStore(denied.headers['cache-control']);
 
     release();
-    await finished;
+    await settled;
+    await staffPage.evaluate(() => new Promise((resolve) => setTimeout(resolve, 0)));
     await expect(staffPage.getByTestId('export-result')).toHaveCount(0);
     expect(downloads).toBe(0);
     await expect(platformPage.getByTestId('audit-table')).toHaveCount(0);
