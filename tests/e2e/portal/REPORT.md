@@ -119,7 +119,16 @@ Không sửa harness cho PORT-09 notification states (PORT-08 counters/fault đ�
 | Runtime do coordinator chạy, `mvs7lq8o-b4964d`                                                                                                                                    | PLAT-01 và PLAT-05 PASS; Operator MFA/TOTP, Owner bị từ chối Platform, và Portal lỗi cấu hình chạy ở process HTTPS riêng. |
 | Runtime do coordinator chạy, `mvs7goky-950046`                                                                                                                                    | PORT-05 FAIL tại AntD option ẩn; selector đã đổi sang dropdown hiện, cần retry.                                           |
 
-Các PASS trên chỉ xác nhận nhánh đã chạy, chưa chứng minh toàn bộ AC tương ứng. `coverage.json` giữ `blocked` khi còn nhánh thiếu; discovery/typecheck không được tính là browser/API PASS.
+## Kiểm tra đã chạy (worker task_0d776f472c26 — PORT-05 B/H / Issue #1035)
+
+| Lệnh | Kết quả |
+| --- | --- |
+| `node tests/e2e/harness/run.mjs e2e --case=PORT-05` | **PASS** run `mvuwcsq0-b11a06`, browser 5/5; artifact `tests/e2e/.artifacts/mvuwcsq0-b11a06/summary.json` (post-commit clean tree re-run for evidenceExactShaEligible). |
+| SHA | `7e8cce2dee502cb12163d2b384012952bfd6ac45` |
+
+PORT-05: seed harness thêm CSV duplicate/existing/row-limit, consumed code PG, foreign tenant/event; spec mở rộng BFF upload/create (idempotencyKey body+header), preview duplicate + `/errors`, commit skip + replay, row limit preview 422, cross-scope deny. UI smoke giữ AntD `.ant-select-dropdown:visible`. **Gap nhỏ:** EMPTY CSV row chưa assert browser (parser bỏ dòng trống trong fixture); DUPLICATE_IN_FILE + skip used codes đáp ứng sai dòng/trùng/mã đã dùng.
+
+- Phạm vi: `tests/e2e/portal/**`, `tests/e2e/harness/seed.mjs` (PORT-05). Không sửa product/CI.
 
 ## Đã viết và giới hạn
 
@@ -131,5 +140,5 @@ Các PASS trên chỉ xác nhận nhánh đã chạy, chưa chứng minh toàn b
 
 ## Việc cần để chạy tiếp
 
-1. Coordinator retry PORT-05 sau selector fix và chạy full suite trên runtime HTTPS cô lập; ghi PASS/FAIL theo actual response/DB/mail.
+1. Coordinator retry PORT-05 sau selector fix và chạy full suite trên runtime HTTPS cô lập; ghi PASS/FAIL theo actual response/DB/mail. *(PORT-05 selector + B/H slice PASS tại task_0d776f472c26 — xem mục trên.)*
 2. Hoàn thiện nhánh còn thiếu trong `coverage.json`, đặc biệt B/H/R của PORT-11, 15 phút step-up của PLAT-01 và H/D audit của PLAT-03.

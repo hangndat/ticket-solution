@@ -751,7 +751,15 @@ export async function seedRuntime(state, caseIds) {
           fixture.data.manualTicketTypeId = manualPrimary.ticketTypeId;
           fixture.data.manualTicketTypeLabel = manualPrimary.ticketTypeLabel;
         }
-        if (caseId === 'PORT-05') fixture.data.sourceLabel = 'E2E Auto';
+        if (caseId === 'PORT-05') {
+          fixture.data.sourceLabel = 'E2E Auto';
+          fixture.data.controlDatabaseUrl = state.databaseUrl;
+          await tx.$executeRaw`
+            UPDATE redemption_codes SET status = 'CONSUMED'
+            WHERE tenant_id = ${tenantId}::uuid AND id = ${inventory.codeIds[0]}::uuid
+          `;
+          fixture.data.consumedCode = codes[0];
+        }
         if (caseId === 'GATE-01') {
           const foreignEventId = randomUUID();
           await tx.event.create({
@@ -1141,6 +1149,52 @@ export async function seedRuntime(state, caseIds) {
           }),
         );
       }
+      if (caseId === 'PORT-05') {
+        const foreignTenantId = randomUUID();
+        const foreignEventId = randomUUID();
+        fixture.data.foreignTenantId = foreignTenantId;
+        fixture.data.foreignEventId = foreignEventId;
+        await backend.withTenant(db, foreignTenantId, async (tx) => {
+          await tx.tenant.create({
+            data: {
+              id: foreignTenantId,
+              slug: `${slug}-foreign`,
+              name: 'Foreign PORT-05 tenant',
+            },
+          });
+          const membership = await backend.grantMembership(tx, {
+            tenantId: foreignTenantId,
+            userId: accounts.owner.userId,
+            role: 'Owner',
+            permissions: backend.tenantPermissionsForRole('Owner'),
+          });
+          await tx.event.create({
+            data: {
+              tenantId: foreignTenantId,
+              id: foreignEventId,
+              slug: 'event',
+              name: 'Foreign PORT-05 event',
+              status: 'PUBLISHED',
+            },
+          });
+          await backend.grantEventAssignment(tx, {
+            tenantId: foreignTenantId,
+            eventId: foreignEventId,
+            membershipId: membership.membershipId,
+            permissions: backend.eventPermissionsForRole('Owner'),
+          });
+          const inventory = await backend.seedEventInventory(tx, hmac, {
+            tenantId: foreignTenantId,
+            eventId: foreignEventId,
+            eventQuota: 20,
+            rawCodes: [],
+            ticketTypeLabel: 'Foreign PORT-05 type',
+            sourceName: 'Foreign PORT-05 source',
+          });
+          fixture.data.foreignSourceId = inventory.sourceId;
+          fixture.data.foreignTicketTypeId = inventory.ticketTypeId;
+        });
+      }
       if (caseId === 'DB-10') {
         const otherEventId = randomUUID();
         fixture.data.otherEventId = otherEventId;
@@ -1234,6 +1288,35 @@ export async function seedRuntime(state, caseIds) {
         mode: 0o600,
       });
       fixture.csvPath = csvPath;
+      if (caseId === 'PORT-05') {
+        const newCode = `PORT05-NEW-${state.id}`;
+        const writeCsv = (name, body) => {
+          const path = resolve(state.dir, name);
+          writeFileSync(path, body, { mode: 0o600 });
+          return path;
+        };
+        fixture.data.newImportCode = newCode;
+        fixture.data.invalidMixCsvPath = writeCsv(
+          `${caseId}-invalid.csv`,
+          `code\n \n${newCode}\n`,
+        );
+        fixture.data.duplicateCsvPath = writeCsv(
+          `${caseId}-dup.csv`,
+          `code\n${newCode}\n${newCode}\n`,
+        );
+        fixture.data.existingCodesCsvPath = writeCsv(
+          `${caseId}-existing.csv`,
+          `code\n${newCode}\n${codes[0]}\n${codes[1]}\n`,
+        );
+        const limitLines = ['code'];
+        for (let i = 0; i < 10_001; i += 1) {
+          limitLines.push(`LIM-${state.id}-${i}`);
+        }
+        fixture.data.rowLimitCsvPath = writeCsv(
+          `${caseId}-row-limit.csv`,
+          `${limitLines.join('\n')}\n`,
+        );
+      }
       if (caseId === 'PORT-11') {
         fixture.data.inviteeEmail = accounts.otherAttendee.username;
         fixture.data.inviteeUsername = accounts.otherAttendee.username;
