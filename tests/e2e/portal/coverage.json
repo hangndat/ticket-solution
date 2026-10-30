@@ -34,10 +34,17 @@
   },
   {
     "caseId": "PORT-05",
-    "tests": ["portal-import-members.spec.ts [PORT-05]"],
+    "tests": [
+      "portal-import-members.spec.ts [PORT-05] CSV upload, preview and commit flow uses isolated event",
+      "portal-import-members.spec.ts [PORT-05] preview reports duplicate rows and error report is reachable",
+      "portal-import-members.spec.ts [PORT-05] malformed nonblank row preview rejects without PG mutation",
+      "portal-import-members.spec.ts [PORT-05] commit skips existing codes and idempotent replay does not double-import",
+      "portal-import-members.spec.ts [PORT-05] row limit preview is rejected without extra business mutation",
+      "portal-import-members.spec.ts [PORT-05] foreign tenant and event cannot read owner import jobs or files"
+    ],
     "layers": ["B", "H"],
-    "status": "blocked",
-    "reason": "Valid CSV UI flow written; AntD visible-option selector corrected after runtime failure, retry pending. Invalid row, duplicate, used code, limit, replay and foreign owner branches remain."
+    "status": "covered",
+    "reason": "James DoD F01–F03 fix iteration 1: clean isolated run mvux2cef-af8a55 PASS 6/6 browser on commit dbd3d762 (tree dirty pre-commit). UI happy path asserts mapping column, preview/commit alerts, job list COMPLETED row; duplicate path asserts sample-error table + authenticated errors CSV + UI Tải lỗi download. EMPTY row via two-column CSV; PG businessRowsUnchanged on preview/reject/replay and code CONSUMED/AVAILABLE after commit. otherAttendee scoped actor denies wrong event/tenant and real fileId cross-scope with PG unchanged. evidenceExactShaEligible after commit+push on same SHA."
   },
   {
     "caseId": "PORT-06",
