@@ -1,5 +1,26 @@
 # Portal/Platform E2E — bàn giao worker
 
+## Kiểm tra đã chạy (worker task_ff809609587e — PORT-01 James F01/F02 fix 1/2 / Issue #1035)
+
+| Lệnh | Kết quả |
+| --- | --- |
+| `pnpm exec playwright test tests/e2e/portal/portal-core.spec.ts -g PORT-01 --list` | Discovery sau chỉnh quota+public projection. |
+| `node tests/e2e/harness/run.mjs e2e --case=PORT-01 --skip-build` | Diagnostic `mvuu9ujm-5d0b11` PASS 1/1 trên working tree dirty; `evidenceExactShaEligible=false`, không dùng làm acceptance evidence. |
+| `pnpm test:e2e --case=PORT-01` | **PASS** run sạch `mvuubgho-341f75`, browser 1/1 tại exact SHA `3ad80f862d8ffc349578d682b4ec9e446acb1d26`; `evidenceExactShaEligible=true`. |
+
+**Thay đổi spec:** BFF GET `/quota` bắt buộc `422`/`QUOTA_REQUIRED` và UI quota lỗi (không dùng `report.allocated>=0`); sau publish kiểm có version đã publish trong `/config-versions` và staff `contentStatus=PUBLISHED`. API public `/v1/public/tenants/{tenantSlug}/events/{slug}` trả 404; Web `/t/{tenantSlug}/events/{slug}` không hiển thị `event-published`. **Coverage:** `PORT-01` → `blocked` — thiếu UI cấu hình quota/event-wide capacity trên wizard path và public projection sau staff publish (đọc PORT-02/04).
+
+## Kiểm tra đã chạy (worker task_2c21d0516da9 — PORT-01 B / Issue #1035)
+
+| Lệnh | Kết quả |
+| --- | --- |
+| `node tests/e2e/harness/run.mjs e2e --case=PORT-01 --skip-build` | **PASS** run `mvutztg6-81c23b`, browser 1/1; artifact `tests/e2e/.artifacts/mvutztg6-81c23b/summary.json`. |
+| SHA | `affd7b5eaf73e86be05a124d683d2bb09fac7b81` (clean tree, evidenceExactShaEligible). |
+
+PORT-01 B: wizard → loại vé → nguồn AUTO → hạn mức (nav + report quota) → config Lưu draft + Xuất bản → `contentStatus` PUBLISHED, reload, danh sách tenant một event. **Gap ghi nhận:** BFF GET `/quota` 422 trên event mới (UI quota read-only); Web consumer direct link 404 dù staff đã PUBLISHED (không sửa product trong slice test).
+
+- Phạm vi: `tests/e2e/portal/portal-core.spec.ts`, `coverage.json`, `REPORT.md`. Không đụng WEB-11, product, harness seed.
+
 ## Kiểm tra đã chạy (worker task_8721cfd967d7 — PORT-08 B/H gap / Issue #1035)
 
 | Lệnh | Kết quả |
