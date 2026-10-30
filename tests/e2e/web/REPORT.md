@@ -5,6 +5,7 @@
 - F01: Tách ma trận B/H — mỗi nhánh invalid (required/type/select allowlist/termsAccepted=false/forged schema, stale form/terms) assert status+code riêng; PG `assertWeb05BusinessUnchanged` (browser) và `web04AssertRejected` + `redemption_requests`/quota (HTTP) không đổi request/ticket/code/quota.
 - F02: `web05-published-config.mjs` + `web05-hashes.mjs` — consent hash trên PG khớp nguồn published v1/v2 (`hashFormDefinition`/`hashTermsContent` body), `assert.notEqual` v2↔v1; HTTP redeem v1 trên `secondCode` trước publish v2, redeem v2 trên `primary` sau publish.
 - Run thăm dò dirty trên HEAD cũ: browser `mvuv8zmi-a02db4` PASS 7/7; HTTP `mvuv9phi-457559` PASS; `pnpm test:e2e:guards` 16/16. Evidence exact SHA ghi sau commit sạch. `coverage.json` giữ **blocked** chờ James revalidate.
+- Checkout sạch SHA `b6f9856b5e7b013278e1a9e66a61f6eb00fa3ed0` (`evidenceExactShaEligible: true`): `node tests/e2e/harness/run.mjs e2e --case=WEB-05 --skip-build` → `mvuvanf0-3fc114` PASS 7/7; `pnpm test:e2e:http --case=WEB-05 --skip-build` → `mvuvba97-1446eb` PASS; `pnpm test:e2e:guards` 16/16.
 
 ## WEB-05 form/terms validation B+H — 30/10/2026
 

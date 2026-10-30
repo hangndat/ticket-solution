@@ -131,7 +131,7 @@
     ],
     "layers": ["B", "H"],
     "status": "blocked",
-    "reason": "James F01/F02 fix lượt 1/2: ma trận B/H độc lập (required/type/select allowlist/termsAccepted/forged schema) + assertWeb05BusinessUnchanged/web04 request+quota; hash PG khớp web05-published-config v1/v2 (v2≠v1). Chờ clean-SHA B+H + reviewer PASS trước implemented."
+    "reason": "James F01/F02 fix lượt 1/2 trên SHA b6f9856b: clean B mvuvanf0-3fc114 PASS 7/7, H mvuvba97-1446eb PASS, guards 16/16; ma trận độc lập + hash v1/v2 khớp seed. coverage blocked chờ James DoD PASS."
   },
   {
     "caseId": "WEB-06",
