@@ -1,5 +1,10 @@
 # Báo cáo Web E2E — 28/10/2026
 
+## WEB-05 tích hợp — 30/10/2026
+
+- Rebase lên `main`, giữ đủ worklog append-only. Checkout sạch SHA `42a29788b252d4f17937c0401187512b1e7b47ea`: browser `mvuvgow7-f39e4e` PASS 7/7, HTTP `mvuvhn2t-f1e3ab` PASS; cả hai `evidenceExactShaEligible: true`. CI PR #1071 run `41046526455` SUCCESS, mergeable.
+- James revalidate F01/F02 và DoD PASS tại https://github.com/hangndat/ticket-solution/pull/1071#issuecomment-6521341187. Bản ghi coverage chuyển `covered`; commit này chỉ cập nhật tài liệu.
+
 ## WEB-05 form/terms validation B+H — 30/10/2026 (James F01/F02 lượt 1/2)
 
 - F01: Tách ma trận B/H — mỗi nhánh invalid (required/type/select allowlist/termsAccepted=false/forged schema, stale form/terms) assert status+code riêng; PG `assertWeb05BusinessUnchanged` (browser) và `web04AssertRejected` + `redemption_requests`/quota (HTTP) không đổi request/ticket/code/quota.

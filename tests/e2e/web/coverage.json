@@ -130,8 +130,8 @@
       "redeem.spec.ts › [WEB-05] published form and terms validation › successful redeem persists published form/terms hashes from seed v1"
     ],
     "layers": ["B", "H"],
-    "status": "blocked",
-    "reason": "James F01/F02 fix lượt 1/2 trên SHA b6f9856b: clean B mvuvanf0-3fc114 PASS 7/7, H mvuvba97-1446eb PASS, guards 16/16; ma trận độc lập + hash v1/v2 khớp seed. coverage blocked chờ James DoD PASS."
+    "status": "covered",
+    "reason": "WEB-05 B/H clean PASS tại SHA tích hợp 42a29788: browser mvuvgow7-f39e4e 7/7, HTTP mvuvhn2t-f1e3ab, CI 41046526455 SUCCESS. James DoD PASS tại PR #1071; F01/F02 đã đóng bằng ma trận âm độc lập, PG no-mutation guard và hash published v1/v2."
   },
   {
     "caseId": "WEB-06",
