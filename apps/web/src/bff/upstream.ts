@@ -3,6 +3,7 @@ import type { GateSsrTrace } from '../nav/ssr-trace';
 import { isOidcConfigured } from '../oidc/config';
 import { clearEstablishedSessionCookies, readAccessToken } from '../oidc/cookies';
 import { refreshWebAccessToken } from '../oidc/refresh';
+import { bindWebActorResponse, readWebActorSnapshot } from '../oidc/actor-epoch';
 import { bffApiError } from './api-error';
 
 export { bffApiError } from './api-error';
@@ -189,7 +190,7 @@ export async function ssrUpstreamGet(
   return { status: upstream.status, body };
 }
 
-export async function forwardWithBearer(
+async function forwardWithBearerUnchecked(
   pathAndQuery: string,
   init: RequestInit = {},
   options: ForwardWithBearerOptions = {},
@@ -257,4 +258,17 @@ export async function forwardWithBearer(
   );
   trace?.mark(`forward_upstream_retry_status_${response.status}`);
   return response;
+}
+
+export async function forwardWithBearer(
+  pathAndQuery: string,
+  init: RequestInit = {},
+  options: ForwardWithBearerOptions = {},
+): Promise<Response> {
+  const snapshot = await readWebActorSnapshot();
+  if (!snapshot) {
+    return bffApiError(IDENTITY_ERROR_CODES.UNAUTHENTICATED, 'Not signed in.', 401);
+  }
+  const response = await forwardWithBearerUnchecked(pathAndQuery, init, options);
+  return bindWebActorResponse(response, snapshot);
 }

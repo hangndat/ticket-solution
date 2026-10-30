@@ -3,7 +3,6 @@ import type { PublishedEventSummary } from '@ticket/contracts';
 import { Button } from '@ticket/ui';
 import { loginHref } from '../../src/oidc/login-href';
 import { authNoticeFromParam } from '../../src/oidc/auth-notice';
-import { loadOwnerWallet, ownedTicketCountByEventId } from '../../src/owner-ticket';
 import { ConsumerPageShell } from '../../src/consumer-page-shell';
 import { HomeHero } from '../../src/i18n';
 import {
@@ -60,11 +59,6 @@ async function loadHomeCatalog(): Promise<HomeCatalog> {
 export default async function Home({ searchParams }: Props) {
   const params = await searchParams;
   const catalog = await loadHomeCatalog();
-  const wallet = await loadOwnerWallet();
-  const ownedByEventId =
-    wallet.status === 'ok'
-      ? ownedTicketCountByEventId(wallet.tickets)
-      : undefined;
   const authNotice = authNoticeFromParam(params.notice?.trim(), {
     retryHref: loginHref('/'),
   });
@@ -133,7 +127,7 @@ export default async function Home({ searchParams }: Props) {
       ) : null}
 
       {catalog.status === 'ok' ? (
-        <HomeCatalogGrid items={catalog.items} ownedByEventId={ownedByEventId} />
+        <HomeCatalogGrid items={catalog.items} />
       ) : null}
       </div>
     </ConsumerPageShell>

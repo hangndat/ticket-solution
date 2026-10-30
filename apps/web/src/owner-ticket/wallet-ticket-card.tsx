@@ -97,6 +97,7 @@ export function WalletTicketCard({ ticket, tenantSlug }: Props) {
   return (
     <Link
       href={href}
+      prefetch={false}
       role="listitem"
       className={attendeeWalletTicketCard}
       data-testid={`wallet-ticket-${ticket.ticketId}`}

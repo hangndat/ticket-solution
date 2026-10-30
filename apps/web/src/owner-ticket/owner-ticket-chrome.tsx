@@ -77,6 +77,11 @@ export function OwnerTicketNeedLogin({ loginHref }: { loginHref: string }) {
   );
 }
 
+export function OwnerTicketLoading() {
+  const { locale } = useAttendeeLocale();
+  return <SurfaceState kind="loading" title={ownerTicketCopy(locale).loading} testId="owner-ticket-loading-state" />;
+}
+
 export function OwnerTicketUnreachable({ path }: { path: string }) {
   const { locale } = useAttendeeLocale();
   const copy = ownerTicketCopy(locale);
@@ -124,7 +129,7 @@ export function OwnerTicketForbidden() {
       testId="owner-ticket-forbidden-state"
       action={
         <Button asChild variant="brand">
-          <Link href="/wallet">{copy.wallet}</Link>
+          <Link href="/wallet" prefetch={false}>{copy.wallet}</Link>
         </Button>
       }
     />
@@ -175,7 +180,7 @@ export function OwnerTicketReady({
   return (
     <>
       <p className={attendeeTicketBread}>
-        <Link className={attendeeTicketBackLink} href="/wallet">
+        <Link className={attendeeTicketBackLink} href="/wallet" prefetch={false}>
           {copy.backWalletShort}
         </Link>
       </p>
@@ -255,7 +260,7 @@ export function OwnerTicketReady({
         </div>
       </article>
       <p>
-        <Link className={attendeeTicketBackLink} href="/wallet">
+        <Link className={attendeeTicketBackLink} href="/wallet" prefetch={false}>
           {copy.backWallet}
         </Link>
         {' · '}
