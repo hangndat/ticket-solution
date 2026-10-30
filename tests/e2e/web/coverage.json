@@ -197,11 +197,13 @@
       "claim-branches.spec.ts › [WEB-13] wrong verified email",
       "claim-branches.spec.ts › [WEB-13] unverified identity",
       "claim-branches.spec.ts › [WEB-13] second claim with a new idempotency key",
+      "claim-branches.spec.ts › [WEB-13] same idempotency key replay returns the first AUTO ticket without extra mutation",
       "claim-branches.spec.ts › [WEB-13] MANUAL manager reject",
-      "claim-branches.spec.ts › [WEB-13] expired invitation token"
+      "claim-branches.spec.ts › [WEB-13] expired invitation token",
+      "claim-branches.spec.ts › [WEB-13] revoked invitation token"
     ],
     "layers": ["B", "H", "R"],
-    "status": "blocked",
-    "reason": "Clean run mvus1m4g-e7eab2 trên SHA 12addd1a PASS 7/7 B/H/R sau fix DoD F01/F02: snapshot PG trước/sau nhánh từ chối, MANUAL request REJECTED, và intent giữ qua OIDC login không mở lại link. Rebase sau đó chỉ ghép append-only worklog. Còn thiếu token-revoke matrix, quota DB đầy đủ và replay cùng idempotency key — full group vẫn blocked."
+    "status": "implemented",
+    "reason": "Clean run mvust3vn-4cb024 sau commit: 9/9 browser PASS trên PostgreSQL/Mailpit/worker thật — cùng idempotency key replay (replayed, không thêm ticket), token expired/revoked matrix (410 INVITATION_EXPIRED/INVITATION_REVOKED, PG không đổi), quota DB AUTO +1, MANUAL pending 0, approve +1, reject giữ snapshot pending. Lệnh: node tests/e2e/harness/run.mjs e2e --case=WEB-13 --skip-build; pnpm test:e2e:guards 16/16."
   }
 ]
