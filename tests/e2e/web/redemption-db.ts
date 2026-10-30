@@ -273,8 +273,10 @@ export function assertIssuedExactlyOnce(
 export type Web04EventSnapshot = {
   ticketCount: number;
   codes: Array<{ id: string; status: string }>;
+  requests: Row[];
   quotas: Row[];
   operations: Row[];
+  outbox: Row[];
 };
 
 export async function readWeb04EventSnapshot(
@@ -303,8 +305,18 @@ export async function readWeb04EventSnapshot(
       'SELECT id, status FROM redemption_codes WHERE tenant_id=$1::uuid AND event_id=$2::uuid ORDER BY id',
       [tenantId, eventId],
     )) as Array<{ id: string; status: string }>;
+    const requests = await query(
+      `SELECT id, status, actor_user_id, redemption_code_id FROM redemption_requests
+       WHERE tenant_id=$1::uuid AND event_id=$2::uuid ORDER BY id`,
+      [tenantId, eventId],
+    );
     const quotas = await query(
       'SELECT id, scope, scope_id, capacity, allocated FROM quota_buckets WHERE tenant_id=$1::uuid AND event_id=$2::uuid ORDER BY scope, id',
+      [tenantId, eventId],
+    );
+    const outbox = await query(
+      `SELECT id, type, aggregate_id, status FROM outbox
+       WHERE tenant_id=$1::uuid AND event_id=$2::uuid ORDER BY id`,
       [tenantId, eventId],
     );
     const operations = await query(
@@ -321,8 +333,10 @@ export async function readWeb04EventSnapshot(
     return {
       ticketCount: Number(ticketRows[0]?.n ?? 0),
       codes,
+      requests,
       quotas,
       operations,
+      outbox: outbox.map(({ status, ...row }) => row),
     };
   } catch (error) {
     await client.query('ROLLBACK').catch(() => {});
@@ -343,8 +357,14 @@ export function assertWeb04NegativeUnchanged(
   expect(after.codes, `${label}: code status must not change`).toEqual(
     before.codes,
   );
+  expect(after.requests, `${label}: redemption_requests must not change`).toEqual(
+    before.requests,
+  );
   expect(after.quotas, `${label}: quota must not change`).toEqual(
     before.quotas,
+  );
+  expect(after.outbox, `${label}: outbox must not change`).toEqual(
+    before.outbox,
   );
   for (const op of after.operations) {
     expect(op.status, `${label}: no dangling IN_PROGRESS operation`).not.toBe(
