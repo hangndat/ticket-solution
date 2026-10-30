@@ -179,8 +179,8 @@
     "caseId": "WEB-11",
     "tests": ["public.spec.ts › [WEB-11]"],
     "layers": ["B"],
-    "status": "blocked",
-    "reason": "Có 390px event/redeem/ticket CTA và overflow; thiếu desktop/form/menu/modal state."
+    "status": "implemented",
+    "reason": "Desktop 1280 và 390px: nav/sheet menu, redeem form+terms, event/ticket CTA, QR; overflow và primary button operable; không pixel/a11y scoring."
   },
   {
     "caseId": "WEB-12",
