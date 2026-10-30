@@ -149,7 +149,8 @@
     "caseId": "WEB-08",
     "tests": ["redeem.spec.ts › [WEB-08]"],
     "layers": ["B", "H", "R"],
-    "status": "implemented"
+    "status": "implemented",
+    "reason": "redeem.spec assertIssuedExactlyOnce dùng seed data.codeIds.primary; Mailpit/worker path — không khai báo group PASS nếu targeted run fail."
   },
   {
     "caseId": "WEB-09",
@@ -192,10 +193,15 @@
     "caseId": "WEB-13",
     "tests": [
       "claim.spec.ts › [WEB-13] AUTO",
-      "claim.spec.ts › [WEB-13] MANUAL"
+      "claim.spec.ts › [WEB-13] MANUAL",
+      "claim-branches.spec.ts › [WEB-13] wrong verified email",
+      "claim-branches.spec.ts › [WEB-13] unverified identity",
+      "claim-branches.spec.ts › [WEB-13] second claim with a new idempotency key",
+      "claim-branches.spec.ts › [WEB-13] MANUAL manager reject",
+      "claim-branches.spec.ts › [WEB-13] expired invitation token"
     ],
     "layers": ["B", "H", "R"],
     "status": "blocked",
-    "reason": "Có import/preview/commit/dispatch/Mailpit/claim/approve happy paths; thiếu reject/expiry/wrong-email/unverified/token replay/idempotency/quota DB assertions."
+    "reason": "Run mvuqulhv-6e1b12 PASS 7/7 browser trên working tree dirty: import→dispatch→Mailpit→AUTO/MANUAL claim, wrong verified email, unverified, second claim key mới, manager reject, expired token. Các nhánh dùng event riêng để tránh dispatch-preview 410 khi invitation đã DISPATCHED. Còn thiếu token-revoke matrix, quota DB đối soát đầy đủ và idempotency replay cùng key — group vẫn blocked ở AC; cần rerun trên SHA sạch."
   }
 ]

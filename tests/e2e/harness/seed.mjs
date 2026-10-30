@@ -341,7 +341,7 @@ export async function seedRuntime(state, caseIds) {
           `;
         }
         if (
-          ['AUTH-03', 'WEB-02', 'WEB-03', 'WEB-07', 'WEB-10'].includes(caseId)
+          ['AUTH-03', 'WEB-02', 'WEB-03', 'WEB-07', 'WEB-08', 'WEB-10'].includes(caseId)
         ) {
           fixture.data.codeIds = { primary: inventory.codeIds[0] };
         }
@@ -577,58 +577,143 @@ export async function seedRuntime(state, caseIds) {
           });
         }
         if (caseId === 'WEB-13') {
-          const manualEventId = randomUUID();
-          const manualEventSlug = 'manual-event';
-          const manualEventName = `E2E ${caseId} Manual`;
-          await tx.event.create({
-            data: {
-              tenantId,
-              id: manualEventId,
-              slug: manualEventSlug,
-              name: manualEventName,
-              status: 'PUBLISHED',
+          const primaryEventName = `E2E ${caseId} primary`;
+          fixture.data.eventName = primaryEventName;
+          fixture.data.autoSlots = {
+            primary: {
+              eventId,
+              eventName: primaryEventName,
             },
-          });
-          for (const [actor, role] of Object.entries(roles)) {
-            await backend.grantEventAssignment(tx, {
+          };
+          await tx.$executeRaw`
+            UPDATE events SET name = ${primaryEventName}
+            WHERE tenant_id = ${tenantId}::uuid AND id = ${eventId}::uuid
+          `;
+          for (const slot of [
+            'wrongEmail',
+            'unverified',
+            'secondClaim',
+            'expired',
+          ]) {
+            const slotEventId = randomUUID();
+            const slotSlug = `auto-${slot.replace(/([A-Z])/g, '-$1').toLowerCase()}`;
+            const slotEventName = `E2E ${caseId} ${slot}`;
+            await tx.event.create({
+              data: {
+                tenantId,
+                id: slotEventId,
+                slug: slotSlug,
+                name: slotEventName,
+                status: 'PUBLISHED',
+                visibility: 'PUBLIC',
+              },
+            });
+            for (const [actor, role] of Object.entries(roles)) {
+              await backend.grantEventAssignment(tx, {
+                tenantId,
+                eventId: slotEventId,
+                membershipId: memberships[actor].membershipId,
+                permissions: backend.eventPermissionsForRole(role),
+              });
+            }
+            await backend.seedEventInventory(tx, hmac, {
+              tenantId,
+              eventId: slotEventId,
+              eventQuota: 100,
+              rawCodes: [],
+              ticketTypeLabel: 'E2E General',
+              sourceName: 'E2E Auto',
+            });
+            const slotPayload = eventPayload(`Tenant ${caseId}`, slotEventName);
+            const slotSaved = await backend.saveEventConfigVersion(tx, {
+              tenantId,
+              eventId: slotEventId,
+              actorUserId: accounts.owner.userId,
+              payload: slotPayload,
+            });
+            await backend.publishEventConfig(tx, {
+              tenantId,
+              eventId: slotEventId,
+              actorUserId: accounts.owner.userId,
+              expectedVersion: slotSaved.version,
+            });
+            fixture.data.autoSlots[slot] = {
+              eventId: slotEventId,
+              eventName: slotEventName,
+            };
+          }
+          const manualPrimaryName = `E2E ${caseId} Manual primary`;
+          fixture.data.manualSlots = {};
+          for (const [slot, slugSuffix] of [
+            ['primary', 'manual-event'],
+            ['managerReject', 'manual-reject'],
+          ]) {
+            const manualEventId = randomUUID();
+            const manualEventSlug = slugSuffix;
+            const manualEventName =
+              slot === 'primary'
+                ? manualPrimaryName
+                : `E2E ${caseId} Manual reject`;
+            await tx.event.create({
+              data: {
+                tenantId,
+                id: manualEventId,
+                slug: manualEventSlug,
+                name: manualEventName,
+                status: 'PUBLISHED',
+              },
+            });
+            for (const [actor, role] of Object.entries(roles)) {
+              await backend.grantEventAssignment(tx, {
+                tenantId,
+                eventId: manualEventId,
+                membershipId: memberships[actor].membershipId,
+                permissions: backend.eventPermissionsForRole(role),
+              });
+            }
+            const manual = await backend.seedEventInventory(tx, hmac, {
               tenantId,
               eventId: manualEventId,
-              membershipId: memberships[actor].membershipId,
-              permissions: backend.eventPermissionsForRole(role),
+              eventQuota: 100,
+              rawCodes: [],
+              ticketTypeLabel: 'E2E Manual General',
+              sourceName: 'E2E Manual',
             });
+            const manualPayload = eventPayload(
+              `Tenant ${caseId}`,
+              manualEventName,
+            );
+            const manualSaved = await backend.saveEventConfigVersion(tx, {
+              tenantId,
+              eventId: manualEventId,
+              actorUserId: accounts.owner.userId,
+              payload: manualPayload,
+            });
+            await backend.publishEventConfig(tx, {
+              tenantId,
+              eventId: manualEventId,
+              actorUserId: accounts.owner.userId,
+              expectedVersion: manualSaved.version,
+            });
+            await tx.$executeRaw`UPDATE issuance_sources SET approval_mode='MANUAL' WHERE tenant_id=${tenantId}::uuid AND id=${manual.sourceId}::uuid`;
+            fixture.data.manualSlots[slot] = {
+              eventId: manualEventId,
+              eventSlug: manualEventSlug,
+              eventName: manualEventName,
+              sourceId: manual.sourceId,
+              sourceLabel: 'E2E Manual',
+              ticketTypeId: manual.ticketTypeId,
+              ticketTypeLabel: 'E2E Manual General',
+            };
           }
-          const manual = await backend.seedEventInventory(tx, hmac, {
-            tenantId,
-            eventId: manualEventId,
-            eventQuota: 100,
-            rawCodes: [],
-            ticketTypeLabel: 'E2E Manual General',
-            sourceName: 'E2E Manual',
-          });
-          const manualPayload = eventPayload(
-            `Tenant ${caseId}`,
-            manualEventName,
-          );
-          const manualSaved = await backend.saveEventConfigVersion(tx, {
-            tenantId,
-            eventId: manualEventId,
-            actorUserId: accounts.owner.userId,
-            payload: manualPayload,
-          });
-          await backend.publishEventConfig(tx, {
-            tenantId,
-            eventId: manualEventId,
-            actorUserId: accounts.owner.userId,
-            expectedVersion: manualSaved.version,
-          });
-          await tx.$executeRaw`UPDATE issuance_sources SET approval_mode='MANUAL' WHERE tenant_id=${tenantId}::uuid AND id=${manual.sourceId}::uuid`;
-          fixture.data.manualEventId = manualEventId;
-          fixture.data.manualEventSlug = manualEventSlug;
-          fixture.data.manualEventName = manualEventName;
-          fixture.data.manualSourceId = manual.sourceId;
-          fixture.data.manualSourceLabel = 'E2E Manual';
-          fixture.data.manualTicketTypeId = manual.ticketTypeId;
-          fixture.data.manualTicketTypeLabel = 'E2E Manual General';
+          const manualPrimary = fixture.data.manualSlots.primary;
+          fixture.data.manualEventId = manualPrimary.eventId;
+          fixture.data.manualEventSlug = manualPrimary.eventSlug;
+          fixture.data.manualEventName = manualPrimary.eventName;
+          fixture.data.manualSourceId = manualPrimary.sourceId;
+          fixture.data.manualSourceLabel = manualPrimary.sourceLabel;
+          fixture.data.manualTicketTypeId = manualPrimary.ticketTypeId;
+          fixture.data.manualTicketTypeLabel = manualPrimary.ticketTypeLabel;
         }
         if (caseId === 'PORT-05') fixture.data.sourceLabel = 'E2E Auto';
         if (caseId === 'GATE-01') {
@@ -1119,16 +1204,22 @@ export async function seedRuntime(state, caseIds) {
         fixture.data.inviteePassword = accounts.otherAttendee.password;
       }
       if (caseId === 'WEB-13') {
-        for (const [kind, actor] of [
-          ['auto', 'attendee'],
-          ['manual', 'otherAttendee'],
-        ]) {
-          const path = resolve(state.dir, `${caseId}-${kind}-guests.csv`);
-          writeFileSync(path, `email\n${accounts[actor].username}\n`, {
+        for (const [slot, meta] of Object.entries(fixture.data.autoSlots)) {
+          const path = resolve(state.dir, `${caseId}-auto-${slot}-guests.csv`);
+          writeFileSync(path, `email\n${accounts.attendee.username}\n`, {
             mode: 0o600,
           });
-          fixture.data[`${kind}CsvPath`] = path;
+          meta.csvPath = path;
         }
+        fixture.data.autoCsvPath = fixture.data.autoSlots.primary.csvPath;
+        for (const [slot, meta] of Object.entries(fixture.data.manualSlots)) {
+          const path = resolve(state.dir, `${caseId}-manual-${slot}-guests.csv`);
+          writeFileSync(path, `email\n${accounts.otherAttendee.username}\n`, {
+            mode: 0o600,
+          });
+          meta.csvPath = path;
+        }
+        fixture.data.manualCsvPath = fixture.data.manualSlots.primary.csvPath;
       }
       if (
         [
