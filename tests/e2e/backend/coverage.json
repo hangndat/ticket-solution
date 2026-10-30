@@ -97,11 +97,12 @@
       "D:packages/backend/test/ticket-reissue-grants.test.cjs#reissue grant migration",
       "D:packages/backend/test/event-lifecycle.test.cjs#C-E event lifecycle",
       "D:packages/backend/test/db09-ticket-security-invariants.test.cjs#DB-09: revoke never reuses a redemption code; no path reassigns ticket owner; allocation is gated on the current event policy, not a stale snapshot",
+      "H:tests/e2e/http/live.test.mjs#[DB-09] live HTTP",
       "R:tests/e2e/backend/reissue-worker-mailpit.test.cjs#R reissue worker Mailpit"
     ],
-    "layers": ["D", "R"],
+    "layers": ["D", "H", "R"],
     "status": "blocked",
-    "reason": "D PostgreSQL: revoke không tái dùng mã, owner bất biến, reissue xoay credential/version với idempotency và grant Owner/Supervisor. R worker thật + Mailpit chứng minh PNG version mới đúng owner và revoke trước relay thành DEAD, không gửi. Thiếu H generic PATCH refusal; GATE-03 vẫn chưa xác thực QR credential khi scan."
+    "reason": "D PostgreSQL: revoke không tái dùng mã, owner bất biến, reissue xoay credential/version với idempotency và grant Owner/Supervisor. R worker thật + Mailpit chứng minh PNG version mới đúng owner và revoke trước relay thành DEAD, không gửi. H partial: PATCH owner reassignment refused trên ticket-facing routes với staff/owner/scanner và snapshot PG không đổi. Full DB-09 vẫn BLOCKED: GATE-03 chưa xác thực QR credential khi scan."
   },
   {
     "caseId": "DB-10",

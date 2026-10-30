@@ -22,6 +22,7 @@ const CASE_IDS = [
   'DB-03',
   'DB-04',
   'DB-07',
+  'DB-09',
   'DB-10',
   'WEB-04',
 ];
@@ -549,6 +550,20 @@ function deny(result) {
     `expected 403/404, got ${result.status}`,
   );
   assert.equal(typeof result.body.code, 'string');
+}
+
+function patchRefused(result, label) {
+  assert.ok(
+    [403, 404, 405, 422].includes(result.status),
+    `${label}: generic PATCH must be refused (403/404/405/422), got ${result.status} (${result.body.code ?? 'none'})`,
+  );
+  if ([403, 422].includes(result.status)) {
+    assert.equal(
+      typeof result.body.code,
+      'string',
+      `${label}: structured error code`,
+    );
+  }
 }
 
 function assertNoForbiddenStrings(payload, forbidden, label) {
@@ -3175,6 +3190,116 @@ for (const caseId of CASE_IDS) {
         reportAfter.body.rejectByReason.TICKET_NOT_FOUND ?? 0,
         (reportBefore.body.rejectByReason.TICKET_NOT_FOUND ?? 0) + 1,
       );
+      return;
+    }
+    if (caseId === 'DB-09') {
+      // TECHNICAL-DESIGN §10: ticket lifecycle mutations use dedicated audited
+      // endpoints; generic PATCH must not reassign owner (PLAN DB-09 H).
+      const ticketId = required(f.ticketId, 'DB-09 ticketId');
+      const attendeeUserId = required(
+        f.accounts.attendee.userId,
+        'DB-09 attendee.userId',
+      );
+      const otherUserId = required(
+        f.accounts.otherAttendee.userId,
+        'DB-09 otherAttendee.userId',
+      );
+      assert.notEqual(attendeeUserId, otherUserId);
+
+      const cs = await bearer(ctx, 'cs');
+      const attendee = await bearer(ctx, 'attendee');
+      const scanner = await bearer(ctx, 'scanner');
+
+      const csDetail = await request(
+        ctx,
+        'GET',
+        `/tenants/${f.tenantId}/events/${f.eventId}/tickets/${ticketId}`,
+        cs,
+      );
+      expectStatus(csDetail, 200);
+      assert.equal(csDetail.body.ticketId, ticketId);
+
+      const meDetail = await request(
+        ctx,
+        'GET',
+        `/me/tickets/${ticketId}?tenantId=${f.tenantId}`,
+        attendee,
+      );
+      expectStatus(meDetail, 200);
+      assert.equal(meDetail.body.ticketId, ticketId);
+
+      const snapshot = async () => {
+        const row = (
+          await web04Query(
+            f,
+            f.tenantId,
+            `SELECT
+              (SELECT row_to_json(t) FROM (
+                SELECT id, owner_user_id, state, credential_version, request_id, redemption_code_id
+                FROM tickets WHERE tenant_id = $1::uuid AND id = $2::uuid
+              ) t) AS ticket,
+              (SELECT coalesce(json_agg(row_to_json(c) ORDER BY version), '[]'::json) FROM (
+                SELECT version, status FROM ticket_credentials
+                WHERE tenant_id = $1::uuid AND ticket_id = $2::uuid
+              ) c) AS credentials,
+              (SELECT row_to_json(rc) FROM (
+                SELECT rc.id, rc.status, rc.active_request_id
+                FROM redemption_codes rc
+                INNER JOIN tickets tk ON tk.redemption_code_id = rc.id AND tk.tenant_id = rc.tenant_id
+                WHERE tk.id = $2::uuid AND tk.tenant_id = $1::uuid
+              ) rc) AS code,
+              (SELECT allocated FROM quota_buckets
+                WHERE tenant_id = $1::uuid AND event_id = $3::uuid AND scope = 'EVENT') AS allocated,
+              (SELECT count(*)::int FROM audit_logs
+                WHERE tenant_id = $1::uuid AND event_id = $3::uuid) AS audit_count,
+              (SELECT count(*)::int FROM outbox
+                WHERE tenant_id = $1::uuid AND event_id = $3::uuid) AS outbox_count`,
+            [f.tenantId, ticketId, f.eventId],
+          )
+        )[0];
+        assert.equal(row.ticket.owner_user_id, attendeeUserId);
+        return row;
+      };
+
+      const before = await snapshot();
+      const transferBody = {
+        ownerUserId: otherUserId,
+        owner_user_id: otherUserId,
+      };
+
+      const candidates = [
+        {
+          label: 'CS ticket resource (authorized staff)',
+          path: `/tenants/${f.tenantId}/events/${f.eventId}/tickets/${ticketId}`,
+          token: cs,
+        },
+        {
+          label: 'attendee me/ticket',
+          path: `/me/tickets/${ticketId}?tenantId=${f.tenantId}`,
+          token: attendee,
+        },
+        {
+          label: 'gate ticket resource (assigned scanner)',
+          path: `/gate/events/${f.eventId}/tickets/${ticketId}`,
+          token: scanner,
+        },
+      ];
+
+      for (const attempt of candidates) {
+        const result = await request(
+          ctx,
+          'PATCH',
+          attempt.path,
+          attempt.token,
+          transferBody,
+        );
+        patchRefused(result, attempt.label);
+        assert.deepEqual(
+          await snapshot(),
+          before,
+          `${attempt.label}: ticket owner/state, credential, code, quota, audit and outbox must be unchanged`,
+        );
+      }
       return;
     }
     if (caseId === 'DB-10') {
