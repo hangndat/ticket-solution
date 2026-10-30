@@ -43,7 +43,7 @@
     ],
     "layers": ["B", "H"],
     "status": "covered",
-    "reason": "PORT-05 B/H PASS run mvuwcsq0-b11a06 (5/5 browser) on SHA 7e8cce2 after clean commit: UI happy path upload→AntD visible catalog→preview→commit→list; BFF preview duplicate/error report, commit skip consumed+available codes with idempotent replay, IMPORT_ROW_LIMIT on preview without extra jobs beyond create, cross-tenant/event import GET/create deny. AntD selector fix confirmed. EMPTY CSV row not asserted in browser (isolated CSV blank lines dropped by parser); DUPLICATE_IN_FILE + skip paths cover sai dòng contract with PG/API."
+    "reason": "PORT-05 B/H PASS run mvuwdtj0-b1f0b9 (5/5 browser) on SHA 405f305c: UI happy path upload→AntD visible catalog→preview→commit→list; BFF preview duplicate/error report, commit skip consumed+available codes with idempotent replay, IMPORT_ROW_LIMIT on preview without extra jobs beyond create, cross-tenant/event import GET/create deny. AntD selector fix confirmed. EMPTY CSV row not asserted in browser (isolated CSV blank lines dropped by parser); DUPLICATE_IN_FILE + skip paths cover sai dòng contract with PG/API."
   },
   {
     "caseId": "PORT-06",
