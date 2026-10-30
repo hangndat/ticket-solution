@@ -1,5 +1,11 @@
 # Báo cáo Web E2E — 28/10/2026
 
+## WEB-04 negative redeem matrix B+H — 30/10/2026
+
+- Trước: browser `assertWeb04NegativeUnchanged` thiếu đối soát `redemption_requests`/outbox (James F01 trên PR liên quan); HTTP `web04AssertRejected` thiếu outbox explicit.
+- Sau: `redemption-db.ts` snapshot event-scoped requests + outbox (status outbox stripped); `live.test.mjs` outbox deepEqual trước/sau reject. Ma trận 7 nhánh browser + HTTP error group khớp PLAN §5.2; wallet giữ; MANUAL pending/approve/reject/expiry cross-ref WEB-06 merged, không đếm vào WEB-04.
+- Clean SHA `2bf01b3bb933aa9ec934429c354ff56f1435c233` (`evidenceExactShaEligible: true`): `node tests/e2e/harness/run.mjs e2e --case=WEB-04 --skip-build` → `mvv0kmxn-5038d2` PASS 7/7 browser; `http --case=WEB-04 --skip-build` → `mvv0lz1j-b30c15` PASS; `pnpm test:e2e:guards` 19/19. Không sửa `apps/web` runtime. Relates #1037.
+
 ## WEB-06 MANUAL redeem pending + Portal decision — 30/10/2026
 
 - Bốn browser test trong `redeem.spec.ts › [WEB-06] manual source redemption`: pending submit (UX + PG HELD/PENDING_REVIEW, quota giữ); Portal manager duyệt → owner refresh → wallet/detail QR + `assertManualIssuedAfterApproval`; từ chối → `redeem-ux-denied`, REJECTED không ticket; `expires_at` run-scoped + owner refresh → `redeem-ux-expired`, EXPIRED không ISSUED. Helper `manual-redemption-flow.ts`; seed nhánh `approveCode`/`rejectCode`/`expiryCode`.
