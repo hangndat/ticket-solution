@@ -59,6 +59,25 @@ Evidence trên checkout sạch đúng SHA (sau commit): SHA `730c78fea5745947bcf
 
 Giới hạn: không tạo thêm Keycloak account mới để test "một lần dùng" theo đúng nghĩa hai actor khác nhau *cùng một email thật* (D-layer đã chứng minh trực tiếp qua actorUserId khác nhau trong DB); ở H, "một lần dùng" được chứng minh tương đương qua idempotency-key mới trên invitation đã CLAIMED (cùng actor) — đủ để phủ accept-path thực tế qua HTTP mà không thêm fixture/account chung mới có thể ảnh hưởng case khác.
 
+## Cập nhật DB-12 (PR liên kết #1030, worktree `f04-db12-published`)
+
+D (`config-publish.test.cjs`, `published-events.test.cjs`) đã đủ từ trước: publish versioned/immutable, optimistic concurrency trên save (`expectedVersion`) và rollback (`expectedPublishedVersion`/`expectedRevision`, `REVISION_CONFLICT`/`CONFIG_VERSION_MISMATCH`), preview trả `cacheControl: 'no-store'` ở data layer, quota/codes không đổi qua rollback, draft/unpublished/UNLISTED/tenant SUSPENDED fail-closed. Phần thiếu theo `coverage.json` trước Dispatch này chỉ là H.
+
+Thêm case `[DB-12] live HTTP` vào `tests/e2e/http/live.test.mjs` (đăng ký ở `CASE_IDS` cùng file, và ở `tests/e2e/http/entry.mjs`/`tests/e2e/harness/run.mjs`), cộng fixture generic cho DB-12 trong `tests/e2e/harness/seed.mjs` (chỉ thêm event `draft-only` chưa publish cùng tenant; event chính tái dùng config v1 generic đã save+publish sẵn cho mọi case, không seed thêm history trùng). `pnpm test:e2e:http -- --case=DB-12` **PASS** qua endpoint thật + Keycloak bearer thật cho `owner`:
+
+- Baseline: public detail (`GET /public/tenants/:slug/events/:slug`, không token) trả đúng version 1 đã seed; draft-only (saved, chưa publish) 404 ở detail và không xuất hiện ở public list.
+- Save v2 qua `POST config-versions` (`expectedVersion=1` → version 2) rồi `POST publish` (`expectedVersion=2`) → public detail cập nhật `publishedConfigVersion=2` và nội dung v2.
+- Rollback với `expectedPublishedVersion`/`expectedRevision` cũ (1/1, thực tế đang là 2/3) → 409, public projection và `quota_buckets`/`redemption_codes` không đổi so với baseline.
+- Rollback đúng token (`expectedPublishedVersion=2`, `expectedRevision=3`, `targetVersion=1`) → 201, tạo version mới (3) từ target, public detail phản ánh version 3 với nội dung v1 gốc (không replay v2); `audit_logs` có cả `event.publish` và `event.config.rollback`; business state (quota/codes) không đổi qua cả hai nhánh.
+- Preview (`GET config-versions/1/preview`) không token → 401; có token owner → 200.
+- Publish `draft-only` ở cuối ca rồi xác nhận public list chỉ gồm đúng 2 slug mong đợi (event chính + draft-only), không rò event nào khác.
+
+Regression harness dùng chung: `pnpm test:e2e:http -- --case=DB-09` và `--case=DB-10,DB-11` **PASS** cả ba, không bị ảnh hưởng bởi thay đổi `seed.mjs`/`run.mjs`/`entry.mjs`/`CASE_IDS`.
+
+Evidence trên checkout sạch đúng SHA (sau commit `b6ff8a9ee504182e590cf37cf85788fb9d16a143`): `pnpm test:e2e:http -- --case=DB-12` run `mvupjy77-513ff2`, `sourceProvenance.evidenceExactShaEligible=true`, `workingTreeDirty=false`.
+
+**BLOCKED thật, không phải thiếu test — đã báo coordinator trước khi mở nhánh:** `docs/TECHNICAL-DESIGN.md` §379 ("Critical responses `Cache-Control: no-store`") và §405 ("Public content cache key chứa canonical host + tenant + event + published config version + locale") chưa có ở runtime. Bằng chứng: `apps/api/src/published-events.ts` (public catalog/detail controller) không có decorator `Cache-Control` nào, khác các controller khác cùng repo (`inventory.ts`, `gate.ts`, `reporting.ts`, `tickets.ts`, `tenant-limits.ts` đều dùng `@Header('Cache-Control', 'private, no-store')`); `apps/api/src/config.ts` dòng ~374 route preview đọc header `cache-control` của client vào biến `_cacheControl` không dùng, không set response header tương ứng. Không có field `locale` ở bất kỳ đâu trong `packages/contracts`. `infra/admission/Caddyfile` không có cache directive cho `/public/*`. Coordinator xác nhận (msg_69030d65a81d, trả lời escalation msg_63b8cae5c655) giữ nguyên trạng BLOCKED và không mở sửa runtime/contract trong Dispatch test-only này; quyết định runtime để ở review sản phẩm riêng. `coverage.json` DB-12 giữ `status: "blocked"` phản ánh đúng việc này — không thêm failing acceptance selector vào CI cho phần cache/locale/no-store.
+
 ## Giới hạn còn mở
 
 - Các ca H cần HTTPS hostname run, Keycloak issuer/JWT thật và manifest case riêng từ harness; local verifier hay `app.inject` fixture không đủ. Các ca R cần worker process, Mailpit, restart/kill/lease và tài nguyên run riêng. Xem `FIXTURES.md`.
