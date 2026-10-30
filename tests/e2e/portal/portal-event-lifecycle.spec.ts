@@ -9,7 +9,7 @@ import {
   login,
   portalUrl,
 } from './helpers';
-import { readTicketConsentSnapshot } from './lifecycle-db';
+import { readTicketConsentSnapshot, readEventConfigMutationSnapshot } from './lifecycle-db';
 
 function requiredString(
   value: unknown,
@@ -116,6 +116,49 @@ async function eventDetailRevision(
   return revision;
 }
 
+type VersionListBody = {
+  items: Array<{ version: number; published: boolean }>;
+};
+
+async function readVersionList(
+  page: import('playwright/test').Page,
+  m: E2EManifest,
+  f: CaseFixture,
+): Promise<VersionListBody> {
+  const versionsPath = eventBff(f, '/config-versions');
+  const res = await bffGet(page, m, versionsPath);
+  expect(res.status).toBe(200);
+  return res.json as VersionListBody;
+}
+
+function assertVersionListUnchanged(before: VersionListBody, after: VersionListBody) {
+  expect(after.items.length).toBe(before.items.length);
+  expect(after.items.find((row) => row.published)?.version).toBe(
+    before.items.find((row) => row.published)?.version,
+  );
+  expect(after.items[0]?.version).toBe(before.items[0]?.version);
+}
+
+async function clickConfigRollbackToVersion(
+  page: import('playwright/test').Page,
+  targetVersion: number,
+) {
+  await page.getByRole('heading', { name: /Lịch sử phiên bản|Version history/i }).waitFor();
+  const row = page.getByRole('row').filter({
+    has: page.getByRole('cell', { name: String(targetVersion), exact: true }),
+  });
+  await row
+    .getByRole('button', { name: /Rollback về đây|Rollback to here/i })
+    .click();
+  const response = page.waitForResponse(
+    (r) =>
+      r.url().includes('/config/rollback') && r.request().method() === 'POST',
+  );
+  await page.getByRole('button', { name: 'Rollback', exact: true }).click();
+  const res = await response;
+  expect([200, 201]).toContain(res.status());
+}
+
 test('[PORT-02] draft preview publish rollback and stale save preserve public and ticket consent', async ({
   page,
   browser,
@@ -187,12 +230,22 @@ test('[PORT-02] draft preview publish rollback and stale save preserve public an
     expect(previewHero).toBe(updatedMarker);
     await expectPublicHero(page, m, f, publishedMarker);
 
+    const beforeStaleSavePg = await readEventConfigMutationSnapshot(f);
+    const versionsBeforeStaleSave = await readVersionList(page, m, f);
+    const revisionBeforeStaleSave = await eventDetailRevision(page, m, f);
+
     const conflict = await bffMutate(page, versionsPath, {
       payload,
       schemaVersion: 1,
       expectedVersion: latest,
     });
     expect(conflict.status).toBe(409);
+    expect(await readEventConfigMutationSnapshot(f)).toEqual(beforeStaleSavePg);
+    assertVersionListUnchanged(
+      versionsBeforeStaleSave,
+      await readVersionList(page, m, f),
+    );
+    expect(await eventDetailRevision(page, m, f)).toBe(revisionBeforeStaleSave);
 
     const tabConflict = await bffMutate(page2, versionsPath, {
       payload,
@@ -200,6 +253,12 @@ test('[PORT-02] draft preview publish rollback and stale save preserve public an
       expectedVersion: latest,
     });
     expect(tabConflict.status).toBe(409);
+    expect(await readEventConfigMutationSnapshot(f)).toEqual(beforeStaleSavePg);
+    assertVersionListUnchanged(
+      versionsBeforeStaleSave,
+      await readVersionList(page, m, f),
+    );
+    expect(await eventDetailRevision(page, m, f)).toBe(revisionBeforeStaleSave);
   } finally {
     await ctx2.close();
   }
@@ -227,17 +286,20 @@ test('[PORT-02] draft preview publish rollback and stale save preserve public an
   ).items.find((row) => row.published);
   expect(publishedRow?.version).toBe(newVersion);
 
-  const rollback = await bffMutate(page, `${eventBff(f, '/config')}/rollback`, {
-    targetVersion: publishedVersion as number,
-    expectedPublishedVersion: newVersion,
-    expectedRevision: revisionAfterPublish,
-    idempotencyKey: randomUUID(),
-  });
-  expect([200, 201]).toContain(rollback.status);
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await clickConfigRollbackToVersion(page, publishedVersion as number);
   await expectPublicHero(page, m, f, publishedMarker);
 
   const ticketAfterRollback = await readTicketConsentSnapshot(f, f.ticketId);
   expect(ticketAfterRollback).toEqual(ticketBefore);
+
+  const pgAfterRollback = await readEventConfigMutationSnapshot(f);
+  const versionsAfterRollback = await readVersionList(page, m, f);
+  const revisionAfterRollback = await eventDetailRevision(page, m, f);
+  const liveAfterRollback = versionsAfterRollback.items.find((row) => row.published);
+  expect(liveAfterRollback?.version).toBe(pgAfterRollback.publishedVersion);
+  expect(liveAfterRollback!.version).toBeGreaterThan(newVersion);
+  expect(revisionAfterRollback).toBeGreaterThan(revisionAfterPublish);
 
   const staleRollback = await bffMutate(page, `${eventBff(f, '/config')}/rollback`, {
     targetVersion: publishedVersion as number,
@@ -247,6 +309,12 @@ test('[PORT-02] draft preview publish rollback and stale save preserve public an
   });
   expect(staleRollback.status).toBe(409);
   await expectPublicHero(page, m, f, publishedMarker);
+  expect(await readEventConfigMutationSnapshot(f)).toEqual(pgAfterRollback);
+  assertVersionListUnchanged(
+    versionsAfterRollback,
+    await readVersionList(page, m, f),
+  );
+  expect(await eventDetailRevision(page, m, f)).toBe(revisionAfterRollback);
 
   const after = await bffGet(page, m, versionsPath);
   expect(
