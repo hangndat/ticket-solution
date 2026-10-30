@@ -154,7 +154,7 @@ test(
     try {
       const boot = await startIsolatedPostgres();
       name = boot.name;
-      db = createDatabase(boot.url, 2);
+      db = createDatabase(boot.url, 5);
       const store = createMemoryObjectStore();
       const users = createPrismaIdentityUserRepository(db);
       const issuer = 'http://127.0.0.1:8080/realms/ticket';
@@ -499,6 +499,155 @@ test(
       assert.equal(dupCodesCommit.committedRowCount, 1);
       assert.equal(dupCodesCommit.skippedRowCount, 1);
       assert.equal(dupCodesCommit.errorRowCount, 1);
+
+      // DB-10 D: a real row-lock barrier proves both commits overlap at the
+      // event lock. Unique code insertion must preserve an already used row.
+      const usedCode = 'USED-DB10';
+      await withTenant(db, tenantA, (tx) =>
+        importRedemptionCodes(tx, HMAC, {
+          tenantId: tenantA,
+          eventId: eventA,
+          actorUserId: manager.userId,
+          rawCodes: [usedCode],
+        }),
+      );
+      const usedCodeHmac = require('../dist').hashRedemptionCode(HMAC, usedCode);
+      const usedBefore = await withTenant(db, tenantA, async (tx) => {
+        await tx.$executeRaw`
+          UPDATE redemption_codes SET status = 'CONSUMED'
+          WHERE tenant_id = ${tenantA}::uuid AND event_id = ${eventA}::uuid
+            AND code_hmac = ${usedCodeHmac}
+        `;
+        const rows = await tx.$queryRaw`
+          SELECT id, status, source_id, ticket_type_id, code_pepper_version
+          FROM redemption_codes
+          WHERE tenant_id = ${tenantA}::uuid AND event_id = ${eventA}::uuid
+            AND code_hmac = ${usedCodeHmac}
+        `;
+        return rows[0];
+      });
+      const raceBody = Buffer.from(`code\nRACE-DB10\n${usedCode}\n`);
+      const raceJobs = [];
+      for (let i = 0; i < 2; i++) {
+        const file = await uploadImportFile(db, store, {
+          tenantId: tenantA, eventId: eventA, actorUserId: manager.userId,
+          kind: 'CODES', filename: `race-${i}.csv`,
+          contentType: 'text/csv', body: raceBody,
+        });
+        const raceJob = await createImportJob(db, {
+          tenantId: tenantA, eventId: eventA, actorUserId: manager.userId,
+          idempotencyKey: randomUUID(),
+          body: { kind: 'CODES', sourceId, ticketTypeId, fileId: file.fileId },
+        });
+        const racePreview = await previewImportJob(db, store, {
+          tenantId: tenantA, eventId: eventA, actorUserId: manager.userId,
+          importId: raceJob.importId,
+        });
+        raceJobs.push({ job: raceJob, preview: racePreview });
+      }
+      const raceStateBefore = await withTenant(db, tenantA, async (tx) => {
+        const rows = await tx.$queryRaw`
+          SELECT
+            (SELECT count(*)::int FROM redemption_codes WHERE tenant_id = ${tenantA}::uuid AND event_id = ${eventA}::uuid) AS codes,
+            (SELECT count(*)::int FROM tickets WHERE tenant_id = ${tenantA}::uuid AND event_id = ${eventA}::uuid) AS tickets,
+            (SELECT count(*)::int FROM guest_invitations WHERE tenant_id = ${tenantA}::uuid AND event_id = ${eventA}::uuid) AS invitations,
+            (SELECT count(*)::int FROM outbox WHERE tenant_id = ${tenantA}::uuid AND event_id = ${eventA}::uuid) AS outbox,
+            (SELECT count(*)::int FROM audit_logs WHERE tenant_id = ${tenantA}::uuid AND event_id = ${eventA}::uuid) AS audit,
+            (SELECT count(*)::int FROM operations WHERE tenant_id = ${tenantA}::uuid AND event_id = ${eventA}::uuid AND command = 'import.commit') AS commit_ops
+        `;
+        return rows[0];
+      });
+      let signalLock;
+      let releaseLock;
+      const locked = new Promise((resolve) => { signalLock = resolve; });
+      const released = new Promise((resolve) => { releaseLock = resolve; });
+      const blocker = withTenant(db, tenantA, async (tx) => {
+        await tx.$queryRaw`
+          SELECT id FROM events WHERE tenant_id = ${tenantA}::uuid
+            AND id = ${eventA}::uuid FOR UPDATE
+        `;
+        signalLock();
+        await released;
+      });
+      await locked;
+      const raceCommit = ({ job: raceJob, preview: racePreview }, key) =>
+        commitImportJob(db, store, HMAC, {
+          tenantId: tenantA, eventId: eventA, actorUserId: manager.userId,
+          importId: raceJob.importId, idempotencyKey: key,
+          body: {
+            previewRevision: racePreview.previewRevision,
+            mappingRevision: racePreview.mappingRevision,
+            fileHash: racePreview.fileHash,
+          },
+        });
+      const raceKeys = [randomUUID(), randomUUID()];
+      const contenders = raceJobs.map((entry, i) => raceCommit(entry, raceKeys[i]));
+      const observer = new Client({ connectionString: boot.url });
+      try {
+        await observer.connect();
+        let waiting = 0;
+        for (let attempt = 0; attempt < 100; attempt++) {
+          const observed = await observer.query(`
+            SELECT count(*)::int AS n FROM pg_stat_activity
+            WHERE wait_event_type = 'Lock'
+              AND query LIKE '%SELECT id, status FROM events%'
+              AND pid <> pg_backend_pid()
+          `);
+          waiting = observed.rows[0].n;
+          if (waiting >= 2) break;
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        }
+        assert.ok(waiting >= 2, 'both commit transactions reached event lock');
+      } finally {
+        releaseLock();
+        await blocker;
+        await observer.end().catch(() => {});
+      }
+      const raceResults = await Promise.all(contenders);
+      assert.deepEqual(raceResults.map((r) => r.committedRowCount).sort(), [0, 1]);
+      assert.deepEqual(raceResults.map((r) => r.skippedRowCount).sort(), [1, 2]);
+      for (let i = 0; i < 2; i++) {
+        const replay = await raceCommit(raceJobs[i], raceKeys[i]);
+        assert.equal(replay.replayed, true);
+        assert.equal(replay.committedRowCount, raceResults[i].committedRowCount);
+        await assert.rejects(
+          () => commitImportJob(db, store, HMAC, {
+            tenantId: tenantA, eventId: eventA, actorUserId: manager.userId,
+            importId: raceJobs[i].job.importId, idempotencyKey: raceKeys[i],
+            body: { ...raceJobs[i].preview,
+              previewRevision: raceJobs[i].preview.previewRevision + 1 },
+          }),
+          (e) => e instanceof ImportError &&
+            e.code === IMPORT_ERROR_CODES.IDEMPOTENCY_CONFLICT,
+        );
+      }
+      const raceStateAfter = await withTenant(db, tenantA, async (tx) => {
+        const rows = await tx.$queryRaw`
+          SELECT
+            (SELECT count(*)::int FROM redemption_codes WHERE tenant_id = ${tenantA}::uuid AND event_id = ${eventA}::uuid) AS codes,
+            (SELECT count(*)::int FROM tickets WHERE tenant_id = ${tenantA}::uuid AND event_id = ${eventA}::uuid) AS tickets,
+            (SELECT count(*)::int FROM guest_invitations WHERE tenant_id = ${tenantA}::uuid AND event_id = ${eventA}::uuid) AS invitations,
+            (SELECT count(*)::int FROM outbox WHERE tenant_id = ${tenantA}::uuid AND event_id = ${eventA}::uuid) AS outbox,
+            (SELECT count(*)::int FROM audit_logs WHERE tenant_id = ${tenantA}::uuid AND event_id = ${eventA}::uuid) AS audit,
+            (SELECT count(*)::int FROM operations WHERE tenant_id = ${tenantA}::uuid AND event_id = ${eventA}::uuid AND command = 'import.commit') AS commit_ops
+        `;
+        const used = await tx.$queryRaw`
+          SELECT id, status, source_id, ticket_type_id, code_pepper_version
+          FROM redemption_codes WHERE tenant_id = ${tenantA}::uuid
+            AND event_id = ${eventA}::uuid AND code_hmac = ${usedCodeHmac}
+        `;
+        assert.deepEqual(used[0], usedBefore);
+        const jobs = await tx.$queryRaw`
+          SELECT status FROM import_jobs WHERE tenant_id = ${tenantA}::uuid
+            AND id IN (${raceJobs[0].job.importId}::uuid, ${raceJobs[1].job.importId}::uuid)
+        `;
+        assert.deepEqual(jobs.map((j) => j.status).sort(), ['COMPLETED', 'COMPLETED']);
+        return rows[0];
+      });
+      assert.equal(raceStateAfter.codes, raceStateBefore.codes + 1);
+      assert.equal(raceStateAfter.commit_ops, raceStateBefore.commit_ops + 2);
+      for (const field of ['tickets', 'invitations', 'outbox', 'audit'])
+        assert.equal(raceStateAfter[field], raceStateBefore[field], field);
 
       // I7 — legacy sync path still works
       const legacy = await withTenant(db, tenantA, (tx) =>
