@@ -77,6 +77,7 @@ export const catalog = {
       'db11-invite-ttl-claim',
       'DB-11: staff invite TTL/one-use/email + attendee claim host separation/expired/replay/wrong-owner',
     ),
+    { file: 'tests/e2e/http/live.test.mjs', name: '[DB-11] live HTTP', layer: 'H' },
   ],
   'DB-12': [
     b('config-publish', 'config publish is versioned'),
