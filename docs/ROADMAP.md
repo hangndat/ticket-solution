@@ -1,5 +1,7 @@
 # Roadmap — Event Ticketing Platform
 
+> **F04 30/10/2026 — user ưu tiên hoàn tất 85 nhóm E2E local:** [PR #1028](https://github.com/hangndat/ticket-solution/pull/1028) đã merge tại `a3022024163bf8cf5ed4d4b426e312bf465f4518`, bàn giao harness và coverage hiện có. Full functional AC vẫn **0 PASS, 85 BLOCKED, 1 OUT** theo [`tests/e2e/PLAN.md`](../tests/e2e/PLAN.md); #1029–#1037 theo dõi chín suite. Ưu tiên này mở **roadmap review và các task test/evidence theo AC đã chốt**. Product gap cần quyết định contract/ADR riêng trước khi sửa runtime; F04 không thay gate D5/pilot. Thứ tự và điều kiện nghiệm thu ở §1.3.
+
 > **O33 28/10/2026:** iOS/web a11y (VoiceOver, Dynamic Type, WCAG UAT) **OUT** MVP/pilot — không known gap, không chặn #879/#889/#874/#1008/#914.
 
 > **Mới 28/10/2026 — O28 / Epic [#914](https://github.com/hangndat/ticket-solution/issues/914):** Guest NativeTabs **Sự kiện + Đổi mã** (catalog public; không Tài khoản, không Vé). Verified: **Sự kiện + Đổi mã + Vé của tôi**. Đổi mã là **tab** (không CTA footer Events). Header guest → OIDC «Đăng nhập»; verified → `/account`. Deep link `/redeem` và `/redeem-global` → tab. Privacy native, staff header-only event switch, banner per-event, USB skill giữ [O27](./DECISION-LOG.md) (O27 §3–§4 guest-no-tabs **đã sửa** bởi O28). VoiceOver ngoài #914.
@@ -85,6 +87,19 @@ Cột **Board** = Status parent Issue trên Project #3 tại thời điểm đ�
 - `./scripts/d5-backup-drill.sh` PASS chỉ chứng minh fixture còn sau `pg_dump`/restore trên Postgres vứt bỏ — **không** backup production, **không** SLO.
 - Push: đăng ký token / outbox `ACCEPTED` ≠ `DELIVERED` đến thiết bị.
 - Không dùng EAS Cloud Build làm bằng chứng phát hành.
+
+### 1.3 F04 — hoàn tất full AC E2E local
+
+**Đơn vị hoàn thành:** từng ID trong 85 nhóm chỉ chuyển `PASS` khi đủ lớp B/H/D/R mà [`PLAN.md`](../tests/e2e/PLAN.md) yêu cầu, có assertion business state và nhánh từ chối không tạo mutation ngoài ý muốn, trên commit sạch với run ID. `coverage.json: implemented`, selector xanh hoặc run trên working tree dirty là bằng chứng một phần. `JOB-08` giữ `OUT`; không hạ AC để tăng số PASS.
+
+| Đợt | Phạm vi ưu tiên | Điều kiện bắt đầu / ranh giới |
+| --- | --- | --- |
+| 0 — bằng chứng | Harness provenance/guard và baseline sạch sau #1028 | Giữ nguyên dirty WEB-13 hiện có; tách patch theo scope vào branch riêng, không reset hoặc dùng dirty run làm DoD |
+| 1 — P0 độc lập | #1030 DB và #1029 AUTH; root tooling chạy song song nếu không sửa cùng path | Một coding Dispatch mỗi owner slice; backend/web không tự sửa contract hay slice khác |
+| 2 — P0 còn lại | #1032 JOB, #1036 SEC, #1037 WEB, #1035 PORT, #1033 PLAT, #1031 GATE | Xếp wave theo owner và artifact thật; GATE-03 signed QR, PORT-11 accept UI, WEB-01 UNLISTED và AUTH-08 status cần đối chiếu AC/ADR trước product fix |
+| 3 — P1/ops | #1034 POL và các nhánh P1 trong issue khác | POL-03 live ops không được tính PASS từ test local; giữ receipt production riêng |
+
+Project #3 chuyển từng Issue từ `Chưa lên lịch` theo sự kiện dispatch/review; không đánh dấu toàn F04 `Hoàn thành` vì một suite hoặc smoke đạt. F04 là **local regression evidence**; D5 vẫn cần physical-device UAT, security/capacity/restore và các gate phát hành riêng theo §1.1–§2.
 
 ## 2. Định nghĩa hoàn thành (Definition of Done)
 
