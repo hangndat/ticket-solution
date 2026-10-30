@@ -1,6 +1,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { randomUUID } = require('node:crypto');
+const { Client } = require('pg');
 const { startPostgres } = require('../../../tests/e2e/backend/pg-fixture.cjs');
 const {
   createDatabase, withTenant, createPrismaIdentityUserRepository,
@@ -42,7 +43,7 @@ async function fixture(t, label, codes, capacities, maxPerAttendee = null) {
     }
     return seeded;
   });
-  return { db, tenantId, eventId, inventory, users: createPrismaIdentityUserRepository(db) };
+  return { db, url: pg.url, tenantId, eventId, inventory, users: createPrismaIdentityUserRepository(db) };
 }
 
 async function identity(f, subject, email, emailVerified = true) {
@@ -62,6 +63,68 @@ function input(f, actor, code) {
 async function redeem(f, value) {
   return withTenant(f.db, f.tenantId, (tx) =>
     redeemAndIssueTicket(tx, HMAC, CREDENTIAL_KEY, value));
+}
+
+async function waitForBlockedQuery(url, blockerPid, sqlFragment, count = 1) {
+  const observer = new Client({ connectionString: url });
+  await observer.connect();
+  try {
+    const deadline = Date.now() + 15000;
+    while (Date.now() < deadline) {
+      const { rows } = await observer.query(`
+        SELECT pid, query FROM pg_stat_activity
+        WHERE pid <> pg_backend_pid() AND wait_event_type = 'Lock'
+          AND $1::int = ANY(pg_blocking_pids(pid)) AND query LIKE $2
+      `, [blockerPid, `%${sqlFragment}%`]);
+      if (rows.length >= count) return rows.map(({ pid, query }) => ({ pid, query }));
+      await new Promise((resolve) => setTimeout(resolve, 30));
+    }
+    assert.fail(`contender never blocked on ${sqlFragment} behind PostgreSQL pid ${blockerPid}`);
+  } finally {
+    await observer.end();
+  }
+}
+
+async function controlledRace(f, firstValue, contenderValues, contestedSql, finiteScope = null) {
+  let releaseFirst;
+  let firstReached;
+  let firstFailed;
+  const held = new Promise((resolve) => { releaseFirst = resolve; });
+  const reached = new Promise((resolve, reject) => { firstReached = resolve; firstFailed = reject; });
+  const first = withTenant(f.db, f.tenantId, async (tx) => {
+    const [{ pid }] = await tx.$queryRaw`SELECT pg_backend_pid() AS pid`;
+    const result = await redeemAndIssueTicket(tx, HMAC, CREDENTIAL_KEY, firstValue);
+    assert.equal(result.ok, true, 'first transaction must reach the allocation before commit');
+    if (finiteScope) {
+      const quotas = await tx.$queryRaw`SELECT scope, capacity, allocated FROM quota_buckets
+        WHERE tenant_id = ${f.tenantId}::uuid AND event_id = ${f.eventId}::uuid`;
+      const finite = quotas.find((row) => row.scope === finiteScope);
+      assert.equal(finite.capacity, 1);
+      assert.equal(finite.allocated, 1, 'first transaction holds the last finite seat before commit');
+    } else {
+      const counters = await tx.$queryRaw`SELECT issued_count FROM attendee_counters
+        WHERE tenant_id = ${f.tenantId}::uuid AND event_id = ${f.eventId}::uuid`;
+      assert.equal(counters[0].issued_count, 1, 'first transaction holds the owner limit before commit');
+    }
+    firstReached(pid);
+    await held;
+    return result;
+  });
+  first.catch(firstFailed);
+  const blockerPid = await reached;
+  const contenders = contenderValues.map((value) => redeem(f, value));
+  try {
+    const blocked = await waitForBlockedQuery(f.url, blockerPid, contestedSql, contenderValues.length);
+    assert.equal(blocked.length, contenderValues.length,
+      'each contender must be waiting while first transaction is uncommitted');
+  } catch (error) {
+    releaseFirst();
+    await Promise.allSettled([first, ...contenders]);
+    throw error;
+  } finally {
+    releaseFirst();
+  }
+  return Promise.all([first, ...contenders]);
 }
 
 async function snapshot(f) {
@@ -94,8 +157,17 @@ test('DB-04: guest and unverified leave no hold; IdP email keeps dot/plus; multi
   assert.deepEqual(await snapshot(f), before, 'guest cannot hold business state');
 
   const owner = await identity(f, 'owner', 'first.last+label@example.test');
-  const jobs = ['DB04-A', 'DB04-B', 'DB04-C'].map((code) => redeem(f, input(f, owner, code)));
-  const outcomes = await Promise.all(jobs);
+  await withTenant(f.db, f.tenantId, async (tx) => {
+    const attendeeId = randomUUID();
+    await tx.$executeRaw`INSERT INTO event_attendees (tenant_id, event_id, id, user_id, canonical_email, created_at, updated_at)
+      VALUES (${f.tenantId}::uuid, ${f.eventId}::uuid, ${attendeeId}::uuid, ${owner.userId}::uuid, ${owner.email}, now(), now())`;
+    await tx.$executeRaw`INSERT INTO attendee_counters (tenant_id, event_id, attendee_id, issued_count, max_tickets, updated_at)
+      VALUES (${f.tenantId}::uuid, ${f.eventId}::uuid, ${attendeeId}::uuid, 0, 1, now())`;
+  });
+  const outcomes = await controlledRace(f,
+    input(f, owner, 'DB04-A'),
+    ['DB04-B', 'DB04-C'].map((code) => input(f, owner, code)),
+    'attendee_counters');
   assert.equal(outcomes.filter((x) => x.ok === true).length, 1);
   assert.equal(outcomes.filter((x) => x.ok === false && x.rejection.code === ISSUE_ERROR_CODES.ATTENDEE_LIMIT).length, 2);
   const after = await snapshot(f);
@@ -121,10 +193,11 @@ test('DB-05: each finite quota wins one seat while other scopes are nullable', {
     const f = await fixture(t, `db05-${finite}`, [`DB05-${finite}-A`, `DB05-${finite}-B`], capacities);
     const a = await identity(f, `a-${finite}`, `a-${finite}@example.test`);
     const b = await identity(f, `b-${finite}`, `b-${finite}@example.test`);
-    const results = await Promise.all([
-      redeem(f, input(f, a, `DB05-${finite}-A`)),
-      redeem(f, input(f, b, `DB05-${finite}-B`)),
-    ]);
+    const results = await controlledRace(f,
+      input(f, a, `DB05-${finite}-A`),
+      [input(f, b, `DB05-${finite}-B`)],
+      "scope = 'EVENT'",
+      { event: 'EVENT', type: 'TICKET_TYPE', source: 'ISSUANCE_SOURCE' }[finite]);
     assert.equal(results.filter((x) => x.ok === true).length, 1, finite);
     assert.equal(results.filter((x) => x.ok === false && x.rejection.code === ISSUE_ERROR_CODES.QUOTA_EXHAUSTED).length, 1, finite);
     const state = await snapshot(f);

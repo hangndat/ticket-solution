@@ -804,6 +804,60 @@ async function db04Snapshot(f) {
   return state;
 }
 
+async function db04ControlledRequests(ctx, path, token, body, codes) {
+  const f = ctx.fixture;
+  const requireBackend = createRequire(
+    new URL('../../../packages/backend/package.json', import.meta.url),
+  );
+  const { Client } = requireBackend('pg');
+  const locker = new Client({
+    connectionString: required(f.data?.controlDatabaseUrl, 'DB-04 controlDatabaseUrl'),
+  });
+  const attendeeId = randomUUID();
+  await db03Query(f, `INSERT INTO event_attendees
+    (tenant_id, event_id, id, user_id, canonical_email, created_at, updated_at)
+    VALUES ($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5, now(), now())`,
+  [f.tenantId, f.eventId, attendeeId, f.accounts.attendee.userId, f.accounts.attendee.username]);
+  await db03Query(f, `INSERT INTO attendee_counters
+    (tenant_id, event_id, attendee_id, issued_count, max_tickets, updated_at)
+    VALUES ($1::uuid, $2::uuid, $3::uuid, 0, 1, now())`,
+  [f.tenantId, f.eventId, attendeeId]);
+  await locker.connect();
+  let requests = [];
+  try {
+    await locker.query('BEGIN');
+    await locker.query('SET LOCAL ROLE ticket_runtime');
+    await locker.query("SELECT set_config('app.tenant_id', $1, true)", [f.tenantId]);
+    const locked = await locker.query(`SELECT pg_backend_pid() AS pid FROM attendee_counters
+      WHERE tenant_id = $1::uuid AND attendee_id = $2::uuid FOR UPDATE`,
+    [f.tenantId, attendeeId]);
+    assert.equal(locked.rows.length, 1);
+    const blockerPid = locked.rows[0].pid;
+    requests = codes.map((code) => request(ctx, 'POST', path, token, { ...body, code },
+      { 'idempotency-key': randomUUID() }));
+    const deadline = Date.now() + 15000;
+    let blocked = [];
+    while (Date.now() < deadline) {
+      const { rows } = await locker.query(`SELECT pid FROM pg_stat_activity
+        WHERE pid <> pg_backend_pid() AND wait_event_type = 'Lock'
+          AND $1::int = ANY(pg_blocking_pids(pid))
+          AND query LIKE '%attendee_counters%'`, [blockerPid]);
+      blocked = rows;
+      if (blocked.length === codes.length) break;
+      await new Promise((resolve) => setTimeout(resolve, 30));
+    }
+    assert.equal(blocked.length, codes.length,
+      'all HTTP requests must reach the same owner counter while it is locked');
+  } catch (error) {
+    requests.forEach((pending) => pending.catch(() => undefined));
+    throw error;
+  } finally {
+    await locker.query('ROLLBACK');
+    await locker.end();
+  }
+  return Promise.all(requests);
+}
+
 async function web04AssertRejected(ctx, {
   label,
   tenantId,
@@ -2422,10 +2476,7 @@ for (const caseId of CASE_IDS) {
       assert.deepEqual(await db04Snapshot(f), before, 'unverified must not leave operation, hold or pending state');
       const attendee = await bearer(ctx, 'attendee');
       const codes = [f.code, f.secondCode, required(f.data?.raceCode, 'DB-04 thirdCode')];
-      const outcomes = await Promise.all(codes.map((code) => request(
-        ctx, 'POST', path, attendee, { ...body, code },
-        { 'idempotency-key': randomUUID() },
-      )));
+      const outcomes = await db04ControlledRequests(ctx, path, attendee, body, codes);
       assert.equal(outcomes.filter((x) => x.status === 201).length, 1);
       assert.equal(outcomes.filter((x) => x.status === 409 && x.body.code === 'ATTENDEE_LIMIT').length, 2);
       const after = await db04Snapshot(f);
