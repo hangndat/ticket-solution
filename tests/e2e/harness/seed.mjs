@@ -215,6 +215,7 @@ export async function seedRuntime(state, caseIds) {
       const codes = [
         `E2E-${state.id}-${caseId}-A`,
         `E2E-${state.id}-${caseId}-B`,
+        ...(caseId === 'DB-03' ? [`E2E-${state.id}-${caseId}-C`] : []),
       ];
       const fixture = {
         tenantId,
@@ -245,9 +246,14 @@ export async function seedRuntime(state, caseIds) {
         // Private, run-scoped control. The test uses ticket_runtime + tenant RLS.
         fixture.data.controlDatabaseUrl = state.databaseUrl;
       }
-      if (caseId === 'WEB-04') {
+      if (caseId === 'WEB-04' || caseId === 'DB-03') {
         // Private, run-scoped control for H/DB reconciliation under tenant RLS.
         fixture.data.controlDatabaseUrl = state.databaseUrl;
+      }
+      if (caseId === 'DB-03') {
+        // Third code dedicated to the multi-actor race branch so it never
+        // shares a code with the single-actor retry/replay branches.
+        fixture.data.raceCode = codes[2];
       }
       if (caseId === 'PORT-12') {
         fixture.data.registrationName = `New Tenant ${state.id}`;
