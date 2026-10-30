@@ -216,7 +216,7 @@ export async function seedRuntime(state, caseIds) {
       const codes = [
         `E2E-${state.id}-${caseId}-A`,
         `E2E-${state.id}-${caseId}-B`,
-        ...(caseId === 'DB-03' ? [`E2E-${state.id}-${caseId}-C`] : []),
+        ...(['DB-03', 'DB-04'].includes(caseId) ? [`E2E-${state.id}-${caseId}-C`] : []),
       ];
       const fixture = {
         tenantId,
@@ -247,20 +247,19 @@ export async function seedRuntime(state, caseIds) {
         // Private, run-scoped control. The test uses ticket_runtime + tenant RLS.
         fixture.data.controlDatabaseUrl = state.databaseUrl;
       }
-      if (caseId === 'WEB-04' || caseId === 'DB-03' || caseId === 'DB-02') {
+      if (['AUTH-03', 'WEB-04', 'DB-03', 'DB-04', 'DB-02'].includes(caseId)) {
         // Private, run-scoped control for H/DB reconciliation under tenant RLS.
         fixture.data.controlDatabaseUrl = state.databaseUrl;
       }
-      if (caseId === 'DB-03') {
-        // Third code dedicated to the multi-actor race branch so it never
-        // shares a code with the single-actor retry/replay branches.
+      if (caseId === 'DB-03' || caseId === 'DB-04') {
+        // Third code keeps each race request on its own unused code.
         fixture.data.raceCode = codes[2];
       }
       if (caseId === 'PORT-12') {
         fixture.data.registrationName = `New Tenant ${state.id}`;
         fixture.data.registrationSlug = `new-${slug}`;
       }
-      if (['AUTH-03', 'DB-03', 'SEC-04', 'SEC-05', 'WEB-04'].includes(caseId)) {
+      if (['AUTH-03', 'DB-03', 'DB-04', 'SEC-04', 'SEC-05', 'WEB-04'].includes(caseId)) {
         fixture.data.formVersion = 'form-v1';
         fixture.data.termsVersion = 'terms-v1';
         if (caseId === 'AUTH-03')
@@ -311,6 +310,12 @@ export async function seedRuntime(state, caseIds) {
         });
         fixture.ticketTypeId = inventory.ticketTypeId;
         fixture.sourceId = inventory.sourceId;
+        if (caseId === 'DB-04') {
+          await tx.$executeRaw`
+            UPDATE events SET max_tickets_per_attendee = 1
+            WHERE tenant_id = ${tenantId}::uuid AND id = ${eventId}::uuid
+          `;
+        }
         if (
           ['AUTH-03', 'WEB-02', 'WEB-03', 'WEB-07', 'WEB-10'].includes(caseId)
         ) {
