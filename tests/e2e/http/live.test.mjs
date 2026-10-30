@@ -20,6 +20,7 @@ const CASE_IDS = [
   'DB-01',
   'DB-02',
   'DB-03',
+  'DB-04',
   'WEB-04',
 ];
 const EVIL_HOST = 'evil.example';
@@ -783,6 +784,24 @@ async function db03Query(f, statement, values) {
   } finally {
     await client.end();
   }
+}
+
+async function db04Snapshot(f) {
+  const tables = {
+    codes: 'SELECT id, status, active_request_id FROM redemption_codes WHERE tenant_id = $1::uuid AND event_id = $2::uuid ORDER BY id',
+    quotas: 'SELECT id, capacity, allocated FROM quota_buckets WHERE tenant_id = $1::uuid AND event_id = $2::uuid ORDER BY id',
+    requests: 'SELECT id, status FROM redemption_requests WHERE tenant_id = $1::uuid AND event_id = $2::uuid ORDER BY id',
+    tickets: 'SELECT id, owner_user_id FROM tickets WHERE tenant_id = $1::uuid AND event_id = $2::uuid ORDER BY id',
+    operations: 'SELECT id, client_key, status, response_json FROM operations WHERE tenant_id = $1::uuid AND event_id = $2::uuid ORDER BY id',
+    audits: 'SELECT id, action FROM audit_logs WHERE tenant_id = $1::uuid AND event_id = $2::uuid ORDER BY id',
+    outbox: 'SELECT id, type FROM outbox WHERE tenant_id = $1::uuid AND event_id = $2::uuid ORDER BY id',
+    attendees: 'SELECT id, user_id, canonical_email FROM event_attendees WHERE tenant_id = $1::uuid AND event_id = $2::uuid ORDER BY id',
+    counters: 'SELECT attendee_id, issued_count, max_tickets FROM attendee_counters WHERE tenant_id = $1::uuid AND event_id = $2::uuid ORDER BY attendee_id',
+  };
+  const state = {};
+  for (const [name, sql] of Object.entries(tables))
+    state[name] = await db03Query(f, sql, [f.tenantId, f.eventId]);
+  return state;
 }
 
 async function web04AssertRejected(ctx, {
@@ -2384,6 +2403,48 @@ for (const caseId of CASE_IDS) {
       const after = await request(ctx, 'GET', reportPath(f), owner);
       expectStatus(after, 200);
       assert.equal(after.body.quota.allocated, before.body.quota.allocated + 1);
+      return;
+    }
+    if (caseId === 'DB-04') {
+      const path = redemptionPath(f);
+      const body = redemptionBody(f, caseId);
+      const before = await db04Snapshot(f);
+      const anonymous = await request(ctx, 'POST', path, null, body, {
+        'idempotency-key': randomUUID(),
+      });
+      expectStatus(anonymous, 401);
+      assert.deepEqual(await db04Snapshot(f), before, 'guest must not hold code, quota or pending state');
+      const unverified = await bearer(ctx, 'unverified');
+      const denied = await request(ctx, 'POST', path, unverified, body, {
+        'idempotency-key': randomUUID(),
+      });
+      expectStatus(denied, 403, 'EMAIL_NOT_VERIFIED');
+      assert.deepEqual(await db04Snapshot(f), before, 'unverified must not leave operation, hold or pending state');
+      const attendee = await bearer(ctx, 'attendee');
+      const codes = [f.code, f.secondCode, required(f.data?.raceCode, 'DB-04 thirdCode')];
+      const outcomes = await Promise.all(codes.map((code) => request(
+        ctx, 'POST', path, attendee, { ...body, code },
+        { 'idempotency-key': randomUUID() },
+      )));
+      assert.equal(outcomes.filter((x) => x.status === 201).length, 1);
+      assert.equal(outcomes.filter((x) => x.status === 409 && x.body.code === 'ATTENDEE_LIMIT').length, 2);
+      const after = await db04Snapshot(f);
+      assert.equal(after.attendees.length, 1);
+      assert.equal(after.attendees[0].canonical_email, f.accounts.attendee.username);
+      assert.ok(after.attendees[0].canonical_email.includes('.last+label.'));
+      assert.equal(after.counters.length, 1);
+      assert.equal(after.counters[0].issued_count, 1);
+      assert.equal(after.counters[0].max_tickets, 1);
+      assert.equal(after.tickets.length, 1);
+      assert.equal(after.requests.length, 1);
+      assert.equal(after.codes.filter((x) => x.status === 'CONSUMED').length, 1);
+      assert.equal(after.codes.filter((x) => x.status === 'AVAILABLE').length, 2);
+      assert.ok(after.codes.every((x) => x.status !== 'HELD'));
+      assert.ok(after.quotas.every((x) => x.allocated === 1));
+      assert.equal(after.operations.length, 3);
+      assert.ok(after.operations.every((x) => x.status === 'COMPLETED'));
+      assert.equal(after.audits.filter((x) => x.action === 'ticket.issued').length, 1);
+      assert.equal(after.outbox.filter((x) => x.type === 'TicketIssued').length, 1);
       return;
     }
     if (caseId === 'AUTH-06') {

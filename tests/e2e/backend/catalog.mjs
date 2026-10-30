@@ -36,10 +36,12 @@ export const catalog = {
   'DB-04': [
     b('issue', 'issue: last-seat'),
     b('approval', 'manual redeem does not allocate'),
+    b('db04-db05-acceptance', 'DB-04:'),
   ],
   'DB-05': [
     b('issue', 'issue: last-seat'),
     b('approval', 'F01: mixed auto/manual'),
+    b('db04-db05-acceptance', 'DB-05:'),
   ],
   'DB-06': [b('event-lifecycle', 'C-E event lifecycle')],
   'DB-07': [
@@ -188,9 +190,9 @@ export const notes = {
     'D membership/revoke/identity đủ; H claim cũ và token realm thứ hai bị từ chối 401, không tạo identity/session/business mutation.',
   'DB-03':
     'D quota/idempotency đủ; H cùng request retry, multi-actor race và audit/outbox matrix đã mở (live.test.mjs#[DB-03]).',
-  'DB-04': 'D unverified; thiếu canonicalization IdP và tranh per-email limit.',
+  'DB-04': 'D IdP dot/plus, guest/unverified zero mutation và multi-code owner limit; H Keycloak guest/unverified deny, dot/plus, multi-code race đối soát business state. Chờ reviewer độc lập trên SHA cuối.',
   'DB-05':
-    'D last-seat; thiếu quota nullable và fault rollback ở cả type/source.',
+    'D event/type/source last-seat, các scope còn lại nullable, allocated invariant và fault sau cả ba quota mutation rollback toàn bộ. Chờ reviewer độc lập trên SHA cuối.',
   'DB-06':
     'D event lifecycle; thiếu race config/quota/suspend và bounded transient retry.',
   'DB-07': 'D pending/approve; thiếu H expiry/reject race và TTL cấu hình.',
