@@ -202,6 +202,6 @@
     ],
     "layers": ["B", "H", "R"],
     "status": "blocked",
-    "reason": "Run mvuqulhv-6e1b12 PASS 7/7 browser trên working tree dirty: import→dispatch→Mailpit→AUTO/MANUAL claim, wrong verified email, unverified, second claim key mới, manager reject, expired token. Các nhánh dùng event riêng để tránh dispatch-preview 410 khi invitation đã DISPATCHED. Còn thiếu token-revoke matrix, quota DB đối soát đầy đủ và idempotency replay cùng key — group vẫn blocked ở AC; cần rerun trên SHA sạch."
+    "reason": "Clean run mvurb5ch-8e062b trên SHA 5f300f76 PASS 7/7 B/H/R với Keycloak, Portal, Mailpit và PG thật. Fix DoD F01/F02 thêm snapshot PG trước/sau nhánh từ chối, request REJECTED cho MANUAL, và assert intent sau OIDC login không mở lại link; dirty diagnostic mvurohbj-e37b3c PASS 7/7, cần clean rerun fix. Còn thiếu token-revoke matrix, quota DB đầy đủ và replay cùng idempotency key — full group vẫn blocked."
   }
 ]

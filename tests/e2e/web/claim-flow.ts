@@ -337,9 +337,32 @@ export async function openClaimAsRecipient(
   await attendee.locator('#username').fill(recipient.username);
   await attendee.locator('#password').fill(recipient.password);
   await attendee.locator('#kc-login').click();
-  await expect(attendee).toHaveURL(/\/claim/);
-  await attendee.goto(claimUrl);
-  await expect(attendee).toHaveURL(/\/claim/);
+  await expect(attendee).toHaveURL(
+    new RegExp(`^${manifest.origins.web.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/claim(?:[?#]|$)`),
+  );
+  const expected = new URLSearchParams(new URL(claimUrl).hash.slice(1));
+  await expect
+    .poll(async () =>
+      attendee.evaluate(
+        ({ token, tenantId, eventId }) => {
+          const raw = sessionStorage.getItem('vemoki_guest_claim_intent');
+          if (!raw) return false;
+          const intent = JSON.parse(raw) as {
+            token?: string;
+            tenantId?: string;
+            eventId?: string;
+          };
+          return intent.token === token &&
+            intent.tenantId === tenantId && intent.eventId === eventId;
+        },
+        {
+          token: expected.get('token'),
+          tenantId: expected.get('tenantId'),
+          eventId: expected.get('eventId'),
+        },
+      ),
+    )
+    .toBe(true);
   if (options?.waitForClaimButton !== false) {
     await expect(attendee.locator('#claim-terms-consent')).toBeVisible({
       timeout: 60_000,
