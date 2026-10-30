@@ -135,10 +135,15 @@
   },
   {
     "caseId": "WEB-06",
-    "tests": ["redeem.spec.ts › [WEB-06]"],
+    "tests": [
+      "redeem.spec.ts › [WEB-06] manual source redemption › submit stays pending without QR or quota allocation",
+      "redeem.spec.ts › [WEB-06] manual source redemption › manager approve reflects on owner wallet, detail QR, and PG ticket/quota",
+      "redeem.spec.ts › [WEB-06] manual source redemption › manager reject leaves owner denied without ticket or quota change",
+      "redeem.spec.ts › [WEB-06] manual source redemption › expired pending shows clear owner status and never ISSUED without ticket"
+    ],
     "layers": ["B"],
-    "status": "blocked",
-    "reason": "Browser PASS run mvt0wnef-960246: pending UX, không QR/ticket; PostgreSQL HELD + PENDING_REVIEW, quota không allocate (readManualPendingHold). Thiếu Portal approve/reject/expiry và ticket/quota sau approve."
+    "status": "covered",
+    "reason": "PLAN §5.2 WEB-06 P0 B: MANUAL Web submit → redeem-ux-pending, không ticket card/QR; PG HELD + PENDING_REVIEW, quota không allocate. Portal manager duyệt → owner «Kiểm tra trạng thái yêu cầu» → success, wallet/detail QR, assertManualIssuedAfterApproval (+1 quota/ticket/outbox). Từ chối → redeem-ux-denied, wallet giữ, REJECTED không ISSUED. Hết hạn (run-scoped PG expires_at) + owner refresh → redeem-ux-expired, EXPIRED không vé. Reuse luồng PORT-06 approve/deny UI. Clean checkout SHA d1096bd99b42070e67bf644e5c637de7af6f8645 (evidenceExactShaEligible: true): node tests/e2e/harness/run.mjs e2e --case=WEB-06 → run mvuzute9-d7d0ba PASS 4/4 browser; artifact tests/e2e/.artifacts/mvuzute9-d7d0ba/summary.json. pnpm test:e2e:guards 19/19. Không sửa apps/web runtime."
   },
   {
     "caseId": "WEB-07",
