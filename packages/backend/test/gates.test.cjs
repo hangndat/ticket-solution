@@ -144,6 +144,42 @@ test('O31 gates: list/create/open per gate, RLS, cross-event, backward compat', 
       withTenant(db, tenantA, (tx) => createEventGate(tx, { tenantId: tenantA, eventId: ev1, userId: admin.userId, name: ' Cổng A ' })),
       (e) => e instanceof GateError && e.code === GATE_ERROR_CODES.GATE_NAME_CONFLICT,
     );
+
+    for (const bad of [-1, 10000, 1.5]) {
+      await assert.rejects(
+        withTenant(db, tenantA, (tx) =>
+          createEventGate(tx, {
+            tenantId: tenantA,
+            eventId: ev1,
+            userId: admin.userId,
+            name: `sort-bad-${bad}`,
+            sortOrder: bad,
+          }),
+        ),
+        (e) => e instanceof GateError && e.code === GATE_ERROR_CODES.GATE_NOT_FOUND,
+      );
+    }
+    const minGate = await withTenant(db, tenantA, (tx) =>
+      createEventGate(tx, {
+        tenantId: tenantA,
+        eventId: ev2,
+        userId: admin.userId,
+        name: 'Sort min',
+        sortOrder: 0,
+      }),
+    );
+    const maxGate = await withTenant(db, tenantA, (tx) =>
+      createEventGate(tx, {
+        tenantId: tenantA,
+        eventId: ev2,
+        userId: admin.userId,
+        name: 'Sort max',
+        sortOrder: 9999,
+      }),
+    );
+    assert.equal(minGate.sortOrder, 0);
+    assert.equal(maxGate.sortOrder, 9999);
+
     const listed = await withTenant(db, tenantA, (tx) => listEventGates(tx, { tenantId: tenantA, eventId: ev1, userId: staff.userId }));
     assert.deepEqual(listed.map((g) => g.name), ['Cổng A', 'Cổng B']);
     assert.ok(listed.every((g) => g.eventId === ev1));
