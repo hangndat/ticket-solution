@@ -183,11 +183,11 @@ export const catalog = {
 
 export const notes = {
   'DB-01':
-    'D hiện có RLS/pool/owner; thiếu rollback/exception và H worker/export matrix.',
+    'D RLS/pool/owner/rollback-exception đủ; H worker/export cross-tenant đã mở (live.test.mjs#[DB-01]).',
   'DB-02':
-    'D membership/revoke; thiếu H claim cũ và issuer+subject qua Keycloak thật.',
+    'D membership/revoke/identity đủ; H claim cũ đã mở, issuer+subject qua Keycloak thật vẫn blocked (cần realm thứ hai).',
   'DB-03':
-    'D quota/idempotency; thiếu H cùng request retry và audit matrix đầy đủ.',
+    'D quota/idempotency đủ; H cùng request retry, multi-actor race và audit/outbox matrix đã mở (live.test.mjs#[DB-03]).',
   'DB-04': 'D unverified; thiếu canonicalization IdP và tranh per-email limit.',
   'DB-05':
     'D last-seat; thiếu quota nullable và fault rollback ở cả type/source.',

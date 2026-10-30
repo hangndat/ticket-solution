@@ -9,7 +9,7 @@
     ],
     "layers": ["D"],
     "status": "blocked",
-    "reason": "D có RLS/pool reuse/no-context (rls.test.cjs bao gồm rollback/exception dòng 282-295), owner aggregate, và nay thêm ticket_platform_runtime (worker/export role) không có grant trên bảng PII và bị PostgreSQL permission denied khi đọc trực tiếp — chạy PASS trên PostgreSQL thật (xem Checks). Thiếu H: chưa có live API/Keycloak chứng minh endpoint worker/export thực tế (CS export, report) từ chối cross-tenant qua HTTP, không chỉ qua grant DB."
+    "reason": "D có RLS/pool reuse/no-context (rls.test.cjs bao gồm rollback/exception dòng 282-295), owner aggregate, và ticket_platform_runtime (worker/export role) không có grant trên bảng PII và bị PostgreSQL permission denied khi đọc trực tiếp — chạy PASS trên PostgreSQL thật (xem Checks). H đã mở: tests/e2e/http/live.test.mjs#[DB-01] run mvud30a6-64e1fe PASS, exact SHA c5aecdba3a61401f018b362f666bed861a55574c — endpoint export/report thực tế qua HTTP/Keycloak thật chặn cross-tenant (manager export cross-tenant 403/404, owner report cross-tenant 403/404, download/status cross-tenant 403/404), không chỉ qua grant DB. Xem tests/e2e/http/coverage.json#DB-01 cho chi tiết lệnh/nhánh."
   },
   {
     "caseId": "DB-02",
@@ -21,7 +21,7 @@
     ],
     "layers": ["D", "U"],
     "status": "blocked",
-    "reason": "D membership/revoke; nay thêm D: hai issuer khác nhau cùng email không auto-link (userId khác nhau, không merge membership), owner identity không có quyền staff ngầm — PASS trên PostgreSQL thật. Thiếu H: claim cũ qua token thật (role/tenant trong JWT không còn đúng DB) và issuer+subject qua Keycloak thật (JWKS/issuer validation ở live IdP), chưa có manifest Keycloak cho case này (xem FIXTURES.md)."
+    "reason": "D membership/revoke; hai issuer khác nhau cùng email không auto-link (userId khác nhau, không merge membership), owner identity không có quyền staff ngầm — PASS trên PostgreSQL thật. H mở phần claim cũ: tests/e2e/http/live.test.mjs#[DB-02] run mvud30a6-64e1fe PASS, exact SHA c5aecdba3a61401f018b362f666bed861a55574c — revoke membership/event_assignments có hiệu lực ngay với access token Keycloak thật còn hợp lệ (chưa hết hạn, chưa refetch), chứng minh DB là nguồn sự thật không phải JWT. Vẫn BLOCKED phần issuer+subject qua Keycloak thật: harness chỉ provision một realm/issuer mỗi run (tests/e2e/harness/runtime.mjs), không có issuer thứ hai để mint token thật; cần thêm realm Keycloak thứ hai trong runtime.mjs để mở — thay đổi harness ngoài scope task hiện tại, không dùng JWT giả để né. Xem tests/e2e/http/coverage.json#DB-02."
   },
   {
     "caseId": "DB-03",
