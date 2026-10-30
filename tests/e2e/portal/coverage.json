@@ -56,7 +56,7 @@
     "tests": ["portal-core.spec.ts [PORT-08]"],
     "layers": ["B", "H"],
     "status": "blocked",
-    "reason": "B/H read path extended: full seeded report quota fields, gate asOf line, check-in KPI, manual refresh GET, deep links, no resend on dashboard. BLOCKED: confirm APPLIED/undo/reject is Gate/mobile (O12 scan), not Portal; seed lacks check-in/emailNeedsCs>0 for CTA branches; error-state must not show fake zero needs fault profile plus runtime."
+    "reason": "PORT-08 targeted B/H PASS runs mvuss75q-554aba and mvustvib-8df4b9 (1/1 browser each) on branch hangndat/f04-port08-dashboard: BFF /report matches readEventReport seed (FINITE quota remaining, pending/check-in/emailNeedsCs 0), gate asOf, KPI counts, manual refresh GET, no resend on dashboard, no Portal scan/confirm/undo, zero-count CTAs hidden, FINITE remaining shown. BLOCKED: confirm APPLIED/undo/reject per O12 source → Gate/mobile + DB-15 (not Portal); deep-link href branches need seed pending/emailNeedsCs>0 (coordinator harness, avoid WEB-13 overlap); upstream error must not render fake zero needs fault profile."
   },
   {
     "caseId": "PORT-09",

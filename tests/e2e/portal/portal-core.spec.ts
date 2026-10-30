@@ -234,6 +234,10 @@ test('[PORT-08] event report shows seeded KPI, asOf and work links', async ({
   expect(Date.parse(String(report.asOf))).not.toBeNaN();
   await page.goto(portalUrl(m, eventPath(f, '/gate')));
   await expect(page.getByTestId('event-report-as-of')).toBeVisible();
+  // O12 confirm APPLIED/undo/reject lives in Gate/mobile scan flows (DB-15), not Portal.
+  await expect(
+    page.getByRole('button', { name: /quét|scan|confirm|undo|reject admission/i }),
+  ).toHaveCount(0);
   await expect(
     page
       .getByText(String(expected.checkInSuccessCount), { exact: true })
@@ -247,6 +251,22 @@ test('[PORT-08] event report shows seeded KPI, asOf and work links', async ({
   await expect(
     page.getByRole('button', { name: 'Resend email', exact: true }),
   ).toHaveCount(0);
+  if (expected.pendingApprovalCount === 0) {
+    await expect(page.getByTestId('event-report-cta-pending-approval')).toHaveCount(
+      0,
+    );
+  }
+  if (expected.emailNeedsCsCount === 0) {
+    await expect(page.getByTestId('event-report-cta-email-cs')).toHaveCount(0);
+  }
+  if (
+    expected.quotaCapacityState === 'FINITE' &&
+    expected.quotaRemaining != null
+  ) {
+    await expect(
+      page.getByText(String(expected.quotaRemaining), { exact: true }).first(),
+    ).toBeVisible();
+  }
   if (expected.pendingApprovalCount > 0) {
     await expect(
       page.getByTestId('event-report-cta-pending-approval').locator('xpath=..'),
