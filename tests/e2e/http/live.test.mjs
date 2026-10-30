@@ -813,6 +813,9 @@ async function db04ControlledRequests(ctx, path, token, body, codes) {
   const locker = new Client({
     connectionString: required(f.data?.controlDatabaseUrl, 'DB-04 controlDatabaseUrl'),
   });
+  const observer = new Client({
+    connectionString: required(f.data?.controlDatabaseUrl, 'DB-04 controlDatabaseUrl'),
+  });
   const attendeeId = randomUUID();
   await db03Query(f, `INSERT INTO event_attendees
     (tenant_id, event_id, id, user_id, canonical_email, created_at, updated_at)
@@ -823,6 +826,7 @@ async function db04ControlledRequests(ctx, path, token, body, codes) {
     VALUES ($1::uuid, $2::uuid, $3::uuid, 0, 1, now())`,
   [f.tenantId, f.eventId, attendeeId]);
   await locker.connect();
+  await observer.connect();
   let requests = [];
   try {
     await locker.query('BEGIN');
@@ -838,7 +842,7 @@ async function db04ControlledRequests(ctx, path, token, body, codes) {
     const deadline = Date.now() + 15000;
     let blocked = [];
     while (Date.now() < deadline) {
-      const { rows } = await locker.query(`SELECT pid FROM pg_stat_activity
+      const { rows } = await observer.query(`SELECT pid FROM pg_stat_activity
         WHERE pid <> pg_backend_pid() AND wait_event_type = 'Lock'
           AND $1::int = ANY(pg_blocking_pids(pid))
           AND query LIKE '%attendee_counters%'`, [blockerPid]);
@@ -854,6 +858,7 @@ async function db04ControlledRequests(ctx, path, token, body, codes) {
   } finally {
     await locker.query('ROLLBACK');
     await locker.end();
+    await observer.end();
   }
   return Promise.all(requests);
 }
