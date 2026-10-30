@@ -21,6 +21,7 @@ const CASE_IDS = [
   'DB-02',
   'DB-03',
   'DB-04',
+  'DB-07',
   'WEB-04',
 ];
 const EVIL_HOST = 'evil.example';
@@ -850,6 +851,78 @@ async function db04Snapshot(f) {
   for (const [name, sql] of Object.entries(tables))
     state[name] = await db03Query(f, sql, [f.tenantId, f.eventId]);
   return state;
+}
+
+async function db07State(f, requestId) {
+  const [requestRow] = await db03Query(f, `SELECT id, status, expires_at, created_at, decision_reason,
+      redemption_code_id FROM redemption_requests
+      WHERE tenant_id=$1::uuid AND id=$2::uuid`, [f.tenantId, requestId]);
+  assert.ok(requestRow, 'DB-07 request must exist');
+  const [code] = await db03Query(f, `SELECT status, active_request_id FROM redemption_codes
+      WHERE tenant_id=$1::uuid AND id=$2::uuid`,
+  [f.tenantId, requestRow.redemption_code_id]);
+  return {
+    request: requestRow, code,
+    quota: await db03Query(f, `SELECT scope, capacity, allocated FROM quota_buckets
+      WHERE tenant_id=$1::uuid AND event_id=$2::uuid ORDER BY scope`, [f.tenantId, f.eventId]),
+    tickets: await db03Query(f, `SELECT id, request_id FROM tickets
+      WHERE tenant_id=$1::uuid AND request_id=$2::uuid`, [f.tenantId, requestId]),
+    audit: await db03Query(f, `SELECT action FROM audit_logs
+      WHERE tenant_id=$1::uuid AND resource_id=$2::uuid`, [f.tenantId, requestId]),
+    outbox: await db03Query(f, `SELECT type FROM outbox
+      WHERE tenant_id=$1::uuid AND event_id=$2::uuid AND payload->>'requestId'=$3`,
+    [f.tenantId, f.eventId, requestId]),
+    operations: await db03Query(f, `SELECT command, status, response_json FROM operations
+      WHERE tenant_id=$1::uuid AND event_id=$2::uuid
+        AND response_json->>'requestId'=$3`, [f.tenantId, f.eventId, requestId]),
+  };
+}
+
+async function db07DecisionBarrier(ctx, requestId, calls) {
+  const f = ctx.fixture;
+  const requireBackend = createRequire(
+    new URL('../../../packages/backend/package.json', import.meta.url),
+  );
+  const { Client } = requireBackend('pg');
+  const url = required(f.data?.controlDatabaseUrl, 'DB-07 controlDatabaseUrl');
+  const locker = new Client({ connectionString: url });
+  const observer = new Client({ connectionString: url });
+  await locker.connect();
+  await observer.connect();
+  let requests = [];
+  try {
+    await locker.query('BEGIN');
+    await locker.query('SET LOCAL ROLE ticket_runtime');
+    await locker.query("SELECT set_config('app.tenant_id', $1, true)", [f.tenantId]);
+    const locked = await locker.query(`SELECT c.id, pg_backend_pid() AS pid
+      FROM redemption_codes c JOIN redemption_requests r
+        ON r.tenant_id=c.tenant_id AND r.redemption_code_id=c.id
+      WHERE r.tenant_id=$1::uuid AND r.id=$2::uuid FOR UPDATE OF c`,
+    [f.tenantId, requestId]);
+    assert.equal(locked.rows.length, 1);
+    const blockerPid = locked.rows[0].pid;
+    requests = calls.map((call) => call());
+    const deadline = Date.now() + 1500;
+    let waiters = [];
+    while (Date.now() < deadline) {
+      const { rows } = await observer.query(`SELECT pid FROM pg_stat_activity
+        WHERE pid <> pg_backend_pid() AND wait_event_type='Lock'
+          AND $1::int = ANY(pg_blocking_pids(pid))`, [blockerPid]);
+      waiters = rows;
+      if (waiters.length >= calls.length) break;
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+    assert.ok(waiters.length >= calls.length,
+      `DB-07 expected ${calls.length} HTTP contenders blocked on PostgreSQL code row; observed ${waiters.length}`);
+  } catch (error) {
+    requests.forEach((pending) => pending.catch(() => undefined));
+    throw error;
+  } finally {
+    await locker.query('ROLLBACK');
+    await locker.end();
+    await observer.end();
+  }
+  return Promise.all(requests);
 }
 
 async function db04ControlledRequests(ctx, path, token, body, codes) {
@@ -2729,6 +2802,132 @@ for (const caseId of CASE_IDS) {
       assert.ok(after.operations.every((x) => x.status === 'COMPLETED'));
       assert.equal(after.audits.filter((x) => x.action === 'ticket.issued').length, 1);
       assert.equal(after.outbox.filter((x) => x.type === 'TicketIssued').length, 1);
+      return;
+    }
+    if (caseId === 'DB-07') {
+      const attendee = await bearer(ctx, 'attendee');
+      const manager = await bearer(ctx, 'manager');
+      const supervisor = await bearer(ctx, 'supervisor');
+      const path = redemptionPath(f);
+      const body = redemptionBody(f, caseId);
+      const hold = async (code, allocated = 0) => {
+        const key = randomUUID();
+        const pendingBody = { ...body, code };
+        const first = await request(ctx, 'POST', path, attendee, pendingBody,
+          { 'idempotency-key': key });
+        expectStatus(first, 201);
+        assert.equal(first.body.status, 'PENDING_REVIEW');
+        assert.equal(first.body.code, 'APPROVAL_PENDING');
+        assert.equal(first.body.replayed, false);
+        assert.equal(first.body.ticketId, undefined);
+        const replay = await request(ctx, 'POST', path, attendee, pendingBody,
+          { 'idempotency-key': key });
+        expectStatus(replay, 201);
+        assert.equal(replay.body.replayed, true);
+        assert.equal(replay.body.requestId, first.body.requestId);
+        const s = await db07State(f, first.body.requestId);
+        assert.equal(s.request.status, 'PENDING_REVIEW');
+        assert.equal(s.code.status, 'HELD');
+        assert.equal(s.code.active_request_id, first.body.requestId);
+        assert.equal(s.tickets.length, 0);
+        assert.ok(s.quota.every((q) => q.allocated === allocated), 'pending must not allocate quota');
+        assert.equal(s.audit.filter((a) => a.action === 'redemption.pending').length, 1);
+        assert.equal(s.outbox.length, 0);
+        assert.ok(Math.abs(new Date(s.request.expires_at).getTime() -
+          new Date(s.request.created_at).getTime() -
+          required(f.data?.pendingTtlHours, 'DB-07 pendingTtlHours') * 3_600_000) < 5000,
+        'pending TTL must come from issuance source config');
+        assert.equal(first.body.expiresAt, new Date(s.request.expires_at).toISOString());
+        return first.body.requestId;
+      };
+      const decision = (requestId, action, token, key, reason) => request(
+        ctx, 'POST', `${path}/${requestId}/${action}`, token,
+        action === 'deny' ? { reason } : undefined,
+        { 'idempotency-key': key },
+      );
+
+      const approveRequestId = await hold(f.code);
+      const firstKey = randomUUID();
+      const secondKey = randomUUID();
+      const approvals = await db07DecisionBarrier(ctx, approveRequestId, [
+        () => decision(approveRequestId, 'approve', manager, firstKey),
+        () => decision(approveRequestId, 'approve', supervisor, secondKey),
+      ]);
+      assert.ok(approvals.some((result) => result.status === 201));
+      const approved = approvals.find((result) => result.status === 201);
+      assert.equal(approved.body.status, 'ISSUED');
+      for (const result of approvals) {
+        if (result.status === 201) assert.equal(result.body.ticketId, approved.body.ticketId);
+        else expectStatus(result, 409, 'DECISION_CONFLICT');
+      }
+      const approvedState = await db07State(f, approveRequestId);
+      assert.equal(approvedState.request.status, 'ISSUED');
+      assert.equal(approvedState.code.status, 'CONSUMED');
+      assert.equal(approvedState.tickets.length, 1);
+      assert.equal(approvedState.tickets[0].id, approved.body.ticketId);
+      assert.ok(approvedState.quota.every((q) => q.allocated === 1));
+      assert.equal(approvedState.audit.filter((a) => a.action === 'redemption.approved').length, 1);
+      assert.equal(approvedState.outbox.filter((o) => o.type === 'TicketIssued').length, 1);
+      const replayKey = approvals[0].status === 201 ? firstKey : secondKey;
+      const replayActor = approvals[0].status === 201 ? manager : supervisor;
+      const approvalReplay = await decision(approveRequestId, 'approve', replayActor, replayKey);
+      expectStatus(approvalReplay, 201);
+      assert.equal(approvalReplay.body.replayed, true);
+      assert.equal(approvalReplay.body.ticketId, approved.body.ticketId);
+
+      const denyRequestId = await hold(f.secondCode, 1);
+      const denyKey = randomUUID();
+      const denied = await decision(denyRequestId, 'deny', manager, denyKey, 'DB-07 synthetic denial');
+      expectStatus(denied, 201);
+      assert.equal(denied.body.status, 'REJECTED');
+      const denyReplay = await decision(denyRequestId, 'deny', manager, denyKey, 'DB-07 synthetic denial');
+      expectStatus(denyReplay, 201);
+      assert.equal(denyReplay.body.replayed, true);
+      expectStatus(await decision(denyRequestId, 'approve', supervisor, randomUUID()),
+        409, 'DECISION_CONFLICT');
+      const deniedState = await db07State(f, denyRequestId);
+      assert.equal(deniedState.request.status, 'REJECTED');
+      assert.equal(deniedState.request.decision_reason, 'DB-07 synthetic denial');
+      assert.equal(deniedState.code.status, 'AVAILABLE');
+      assert.equal(deniedState.code.active_request_id, null);
+      assert.equal(deniedState.tickets.length, 0);
+      assert.ok(deniedState.quota.every((q) => q.allocated === 1));
+      assert.equal(deniedState.audit.filter((a) => a.action === 'redemption.denied').length, 1);
+      assert.equal(deniedState.outbox.length, 0);
+
+      const expiryRequestId = await hold(required(f.data?.thirdCode, 'DB-07 thirdCode'), 1);
+      await db03Query(f, `UPDATE redemption_requests
+        SET expires_at=clock_timestamp() - interval '1 second'
+        WHERE tenant_id=$1::uuid AND id=$2::uuid`, [f.tenantId, expiryRequestId]);
+      const expiryKey = randomUUID();
+      expectStatus(await decision(expiryRequestId, 'approve', manager, expiryKey),
+        409, 'PENDING_EXPIRED');
+      expectStatus(await decision(expiryRequestId, 'approve', manager, expiryKey),
+        409, 'PENDING_EXPIRED');
+      const expiredState = await db07State(f, expiryRequestId);
+      assert.equal(expiredState.request.status, 'EXPIRED');
+      assert.equal(expiredState.code.status, 'AVAILABLE');
+      assert.equal(expiredState.code.active_request_id, null);
+      assert.equal(expiredState.tickets.length, 0);
+      assert.ok(expiredState.quota.every((q) => q.allocated === 1));
+      assert.equal(expiredState.audit.filter((a) => a.action === 'redemption.expired').length, 1);
+      assert.equal(expiredState.outbox.length, 0);
+
+      const quotaRequestId = await hold(required(f.data?.fourthCode, 'DB-07 fourthCode'), 1);
+      await db03Query(f, `UPDATE quota_buckets SET capacity=allocated
+        WHERE tenant_id=$1::uuid AND event_id=$2::uuid`, [f.tenantId, f.eventId]);
+      const quotaKey = randomUUID();
+      expectStatus(await decision(quotaRequestId, 'approve', manager, quotaKey),
+        409, 'QUOTA_EXHAUSTED');
+      expectStatus(await decision(quotaRequestId, 'approve', manager, quotaKey),
+        409, 'QUOTA_EXHAUSTED');
+      const quotaState = await db07State(f, quotaRequestId);
+      assert.equal(quotaState.request.status, 'PENDING_REVIEW');
+      assert.equal(quotaState.code.status, 'HELD');
+      assert.equal(quotaState.tickets.length, 0);
+      assert.ok(quotaState.quota.every((q) => q.allocated === 1));
+      assert.equal(quotaState.audit.filter((a) => a.action === 'redemption.approved').length, 0);
+      assert.equal(quotaState.outbox.length, 0);
       return;
     }
     if (caseId === 'AUTH-06') {

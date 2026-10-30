@@ -51,6 +51,7 @@ export const catalog = {
     b('approval', 'manual redeem does not allocate'),
     b('approval', 'manual approval is audited'),
     b('form-consent', 'F-BE: form/consent'),
+    b('db07-manual-race', 'DB-07:'),
   ],
   'DB-08': [
     b('issue', 'issue: last-seat'),
@@ -199,7 +200,7 @@ export const notes = {
     'D event/type/source last-seat, các scope còn lại nullable, allocated invariant và fault sau cả ba quota mutation rollback toàn bộ. Chờ reviewer độc lập trên SHA cuối.',
   'DB-06':
     'D barrier PostgreSQL chứng minh issue vs close/config theo hai thứ tự, issue trước suspend, state ticket/code/quota/operation/outbox và lock timeout + same-key retry. SQL quota reduction chỉ là diagnostic cho CHECK/serialization, không thay AC runtime. BLOCKED: chưa có runtime quota-reduction command; contract bounded transient retry chưa chốt (hiện có lock_timeout 2s và client retry cùng key, không auto-retry).',
-  'DB-07': 'D pending/approve; thiếu H expiry/reject race và TTL cấu hình.',
+  'DB-07': 'D PostgreSQL barrier: pending không chiếm quota, TTL nguồn, approve/deny/expiry nhiều actor, replay và quota recheck. H Keycloak/HTTP còn thiếu; giữ BLOCKED.',
   'DB-08':
     'Thiếu fault injection trước commit và lost-response sau commit theo command scope.',
   'DB-09': 'D revoke, owner invariant, allocation policy và reissue credential/version/grant; R worker/Mailpit PNG v2 + revoke-before-relay DEAD. Thiếu generic PATCH refusal H; GATE-03 vẫn thiếu QR credential validation tại Gate.',

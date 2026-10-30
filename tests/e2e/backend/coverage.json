@@ -71,11 +71,12 @@
     "tests": [
       "D:packages/backend/test/approval.test.cjs#manual redeem does not allocate",
       "D:packages/backend/test/approval.test.cjs#manual approval is audited",
-      "D:packages/backend/test/form-consent.test.cjs#F-BE: form/consent"
+      "D:packages/backend/test/form-consent.test.cjs#F-BE: form/consent",
+      "D:packages/backend/test/db07-manual-race.test.cjs#DB-07:"
     ],
     "layers": ["D"],
     "status": "blocked",
-    "reason": "D pending/approve; thiếu H expiry/reject race và TTL cấu hình."
+    "reason": "D PostgreSQL barrier kiểm pending/TTL cấu hình nguồn, approve vs expiry/deny và nhiều approver, quota recheck, replay, code/request/ticket/quota/audit/outbox. H Keycloak/HTTP chưa được chứng minh; giữ BLOCKED."
   },
   {
     "caseId": "DB-08",
