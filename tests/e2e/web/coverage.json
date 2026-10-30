@@ -120,10 +120,18 @@
   },
   {
     "caseId": "WEB-05",
-    "tests": ["redeem.spec.ts › [WEB-05]"],
-    "layers": ["B"],
-    "status": "blocked",
-    "reason": "Có terms/required client gate; thiếu field-type/allowlist/server version assertions."
+    "tests": [
+      "redeem.spec.ts › [WEB-05] published form and terms validation › client gate: terms not accepted blocks POST",
+      "redeem.spec.ts › [WEB-05] published form and terms validation › client gate: invalid email blocks POST",
+      "redeem.spec.ts › [WEB-05] published form and terms validation › client gate: invalid phone blocks POST",
+      "redeem.spec.ts › [WEB-05] published form and terms validation › client gate: required select empty blocks POST",
+      "redeem.spec.ts › [WEB-05] published form and terms validation › client gate: required checkbox blocks POST",
+      "redeem.spec.ts › [WEB-05] published form and terms validation › BFF rejects each invalid consent branch without business mutation",
+      "redeem.spec.ts › [WEB-05] published form and terms validation › successful redeem persists published form/terms hashes from seed v1"
+    ],
+    "layers": ["B", "H"],
+    "status": "covered",
+    "reason": "WEB-05 B/H clean PASS tại SHA tích hợp 42a29788: browser mvuvgow7-f39e4e 7/7, HTTP mvuvhn2t-f1e3ab, CI 41046526455 SUCCESS. James DoD PASS tại PR #1071; F01/F02 đã đóng bằng ma trận âm độc lập, PG no-mutation guard và hash published v1/v2."
   },
   {
     "caseId": "WEB-06",
