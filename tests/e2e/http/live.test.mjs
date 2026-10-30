@@ -17,6 +17,8 @@ const CASE_IDS = [
   'AUTH-06',
   'GATE-01',
   'GATE-03',
+  'DB-01',
+  'DB-02',
   'DB-03',
   'WEB-04',
 ];
@@ -626,7 +628,7 @@ async function auth06Revoke(f, statement, values) {
   const client = new Client({
     connectionString: required(
       f.data?.controlDatabaseUrl,
-      'AUTH-06 controlDatabaseUrl',
+      'controlDatabaseUrl',
     ),
   });
   await client.connect();
@@ -640,7 +642,7 @@ async function auth06Revoke(f, statement, values) {
     assert.equal(
       changed.rowCount,
       1,
-      'AUTH-06 scoped revocation must change one row under tenant RLS',
+      'scoped revocation must change one row under tenant RLS',
     );
     await client.query('COMMIT');
   } catch (error) {
@@ -2538,6 +2540,125 @@ for (const caseId of CASE_IDS) {
       assert.equal(
         reportAfter.body.rejectByReason.TICKET_NOT_FOUND ?? 0,
         (reportBefore.body.rejectByReason.TICKET_NOT_FOUND ?? 0) + 1,
+      );
+      return;
+    }
+    if (caseId === 'DB-01') {
+      // Worker/export role boundary at the HTTP layer: the D suite proves
+      // ticket_platform_runtime has no grant on PII tables cross-tenant; H
+      // must prove the export/report endpoints a worker serves also refuse
+      // cross-tenant access end to end, not only via DB role grants.
+      const owner = await bearer(ctx, 'owner');
+      const manager = await bearer(ctx, 'manager');
+      const foreignTenantId = required(
+        f.data?.foreignTenantId,
+        'DB-01 foreignTenantId',
+      );
+      const foreignEventId = required(
+        f.data?.foreignEventId,
+        'DB-01 foreignEventId',
+      );
+      const ownReport = await request(ctx, 'GET', reportPath(f), owner);
+      expectStatus(ownReport, 200);
+      assert.equal(ownReport.body.eventId, f.eventId);
+      deny(
+        await request(
+          ctx,
+          'GET',
+          reportPath(f, foreignTenantId, foreignEventId),
+          owner,
+        ),
+      );
+      deny(
+        await request(ctx, 'GET', reportPath(f, f.tenantId, foreignEventId), owner),
+      );
+      const exportsPath = `/tenants/${f.tenantId}/events/${f.eventId}/exports`;
+      const ownExport = await request(ctx, 'POST', exportsPath, manager, {
+        format: 'csv',
+        filter: { states: ['ACTIVE'] },
+      }, { 'idempotency-key': randomUUID() });
+      expectStatus(ownExport, 201);
+      const exportId = required(ownExport.body.exportId, 'DB-01 exportId');
+      await waitExportReady(ctx, f, manager, exportId);
+      const csv = await downloadExportCsv(ctx, f, manager, exportId);
+      assert.ok(csv.length > 0, 'DB-01 own-tenant export must return rows');
+
+      const foreignExportsPath = `/tenants/${foreignTenantId}/events/${foreignEventId}/exports`;
+      deny(
+        await request(ctx, 'POST', foreignExportsPath, manager, {
+          format: 'csv',
+          filter: { states: ['ACTIVE'] },
+        }, { 'idempotency-key': randomUUID() }),
+      );
+      deny(
+        await request(
+          ctx,
+          'GET',
+          `/tenants/${foreignTenantId}/events/${f.eventId}/exports/${exportId}`,
+          manager,
+        ),
+      );
+      deny(
+        await request(
+          ctx,
+          'GET',
+          `/tenants/${foreignTenantId}/events/${f.eventId}/exports/${exportId}/download`,
+          manager,
+        ),
+      );
+      return;
+    }
+    if (caseId === 'DB-02') {
+      // Role/assignment revocation must take effect immediately against the
+      // DB, even for an access token that is still cryptographically valid
+      // and was cached before the revoke (PG is the source of truth, not
+      // whatever role/tenant claim the token carried at mint time).
+      //
+      // Cross-issuer identity (two different Keycloak issuers + subjects
+      // sharing one email must not auto-link) is covered at D by
+      // db02-identity-issuer-subject.test.cjs. It stays BLOCKED for H: this
+      // harness provisions exactly one Keycloak realm/issuer per run
+      // (tests/e2e/harness/runtime.mjs seedKeycloak), so there is no second
+      // live issuer to mint a token from. Opening it needs a second
+      // provisioned realm in runtime.mjs, which is an architecture-impact
+      // harness change outside this task's scope, not something to fake
+      // with a crafted/mock JWT.
+      const owner = await bearer(ctx, 'owner');
+      const manager = await bearer(ctx, 'manager');
+      const gates = gatePath(f, 'gates');
+      expectStatus(
+        await request(ctx, 'POST', gates, manager, {
+          tenantId: f.tenantId,
+          name: `DB-02 before ${randomUUID()}`,
+        }),
+        201,
+      );
+      await auth06Revoke(
+        f,
+        `UPDATE event_assignments SET revoked_at = now()
+         WHERE tenant_id = $1::uuid AND event_id = $2::uuid
+           AND membership_id = (SELECT id FROM memberships WHERE tenant_id = $1::uuid AND user_id = $3::uuid)
+           AND revoked_at IS NULL`,
+        [f.tenantId, f.eventId, f.accounts.manager.userId],
+      );
+      deny(
+        await request(ctx, 'POST', gates, manager, {
+          tenantId: f.tenantId,
+          name: `DB-02 after assignment revoke ${randomUUID()}`,
+        }),
+      );
+      const reportStillOk = await request(ctx, 'GET', reportPath(f), owner);
+      expectStatus(reportStillOk, 200);
+      await auth06Revoke(
+        f,
+        'UPDATE memberships SET revoked_at = now() WHERE tenant_id = $1::uuid AND user_id = $2::uuid AND revoked_at IS NULL',
+        [f.tenantId, f.accounts.manager.userId],
+      );
+      deny(
+        await request(ctx, 'POST', gates, manager, {
+          tenantId: f.tenantId,
+          name: `DB-02 after membership revoke ${randomUUID()}`,
+        }),
       );
       return;
     }
