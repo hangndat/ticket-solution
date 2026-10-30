@@ -413,7 +413,11 @@ function secondaryRealmConfig(state, caseIds) {
   realm.sslRequired = 'external';
   realm.registrationAllowed = false;
   realm.verifyEmail = false;
-  const primaryEmail = state.accounts.attendee.username;
+  // Keep DB-02's cross-issuer identity fixture on the same email as its own
+  // case actor. AUTH-02 only needs the alternate issuer; it uses its case actor
+  // when DB-02 is not selected.
+  const emailCase = caseIds.includes('DB-02') ? 'DB-02' : 'AUTH-02';
+  const primaryEmail = state.caseAccounts[emailCase].attendee.username;
   const actor = {
     username: primaryEmail,
     password: randomBytes(24).toString('base64url'),
