@@ -397,7 +397,76 @@ function realmConfig(state, caseIds) {
   return realmPath;
 }
 
-function composeConfig(state, realmPath) {
+// Second, fully independent realm (own signing keypair) supplies a real token
+// with a different issuer for AUTH-02/DB-02. Rejection by the app cannot by
+// itself isolate issuer validation from signature/JWKS validation. Keycloak
+// ignores a protocol mapper targeting the core `iss` claim, so a same-realm
+// client cannot supply that isolated assertion.
+function secondaryRealmConfig(state, caseIds) {
+  if (!caseIds.some((id) => id === 'AUTH-02' || id === 'DB-02')) return null;
+  state.secondaryRealm = `${state.realm}-alt`;
+  const realm = JSON.parse(
+    readFileSync(resolve(ROOT, 'infra/keycloak/realm-ticket.json'), 'utf8'),
+  );
+  realm.realm = state.secondaryRealm;
+  realm.displayName = 'Vemoki local E2E (secondary issuer)';
+  realm.sslRequired = 'external';
+  realm.registrationAllowed = false;
+  realm.verifyEmail = false;
+  const primaryEmail = state.accounts.attendee.username;
+  const actor = {
+    username: primaryEmail,
+    password: randomBytes(24).toString('base64url'),
+    subject: randomUUID(),
+  };
+  realm.users = [
+    {
+      id: actor.subject,
+      username: actor.username,
+      email: actor.username,
+      enabled: true,
+      firstName: 'E2E',
+      lastName: 'secondary-issuer',
+      emailVerified: true,
+      requiredActions: [],
+      credentials: [
+        { type: 'password', value: actor.password, temporary: false },
+      ],
+    },
+  ];
+  state.secondaryClientSecret = randomBytes(24).toString('base64url');
+  realm.clients = [
+    {
+      clientId: 'e2e-http-secondary',
+      enabled: true,
+      publicClient: false,
+      secret: state.secondaryClientSecret,
+      protocol: 'openid-connect',
+      standardFlowEnabled: false,
+      directAccessGrantsEnabled: true,
+      defaultClientScopes: ['basic', 'profile', 'email', 'roles'],
+      protocolMappers: [
+        {
+          name: 'real-api-audience',
+          protocol: 'openid-connect',
+          protocolMapper: 'oidc-audience-mapper',
+          consentRequired: false,
+          config: {
+            'included.custom.audience': 'ticket-api',
+            'access.token.claim': 'true',
+            'id.token.claim': 'false',
+          },
+        },
+      ],
+    },
+  ];
+  state.secondaryActor = actor;
+  const realmPath = resolve(state.dir, 'realm-secondary.json');
+  privateJson(realmPath, realm);
+  return realmPath;
+}
+
+function composeConfig(state, realmPath, secondaryRealmPath) {
   const env = state.secrets;
   const port = (inner) => [`127.0.0.1::${inner}`];
   const label = { 'vemoki.e2e.run': state.id };
@@ -450,7 +519,14 @@ function composeConfig(state, realmPath) {
           KC_PROXY_HEADERS: 'xforwarded',
         },
         ports: port(8080),
-        volumes: [`${realmPath}:/opt/keycloak/data/import/e2e.json:ro`],
+        volumes: [
+          `${realmPath}:/opt/keycloak/data/import/e2e.json:ro`,
+          ...(secondaryRealmPath
+            ? [
+                `${secondaryRealmPath}:/opt/keycloak/data/import/e2e-secondary.json:ro`,
+              ]
+            : []),
+        ],
       },
       minio: {
         image:
@@ -945,7 +1021,9 @@ export async function createRuntime(caseIds) {
   if (caseIds.includes('AUTH-05'))
     state.origins.shortWeb = `https://short-web.${state.suffix}:${state.tlsPort}`;
   certs(state);
-  composeConfig(state, realmConfig(state, caseIds));
+  const realmPath = realmConfig(state, caseIds);
+  const secondaryRealmPath = secondaryRealmConfig(state, caseIds);
+  composeConfig(state, realmPath, secondaryRealmPath);
   privateJson(resolve(state.dir, 'owner.json'), {
     runId: id,
     project: state.project,
@@ -999,6 +1077,18 @@ export async function createRuntime(caseIds) {
         ),
       150_000,
     );
+    if (state.secondaryRealm) {
+      await waitFor(
+        'Keycloak secondary realm OIDC HTTPS',
+        () =>
+          getLocalJson(
+            state,
+            state.origins.auth,
+            `/realms/${state.secondaryRealm}/.well-known/openid-configuration`,
+          ),
+        150_000,
+      );
+    }
     await waitFor(
       'MinIO health',
       async () =>
