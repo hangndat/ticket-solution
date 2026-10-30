@@ -1,5 +1,11 @@
 # Báo cáo Web E2E — 28/10/2026
 
+## WEB-13 invitation claim — 30/10/2026
+
+- Bổ sung E2E: replay cùng `idempotencyKey` sau AUTO (ticketId giữ nguyên, `replayed`, PG không mutation thêm), ma trận token `INVITATION_EXPIRED` / `INVITATION_REVOKED` (run-scoped PG control), đối soát `quota_buckets` cho AUTO claim (+1), MANUAL pending (0), manager approve (+1), reject (snapshot pending không đổi ticket/quota/outbox).
+- Run sạch sau commit: `node tests/e2e/harness/run.mjs e2e --case=WEB-13 --skip-build` → `mvust3vn-4cb024` PASS 9/9 browser; `pnpm test:e2e:guards` 16/16. Seed thêm slot `idempotencyReplay` và `revoked` trên harness WEB-13.
+- `coverage.json` WEB-13 → `implemented` theo PLAN §5.2 P0 B/H/R; không sửa apps/web runtime.
+
 ## AUTH-07 Web ADR-23 — 30/10/2026
 
 - Web `/wallet` và `/t/{slug}/tickets/{id}` trả shell không chứa vé trong HTML/RSC. Browser lấy identity rồi BFF JSON; callback tạo epoch mới, logout xoay epoch, refresh giữ nguyên. BFF private gắn actor/epoch/surface; client kiểm binding, marker và generation trước khi hiển thị. Chặn prefetch RSC của hai route này.
