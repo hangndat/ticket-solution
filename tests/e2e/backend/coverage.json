@@ -111,7 +111,7 @@
     ],
     "layers": ["D", "H"],
     "status": "implemented",
-    "reason": "D/H PostgreSQL và F04 Keycloak/API/MinIO: hai commit chờ lock, một mã mới; mã CONSUMED giữ nguyên, retry không trùng, preview không reserve; import GUESTS chỉ tạo invitation/outbox, tenant/event và quyền actor được kiểm. Chờ DoD độc lập trên SHA cuối."
+    "reason": "D PostgreSQL PASS: hai request cùng importId/key/body chờ event lock khi commit đầu còn in-flight, một original + một replay, một operation và một mã mới; mã CONSUMED giữ nguyên. H có cùng barrier và actor inventory.import đọc/preview/commit job do actor khác tạo, actor thiếu quyền/revoked và sai tenant/event bị từ chối không mutation; chờ H run SHA sạch và DoD độc lập."
   },
   {
     "caseId": "DB-11",
