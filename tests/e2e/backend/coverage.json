@@ -20,8 +20,8 @@
       "D:packages/backend/test/db02-identity-issuer-subject.test.cjs#DB-02: identity keyed"
     ],
     "layers": ["D", "U"],
-    "status": "blocked",
-    "reason": "D membership/revoke; hai issuer khác nhau cùng email không auto-link (userId khác nhau, không merge membership), owner identity không có quyền staff ngầm — PASS trên PostgreSQL thật. H mở phần claim cũ: tests/e2e/http/live.test.mjs#[DB-02] run mvud30a6-64e1fe PASS, exact SHA c5aecdba3a61401f018b362f666bed861a55574c — revoke membership/event_assignments có hiệu lực ngay với access token Keycloak thật còn hợp lệ (chưa hết hạn, chưa refetch), chứng minh DB là nguồn sự thật không phải JWT. Vẫn BLOCKED phần issuer+subject qua Keycloak thật: harness chỉ provision một realm/issuer mỗi run (tests/e2e/harness/runtime.mjs), không có issuer thứ hai để mint token thật; cần thêm realm Keycloak thứ hai trong runtime.mjs để mở — thay đổi harness ngoài scope task hiện tại, không dùng JWT giả để né. Xem tests/e2e/http/coverage.json#DB-02."
+    "status": "pass",
+    "reason": "PASS D/H: D selectors DB-02 PASS PostgreSQL thật trên SHA a19f1488: role/assignment matrix, active membership/revoke, identity khóa issuer+subject và cùng email không auto-link. H run mvuec1b3-f93191 PASS SHA f61f193c sạch sau PR #1043: secondary Keycloak token thật cùng email, chữ ký/JWKS/issuer/audience/sub hợp lệ bị API 401; không tạo identity, staff session, gate, ticket; primary token cũ bị deny ngay sau revoke assignment/membership, owner report còn 200. Giới hạn: alternate realm có signing key khác nên rejection không cô lập issuer claim khỏi signature validation."
   },
   {
     "caseId": "DB-03",
