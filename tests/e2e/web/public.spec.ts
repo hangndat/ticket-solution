@@ -8,6 +8,7 @@ import {
 import {
   assertNoHorizontalOverflow,
   assertPrimaryButtonOperable,
+  assertRedeemOutcomePanel,
   caseData,
   eventPath,
   login,
@@ -178,7 +179,12 @@ async function assertWeb11ResponsiveSlice(
   f: import('../harness/contract').CaseFixture,
   viewport: { width: number; height: number },
   mobile: boolean,
-  options?: { skipLogin?: boolean },
+  options?: {
+    skipLogin?: boolean;
+    redeemExpectation?: 'issue' | 'used';
+    ticketIdForDetail?: string;
+    onIssuedTicketId?: (ticketId: string) => void;
+  },
 ) {
   await page.setViewportSize(viewport);
   if (!options?.skipLogin) {
@@ -188,16 +194,18 @@ async function assertWeb11ResponsiveSlice(
   await page.goto(webUrl(manifest, '/'));
   const headerNav = page
     .locator('header[data-testid="site-header"]')
-    .getByTestId('site-nav');
+    .first()
+    .getByTestId('site-nav')
+    .first();
   await expect(headerNav).toBeVisible();
   if (mobile) {
-    await headerNav.getByTestId('nav-menu-toggle').click();
+    await page.getByTestId('nav-menu-toggle').click();
     await expect(page.getByTestId('nav-mobile-menu')).toBeVisible();
     await page.getByTestId('nav-mobile-menu').getByTestId('nav-wallet').click();
     await expect(page).toHaveURL(/\/wallet$/);
     await expect(page.getByTestId('nav-mobile-menu')).toHaveCount(0);
   } else {
-    await headerNav.getByTestId('nav-wallet').click();
+    await page.getByTestId('nav-wallet').click();
     await expect(page).toHaveURL(/\/wallet$/);
   }
   await assertNoHorizontalOverflow(page);
@@ -228,20 +236,51 @@ async function assertWeb11ResponsiveSlice(
     }
   }
   await page.locator('#terms-accepted').check();
+  if (!f.secondCode)
+    throw new Error('BLOCKED: WEB-11 cần secondCode fresh (seed codes[1])');
+  await page.locator('#redeem-code-confirm').fill(f.secondCode);
   await assertPrimaryButtonOperable(page, 'Đổi mã lấy vé');
   await assertNoHorizontalOverflow(page);
 
-  await page.goto(
-    webUrl(
-      manifest,
-      `/t/${f.tenantSlug}/tickets/${f.ticketId}?tenantId=${f.tenantId}`,
+  const redeemExpectation = options?.redeemExpectation ?? 'issue';
+  const [issueResponse] = await Promise.all([
+    page.waitForResponse(
+      (response) => new URL(response.url()).pathname === '/api/bff/redeem',
     ),
-  );
+    page.getByRole('button', { name: 'Đổi mã lấy vé', exact: true }).click(),
+  ]);
+  if (redeemExpectation === 'issue') {
+    expect(issueResponse.status()).toBe(201);
+    await expect(page.getByTestId('redeem-ux-success')).toBeVisible();
+    const card = page.getByTestId('redeem-ticket-card');
+    await expect(card).toBeVisible();
+    const issuedTicketId = (
+      await card.locator('dd').first().textContent()
+    )?.trim();
+    expect(issuedTicketId).toMatch(/^[0-9a-f-]{36}$/i);
+    options?.onIssuedTicketId?.(issuedTicketId!);
+    await page.getByRole('link', { name: 'Xem vé của tôi' }).click();
+    await expect(page).toHaveURL(/\/wallet$/);
+    await assertNoHorizontalOverflow(page);
+    await page.getByTestId(`wallet-ticket-${issuedTicketId}`).click();
+  } else {
+    await assertRedeemOutcomePanel(page, 'used');
+  }
+  await assertNoHorizontalOverflow(page);
+
+  const detailTicketId = options?.ticketIdForDetail ?? f.ticketId;
+  if (!detailTicketId)
+    throw new Error('BLOCKED: WEB-11 cần ticketId để mở vé qua wallet CTA');
+  if (redeemExpectation === 'used') {
+    await page.goto(webUrl(manifest, '/wallet'));
+    await assertNoHorizontalOverflow(page);
+    await page.getByTestId(`wallet-ticket-${detailTicketId}`).click();
+  }
   await expect(page.getByTestId('owner-ticket-qr-figure')).toBeVisible();
   await assertNoHorizontalOverflow(page);
 
   if (mobile) {
-    await headerNav.getByTestId('nav-menu-toggle').click();
+    await page.getByTestId('nav-menu-toggle').click();
     await expect(page.getByTestId('nav-mobile-menu')).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(page.getByTestId('nav-mobile-menu')).toHaveCount(0);
@@ -256,13 +295,20 @@ test('[WEB-11] desktop and 390px form, menu sheet, redeem and ticket CTAs operab
   if (!f.ticketId)
     throw new Error('BLOCKED: WEB-11 cần ticketId thuộc attendee');
   await login(page, manifest, accountFor(manifest, 'WEB-11', 'attendee'));
+  let issuedTicketId: string | undefined;
   await assertWeb11ResponsiveSlice(
     page,
     manifest,
     f,
     { width: 1280, height: 720 },
     false,
-    { skipLogin: true },
+    {
+      skipLogin: true,
+      redeemExpectation: 'issue',
+      onIssuedTicketId: (id) => {
+        issuedTicketId = id;
+      },
+    },
   );
   await assertWeb11ResponsiveSlice(
     page,
@@ -270,7 +316,11 @@ test('[WEB-11] desktop and 390px form, menu sheet, redeem and ticket CTAs operab
     f,
     { width: 390, height: 844 },
     true,
-    { skipLogin: true },
+    {
+      skipLogin: true,
+      redeemExpectation: 'used',
+      ticketIdForDetail: issuedTicketId ?? f.ticketId,
+    },
   );
 });
 
