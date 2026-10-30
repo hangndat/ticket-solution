@@ -4719,6 +4719,10 @@ for (const caseId of CASE_IDS) {
       // PLAN §6.1 DB-14 H: form/terms version, structural allowlist on config
       // save, entitlement snapshot on issued ticket unchanged after brand/config
       // publish and ticket_type mutation; stale terms rejected on redeem.
+      const requireBackend = createRequire(
+        new URL('../../../packages/backend/package.json', import.meta.url),
+      );
+      const { hashFormDefinition, hashTermsContent } = requireBackend('./dist/index.js');
       const owner = await bearer(ctx, 'owner');
       const attendee = await bearer(ctx, 'attendee');
       const configBase = `/tenants/${f.tenantId}/events/${f.eventId}`;
@@ -4727,13 +4731,60 @@ for (const caseId of CASE_IDS) {
         tier: 'db14-v1',
         perks: ['lounge'],
       };
+      // Published form/terms bodies must match tests/e2e/harness/seed.mjs defaultConfig
+      // and the v2 save payload below (not DB readback alone).
+      const publishedFormV1 = {
+        formVersion: 'form-v1',
+        fields: [
+          { id: 'full_name', label: 'Họ tên', type: 'text', required: true },
+          { id: 'email', label: 'Email', type: 'email', required: true },
+          { id: 'phone', label: 'Điện thoại', type: 'phone', required: true },
+          {
+            id: 'shirt',
+            label: 'Áo',
+            type: 'select',
+            required: true,
+            options: [{ id: 'm', label: 'M' }],
+          },
+          { id: 'agree', label: 'Đồng ý', type: 'checkbox', required: true },
+        ],
+      };
+      const publishedFormV2 = {
+        formVersion: 'form-v2',
+        fields: [
+          { id: 'full_name', label: 'Name', type: 'text', required: true },
+          { id: 'email', label: 'Email', type: 'email', required: true },
+          { id: 'phone', label: 'Phone', type: 'phone', required: true },
+          {
+            id: 'shirt',
+            label: 'Shirt',
+            type: 'select',
+            required: true,
+            options: [{ id: 'm', label: 'M' }],
+          },
+          { id: 'agree', label: 'Agree', type: 'checkbox', required: true },
+        ],
+      };
+      const expectedFormHashV1 = hashFormDefinition(publishedFormV1);
+      const expectedTermsHashV1 = hashTermsContent({
+        termsVersion: 'terms-v1',
+        body: 'Synthetic test terms',
+      });
+      const expectedFormHashV2 = hashFormDefinition(publishedFormV2);
+      const expectedTermsHashV2 = hashTermsContent({
+        termsVersion: 'terms-v2',
+        body: 'Synthetic v2',
+      });
+      assert.notEqual(expectedFormHashV2, expectedFormHashV1);
+      assert.notEqual(expectedTermsHashV2, expectedTermsHashV1);
 
       const ticketRow = async (ticketId) => {
         const [row] = await web04Query(
           f,
           f.tenantId,
           `SELECT entitlement_snapshot::text AS entitlement,
-                  form_version, terms_version
+                  form_version, terms_version,
+                  form_definition_hash, terms_content_hash
            FROM tickets t
            INNER JOIN redemption_requests r
              ON r.tenant_id = t.tenant_id AND r.id = t.request_id
@@ -4744,6 +4795,8 @@ for (const caseId of CASE_IDS) {
           entitlement: JSON.parse(row.entitlement),
           formVersion: row.form_version,
           termsVersion: row.terms_version,
+          formDefinitionHash: row.form_definition_hash,
+          termsContentHash: row.terms_content_hash,
         };
       };
 
@@ -4761,6 +4814,8 @@ for (const caseId of CASE_IDS) {
       assert.deepEqual(snap1.entitlement, entitlementV1);
       assert.equal(snap1.formVersion, 'form-v1');
       assert.equal(snap1.termsVersion, 'terms-v1');
+      assert.equal(snap1.formDefinitionHash, expectedFormHashV1);
+      assert.equal(snap1.termsContentHash, expectedTermsHashV1);
 
       const listedVersions = await request(
         ctx,
@@ -5045,6 +5100,8 @@ for (const caseId of CASE_IDS) {
       assert.deepEqual(snap2.entitlement, entitlementV1);
       assert.equal(snap2.formVersion, 'form-v1');
       assert.equal(snap2.termsVersion, 'terms-v1');
+      assert.equal(snap2.formDefinitionHash, expectedFormHashV1);
+      assert.equal(snap2.termsContentHash, expectedTermsHashV1);
 
       const staleRedeem = await request(
         ctx,
@@ -5083,6 +5140,15 @@ for (const caseId of CASE_IDS) {
       assert.deepEqual(snap3.entitlement, entitlementV1);
       assert.equal(snap3.formVersion, 'form-v2');
       assert.equal(snap3.termsVersion, 'terms-v2');
+      assert.equal(snap3.formDefinitionHash, expectedFormHashV2);
+      assert.equal(snap3.termsContentHash, expectedTermsHashV2);
+
+      const snap1AfterV2 = await ticketRow(ticketId);
+      assert.deepEqual(snap1AfterV2.entitlement, entitlementV1);
+      assert.equal(snap1AfterV2.formVersion, 'form-v1');
+      assert.equal(snap1AfterV2.termsVersion, 'terms-v1');
+      assert.equal(snap1AfterV2.formDefinitionHash, expectedFormHashV1);
+      assert.equal(snap1AfterV2.termsContentHash, expectedTermsHashV1);
     }
   });
 }
