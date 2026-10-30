@@ -120,10 +120,15 @@
   },
   {
     "caseId": "WEB-05",
-    "tests": ["redeem.spec.ts › [WEB-05]"],
-    "layers": ["B"],
-    "status": "blocked",
-    "reason": "Có terms/required client gate; thiếu field-type/allowlist/server version assertions."
+    "tests": [
+      "redeem.spec.ts › [WEB-05] published form and terms validation › blocks incomplete submission without POST",
+      "redeem.spec.ts › [WEB-05] published form and terms validation › client-side field type and required gates block POST",
+      "redeem.spec.ts › [WEB-05] published form and terms validation › BFF rejects invalid and stale consent without mutating code state",
+      "redeem.spec.ts › [WEB-05] published form and terms validation › successful redeem persists published form and terms version"
+    ],
+    "layers": ["B", "H"],
+    "status": "implemented",
+    "reason": "Run mvuur1i8-67d0bb PASS 4/4 browser (Keycloak/BFF/PG): terms+required client gate không POST; email/phone/checkbox aria-invalid; BFF FORM_INVALID/FORM_VERSION_STALE/TERMS_VERSION_STALE không issue ticket/code; secondCode success lưu form_version/terms_version+hash. Run mvuurx3f-d9f0ce PASS HTTP cùng ma trận + owner publish v2 từ chối v1. Cần recheck evidenceExactShaEligible sau commit sạch."
   },
   {
     "caseId": "WEB-06",
