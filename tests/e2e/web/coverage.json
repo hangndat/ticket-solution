@@ -128,7 +128,7 @@
     ],
     "layers": ["B", "H"],
     "status": "implemented",
-    "reason": "Run mvuur1i8-67d0bb PASS 4/4 browser (Keycloak/BFF/PG): terms+required client gate không POST; email/phone/checkbox aria-invalid; BFF FORM_INVALID/FORM_VERSION_STALE/TERMS_VERSION_STALE không issue ticket/code; secondCode success lưu form_version/terms_version+hash. Run mvuurx3f-d9f0ce PASS HTTP cùng ma trận + owner publish v2 từ chối v1. Cần recheck evidenceExactShaEligible sau commit sạch."
+    "reason": "SHA 85754809: run mvuuuf0j-5208aa PASS 4/4 browser (Keycloak/BFF/PG); mvuuv3my-d98585 PASS HTTP; guards 16/16. Terms/required/type client gate; BFF FORM_INVALID/stale versions không issue; secondCode lưu form_version/terms_version+hash; owner publish v2 từ chối v1."
   },
   {
     "caseId": "WEB-06",
