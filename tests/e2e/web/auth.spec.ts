@@ -10,7 +10,18 @@ import {
   webUrl,
   fillPublishedForm,
   openCodeConfirmation,
+  decodeJwtPayload,
+  mintCrossClientAccessToken,
+  mintSecondaryIssuerAccessToken,
 } from './helpers';
+
+type WebRuntime = {
+  httpPlatformClientId?: string;
+  httpPlatformClientSecret?: string;
+  secondaryIssuer?: string;
+  secondaryHttpClientId?: string;
+  secondaryHttpClientSecret?: string;
+};
 
 test('[AUTH-01] attendee OIDC callback and BFF identity', async ({ page }) => {
   const manifest = loadManifest();
@@ -43,6 +54,132 @@ test('[AUTH-01] attendee OIDC callback and BFF identity', async ({ page }) => {
   ).toBe(true);
 });
 
+test('[AUTH-01] disallowed return path falls back to the default instead of an open redirect', async ({
+  page,
+}) => {
+  const manifest = loadManifest();
+  fixtureFor(manifest, 'AUTH-01');
+  const actor = accountFor(manifest, 'AUTH-01', 'attendee');
+  await login(page, manifest, actor, 'https://evil.example/steal?x=1');
+  const landed = new URL(page.url());
+  expect(landed.origin).toBe(new URL(manifest.origins.web).origin);
+  expect(landed.pathname).toBe('/');
+  await expect(page.getByTestId('wallet-ready')).toHaveCount(0);
+});
+
+test('[AUTH-01] post-login navigation is terminal and does not bounce back to login', async ({
+  page,
+}) => {
+  const manifest = loadManifest();
+  fixtureFor(manifest, 'AUTH-01');
+  const actor = accountFor(manifest, 'AUTH-01', 'attendee');
+  await login(page, manifest, actor, '/wallet');
+  await expect(page.getByTestId('wallet-ready')).toBeVisible();
+  await page.goto(webUrl(manifest, '/wallet'));
+  await expect(page).toHaveURL(
+    new RegExp(
+      `^${manifest.origins.web.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/wallet`,
+    ),
+  );
+  await expect(page.getByTestId('wallet-ready')).toBeVisible();
+  expect(
+    (await page.request.get(webUrl(manifest, '/api/bff/me'))).status(),
+  ).toBe(200);
+});
+
+test('[AUTH-01] staff (owner/manager) OIDC login bounces to Portal with its own client/callback and host-only cookies (ADR-20)', async ({
+  browser,
+}) => {
+  test.setTimeout(60_000);
+  const manifest = loadManifest();
+  fixtureFor(manifest, 'AUTH-01');
+  const portalOrigin = new URL(manifest.origins.portal).origin;
+
+  for (const role of ['owner', 'manager'] as const) {
+    const actor = accountFor(manifest, 'AUTH-01', role);
+    const context = await browser.newContext();
+    try {
+      const page = await context.newPage();
+      const hops: { url: string; location: string | null }[] = [];
+      page.on('response', (res) => {
+        if (res.request().resourceType() !== 'document') return;
+        hops.push({ url: res.url(), location: res.headers().location ?? null });
+      });
+
+      await page.goto(webUrl(manifest, '/api/auth/login?return=%2Fwallet'));
+      await page.locator('#username').fill(actor.username);
+      await page.locator('#password').fill(actor.password);
+      await page.locator('#kc-login').click();
+      await page.waitForURL(
+        (url) =>
+          url.origin === portalOrigin && !url.pathname.startsWith('/api/auth/'),
+        { timeout: 45_000 },
+      );
+      expect(new URL(page.url()).origin).toBe(portalOrigin);
+      expect(new URL(page.url()).searchParams.has('error')).toBe(false);
+
+      // Web callback decided the staff branch and sent a plain bounce to Portal
+      // login — not a page carrying any token/code of its own (ADR-20 §3: no
+      // copied BFF session).
+      const webCallback = hops.find((h) =>
+        h.url.startsWith(webUrl(manifest, '/api/auth/callback')),
+      );
+      expect(webCallback?.location).toBe(`${portalOrigin}/api/auth/login`);
+
+      // Portal ran its own full Authorization Code + PKCE + nonce leg against
+      // its own client, not a reused Web code/session.
+      const portalAuthorize = hops.find(
+        (h) =>
+          h.url.includes('/protocol/openid-connect/auth') &&
+          h.url.includes('client_id=ticket-admin-web'),
+      );
+      expect(portalAuthorize).toBeTruthy();
+      const authorizeUrl = new URL(portalAuthorize!.url);
+      expect(authorizeUrl.searchParams.get('redirect_uri')).toBe(
+        `${portalOrigin}/api/auth/callback`,
+      );
+      expect(authorizeUrl.searchParams.get('response_type')).toBe('code');
+      expect(authorizeUrl.searchParams.get('code_challenge_method')).toBe(
+        'S256',
+      );
+      expect(authorizeUrl.searchParams.get('state')).toBeTruthy();
+      expect(authorizeUrl.searchParams.get('nonce')).toBeTruthy();
+
+      const subject = await page.request.get(
+        new URL('/api/bff/me/subject', manifest.origins.portal).toString(),
+      );
+      expect(subject.status()).toBe(200);
+      const subjectBody = (await subject.json()) as { userId?: string };
+      expect(subjectBody.userId).toBeTruthy();
+
+      // Host-only cookies: no `Domain=.vemoki.com`-style attribute on either
+      // surface's jar (ADR-20 §3.2).
+      const portalCookies = await context.cookies(manifest.origins.portal);
+      const webCookies = await context.cookies(manifest.origins.web);
+      const portalIdToken = portalCookies.find(
+        (cookie) => cookie.name === 'oidc_id_token',
+      );
+      expect(portalIdToken).toBeTruthy();
+      const idPayload = decodeJwtPayload(portalIdToken!.value);
+      // The Portal subject is the real Keycloak `sub` from its own token
+      // exchange — bind it to the real `oidc_id_token` claim for this run's
+      // actor, not to the Web-side Postgres `userId` (a distinct identifier).
+      expect(subjectBody.userId).toBe(idPayload.sub);
+      expect(idPayload.email).toBe(actor.username);
+      expect(
+        portalCookies.some(
+          (cookie) => cookie.name === 'oidc_access_token' && cookie.httpOnly,
+        ),
+      ).toBe(true);
+      for (const cookie of [...portalCookies, ...webCookies]) {
+        expect(cookie.domain.startsWith('.')).toBe(false);
+      }
+    } finally {
+      await context.close();
+    }
+  }
+});
+
 test('[AUTH-02] wrong password and callback without state do not create a session', async ({
   page,
 }) => {
@@ -68,6 +205,265 @@ test('[AUTH-02] wrong password and callback without state do not create a sessio
   expect(
     (await page.request.get(webUrl(manifest, '/api/bff/me'))).status(),
   ).toBe(401);
+});
+
+test('[AUTH-02] mismatched callback state is rejected locally and never reaches the IdP token exchange', async ({
+  page,
+}) => {
+  const manifest = loadManifest();
+  fixtureFor(manifest, 'AUTH-02');
+  const start = await page.request.get(
+    webUrl(manifest, '/api/auth/login?return=%2Fwallet'),
+    { maxRedirects: 0 },
+  );
+  expect([302, 307]).toContain(start.status());
+  const callback = await page.request.get(
+    webUrl(manifest, '/api/auth/callback?code=irrelevant&state=tampered-state'),
+    { maxRedirects: 0 },
+  );
+  expect([302, 307]).toContain(callback.status());
+  const location = new URL(
+    callback.headers()['location'],
+    manifest.origins.web,
+  );
+  expect(location.pathname).toBe('/auth');
+  expect(location.searchParams.get('error')).toBe('invalid_state');
+  expect(
+    (await page.request.get(webUrl(manifest, '/api/bff/me'))).status(),
+  ).toBe(401);
+  const cookies = await page.context().cookies(manifest.origins.web);
+  expect(cookies.some((cookie) => cookie.name === 'oidc_access_token')).toBe(
+    false,
+  );
+});
+
+test('[AUTH-02] IdP-rejected authorization code is a distinct upstream error, not the local state/validation error', async ({
+  page,
+}) => {
+  const manifest = loadManifest();
+  fixtureFor(manifest, 'AUTH-02');
+  const start = await page.request.get(
+    webUrl(manifest, '/api/auth/login?return=%2Fwallet'),
+    { maxRedirects: 0 },
+  );
+  expect([302, 307]).toContain(start.status());
+  const redirect = new URL(start.headers()['location']);
+  const state = redirect.searchParams.get('state');
+  expect(state).toBeTruthy();
+  const callback = await page.request.get(
+    webUrl(
+      manifest,
+      `/api/auth/callback?code=not-a-real-authorization-code&state=${encodeURIComponent(state!)}`,
+    ),
+    { maxRedirects: 0 },
+  );
+  expect([302, 307]).toContain(callback.status());
+  const location = new URL(
+    callback.headers()['location'],
+    manifest.origins.web,
+  );
+  expect(location.pathname).toBe('/auth');
+  // Keycloak rejects an unknown/garbage authorization_code as invalid_grant —
+  // an IdP-reported (upstream) rejection, distinct from the local
+  // invalid_state validation failure above.
+  expect(location.searchParams.get('error')).not.toBe('invalid_state');
+  expect(location.searchParams.get('error')).toBeTruthy();
+  expect(
+    (await page.request.get(webUrl(manifest, '/api/bff/me'))).status(),
+  ).toBe(401);
+});
+
+test('[AUTH-02] a correctly-signed token for the wrong audience does not grant a valid BFF session', async ({
+  page,
+}) => {
+  const manifest = loadManifest();
+  fixtureFor(manifest, 'AUTH-02');
+  const runtime = manifest.runtime as WebRuntime | undefined;
+  const clientId = runtime?.httpPlatformClientId;
+  const clientSecret = runtime?.httpPlatformClientSecret;
+  if (!clientId || !clientSecret) {
+    throw new Error(
+      'BLOCKED: AUTH-02 wrong-audience cần runtime.httpPlatformClientId/Secret từ harness',
+    );
+  }
+  const operator = manifest.accounts.operator;
+  const wrongAudienceToken = await mintCrossClientAccessToken(
+    manifest,
+    operator,
+    clientId,
+    clientSecret,
+  );
+  const payload = decodeJwtPayload(wrongAudienceToken);
+  const audiences = Array.isArray(payload.aud) ? payload.aud : [payload.aud];
+  expect(audiences).not.toContain('ticket-api');
+  const sub = String(payload.sub ?? '');
+  expect(sub).toBeTruthy();
+
+  await page.goto(webUrl(manifest, '/'));
+  await page.context().addCookies([
+    {
+      name: 'oidc_access_token',
+      value: wrongAudienceToken,
+      url: manifest.origins.web,
+      httpOnly: true,
+      sameSite: 'Lax',
+    },
+    {
+      name: 'web_oidc_sub',
+      value: sub,
+      url: manifest.origins.web,
+      httpOnly: true,
+      sameSite: 'Lax',
+    },
+  ]);
+  const me = await page.request.get(webUrl(manifest, '/api/bff/me'));
+  expect(me.status()).toBe(401);
+  const body = JSON.stringify(await me.json().catch(() => ({})));
+  expect(body).not.toContain(operator.userId ?? '\u0000no-user-id');
+  const cookiesAfter = await page.context().cookies(manifest.origins.web);
+  expect(
+    cookiesAfter.some((cookie) => cookie.name === 'oidc_access_token'),
+  ).toBe(false);
+});
+
+test('[AUTH-02] a correctly-signed, correct-audience token from a different issuer does not grant a valid BFF session', async ({
+  page,
+}) => {
+  const manifest = loadManifest();
+  fixtureFor(manifest, 'AUTH-02');
+  const runtime = manifest.runtime as WebRuntime | undefined;
+  const secondaryIssuer = runtime?.secondaryIssuer;
+  const secondaryClientId = runtime?.secondaryHttpClientId;
+  const secondaryClientSecret = runtime?.secondaryHttpClientSecret;
+  const secondaryActor = manifest.secondaryActor;
+  if (
+    !secondaryIssuer ||
+    !secondaryClientId ||
+    !secondaryClientSecret ||
+    !secondaryActor
+  ) {
+    throw new Error(
+      'BLOCKED: AUTH-02 wrong-issuer cần runtime.secondaryIssuer/secondaryActor từ harness (chạy --case=AUTH-02 để dựng realm phụ)',
+    );
+  }
+
+  // Establish a real session for the primary attendee first so the later
+  // wrong-issuer cookie swap is a genuine replacement, not an empty jar.
+  const actor = accountFor(manifest, 'AUTH-02', 'attendee');
+  await login(page, manifest, actor, '/wallet');
+  await expect(page.getByTestId('wallet-ready')).toBeVisible();
+  const primaryAccess = (
+    await page.context().cookies(manifest.origins.web)
+  ).find((cookie) => cookie.name === 'oidc_access_token');
+  expect(primaryAccess).toBeTruthy();
+  const primarySubject = decodeJwtPayload(primaryAccess!.value).sub;
+
+  const wrongIssuerToken = await mintSecondaryIssuerAccessToken(
+    secondaryIssuer,
+    secondaryClientId,
+    secondaryClientSecret,
+    secondaryActor,
+  );
+  const payload = decodeJwtPayload(wrongIssuerToken);
+  expect(payload.iss).toBe(secondaryIssuer);
+  expect(payload.iss).not.toBe(
+    `${manifest.origins.auth}/realms/e2e-${manifest.runId}`,
+  );
+  // The audience is the real API audience. This realm has its own signing key,
+  // so rejection cannot isolate issuer validation from JWKS/signature checks.
+  const audiences = Array.isArray(payload.aud) ? payload.aud : [payload.aud];
+  expect(audiences).toContain('ticket-api');
+  const sub = String(payload.sub ?? '');
+  expect(sub).toBeTruthy();
+  expect(sub).not.toBe(primarySubject);
+
+  // A valid primary refresh cookie would restore the original actor after an
+  // upstream 401 and hide whether the secondary access token was rejected.
+  await page.context().clearCookies({ name: 'oidc_refresh_token' });
+
+  await page.context().addCookies([
+    {
+      name: 'oidc_access_token',
+      value: wrongIssuerToken,
+      url: manifest.origins.web,
+      httpOnly: true,
+      sameSite: 'Lax',
+    },
+    {
+      name: 'web_oidc_sub',
+      value: sub,
+      url: manifest.origins.web,
+      httpOnly: true,
+      sameSite: 'Lax',
+    },
+  ]);
+
+  const me = await page.request.get(webUrl(manifest, '/api/bff/me'));
+  expect(me.status()).toBe(401);
+  const body = JSON.stringify(await me.json().catch(() => ({})));
+  expect(body).not.toContain(actor.userId ?? '\u0000no-user-id');
+  expect(body).not.toContain(sub);
+  expect(body).not.toContain(wrongIssuerToken);
+
+  // The browser surface must not keep rendering the previous (real) actor's
+  // wallet once the session cookie has been replaced by a wrong-issuer
+  // token: it must fall back to the logged-out state, not stale content.
+  await page.goto(webUrl(manifest, '/wallet'));
+  await expect(page.getByTestId('wallet-need-login')).toBeVisible();
+  await expect(page.getByTestId('wallet-ready')).toHaveCount(0);
+  await expect(page.getByTestId('wallet-ticket-grid')).toHaveCount(0);
+  const pageText = await page.locator('body').innerText();
+  expect(pageText).not.toContain(actor.userId ?? '\u0000no-user-id');
+  expect(pageText).not.toContain(wrongIssuerToken);
+
+  const cookiesAfter = await page.context().cookies(manifest.origins.web);
+  expect(
+    cookiesAfter.filter((cookie) =>
+      [
+        'oidc_access_token',
+        'oidc_refresh_token',
+        'oidc_id_token',
+        'web_oidc_sub',
+      ].includes(cookie.name),
+    ),
+  ).toEqual([]);
+});
+
+test('[AUTH-02] an expired access token with no refresh token fails closed instead of granting a session', async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  const base = loadManifest();
+  if (!base.origins.shortWeb)
+    throw new Error('BLOCKED: AUTH-02 short-lived isolated Web missing');
+  const manifest = {
+    ...base,
+    origins: { ...base.origins, web: base.origins.shortWeb },
+  };
+  fixtureFor(manifest, 'AUTH-02');
+  await login(page, manifest, accountFor(manifest, 'AUTH-02', 'attendee'));
+  const stale = (await page.context().cookies(manifest.origins.web)).find(
+    (cookie) => cookie.name === 'oidc_access_token',
+  );
+  expect(stale).toBeTruthy();
+  const payload = decodeJwtPayload(stale!.value);
+  const exp = Number(payload.exp);
+  expect(Number.isFinite(exp)).toBe(true);
+  // Drop the refresh cookie so expiry cannot be silently recovered; the BFF
+  // must reject the stale token rather than treat it as still valid.
+  await page.context().clearCookies({
+    name: 'oidc_refresh_token',
+    domain: new URL(manifest.origins.web).hostname,
+  });
+  const delayMs = Math.max(0, exp * 1000 - Date.now() + 1200);
+  await new Promise((resolve) => setTimeout(resolve, delayMs));
+  expect(Date.now()).toBeGreaterThan(exp * 1000);
+  const me = await page.request.get(webUrl(manifest, '/api/bff/me'));
+  expect(me.status()).toBe(401);
+  const cookiesAfter = await page.context().cookies(manifest.origins.web);
+  expect(
+    cookiesAfter.some((cookie) => cookie.name === 'oidc_access_token'),
+  ).toBe(false);
 });
 
 test('[AUTH-03] guest is gated and unverified identity cannot issue a ticket', async ({
@@ -276,8 +672,7 @@ test('[AUTH-06] redeem UI does not claim success after session capability is cle
   const code = fixture.secondCode;
   if (!code) throw new Error('BLOCKED: AUTH-06 secondCode');
   const answers = fixture.data?.answers as
-    | Record<string, string | boolean>
-    | undefined;
+    Record<string, string | boolean> | undefined;
   await login(page, manifest, accountFor(manifest, 'AUTH-06', 'attendee'));
   await openCodeConfirmation(page, manifest, code);
   await fillPublishedForm(page, answers);

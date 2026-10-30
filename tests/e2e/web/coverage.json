@@ -1,17 +1,29 @@
 [
   {
     "caseId": "AUTH-01",
-    "tests": ["auth.spec.ts › [AUTH-01]"],
-    "layers": ["B", "H"],
-    "status": "blocked",
-    "reason": "Có login attendee, BFF /me, PKCE/state/nonce assertion; smoke mvs7d4db-259457 FAIL vì OIDC nonce null. Chưa kiểm staff client và scope."
+    "tests": [
+      "auth.spec.ts › [AUTH-01] attendee OIDC callback and BFF identity",
+      "auth.spec.ts › [AUTH-01] disallowed return path falls back to the default instead of an open redirect",
+      "auth.spec.ts › [AUTH-01] post-login navigation is terminal and does not bounce back to login",
+      "auth.spec.ts › [AUTH-01] staff (owner/manager) OIDC login bounces to Portal with its own client/callback and host-only cookies (ADR-20)"
+    ],
+    "layers": ["B"],
+    "status": "implemented",
+    "reason": "Nonce null FAIL ở smoke mvs7d4db-259457 không còn tái hiện trên source hiện tại (authorize.ts/pkce.ts/login route đã có nonce thật). Run browser mới PASS 11/11 (kèm AUTH-02/05) tại SHA d34389bda71afd6b393d2784952dda3aad24ec82 (clean checkout, evidenceExactShaEligible: true), run ID mvud61d3-11a635: attendee login đúng client/callback/PKCE/state/nonce, BFF /me đúng actor, return path ngoài allowlist rơi về mặc định (không open redirect), reload /wallet sau login không bounce lại /auth (không login loop). Gap PORTAL_ORIGIN nêu ở bản trước (SHA 334b75ed) là nhận định sai: `processEnvironment` (tests/e2e/harness/runtime.mjs:741) đã đặt PORTAL_ORIGIN cho common env và `run.mjs` clientEnv() (tests/e2e/harness/run.mjs:287-302) truyền nó vào cả process web/portal — không cần sửa harness. Test mới đăng nhập owner/manager (fixture AUTH-01 thật, có event assignment) qua Web, theo đúng redirect Web callback → `${PORTAL_ORIGIN}/api/auth/login` (không copy BFF session) → Portal tự chạy Authorization Code + PKCE S256 + nonce + state riêng cho client `ticket-admin-web`, redirect_uri đúng origin Portal → Portal `/api/bff/me/subject` 200 đúng `sub`/`email` của actor (đối chiếu qua `oidc_id_token` thật, không qua Postgres userId vì đó là id khác theo thiết kế `upsertFromVerifiedIdentity`) → cookie cả hai surface host-only, không `Domain=.vemoki.com`."
   },
   {
     "caseId": "AUTH-02",
-    "tests": ["auth.spec.ts › [AUTH-02]"],
-    "layers": ["B", "H"],
-    "status": "blocked",
-    "reason": "Có sai mật khẩu/callback thực sự thiếu state và xác nhận BFF không tạo session; chưa có issuer/audience/expiry/upstream matrix."
+    "tests": [
+      "auth.spec.ts › [AUTH-02] wrong password and callback without state do not create a session",
+      "auth.spec.ts › [AUTH-02] mismatched callback state is rejected locally and never reaches the IdP token exchange",
+      "auth.spec.ts › [AUTH-02] IdP-rejected authorization code is a distinct upstream error, not the local state/validation error",
+      "auth.spec.ts › [AUTH-02] a correctly-signed token for the wrong audience does not grant a valid BFF session",
+      "auth.spec.ts › [AUTH-02] a correctly-signed, correct-audience token from a different issuer does not grant a valid BFF session",
+      "auth.spec.ts › [AUTH-02] an expired access token with no refresh token fails closed instead of granting a session"
+    ],
+    "layers": ["B"],
+    "status": "implemented",
+    "reason": "AUTH-02 có browser assertions cho sai mật khẩu, callback thiếu/sai state, code bị IdP từ chối với lỗi phân biệt local/upstream, audience sai, issuer sai và access token hết hạn. Với issuer sai: preflight xác minh token thật của realm phụ bằng JWKS của chính realm đó, `iss` khác realm chính và `aud` có ticket-api; Web BFF /me trả 401, xóa session cookies, wallet không render actor trước và response/UI không lộ token. Run mvue1iq9-ca9616 PASS 12/12 cho AUTH-01/02/05 nhưng dùng working tree dirty tại HEAD 15ba60e722fe40882782f957766f65fb0d0e8f46, evidenceExactShaEligible=false; không gán run này cho SHA commit sau. Realm phụ có signing key khác nên kết quả fail-closed không cô lập check iss khỏi JWKS/signature; không kết luận verifier từ chối do một nguyên nhân nội bộ duy nhất."
   },
   {
     "caseId": "AUTH-03",
