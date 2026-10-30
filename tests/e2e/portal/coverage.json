@@ -13,7 +13,7 @@
     ],
     "layers": ["B", "H"],
     "status": "covered",
-    "reason": "PORT-02 B/H PASS run mvuvg7n2-768c19 (1/1 browser) on exact SHA after James F01/F02 fix: UI config rollback via intent idempotencyKey + rollback buttons on non-live versions; stale save (two tabs) and stale rollback 409 assert PG published pointer/revision/config-version/audit/operation/outbox counts and BFF version list unchanged; public API hero + ticket consent stable. Gaps honest: consumer Web ISR revalidate=60 not asserted; PORT-01 wizard-created public 404 may persist until product sync."
+    "reason": "PORT-02 B/H PASS run mvuvhcrh-ee2d55 (1/1 browser) on exact SHA 4ae03e41e8ce7c253c0f50c2537764bfadc06a7d (evidenceExactShaEligible=true): UI config rollback via intent idempotencyKey; stale save (two tabs) and stale rollback 409 assert PG published pointer/revision/config-version/audit/operation/outbox counts and BFF version list unchanged; public API hero + ticket consent stable. Gaps honest: consumer Web ISR revalidate=60 not asserted; PORT-01 wizard-created public 404 may persist until product sync."
   },
   {
     "caseId": "PORT-03",
