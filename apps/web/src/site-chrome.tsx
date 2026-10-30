@@ -32,6 +32,7 @@ import { navLabelForTestId } from './i18n/nav-labels';
 import type { NavLink } from './nav/capabilities';
 import { bindNavCapabilitiesAuthzObserver } from './nav/bind-fetch-authz-observer';
 import { navCapabilitiesStore } from './nav/nav-capabilities-store';
+import { fetchBoundJson, useWebActorData, type PrivateView, type WebActorIdentity } from './oidc/client-actor-gate';
 
 /** Platform / tenant wordmark — defaults to Vemoki lockup from ThemeProvider. */
 export function Wordmark({ href = '/' }: { href?: string }) {
@@ -67,31 +68,26 @@ function isNavLinkActive(pathname: string, href: string): boolean {
   return pathname === path || pathname.startsWith(`${path}/`);
 }
 
-function initialsFromSession(body: string): string | null {
-  try {
-    const parsed = JSON.parse(body) as Record<string, unknown>;
-    const raw =
-      typeof parsed.email === 'string'
-        ? parsed.email
-        : typeof parsed.sub === 'string'
-          ? parsed.sub
-          : typeof parsed.subject === 'string'
-            ? parsed.subject
-            : null;
-    if (!raw?.trim()) return null;
-    const s = raw.trim();
-    if (s.includes('@')) {
-      const local = s.split('@')[0] ?? s;
-      const parts = local.split(/[._-]+/).filter(Boolean);
-      if (parts.length >= 2) {
-        return `${parts[0]![0] ?? ''}${parts[1]![0] ?? ''}`.toUpperCase();
-      }
-      return local.slice(0, 2).toUpperCase();
+function initialsFromSession(parsed: Record<string, unknown>): string | null {
+  const raw =
+    typeof parsed.email === 'string'
+      ? parsed.email
+      : typeof parsed.sub === 'string'
+        ? parsed.sub
+        : typeof parsed.subject === 'string'
+          ? parsed.subject
+          : null;
+  if (!raw?.trim()) return null;
+  const s = raw.trim();
+  if (s.includes('@')) {
+    const local = s.split('@')[0] ?? s;
+    const parts = local.split(/[._-]+/).filter(Boolean);
+    if (parts.length >= 2) {
+      return `${parts[0]![0] ?? ''}${parts[1]![0] ?? ''}`.toUpperCase();
     }
-    return s.slice(0, 2).toUpperCase();
-  } catch {
-    return null;
+    return local.slice(0, 2).toUpperCase();
   }
+  return s.slice(0, 2).toUpperCase();
 }
 
 function NavLinkItem({
@@ -142,8 +138,29 @@ export function SiteNav({ trailing }: { trailing?: ReactNode }) {
   );
   const [mobileMenu, setMobileMenu] = useState({ path: '', open: false });
   const mobileOpen = mobileMenu.open && mobileMenu.path === pathname;
-  const [avatarInitials, setAvatarInitials] = useState<string | null>(null);
-  const [displayHint, setDisplayHint] = useState<string | null>(null);
+  const loadProfile = useCallback(async (
+    identity: WebActorIdentity,
+    signal: AbortSignal,
+    isCurrent: () => boolean,
+  ): Promise<PrivateView<{ initials: string | null; email: string | null }>> => {
+    const response = await fetchBoundJson('/api/bff/me', identity, signal, isCurrent);
+    if (response.status === 401) return { status: 'unauthenticated' };
+    if (response.status >= 500) return { status: 'unreachable' };
+    if (response.status !== 200 || !response.body || typeof response.body !== 'object' || Array.isArray(response.body)) {
+      return { status: 'invalid' };
+    }
+    const body = response.body as Record<string, unknown>;
+    return {
+      status: 'ready',
+      value: {
+        initials: initialsFromSession(body),
+        email: typeof body.email === 'string' ? body.email.trim() || null : null,
+      },
+    };
+  }, []);
+  const profile = useWebActorData(loadProfile);
+  const avatarInitials = profile.status === 'ready' ? profile.value.initials : null;
+  const displayHint = profile.status === 'ready' ? profile.value.email : null;
 
   useEffect(() => {
     bindNavCapabilitiesAuthzObserver();
@@ -173,39 +190,6 @@ export function SiteNav({ trailing }: { trailing?: ReactNode }) {
       window.removeEventListener('pageshow', onPageShow);
     };
   }, []);
-
-  useEffect(() => {
-    if (!authenticated) return;
-    let cancelled = false;
-    void (async () => {
-      try {
-        const response = await fetch('/api/bff/me', {
-          method: 'GET',
-          credentials: 'same-origin',
-          cache: 'no-store',
-        });
-        const body = await response.text();
-        if (cancelled || response.status < 200 || response.status >= 300) {
-          return;
-        }
-        const initials = initialsFromSession(body);
-        if (!cancelled) setAvatarInitials(initials);
-        try {
-          const parsed = JSON.parse(body) as Record<string, unknown>;
-          const email =
-            typeof parsed.email === 'string' ? parsed.email.trim() : null;
-          if (!cancelled && email) setDisplayHint(email);
-        } catch {
-          /* ignore */
-        }
-      } catch {
-        /* fail-closed — nav still works without avatar */
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [authenticated]);
 
   const labeledLinks = useMemo(
     () =>

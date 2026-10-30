@@ -1266,6 +1266,130 @@ test('[AUTH-07] held ticket JSON from a prior same-sub login never commits', asy
   }
 });
 
+test('[AUTH-07] held A homepage document and RSC never expose owned tickets to B', async ({ browser }) => {
+  const manifest = loadManifest();
+  const fixture = fixtureFor(manifest, 'AUTH-07');
+  if (!fixture.ticketId) throw new Error('BLOCKED: AUTH-07 ticketId');
+  const context = await browser.newContext();
+  let release!: () => void;
+  let fetched!: () => void;
+  const released = new Promise<void>((resolve) => { release = resolve; });
+  const intercepted = new Promise<void>((resolve) => { fetched = resolve; });
+  try {
+    const switchPage = await context.newPage();
+    await login(switchPage, manifest, accountFor(manifest, 'AUTH-07', 'attendee'));
+    await switchPage.goto(webUrl(manifest, '/'));
+    await expect(switchPage.getByTestId(`home-event-owned-${fixture.eventId}`)).toBeVisible();
+
+    const home = webUrl(manifest, '/');
+    const homeDocument = await switchPage.request.get(home);
+    expect(homeDocument.headers()['cache-control']).toMatch(/no-store/i);
+    const html = await homeDocument.text();
+    expect(html).not.toContain('ownedByEventId');
+    expect(html).not.toContain(`home-event-owned-${fixture.eventId}`);
+    expect(html).not.toContain('Bạn có 1 vé');
+    const rsc = await switchPage.request.get(webUrl(manifest, '/?_rsc=auth07'), {
+      headers: { RSC: '1' },
+    });
+    expect(rsc.status()).toBe(200);
+    const rscBody = await rsc.text();
+    expect(rscBody).not.toContain('ownedByEventId');
+    expect(rscBody).not.toContain(`home-event-owned-${fixture.eventId}`);
+
+    const stalePage = await context.newPage();
+    let oldStatus = 0;
+    let oldBody = '';
+    await stalePage.route(home, async (route) => {
+      if (route.request().resourceType() !== 'document') {
+        await route.continue();
+        return;
+      }
+      const upstream = await route.fetch();
+      oldStatus = upstream.status();
+      oldBody = await upstream.text();
+      fetched();
+      await released;
+      await route.fulfill({ response: upstream });
+    });
+    const staleNavigation = stalePage.goto(home);
+    await intercepted;
+    expect(oldStatus).toBe(200);
+    expect(oldBody).not.toContain('ownedByEventId');
+    expect(oldBody).not.toContain(`home-event-owned-${fixture.eventId}`);
+    await switchPage.goto(webUrl(manifest, '/api/auth/logout'));
+    await login(switchPage, manifest, accountFor(manifest, 'AUTH-07', 'otherAttendee'));
+    const list = await switchPage.request.get(webUrl(manifest, '/api/bff/tickets'));
+    expect(list.status()).toBe(200);
+    expect((await list.json()).tickets).toEqual([]);
+    release();
+    await staleNavigation;
+    await expect(stalePage.getByTestId('home-catalog')).toBeVisible();
+    await expect(stalePage.getByTestId(`home-event-owned-${fixture.eventId}`)).toHaveCount(0);
+    await switchPage.goto(home);
+    await expect(switchPage.getByTestId(`home-event-owned-${fixture.eventId}`)).toHaveCount(0);
+  } finally {
+    release();
+    await context.close();
+  }
+});
+
+test('[AUTH-07] cross-tab nav clears A and drops held A profile after B login', async ({ browser }) => {
+  const manifest = loadManifest();
+  fixtureFor(manifest, 'AUTH-07');
+  const actorA = accountFor(manifest, 'AUTH-07', 'attendee');
+  const actorB = accountFor(manifest, 'AUTH-07', 'otherAttendee');
+  const context = await browser.newContext();
+  let release!: () => void;
+  let fetched!: () => void;
+  const released = new Promise<void>((resolve) => { release = resolve; });
+  const intercepted = new Promise<void>((resolve) => { fetched = resolve; });
+  try {
+    const switchPage = await context.newPage();
+    await login(switchPage, manifest, actorA);
+    const firstIdentity = await switchPage.request.get(webUrl(manifest, '/api/auth/identity'));
+    const firstEpoch = ((await firstIdentity.json()) as { authEpoch: string }).authEpoch;
+    const oldTab = await context.newPage();
+    await oldTab.goto(webUrl(manifest, '/'));
+    await expect(oldTab.getByTestId('nav-avatar')).toContainText(actorA.username);
+
+    const heldTab = await context.newPage();
+    let held = false;
+    await heldTab.route('**/api/bff/me', async (route) => {
+      if (held) {
+        await route.continue();
+        return;
+      }
+      held = true;
+      const upstream = await route.fetch();
+      expect(upstream.status()).toBe(200);
+      expect(upstream.headers()['x-auth-epoch']).toBe(firstEpoch);
+      fetched();
+      await released;
+      await route.fulfill({ response: upstream });
+    });
+    await heldTab.goto(webUrl(manifest, '/'));
+    await intercepted;
+    await switchPage.goto(webUrl(manifest, '/api/auth/logout'));
+    await login(switchPage, manifest, actorB);
+    await expect(oldTab.getByTestId('nav-avatar')).not.toContainText(actorA.username);
+    await heldTab.evaluate((oldEmail) => {
+      const observer = new MutationObserver(() => {
+        if (document.body?.textContent?.includes(oldEmail)) {
+          (window as typeof window & { staleProfileRendered?: boolean }).staleProfileRendered = true;
+        }
+      });
+      observer.observe(document, { subtree: true, childList: true, characterData: true });
+    }, actorA.username);
+    release();
+    await expect(heldTab.getByTestId('nav-avatar')).toContainText(actorB.username);
+    expect(await heldTab.evaluate(() => (window as typeof window & { staleProfileRendered?: boolean }).staleProfileRendered ?? false)).toBe(false);
+    await expect(oldTab.getByTestId('nav-avatar')).toContainText(actorB.username);
+  } finally {
+    release();
+    await context.close();
+  }
+});
+
 test('[AUTH-08] account deletion needs consent and acknowledges one request', async ({
   page,
 }) => {

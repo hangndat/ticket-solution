@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Button } from '@ticket/ui';
 import { CatalogEventCard, FilterChip } from '@ticket/ui/client';
 import {
@@ -26,14 +26,27 @@ import {
   eventMatchesTimeFilter,
 } from './catalog-utils';
 import { isDemoCatalogTenant } from './demo-tenant';
+import { fetchBoundJson, useWebActorData, type PrivateView, type WebActorIdentity } from '../oidc/client-actor-gate';
+import { parseMeTicketsResponse } from '../owner-ticket/parse';
+import { ownedTicketCountByEventId } from '../owner-ticket/owned-count-by-event';
 
-export function HomeCatalogGrid({
-  items,
-  ownedByEventId,
-}: {
-  items: HomeCatalogItem[];
-  ownedByEventId?: Record<string, number>;
-}) {
+export function HomeCatalogGrid({ items }: { items: HomeCatalogItem[] }) {
+  const loadOwned = useCallback(async (
+    identity: WebActorIdentity,
+    signal: AbortSignal,
+    isCurrent: () => boolean,
+  ): Promise<PrivateView<Record<string, number>>> => {
+    const response = await fetchBoundJson('/api/bff/tickets', identity, signal, isCurrent);
+    if (response.status === 401) return { status: 'unauthenticated' };
+    if (response.status >= 500) return { status: 'unreachable' };
+    if (response.status !== 200) return { status: 'invalid' };
+    const tickets = parseMeTicketsResponse(response.body);
+    return tickets
+      ? { status: 'ready', value: ownedTicketCountByEventId(tickets) }
+      : { status: 'invalid' };
+  }, []);
+  const ownedView = useWebActorData(loadOwned);
+  const ownedByEventId = ownedView.status === 'ready' ? ownedView.value : undefined;
   const [query, setQuery] = useState('');
   const [timeFilter, setTimeFilter] =
     useState<HomeCatalogTimeFilter>('upcoming');
