@@ -15,6 +15,7 @@ import {
   E2E,
 } from './runtime.mjs';
 import { validateManifest } from '../validation/validate.mjs';
+import { assertSourceProvenanceStable } from './source-provenance.mjs';
 
 const requireRoot = createRequire(resolve(ROOT, 'package.json'));
 const args = process.argv.slice(2);
@@ -409,6 +410,10 @@ if (mode === 'list' || args.includes('--list')) {
         });
       }
     }
+    const provenanceEnd = assertSourceProvenanceStable(
+      ROOT,
+      state.sourceProvenance,
+    );
     const status = results.some((result) => result.exitCode) ? 'FAIL' : 'PASS';
     privateJson(resolve(state.dir, 'summary.json'), {
       runId: state.id,
@@ -416,6 +421,13 @@ if (mode === 'list' || args.includes('--list')) {
       caseIds,
       status,
       results,
+      sourceProvenance: {
+        ...state.sourceProvenance,
+        endCommit: provenanceEnd.endCommit,
+        endWorkingTreeFingerprint: provenanceEnd.endWorkingTreeFingerprint,
+        commitStable: provenanceEnd.stable,
+        evidenceExactShaEligible: provenanceEnd.evidenceExactShaEligible,
+      },
     });
     console.log(
       JSON.stringify({
@@ -435,14 +447,37 @@ if (mode === 'list' || args.includes('--list')) {
       'postgresql://[redacted]@',
     );
     console.error(message);
-    if (state)
+    if (state) {
+      let sourceProvenance = state.sourceProvenance;
+      try {
+        const provenanceEnd = assertSourceProvenanceStable(
+          ROOT,
+          state.sourceProvenance,
+        );
+        sourceProvenance = {
+          ...state.sourceProvenance,
+          endCommit: provenanceEnd.endCommit,
+          endWorkingTreeFingerprint: provenanceEnd.endWorkingTreeFingerprint,
+          commitStable: provenanceEnd.stable,
+          evidenceExactShaEligible: provenanceEnd.evidenceExactShaEligible,
+        };
+      } catch (provenanceError) {
+        sourceProvenance = {
+          ...state.sourceProvenance,
+          commitStable: false,
+          evidenceExactShaEligible: false,
+          provenanceError: String(provenanceError.message || provenanceError),
+        };
+      }
       privateJson(resolve(state.dir, 'summary.json'), {
         runId: state.id,
         mode,
         caseIds,
         status: 'BLOCKED',
         reason: message,
+        sourceProvenance,
       });
+    }
   } finally {
     await cleanup();
     process.removeListener('SIGINT', interrupt);
