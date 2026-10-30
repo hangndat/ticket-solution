@@ -845,11 +845,14 @@ async function db04ControlledRequests(ctx, path, token, body, codes) {
     }));
     const deadline = Date.now() + 15000;
     let blocked = [];
+    const sampled = new Map();
     while (Date.now() < deadline) {
-      const { rows } = await observer.query(`SELECT pid FROM pg_stat_activity
-        WHERE pid <> pg_backend_pid() AND wait_event_type = 'Lock'
-          AND $1::int = ANY(pg_blocking_pids(pid))`, [blockerPid]);
-      blocked = rows;
+      const { rows } = await observer.query(`SELECT pid, wait_event_type,
+        pg_blocking_pids(pid) AS blockers, left(query, 160) AS query
+        FROM pg_stat_activity WHERE pid <> pg_backend_pid()
+          AND wait_event_type = 'Lock'`);
+      for (const row of rows) sampled.set(row.pid, row);
+      blocked = rows.filter((row) => row.blockers.includes(blockerPid));
       if (blocked.length === codes.length) break;
       await new Promise((resolve) => setTimeout(resolve, 30));
     }
@@ -858,7 +861,7 @@ async function db04ControlledRequests(ctx, path, token, body, codes) {
       FROM pg_stat_activity WHERE datname = current_database() AND pid <> pg_backend_pid()
     `)).rows;
     assert.equal(blocked.length, codes.length,
-      `all HTTP requests must reach the same owner counter while it is locked; activity=${JSON.stringify(activity)} outcomes=${JSON.stringify(observed)}`);
+      `all HTTP requests must reach the same owner counter while it is locked; activity=${JSON.stringify(activity)} waits=${JSON.stringify([...sampled.values()])} outcomes=${JSON.stringify(observed)}`);
   } catch (error) {
     requests.forEach((pending) => pending.catch(() => undefined));
     throw error;
