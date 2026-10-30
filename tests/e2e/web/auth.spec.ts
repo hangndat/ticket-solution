@@ -590,6 +590,18 @@ test('[AUTH-04] Portal and Platform logout clear only their own host cookie fami
     expect(
       platformCookies.some((cookie) => cookie.name === 'oidc_access_token'),
     ).toBe(false);
+    expect(
+      (
+        await portalPage.request.get(portalUrl(manifest, '/api/bff/me/subject'))
+      ).status(),
+    ).toBe(200);
+    expect(
+      (
+        await platformPage.request.get(
+          portalUrl(manifest, '/api/bff/platform/me'),
+        )
+      ).status(),
+    ).toBe(200);
 
     // Put the two independently issued, real Portal sessions into one host
     // jar to exercise each logout route's cookie-name boundary.
@@ -603,21 +615,6 @@ test('[AUTH-04] Portal and Platform logout clear only their own host cookie fami
     );
     await portalContext.addCookies(platformSession);
     await platformContext.addCookies(staffSession);
-    expect(
-      (
-        await portalPage.request.get(
-          portalUrl(manifest, '/api/bff/platform/me'),
-        )
-      ).status(),
-    ).toBe(200);
-    expect(
-      (
-        await platformPage.request.get(
-          portalUrl(manifest, '/api/bff/me/subject'),
-        )
-      ).status(),
-    ).toBe(200);
-
     await portalPage.goto(portalUrl(manifest, '/api/auth/logout'));
     expect(
       (await portalContext.cookies(manifest.origins.portal)).some(
