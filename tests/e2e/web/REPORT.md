@@ -1,5 +1,10 @@
 # Báo cáo Web E2E — 28/10/2026
 
+## WEB-06 MANUAL redeem pending + Portal decision — 30/10/2026
+
+- Bốn browser test trong `redeem.spec.ts › [WEB-06] manual source redemption`: pending submit (UX + PG HELD/PENDING_REVIEW, quota giữ); Portal manager duyệt → owner refresh → wallet/detail QR + `assertManualIssuedAfterApproval`; từ chối → `redeem-ux-denied`, REJECTED không ticket; `expires_at` run-scoped + owner refresh → `redeem-ux-expired`, EXPIRED không ISSUED. Helper `manual-redemption-flow.ts`; seed nhánh `approveCode`/`rejectCode`/`expiryCode`.
+- Exact-SHA: `d1096bd99b42070e67bf644e5c637de7af6f8645` (`evidenceExactShaEligible: true`): `node tests/e2e/harness/run.mjs e2e --case=WEB-06` → run `mvuzute9-d7d0ba` PASS 4/4 browser; `tests/e2e/.artifacts/mvuzute9-d7d0ba/summary.json`; `pnpm test:e2e:guards` 19/19. Relates #1037. Không sửa `apps/web` runtime.
+
 ## WEB-08 ticket email Mailpit B/H/R — 30/10/2026
 
 - Trước: run mvuruy41 chứng minh issue + Mailpit link trùng ticketId; thiếu wallet, subject/event body, guest authz selector đúng DOM, owner URL/QR sau mở link. Sau: `redeem.spec.ts › [WEB-08]` + `assertTicketIssuedMail` / `assertTicketQrInlineAttachment` trong `mailpit.ts` — wallet sau redeem, Mailpit poll theo recipient + `eventName`, raw MIME `image/png` inline `ticket-qr@vemoki` (bytes PNG thật, không chỉ `cid:` trong HTML); guest context → `owner-ticket-need-login-state`, không QR/id; `otherAttendee` context riêng + Keycloak → cùng URL email → không QR/id, BFF detail 403/404 không lộ ticketId, UI `forbidden`/`missing`/`tenant-unresolved`; owner đã login → URL vé, QR figure, `owner-ticket-id` title; PG `assertIssuedExactlyOnce` giữ lớp H.
