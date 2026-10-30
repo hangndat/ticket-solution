@@ -86,6 +86,8 @@ Thêm case `[DB-14] live HTTP` (`live.test.mjs`, `entry.mjs`, `run.mjs`, `seed.m
 
 Checks (SHA sau commit): `node tests/e2e/backend/entry.mjs --case DB-14 --suite D --no-build` PASS; `pnpm test:e2e:http -- --case=DB-14` run `mvuqsqyn-c0f918` PASS. `coverage.json` DB-14 → `pass`, layers D+H. Không đổi runtime/contract.
 
+**F01 fix (DoD revalidation):** D/H assert `form_definition_hash` và `terms_content_hash` trên `redemption_requests` khớp hash suy ra từ form/terms published (seed/save payload), khác v1↔v2; vé/request v1 giữ hash v1 sau publish v2. Evidence SHA sạch: cập nhật dòng dưới sau commit.
+
 ## Giới hạn còn mở
 
 - Các ca H cần HTTPS hostname run, Keycloak issuer/JWT thật và manifest case riêng từ harness; local verifier hay `app.inject` fixture không đủ. Các ca R cần worker process, Mailpit, restart/kill/lease và tài nguyên run riêng. Xem `FIXTURES.md`.

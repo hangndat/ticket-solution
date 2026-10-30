@@ -69,6 +69,11 @@ const FORM_V1 = {
   ],
 };
 
+const FORM_V2 = {
+  formVersion: 'form-v2',
+  fields: FORM_V1.fields,
+};
+
 const ANSWERS_V1 = {
   full_name: 'Ada',
   email: 'ada@example.com',
@@ -405,6 +410,13 @@ test(
         termsVersion: 'terms-v1',
         body: 'Be kind v1',
       });
+      const expectedFormHashV2 = hashFormDefinition(FORM_V2);
+      const expectedTermsHashV2 = hashTermsContent({
+        termsVersion: 'terms-v2',
+        body: 'Be kind v2',
+      });
+      assert.notEqual(expectedFormHashV2, expectedFormHash);
+      assert.notEqual(expectedTermsHashV2, expectedTermsHash);
 
       const rows = await withTenant(db, tenantId, (tx) =>
         tx.$queryRaw`
@@ -458,7 +470,8 @@ test(
       const afterRebrand = await withTenant(db, tenantId, (tx) =>
         tx.$queryRaw`
           SELECT t.entitlement_snapshot::text AS entitlement,
-                 r.form_version, r.terms_version
+                 r.form_version, r.terms_version,
+                 r.form_definition_hash, r.terms_content_hash
           FROM tickets t
           INNER JOIN redemption_requests r
             ON r.tenant_id = t.tenant_id AND r.id = t.request_id
@@ -468,6 +481,8 @@ test(
       assert.deepEqual(JSON.parse(afterRebrand[0].entitlement), ENTITLEMENT_V1);
       assert.equal(afterRebrand[0].form_version, 'form-v1');
       assert.equal(afterRebrand[0].terms_version, 'terms-v1');
+      assert.equal(afterRebrand[0].form_definition_hash, expectedFormHash);
+      assert.equal(afterRebrand[0].terms_content_hash, expectedTermsHash);
 
       const stale = await withTenant(db, tenantId, (tx) =>
         redeemAndIssueTicket(
@@ -490,6 +505,39 @@ test(
       );
       assert.equal(issuedV2.ok, true);
       assert.notEqual(issuedV2.result.requestId, requestId);
+
+      const v2TicketId = issuedV2.result.ticketId;
+      const v2Rows = await withTenant(db, tenantId, (tx) =>
+        tx.$queryRaw`
+          SELECT r.form_version, r.terms_version,
+                 r.form_definition_hash, r.terms_content_hash
+          FROM tickets t
+          INNER JOIN redemption_requests r
+            ON r.tenant_id = t.tenant_id AND r.id = t.request_id
+          WHERE t.tenant_id = ${tenantId}::uuid AND t.id = ${v2TicketId}::uuid
+        `,
+      );
+      assert.equal(v2Rows[0].form_version, 'form-v2');
+      assert.equal(v2Rows[0].terms_version, 'terms-v2');
+      assert.equal(v2Rows[0].form_definition_hash, expectedFormHashV2);
+      assert.equal(v2Rows[0].terms_content_hash, expectedTermsHashV2);
+
+      const v1Again = await withTenant(db, tenantId, (tx) =>
+        tx.$queryRaw`
+          SELECT t.entitlement_snapshot::text AS entitlement,
+                 r.form_version, r.terms_version,
+                 r.form_definition_hash, r.terms_content_hash
+          FROM tickets t
+          INNER JOIN redemption_requests r
+            ON r.tenant_id = t.tenant_id AND r.id = t.request_id
+          WHERE t.tenant_id = ${tenantId}::uuid AND t.id = ${ticketId}::uuid
+        `,
+      );
+      assert.deepEqual(JSON.parse(v1Again[0].entitlement), ENTITLEMENT_V1);
+      assert.equal(v1Again[0].form_version, 'form-v1');
+      assert.equal(v1Again[0].terms_version, 'terms-v1');
+      assert.equal(v1Again[0].form_definition_hash, expectedFormHash);
+      assert.equal(v1Again[0].terms_content_hash, expectedTermsHash);
     } finally {
       await db.$disconnect();
       try {
