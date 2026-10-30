@@ -86,7 +86,7 @@ Thêm case `[DB-14] live HTTP` (`live.test.mjs`, `entry.mjs`, `run.mjs`, `seed.m
 
 Checks (SHA sau commit): `node tests/e2e/backend/entry.mjs --case DB-14 --suite D --no-build` PASS; `pnpm test:e2e:http -- --case=DB-14` run `mvuqsqyn-c0f918` PASS. `coverage.json` DB-14 → `pass`, layers D+H. Không đổi runtime/contract.
 
-**F01 fix (DoD revalidation):** D/H assert `form_definition_hash` và `terms_content_hash` trên `redemption_requests` khớp hash suy ra từ form/terms published (seed/save payload), khác v1↔v2; vé/request v1 giữ hash v1 sau publish v2. Evidence SHA sạch `c7f67595f832307d839e43a8d19ed9121f2c409f`: D `entry.mjs --case DB-14 --suite D --no-build` PASS; H `pnpm test:e2e:http -- --case=DB-14` run `mvurc7p5-ae610c` PASS, `workingTreeDirty=false`.
+**F01 fix (DoD revalidation):** D/H assert `form_definition_hash` và `terms_content_hash` trên `redemption_requests` khớp hash suy ra từ form/terms published (seed/save payload), khác v1↔v2; vé/request v1 giữ hash v1 sau publish v2. Evidence SHA sạch `0dc5e1f50147a54466e258ac972f47709c02f4f5`: D `entry.mjs --case DB-14 --suite D --no-build` PASS; H `pnpm test:e2e:http -- --case=DB-14` run `mvurdu1z-873d1d` PASS, `workingTreeDirty=false`.
 
 ## Giới hạn còn mở
 
