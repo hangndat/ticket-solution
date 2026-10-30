@@ -956,17 +956,58 @@ test('[AUTH-07] another attendee cannot see prior actor ticket after login switc
   });
   try {
     await login(page, manifest, accountFor(manifest, 'AUTH-07', 'attendee'));
+    const firstIdentityResponse = await page.request.get(webUrl(manifest, '/api/auth/identity'));
+    expect(firstIdentityResponse.status()).toBe(200);
+    expect(firstIdentityResponse.headers()['cache-control']).toMatch(/private.*no-store/i);
+    const firstIdentity = (await firstIdentityResponse.json()) as {
+      actorId: string;
+      authEpoch: string;
+      surface: string;
+    };
+    expect(firstIdentity.surface).toBe('web-attendee');
+    const firstCookies = await context.cookies(manifest.origins.web);
+    const epochCookie = firstCookies.find((cookie) => cookie.name === 'web_auth_epoch');
+    const markerCookie = firstCookies.find((cookie) => cookie.name === 'web_auth_marker');
+    expect(epochCookie?.httpOnly).toBe(true);
+    expect(markerCookie?.httpOnly).toBe(false);
+    expect(epochCookie?.value).toBe(firstIdentity.authEpoch);
+    expect(markerCookie?.value).toBe(firstIdentity.authEpoch);
     const detail = webUrl(
       manifest,
       `/t/${f.tenantSlug}/tickets/${f.ticketId}?tenantId=${f.tenantId}`,
     );
-    await page.goto(detail);
+    const walletDocument = await page.goto(webUrl(manifest, '/wallet'));
+    expect(walletDocument?.headers()['cache-control']).toMatch(/private.*no-store/i);
+    expect(await walletDocument?.text()).not.toContain(`wallet-ticket-${f.ticketId}`);
+    await expect(page.getByTestId(`wallet-ticket-${f.ticketId}`)).toBeVisible();
+    const firstDocument = await page.goto(detail);
+    expect(firstDocument?.headers()['cache-control']).toMatch(/no-store/i);
+    expect(await firstDocument?.text()).not.toContain('owner-ticket-card');
     await expect(page.getByTestId('owner-ticket-ready')).toBeVisible();
     const response = await page.request.get(
       webUrl(manifest, `/api/bff/tickets/${f.ticketId}?tenantId=${f.tenantId}`),
     );
     expect(response.status()).toBe(200);
     expect(response.headers()['cache-control']).toMatch(/no-store/i);
+    const ticketListUrl = webUrl(
+      manifest,
+      `/api/bff/tickets?tenantId=${f.tenantId}`,
+    );
+    const oldList = await page.request.get(ticketListUrl);
+    expect(oldList.status()).toBe(200);
+    expect(oldList.headers()['cache-control']).toMatch(/no-store/i);
+    expect((await oldList.json()).tickets).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ ticketId: f.ticketId }),
+      ]),
+    );
+    const oldTab = await context.newPage();
+    await oldTab.goto(detail);
+    await expect(oldTab.getByTestId('owner-ticket-ready')).toBeVisible();
+    const activeTab = await context.newPage();
+    await activeTab.goto(detail);
+    await expect(activeTab.getByTestId('owner-ticket-ready')).toBeVisible();
+    await oldTab.goto(webUrl(manifest, '/'));
     // Hold a real refresh response until logout has cleared the callback-owned
     // subject anchor. Its late Set-Cookie must not resurrect the old actor.
     let releaseRefresh!: () => void;
@@ -998,9 +1039,14 @@ test('[AUTH-07] another attendee cannot see prior actor ticket after login switc
     } finally {
       releaseRefresh();
     }
+    const logoutEpoch = (await context.cookies(manifest.origins.web)).find((cookie) => cookie.name === 'web_auth_epoch')?.value;
+    expect(logoutEpoch).toBeTruthy();
+    expect(logoutEpoch).not.toBe(firstIdentity.authEpoch);
     await staleRefresh;
     await context.unroute('**/api/auth/refresh?*');
     const lateCookies = await context.cookies(manifest.origins.web);
+    expect(lateCookies.find((cookie) => cookie.name === 'web_auth_epoch')?.value).toBe(logoutEpoch);
+    expect(lateCookies.find((cookie) => cookie.name === 'web_auth_marker')?.value).toBe(logoutEpoch);
     expect(
       lateCookies.some((cookie) => cookie.name === 'oidc_access_token'),
     ).toBe(true);
@@ -1036,6 +1082,12 @@ test('[AUTH-07] another attendee cannot see prior actor ticket after login switc
         { cause: error },
       );
     }
+    const secondIdentityResponse = await page.request.get(webUrl(manifest, '/api/auth/identity'));
+    expect(secondIdentityResponse.status()).toBe(200);
+    const secondIdentity = (await secondIdentityResponse.json()) as typeof firstIdentity;
+    expect(secondIdentity.actorId).not.toBe(firstIdentity.actorId);
+    expect(secondIdentity.authEpoch).not.toBe(firstIdentity.authEpoch);
+    await expect(activeTab.getByTestId('owner-ticket-ready')).toHaveCount(0);
     const guestBffPendingDelete = cookieOrder.some(
       (entry) =>
         entry.startsWith('/api/bff/') &&
@@ -1057,7 +1109,283 @@ test('[AUTH-07] another attendee cannot see prior actor ticket after login switc
     );
     expect([403, 404]).toContain(forbidden.status());
     expect(forbidden.headers()['cache-control']).toMatch(/no-store/i);
+    const newList = await page.request.get(ticketListUrl);
+    expect(newList.status()).toBe(200);
+    expect(newList.headers()['cache-control']).toMatch(/no-store/i);
+    expect((await newList.json()).tickets).toEqual([]);
+    await page.goto(webUrl(manifest, '/wallet'));
+    await expect(page.getByTestId(`wallet-ticket-${f.ticketId}`)).toHaveCount(
+      0,
+    );
+    await oldTab.goBack();
+    await expect(oldTab.getByTestId('owner-ticket-ready')).toHaveCount(0);
+    await expect(
+      oldTab
+        .getByTestId('owner-ticket-forbidden')
+        .or(oldTab.getByTestId('owner-ticket-missing')),
+    ).toBeVisible();
+    await oldTab.reload();
+    await expect(oldTab.getByTestId('owner-ticket-ready')).toHaveCount(0);
+    const reopened = await context.newPage();
+    const reopenedDocument = await reopened.goto(detail);
+    expect(reopenedDocument?.headers()['cache-control']).toMatch(/no-store/i);
+    await expect(reopened.getByTestId('owner-ticket-ready')).toHaveCount(0);
   } finally {
+    await context.close();
+  }
+});
+
+test('[AUTH-07] an old ticket document response cannot render after an actor switch', async ({
+  browser,
+}) => {
+  const manifest = loadManifest();
+  const fixture = fixtureFor(manifest, 'AUTH-07');
+  if (!fixture.ticketId) throw new Error('BLOCKED: AUTH-07 ticketId');
+  const detail = webUrl(
+    manifest,
+    `/t/${fixture.tenantSlug}/tickets/${fixture.ticketId}?tenantId=${fixture.tenantId}`,
+  );
+  const context = await browser.newContext();
+  let releaseOldResponse!: () => void;
+  let signalOldResponse!: () => void;
+  const released = new Promise<void>((resolve) => {
+    releaseOldResponse = resolve;
+  });
+
+  const fetched = new Promise<void>((resolve) => {
+    signalOldResponse = resolve;
+  });
+  try {
+    const switchPage = await context.newPage();
+    await login(
+      switchPage,
+      manifest,
+      accountFor(manifest, 'AUTH-07', 'attendee'),
+    );
+    const stalePage = await context.newPage();
+    await stalePage.setViewportSize({ width: 390, height: 844 });
+    await stalePage.goto(webUrl(manifest, '/'));
+    let oldResponseStatus = 0;
+    let oldResponseHasTicket = false;
+    await context.route(
+      (url) => url.toString() === detail,
+      async (route) => {
+        if (route.request().resourceType() !== 'document') {
+          await route.continue();
+          return;
+        }
+        const upstream = await route.fetch();
+        oldResponseStatus = upstream.status();
+        oldResponseHasTicket = (await upstream.text()).includes(
+          'owner-ticket-ready',
+        );
+        signalOldResponse();
+        await released;
+        await route.fulfill({ response: upstream });
+      },
+    );
+    const staleNavigation = stalePage.goto(detail);
+    await fetched;
+    expect(oldResponseStatus).toBe(200);
+    expect(oldResponseHasTicket).toBe(false);
+    await switchPage.goto(webUrl(manifest, '/api/auth/logout'));
+    await login(
+      switchPage,
+      manifest,
+      accountFor(manifest, 'AUTH-07', 'otherAttendee'),
+    );
+    const denied = await switchPage.request.get(
+      webUrl(
+        manifest,
+        `/api/bff/tickets/${fixture.ticketId}?tenantId=${fixture.tenantId}`,
+      ),
+    );
+    expect([403, 404]).toContain(denied.status());
+    releaseOldResponse();
+    await staleNavigation;
+    await expect(stalePage.getByTestId('owner-ticket-ready')).toHaveCount(0);
+  } finally {
+    releaseOldResponse();
+    await context.close();
+  }
+});
+
+test('[AUTH-07] held ticket JSON from a prior same-sub login never commits', async ({ browser }) => {
+  const manifest = loadManifest();
+  const fixture = fixtureFor(manifest, 'AUTH-07');
+  if (!fixture.ticketId) throw new Error('BLOCKED: AUTH-07 ticketId');
+  const detail = webUrl(manifest, `/t/${fixture.tenantSlug}/tickets/${fixture.ticketId}?tenantId=${fixture.tenantId}`);
+  const context = await browser.newContext();
+  let release!: () => void;
+  let fetched!: () => void;
+  const released = new Promise<void>((resolve) => { release = resolve; });
+  const intercepted = new Promise<void>((resolve) => { fetched = resolve; });
+  try {
+    const switchPage = await context.newPage();
+    const actor = accountFor(manifest, 'AUTH-07', 'attendee');
+    await login(switchPage, manifest, actor);
+    const before = await switchPage.request.get(webUrl(manifest, '/api/auth/identity'));
+    const firstEpoch = ((await before.json()) as { authEpoch: string }).authEpoch;
+    const stalePage = await context.newPage();
+    await stalePage.addInitScript(() => {
+      const observer = new MutationObserver(() => {
+        if (document.body?.textContent?.includes('STALE_ONLY')) {
+          (window as typeof window & { staleTicketRendered?: boolean }).staleTicketRendered = true;
+        }
+      });
+      observer.observe(document, { subtree: true, childList: true, characterData: true });
+    });
+    let held = false;
+    await context.route('**/api/bff/tickets/*', async (route) => {
+      if (held || !route.request().url().includes(fixture.ticketId!)) {
+        await route.continue();
+        return;
+      }
+      held = true;
+      const upstream = await route.fetch();
+      expect(upstream.status()).toBe(200);
+      expect(upstream.headers()['x-auth-epoch']).toBe(firstEpoch);
+      const body = (await upstream.json()) as Record<string, unknown>;
+      fetched();
+      await released;
+      await route.fulfill({ response: upstream, body: JSON.stringify({ ...body, state: 'STALE_ONLY' }) });
+    });
+    await stalePage.goto(detail);
+    await intercepted;
+    await switchPage.goto(webUrl(manifest, '/api/auth/logout'));
+    await login(switchPage, manifest, actor);
+    const after = await switchPage.request.get(webUrl(manifest, '/api/auth/identity'));
+    expect(((await after.json()) as { authEpoch: string }).authEpoch).not.toBe(firstEpoch);
+    release();
+    await expect(stalePage.getByTestId('owner-ticket-ready')).toBeVisible();
+    expect(await stalePage.evaluate(() => (window as typeof window & { staleTicketRendered?: boolean }).staleTicketRendered ?? false)).toBe(false);
+    await context.unroute('**/api/bff/tickets/*');
+  } finally {
+    release();
+    await context.close();
+  }
+});
+
+test('[AUTH-07] held A homepage document and RSC never expose owned tickets to B', async ({ browser }) => {
+  const manifest = loadManifest();
+  const fixture = fixtureFor(manifest, 'AUTH-07');
+  if (!fixture.ticketId) throw new Error('BLOCKED: AUTH-07 ticketId');
+  const context = await browser.newContext();
+  let release!: () => void;
+  let fetched!: () => void;
+  const released = new Promise<void>((resolve) => { release = resolve; });
+  const intercepted = new Promise<void>((resolve) => { fetched = resolve; });
+  try {
+    const switchPage = await context.newPage();
+    await login(switchPage, manifest, accountFor(manifest, 'AUTH-07', 'attendee'));
+    await switchPage.goto(webUrl(manifest, '/'));
+    await expect(switchPage.getByTestId(`home-event-owned-${fixture.eventId}`)).toBeVisible();
+
+    const home = webUrl(manifest, '/');
+    const homeDocument = await switchPage.request.get(home);
+    expect(homeDocument.headers()['cache-control']).toMatch(/no-store/i);
+    const html = await homeDocument.text();
+    expect(html).not.toContain('ownedByEventId');
+    expect(html).not.toContain(`home-event-owned-${fixture.eventId}`);
+    expect(html).not.toContain('Bạn có 1 vé');
+    const rsc = await switchPage.request.get(webUrl(manifest, '/?_rsc=auth07'), {
+      headers: { RSC: '1' },
+    });
+    expect(rsc.status()).toBe(200);
+    const rscBody = await rsc.text();
+    expect(rscBody).not.toContain('ownedByEventId');
+    expect(rscBody).not.toContain(`home-event-owned-${fixture.eventId}`);
+
+    const stalePage = await context.newPage();
+    let oldStatus = 0;
+    let oldBody = '';
+    await stalePage.route(home, async (route) => {
+      if (route.request().resourceType() !== 'document') {
+        await route.continue();
+        return;
+      }
+      const upstream = await route.fetch();
+      oldStatus = upstream.status();
+      oldBody = await upstream.text();
+      fetched();
+      await released;
+      await route.fulfill({ response: upstream });
+    });
+    const staleNavigation = stalePage.goto(home);
+    await intercepted;
+    expect(oldStatus).toBe(200);
+    expect(oldBody).not.toContain('ownedByEventId');
+    expect(oldBody).not.toContain(`home-event-owned-${fixture.eventId}`);
+    await switchPage.goto(webUrl(manifest, '/api/auth/logout'));
+    await login(switchPage, manifest, accountFor(manifest, 'AUTH-07', 'otherAttendee'));
+    const list = await switchPage.request.get(webUrl(manifest, '/api/bff/tickets'));
+    expect(list.status()).toBe(200);
+    expect((await list.json()).tickets).toEqual([]);
+    release();
+    await staleNavigation;
+    await expect(stalePage.getByTestId('home-catalog')).toBeVisible();
+    await expect(stalePage.getByTestId(`home-event-owned-${fixture.eventId}`)).toHaveCount(0);
+    await switchPage.goto(home);
+    await expect(switchPage.getByTestId(`home-event-owned-${fixture.eventId}`)).toHaveCount(0);
+  } finally {
+    release();
+    await context.close();
+  }
+});
+
+test('[AUTH-07] cross-tab nav clears A and drops held A profile after B login', async ({ browser }) => {
+  const manifest = loadManifest();
+  fixtureFor(manifest, 'AUTH-07');
+  const actorA = accountFor(manifest, 'AUTH-07', 'attendee');
+  const actorB = accountFor(manifest, 'AUTH-07', 'otherAttendee');
+  const context = await browser.newContext();
+  let release!: () => void;
+  let fetched!: () => void;
+  const released = new Promise<void>((resolve) => { release = resolve; });
+  const intercepted = new Promise<void>((resolve) => { fetched = resolve; });
+  try {
+    const switchPage = await context.newPage();
+    await login(switchPage, manifest, actorA);
+    const firstIdentity = await switchPage.request.get(webUrl(manifest, '/api/auth/identity'));
+    const firstEpoch = ((await firstIdentity.json()) as { authEpoch: string }).authEpoch;
+    const oldTab = await context.newPage();
+    await oldTab.goto(webUrl(manifest, '/'));
+    await expect(oldTab.getByTestId('nav-avatar')).toContainText(actorA.username);
+
+    const heldTab = await context.newPage();
+    let held = false;
+    await heldTab.route('**/api/bff/me', async (route) => {
+      if (held) {
+        await route.continue();
+        return;
+      }
+      held = true;
+      const upstream = await route.fetch();
+      expect(upstream.status()).toBe(200);
+      expect(upstream.headers()['x-auth-epoch']).toBe(firstEpoch);
+      fetched();
+      await released;
+      await route.fulfill({ response: upstream });
+    });
+    await heldTab.goto(webUrl(manifest, '/'));
+    await intercepted;
+    await switchPage.goto(webUrl(manifest, '/api/auth/logout'));
+    await login(switchPage, manifest, actorB);
+    await expect(oldTab.getByTestId('nav-avatar').getByText(actorA.username, { exact: true })).toHaveCount(0);
+    await heldTab.evaluate((oldEmail) => {
+      const observer = new MutationObserver(() => {
+        if (document.querySelector('[data-testid="nav-avatar"]')?.lastElementChild?.textContent?.trim() === oldEmail) {
+          (window as typeof window & { staleProfileRendered?: boolean }).staleProfileRendered = true;
+        }
+      });
+      observer.observe(document, { subtree: true, childList: true, characterData: true });
+    }, actorA.username);
+    release();
+    await expect(heldTab.getByTestId('nav-avatar')).toContainText(actorB.username.toLowerCase());
+    expect(await heldTab.evaluate(() => (window as typeof window & { staleProfileRendered?: boolean }).staleProfileRendered ?? false)).toBe(false);
+    await expect(oldTab.getByTestId('nav-avatar')).toContainText(actorB.username.toLowerCase());
+  } finally {
+    release();
     await context.close();
   }
 });

@@ -51,6 +51,7 @@ export const WALLET_COPY_CATALOG = {
   ),
   redeemCta: dual('Đổi mã lấy vé', 'Redeem a code'),
   login: dual('Đăng nhập', 'Sign in'),
+  loading: dual('Đang kiểm tra phiên đăng nhập…', 'Checking your sign-in…'),
   retry: dual('Thử lại', 'Try again'),
   allTickets: dual('Xem tất cả vé', 'View all tickets'),
   filterEmptyTitle: dual(
@@ -123,6 +124,7 @@ export const OWNER_TICKET_COPY_CATALOG = {
   home: dual('Về trang chủ', 'Back to home'),
   retry: dual('Thử lại', 'Try again'),
   login: dual('Đăng nhập', 'Sign in'),
+  loading: dual('Đang kiểm tra phiên đăng nhập…', 'Checking your sign-in…'),
   redeemCta: dual('Đổi mã lấy vé', 'Redeem a code'),
   wallet: dual('Vé của tôi', 'My tickets'),
   backWallet: dual('← Vé của tôi', '← My tickets'),

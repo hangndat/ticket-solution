@@ -407,7 +407,7 @@ export function GuestClaimForm() {
           onClick={() => void submitClaim()}>{copy.resubmit}</Button></p>
       ) : null}
       {decision?.kind === 'issued' ? (
-        <p><Button asChild variant="brand"><Link href="/wallet">{copy.viewWallet}</Link></Button></p>
+        <p><Button asChild variant="brand"><Link href="/wallet" prefetch={false}>{copy.viewWallet}</Link></Button></p>
       ) : null}
     </section>
   ) : null;
@@ -422,7 +422,7 @@ export function GuestClaimForm() {
         testId="claim-token-empty" />
       <div className={authButtonsRow}>
         <Button asChild variant="secondary"><Link href="/redeem">{copy.redeem}</Link></Button>
-        <Button asChild variant="secondary"><Link href="/wallet">{copy.wallet}</Link></Button>
+        <Button asChild variant="secondary"><Link href="/wallet" prefetch={false}>{copy.wallet}</Link></Button>
       </div>
     </div>;
   }
