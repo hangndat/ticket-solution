@@ -397,11 +397,11 @@ function realmConfig(state, caseIds) {
   return realmPath;
 }
 
-// Second, fully independent realm (own signing keypair) so AUTH-02/DB-02 can
-// prove the app actually checks `iss` rather than only JWKS/signature —
-// Keycloak does not let a protocol mapper override the core `iss` claim, so
-// a same-realm fake-issuer client cannot stand in for this (verified
-// empirically: the raw token payload always carries the real realm issuer).
+// Second, fully independent realm (own signing keypair) supplies a real token
+// with a different issuer for AUTH-02/DB-02. Rejection by the app cannot by
+// itself isolate issuer validation from signature/JWKS validation. Keycloak
+// ignores a protocol mapper targeting the core `iss` claim, so a same-realm
+// client cannot supply that isolated assertion.
 function secondaryRealmConfig(state, caseIds) {
   if (!caseIds.some((id) => id === 'AUTH-02' || id === 'DB-02')) return null;
   state.secondaryRealm = `${state.realm}-alt`;
