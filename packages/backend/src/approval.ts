@@ -327,7 +327,11 @@ export async function decideRedemption(
         true,
       );
     }
-    await tx.$executeRaw`ROLLBACK TO SAVEPOINT approval_business`;
+    // Lazy expiry is a committed business transition: keep its code release
+    // and audit row while recording the terminal decision response.
+    if (!(error instanceof ApprovalError && error.code === APPROVAL_ERROR_CODES.PENDING_EXPIRED)) {
+      await tx.$executeRaw`ROLLBACK TO SAVEPOINT approval_business`;
+    }
     if (error instanceof ApprovalError && !error.retryable) {
       const rejectionPayload = {
         code: error.code,
