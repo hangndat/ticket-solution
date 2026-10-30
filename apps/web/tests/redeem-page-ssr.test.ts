@@ -17,7 +17,6 @@ test('redeem page stays force-dynamic and wires guest auth gate', () => {
   assert.match(page, /export const dynamic = 'force-dynamic'/);
   assert.match(page, /readSubject\(\)/);
   assert.match(page, /<\s*RedeemAuthGate/);
-  assert.match(page, /ssrUpstreamGet\('\/v1\/me'\)/);
-  assert.match(page, /emailVerified === true/);
+  assert.match(page, /<\s*RedeemVerifiedBoundary/);
   assert.match(page, /tenantBound/);
 });
