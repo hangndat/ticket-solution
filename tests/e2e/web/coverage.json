@@ -90,8 +90,8 @@
     "caseId": "WEB-02",
     "tests": ["redeem.spec.ts › [WEB-02]"],
     "layers": ["B", "H"],
-    "status": "implemented",
-    "reason": "Browser UI auto, wallet, QR/reload và ticket list; PostgreSQL runtime role + tenant transaction-local RLS xác nhận code CONSUMED, đúng một request/ticket/operation và TicketIssued outbox, event/type/source/owner cùng mọi quota bucket tăng đúng một. Targeted WEB-02/07 PASS run mvsw7lum-c9f6a7."
+    "status": "covered",
+    "reason": "PLAN §5.2 WEB-02 P0 B (+ PG H): verified attendee AUTO qua Keycloak/BFF, form/terms published, success UX, wallet list một vé, detail QR + reload; assertIssuedExactlyOnce trên role runtime + transaction-local — AVAILABLE→CONSUMED, một request ISSUED/ticket ACTIVE đúng event/type/source/owner, một operation COMPLETED, một TicketIssued outbox, mọi quota bucket +1. Checkout sạch SHA 96339b10a215febb0dac49ae017b71641f5f01a5 (evidenceExactShaEligible: true): node tests/e2e/harness/run.mjs e2e --case=WEB-02,WEB-03 → run mvuxsq31-d9f462 PASS 3/3 browser (WEB-02 1/3); artifact tests/e2e/.artifacts/mvuxsq31-d9f462/summary.json. pnpm test:e2e:guards 16/16. Không sửa apps/web runtime."
   },
   {
     "caseId": "WEB-03",
@@ -100,8 +100,8 @@
       "redeem.spec.ts › [WEB-03] invalid and ambiguous codes keep context private and state unchanged"
     ],
     "layers": ["B", "H"],
-    "status": "implemented",
-    "reason": "WEB-03 targeted mvsxbht5-863995 và WEB-03+WEB-04 cùng run mvsxo9u5-555265 PASS 8/8; full browser sau cleanup mvsxpkhf-02af2b PASS 52/52. Event link qua OIDC login giữ tenant/event, submit cấp đúng một ticket cho owner/event/type/source, code CONSUMED, quota +1, operation COMPLETED, TicketIssued outbox; global entry resolve cùng published event. Mã sai cả hai entry giữ UX/privacy và không issue. Fixture tạo event thứ hai cùng mã, backend legacy backfill hình thành group AMBIGUOUS có hai candidate; BFF/UI không lộ tenant/event/owner. Cleanup transactional phục hồi ROUTABLE và xóa event/code/candidate phụ để không ảnh hưởng case sau. PostgreSQL kiểm ambiguity không phát sinh thêm business state; event-scoped invalid chỉ ghi một operation CODE_INVALID."
+    "status": "covered",
+    "reason": "PLAN §5.2 WEB-03 P0 B/H: event sidebox → auth gate → OIDC giữ tenantSlug/eventSlug; global /redeem sau login resolve cùng published event rồi event-scoped submit 201 một ticket (PG như WEB-02). Mã invalid global/event: 422, không lộ eventId/tenantId/owner email trên response/UI; PG code/request/ticket/quota/outbox giữ (event path +1 operation CODE_INVALID). withLegacyCodeCollision: group AMBIGUOUS hai candidate, BFF RESOLVE_DISABLED, cleanup admin phục hồi ROUTABLE. Cùng run mvuxsq31-d9f462 PASS (WEB-03 2/3) tại SHA 96339b10, evidenceExactShaEligible true; guards 16/16."
   },
   {
     "caseId": "WEB-04",
