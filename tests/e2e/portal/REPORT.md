@@ -16,7 +16,7 @@
 | `node tests/e2e/harness/run.mjs e2e --case=PORT-02` | **PASS** run `mvuv3fpp-04187d`, browser 1/1; artifact `tests/e2e/.artifacts/mvuv3fpp-04187d/summary.json`; `evidenceExactShaEligible=true`. |
 | SHA | `f8152257039a2e6a5f9866b4a774f828c67e4ded` |
 
-**Thay đổi:** mở rộng `portal-event-lifecycle.spec.ts` [PORT-02] — public API `/v1/public/tenants/{tenantSlug}/events/{eventSlug}`, draft/preview không đổi projection, publish/rollback BFF + stale 409, hai browser context stale save, PG `tickets` consent/entitlement bất biến; seed `PORT-02` + `lifecycle-db.ts`; Portal BFF `config/rollback` forward `idempotencyKey` (wire-up thiếu so với API). **Coverage:** `PORT-02` → `covered` (BFF path; UI config wizard và Web ISR publish delta ngoài slice).
+**Thay đổi:** mở rộng `portal-event-lifecycle.spec.ts` [PORT-02] — public API `/v1/public/tenants/{tenantSlug}/events/{eventSlug}`, draft/preview không đổi projection, publish/rollback BFF + stale 409, hai browser context stale save, PG `tickets` consent/entitlement bất biến; seed `PORT-02` + `lifecycle-db.ts`; Portal BFF `config/rollback` forward `idempotencyKey`. Run này chỉ chứng minh BFF/API/PG; James đã tìm F01/F02 và worker sửa ở run `mvuvhcrh-ee2d55` phía trên. Full PORT-02 vẫn `blocked` vì Web ISR chưa được kiểm.
 
 ## Kiểm tra đã chạy (worker task_ff809609587e — PORT-01 James F01/F02 fix 1/2 / Issue #1035)
 
