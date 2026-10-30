@@ -680,6 +680,35 @@ async function web04Query(f, tenantId, statement, values) {
   }
 }
 
+async function db03Query(f, statement, values) {
+  const requireBackend = createRequire(
+    new URL('../../../packages/backend/package.json', import.meta.url),
+  );
+  const { Client } = requireBackend('pg');
+  const client = new Client({
+    connectionString: required(
+      f.data?.controlDatabaseUrl,
+      'DB-03 controlDatabaseUrl',
+    ),
+  });
+  await client.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query('SET LOCAL ROLE ticket_runtime');
+    await client.query("SELECT set_config('app.tenant_id', $1, true)", [
+      f.tenantId,
+    ]);
+    const result = await client.query(statement, values);
+    await client.query('COMMIT');
+    return result.rows;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    await client.end();
+  }
+}
+
 async function web04AssertRejected(ctx, {
   label,
   tenantId,
@@ -2563,6 +2592,134 @@ for (const caseId of CASE_IDS) {
         afterReport.body.quota.allocated,
         beforeReport.body.quota.allocated + 1,
       );
+
+      // Full audit matrix for the issued ticket: exactly one audit_logs row
+      // and exactly one outbox row, proving the sequential replay above did
+      // not duplicate side effects alongside the HTTP-visible response reuse.
+      const auditRows = await db03Query(
+        f,
+        `SELECT action, resource_id, operation_id FROM audit_logs
+         WHERE resource_id = $1 AND action = 'ticket.issued'`,
+        [first.body.ticketId],
+      );
+      assert.equal(
+        auditRows.length,
+        1,
+        'DB-03 replay must not duplicate the ticket.issued audit row',
+      );
+      assert.equal(auditRows[0].operation_id, first.body.operationId);
+      const outboxRows = await db03Query(
+        f,
+        `SELECT type, aggregate_id FROM outbox
+         WHERE aggregate_id = $1 AND type = 'TicketIssued'`,
+        [first.body.ticketId],
+      );
+      assert.equal(
+        outboxRows.length,
+        1,
+        'DB-03 replay must not duplicate the TicketIssued outbox row',
+      );
+
+      // Same-request concurrent retry: two HTTP requests racing the same
+      // idempotency key/body, not a sequential replay, must still collapse
+      // onto one business outcome (ON CONFLICT DO NOTHING + wait-for-first).
+      const raceBody = { ...body, code: required(f.secondCode, 'DB-03 secondCode') };
+      const raceKey = randomUUID();
+      const beforeRaceReport = await request(ctx, 'GET', reportPath(f), owner);
+      expectStatus(beforeRaceReport, 200);
+      const [raceA, raceB] = await Promise.all([
+        request(ctx, 'POST', path, attendee, raceBody, {
+          'idempotency-key': raceKey,
+        }),
+        request(ctx, 'POST', path, attendee, raceBody, {
+          'idempotency-key': raceKey,
+        }),
+      ]);
+      expectStatus(raceA, 201);
+      expectStatus(raceB, 201);
+      assert.equal(raceA.body.ticketId, raceB.body.ticketId);
+      assert.equal(raceA.body.operationId, raceB.body.operationId);
+      assert.equal(
+        [raceA.body.replayed, raceB.body.replayed].filter((v) => v === false)
+          .length,
+        1,
+        'DB-03 concurrent same-key retry must settle on exactly one winner',
+      );
+      const afterRaceReport = await request(ctx, 'GET', reportPath(f), owner);
+      expectStatus(afterRaceReport, 200);
+      assert.equal(
+        afterRaceReport.body.quota.allocated,
+        beforeRaceReport.body.quota.allocated + 1,
+        'DB-03 concurrent same-key retry must allocate quota exactly once',
+      );
+      const raceAuditRows = await db03Query(
+        f,
+        `SELECT action FROM audit_logs
+         WHERE resource_id = $1 AND action = 'ticket.issued'`,
+        [raceA.body.ticketId],
+      );
+      assert.equal(raceAuditRows.length, 1);
+      const raceOutboxRows = await db03Query(
+        f,
+        `SELECT type FROM outbox WHERE aggregate_id = $1 AND type = 'TicketIssued'`,
+        [raceA.body.ticketId],
+      );
+      assert.equal(raceOutboxRows.length, 1);
+
+      // Multi-actor race on one code: two different actors redeem the same
+      // code concurrently; the code's FOR UPDATE lock must serialize them so
+      // exactly one wins ACTIVE and the other observes CODE_CONSUMED, with
+      // quota/counter advancing once, not twice.
+      const otherAttendee = await bearer(ctx, 'otherAttendee');
+      const multiActorCode = required(f.data?.raceCode, 'DB-03 raceCode');
+      const beforeMultiReport = await request(ctx, 'GET', reportPath(f), owner);
+      expectStatus(beforeMultiReport, 200);
+      const [actorA, actorB] = await Promise.all([
+        request(
+          ctx,
+          'POST',
+          path,
+          attendee,
+          { ...body, code: multiActorCode },
+          { 'idempotency-key': randomUUID() },
+        ),
+        request(
+          ctx,
+          'POST',
+          path,
+          otherAttendee,
+          {
+            ...body,
+            code: multiActorCode,
+            answers: required(f.data?.manualAnswers, 'DB-03 manualAnswers'),
+          },
+          { 'idempotency-key': randomUUID() },
+        ),
+      ]);
+      const statuses = [actorA.status, actorB.status].sort();
+      assert.deepEqual(
+        statuses,
+        [201, 409],
+        `DB-03 multi-actor race on one code must split 201/409, got ${actorA.status}/${actorB.status}`,
+      );
+      const winner = actorA.status === 201 ? actorA : actorB;
+      const loser = actorA.status === 201 ? actorB : actorA;
+      assert.equal(winner.body.state, 'ACTIVE');
+      assert.equal(loser.body.code, 'CODE_CONSUMED');
+      const afterMultiReport = await request(ctx, 'GET', reportPath(f), owner);
+      expectStatus(afterMultiReport, 200);
+      assert.equal(
+        afterMultiReport.body.quota.allocated,
+        beforeMultiReport.body.quota.allocated + 1,
+        'DB-03 multi-actor race must allocate quota exactly once',
+      );
+      const multiAuditRows = await db03Query(
+        f,
+        `SELECT action FROM audit_logs
+         WHERE resource_id = $1 AND action = 'ticket.issued'`,
+        [winner.body.ticketId],
+      );
+      assert.equal(multiAuditRows.length, 1);
     }
     if (caseId === 'WEB-04') {
       await web04AssertRejected(ctx, {
