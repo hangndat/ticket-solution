@@ -180,8 +180,8 @@
       "fault.spec.ts › [WEB-10] redeem reconciles retryable 404 before delayed commit with the original key"
     ],
     "layers": ["B", "H"],
-    "status": "implemented",
-    "reason": "F03 catalog fault/recovery được giữ. F05: poll giữ retryable operation 404 ở trạng thái chưa rõ; E2E dùng trigger commit muộn trong DB cô lập, proxy 504 sớm, xác nhận GET 404 trước commit, recovery cùng key và đúng một vé; timeout không tạo vé giả và giữ đường kiểm tra lại."
+    "status": "covered",
+    "reason": "PLAN §5.2 WEB-10 P0 B/H: sáu browser test map catalog/detail/wallet/redeem qua fault control scoped run (proxy TLS, không route mock). B: public detail unavailable→published; home catalog filter-empty vs upstream-unavailable; wallet real-empty vs unreachable (503/500) rồi recovery; redeem timeout giữ redeem-ux-timeout + Kiểm tra lại, không success/ticket; unavailable trước commit vs lostResponse reconcile; unknown + operation404 poll trước delayed commit. H: walletTicketIds/BFF thật; test 6 PG assertIssuedExactlyOnce + một operation/client_key. «Pending» PLAN = retryable unknown/timeout, không MANUAL pending (WEB-06). Không cold-offline/PWA. Clean checkout SHA 85ddecddb8f2128bdcbed60b94c56fc416fc89af: run mvux2lwy-e9069f PASS 6/6 browser, summary.json evidenceExactShaEligible true; pnpm test:e2e:guards 16/16."
   },
   {
     "caseId": "WEB-11",
