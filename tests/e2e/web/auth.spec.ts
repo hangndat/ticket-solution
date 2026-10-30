@@ -83,6 +83,89 @@ test('[AUTH-01] post-login navigation is terminal and does not bounce back to lo
   ).toBe(200);
 });
 
+test('[AUTH-01] staff (owner/manager) OIDC login bounces to Portal with its own client/callback and host-only cookies (ADR-20)', async ({
+  browser,
+}) => {
+  test.setTimeout(60_000);
+  const manifest = loadManifest();
+  fixtureFor(manifest, 'AUTH-01');
+  const portalOrigin = new URL(manifest.origins.portal).origin;
+
+  for (const role of ['owner', 'manager'] as const) {
+    const actor = accountFor(manifest, 'AUTH-01', role);
+    const context = await browser.newContext();
+    try {
+      const page = await context.newPage();
+      const hops: { url: string; location: string | null }[] = [];
+      page.on('response', (res) => {
+        if (res.request().resourceType() !== 'document') return;
+        hops.push({ url: res.url(), location: res.headers().location ?? null });
+      });
+
+      await page.goto(webUrl(manifest, '/api/auth/login?return=%2Fwallet'));
+      await page.locator('#username').fill(actor.username);
+      await page.locator('#password').fill(actor.password);
+      await page.locator('#kc-login').click();
+      await page.waitForURL(
+        (url) =>
+          url.origin === portalOrigin && !url.pathname.startsWith('/api/auth/'),
+        { timeout: 45_000 },
+      );
+      expect(new URL(page.url()).origin).toBe(portalOrigin);
+      expect(new URL(page.url()).searchParams.has('error')).toBe(false);
+
+      // Web callback decided the staff branch and sent a plain bounce to Portal
+      // login — not a page carrying any token/code of its own (ADR-20 §3: no
+      // copied BFF session).
+      const webCallback = hops.find((h) =>
+        h.url.startsWith(webUrl(manifest, '/api/auth/callback')),
+      );
+      expect(webCallback?.location).toBe(`${portalOrigin}/api/auth/login`);
+
+      // Portal ran its own full Authorization Code + PKCE + nonce leg against
+      // its own client, not a reused Web code/session.
+      const portalAuthorize = hops.find(
+        (h) =>
+          h.url.includes('/protocol/openid-connect/auth') &&
+          h.url.includes('client_id=ticket-admin-web'),
+      );
+      expect(portalAuthorize).toBeTruthy();
+      const authorizeUrl = new URL(portalAuthorize!.url);
+      expect(authorizeUrl.searchParams.get('redirect_uri')).toBe(
+        `${portalOrigin}/api/auth/callback`,
+      );
+      expect(authorizeUrl.searchParams.get('response_type')).toBe('code');
+      expect(authorizeUrl.searchParams.get('code_challenge_method')).toBe(
+        'S256',
+      );
+      expect(authorizeUrl.searchParams.get('state')).toBeTruthy();
+      expect(authorizeUrl.searchParams.get('nonce')).toBeTruthy();
+
+      const subject = await page.request.get(
+        new URL('/api/bff/me/subject', manifest.origins.portal).toString(),
+      );
+      expect(subject.status()).toBe(200);
+      const subjectBody = (await subject.json()) as { userId?: string };
+      expect(subjectBody.userId).toBe(actor.userId);
+
+      // Host-only cookies: no `Domain=.vemoki.com`-style attribute on either
+      // surface's jar (ADR-20 §3.2).
+      const portalCookies = await context.cookies(manifest.origins.portal);
+      const webCookies = await context.cookies(manifest.origins.web);
+      expect(
+        portalCookies.some(
+          (cookie) => cookie.name === 'oidc_access_token' && cookie.httpOnly,
+        ),
+      ).toBe(true);
+      for (const cookie of [...portalCookies, ...webCookies]) {
+        expect(cookie.domain.startsWith('.')).toBe(false);
+      }
+    } finally {
+      await context.close();
+    }
+  }
+});
+
 test('[AUTH-02] wrong password and callback without state do not create a session', async ({
   page,
 }) => {
