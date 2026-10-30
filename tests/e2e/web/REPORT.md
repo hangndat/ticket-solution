@@ -1,5 +1,11 @@
 # Báo cáo Web E2E — 28/10/2026
 
+## WEB-02/WEB-03 redeem B+H — 30/10/2026
+
+- Đối chiếu PLAN §5.2 P0: WEB-02 (verified AUTO, form/terms, wallet/QR/reload, PG code/request/ticket/operation/outbox/quota +1) và WEB-03 (context event + global qua login, invalid/ambiguous privacy, PG không issue thêm, cleanup collision) đã khớp `redeem.spec.ts` — không thiếu assertion bắt buộc, không sửa harness/fixture ngoài tài liệu.
+- Checkout sạch SHA `96339b10a215febb0dac49ae017b71641f5f01a5` (`evidenceExactShaEligible: true`): `node tests/e2e/harness/run.mjs e2e --case=WEB-02,WEB-03` (build production) → run `mvuxsq31-d9f462` PASS 3/3 browser; artifact `tests/e2e/.artifacts/mvuxsq31-d9f462/summary.json`. `pnpm test:e2e:guards` 16/16. Locale VI, Keycloak thật, viewport desktop harness mặc định; không fake auth.
+- `coverage.json` WEB-02/WEB-03 → `covered` theo run trên; Issue #1037.
+
 ## WEB-10 fault/recovery B+H — 30/10/2026
 
 - Trước: `coverage.json` ghi `implemented` theo code F03/F05 nhưng chưa có exact-SHA run trên base branch. Sau: đối chiếu PLAN §5.2 P0 B/H với sáu test `fault.spec.ts › [WEB-10]` — catalog/detail/wallet/redeem, fault control `runtime.faultControlPath`, không sửa `apps/web`.
