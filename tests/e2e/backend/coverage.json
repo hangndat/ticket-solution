@@ -59,11 +59,12 @@
   {
     "caseId": "DB-06",
     "tests": [
-      "D:packages/backend/test/event-lifecycle.test.cjs#C-E event lifecycle"
+      "D:packages/backend/test/event-lifecycle.test.cjs#C-E event lifecycle",
+      "D:packages/backend/test/db06-race.test.cjs#DB-06:"
     ],
     "layers": ["D"],
     "status": "blocked",
-    "reason": "D event lifecycle; thiếu race config/quota/suspend và bounded transient retry."
+    "reason": "D barrier PostgreSQL chứng minh issue vs close/config theo hai thứ tự, issue trước suspend, state ticket/code/quota/operation/outbox và lock timeout + same-key retry. SQL quota reduction chỉ là diagnostic cho CHECK/serialization, không thay AC runtime. BLOCKED: chưa có runtime quota-reduction command; contract bounded transient retry chưa chốt (hiện có lock_timeout 2s và client retry cùng key, không auto-retry)."
   },
   {
     "caseId": "DB-07",
