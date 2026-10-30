@@ -2492,6 +2492,27 @@ for (const caseId of CASE_IDS) {
       expectStatus(before, 200);
       const beforeState = await auth03Snapshot(f);
       const resolveBody = { code: body.code };
+      const assertDeniedBff = async (response, status, label, errorCode) => {
+        expectStatus(response, status, errorCode);
+        for (const field of [
+          'tenantId', 'eventId', 'ticketTypeId', 'sourceId', 'resolveToken',
+        ]) {
+          assert.equal(response.body[field], undefined, `${label} leaked ${field}`);
+        }
+        const responseJson = JSON.stringify(response.body);
+        assert.equal(
+          [body.code, f.tenantId, f.eventId, 'resolveToken'].some((value) =>
+            responseJson.includes(value),
+          ),
+          false,
+          `${label} leaked code or target`,
+        );
+        assert.deepEqual(
+          await auth03Snapshot(f),
+          beforeState,
+          `${label} must not mutate redeem state`,
+        );
+      };
       expectStatus(
         await request(ctx, 'POST', '/redemptions/resolve', null, resolveBody),
         401,
@@ -2543,6 +2564,35 @@ for (const caseId of CASE_IDS) {
       }
       const suffix = required(process.env.E2E_HOST_SUFFIX, 'E2E_HOST_SUFFIX');
       const trust = required(process.env.E2E_TLS_SPKI, 'E2E_TLS_SPKI');
+      const webOrigin = new URL(ctx.web).origin;
+      const bffResolveUrl = new URL('/api/bff/redeem/resolve', ctx.web);
+      const bffIssueUrl = new URL('/api/bff/redeem', ctx.web);
+      const guestCsrf = randomUUID();
+      const guestHeaders = {
+        'content-type': 'application/json',
+        Origin: webOrigin,
+        Cookie: `${WEB_CSRF_COOKIE}=${guestCsrf}`,
+        [WEB_CSRF_HEADER]: guestCsrf,
+      };
+      await assertDeniedBff(
+        await bffJson(bffResolveUrl, {
+          method: 'POST',
+          headers: guestHeaders,
+          body: JSON.stringify(resolveBody),
+        }),
+        401, 'guest BFF resolve',
+      );
+      await assertDeniedBff(
+        await bffJson(bffIssueUrl, {
+          method: 'POST',
+          headers: guestHeaders,
+          body: JSON.stringify({
+            tenantId: f.tenantId, eventId: f.eventId, ...body,
+            idempotencyKey: randomUUID(),
+          }),
+        }),
+        401, 'guest BFF issue',
+      );
       const browser = await chromium.launch({
         headless: true,
         args: [
@@ -2564,25 +2614,30 @@ for (const caseId of CASE_IDS) {
           ({ name }) => name === WEB_CSRF_COOKIE,
         )?.value;
         assert.ok(csrf, 'unverified Web session must include CSRF cookie');
-        const bffDenied = await bffJson(
-          new URL('/api/bff/redeem/resolve', ctx.web),
-          {
+        const unverifiedHeaders = {
+          'content-type': 'application/json',
+          Origin: webOrigin,
+          Cookie: cookieHeader(cookies),
+          [WEB_CSRF_HEADER]: csrf,
+        };
+        await assertDeniedBff(
+          await bffJson(bffResolveUrl, {
             method: 'POST',
-            headers: {
-              'content-type': 'application/json',
-              Origin: new URL(ctx.web).origin,
-              Cookie: cookieHeader(cookies),
-              [WEB_CSRF_HEADER]: csrf,
-            },
+            headers: unverifiedHeaders,
             body: JSON.stringify(resolveBody),
-          },
+          }),
+          403, 'unverified BFF resolve', 'EMAIL_NOT_VERIFIED',
         );
-        expectStatus(bffDenied, 403, 'EMAIL_NOT_VERIFIED');
-        assert.equal(bffDenied.body.resolveToken, undefined);
-        assert.equal(
-          JSON.stringify(bffDenied.body).includes(body.code),
-          false,
-          'BFF leaked code',
+        await assertDeniedBff(
+          await bffJson(bffIssueUrl, {
+            method: 'POST',
+            headers: unverifiedHeaders,
+            body: JSON.stringify({
+              tenantId: f.tenantId, eventId: f.eventId, ...body,
+              idempotencyKey: randomUUID(),
+            }),
+          }),
+          403, 'unverified BFF issue', 'EMAIL_NOT_VERIFIED',
         );
       } finally {
         await browser.close();
