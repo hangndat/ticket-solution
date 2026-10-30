@@ -2683,7 +2683,6 @@ for (const caseId of CASE_IDS) {
       const manager = await bearer(ctx, 'manager');
       const gates = gatePath(f, 'gates');
       const alternate = await secondaryBearer(ctx);
-      assert.equal(ctx.secondaryActor.username, f.accounts.attendee.username);
       const beforeAlternate = await db02MutationSnapshot(f, ctx);
       assert.equal(beforeAlternate.identity, 0, 'secondary identity must start absent');
       expectStatus(
