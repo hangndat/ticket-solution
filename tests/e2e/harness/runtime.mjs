@@ -199,6 +199,13 @@ function realmConfig(state, caseIds) {
   for (const id of caseIds) {
     state.caseAccounts[id] = {};
     addAccounts(id.toLowerCase(), state.caseAccounts[id]);
+    if (id === 'DB-04') {
+      const attendee = state.caseAccounts[id].attendee;
+      attendee.username = `first.last+label.db04.${state.id}@example.test`;
+      const realmUser = realm.users.find((user) => user.id === attendee.subject);
+      realmUser.username = attendee.username;
+      realmUser.email = attendee.username;
+    }
     if (id === 'SEC-05') {
       const formulaEmail = `=formula-${state.id}@example.test`;
       const attendee = state.caseAccounts[id].attendee;

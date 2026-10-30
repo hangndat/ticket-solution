@@ -16,6 +16,7 @@ const cases = [
   'DB-01',
   'DB-02',
   'DB-03',
+  'DB-04',
   'WEB-04',
 ];
 const args = process.argv.slice(2);
