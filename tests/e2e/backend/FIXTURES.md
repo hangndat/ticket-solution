@@ -4,7 +4,7 @@
 
 `entry.mjs --case <ID> --suite D` chọn assertion DB từ các suite hiện có. Các test này tự chạy `postgres:18.1-alpine` trên cổng loopback ngẫu nhiên, tạo database/role riêng, migrate bằng `migration_owner`, rồi gọi domain bằng login thuộc `ticket_runtime` không `BYPASSRLS`; container được xóa trong `finally`. Chúng dùng identity/email `example.test` tổng hợp, không dùng manifest hay database dev. `retention-db.test.cjs` dùng `pg-fixture.cjs` cùng cách cô lập, namespace container `ticket-e2e-backend-*`, và IdP adapter lỗi/thành công có kiểm soát chỉ cho lớp D.
 
-`U` là unit hoặc `app.inject` không có JWT Keycloak thật. Không tính `U` thay cho H; `--suite H` hiện không có selector đủ contract. `--suite R` cũng chưa có selector process thật. `entry.mjs --list` cho biết test nào đang được chọn và lý do coverage còn blocked. `--no-build` chỉ dùng sau khi đã build current checkout của `@ticket/contracts`, `@ticket/backend` và package cần thiết.
+`U` là unit hoặc `app.inject` không có JWT Keycloak thật. Không tính `U` thay cho H; `--suite H` hiện không có selector đủ contract. `--suite R` chạy worker process + Mailpit/Redis cô lập trong `tests/e2e/backend/*.test.cjs` (JOB-01, DB-09 reissue). `entry.mjs --list` cho biết test nào đang được chọn và lý do coverage còn blocked. `--no-build` chỉ dùng sau khi đã build current checkout của `@ticket/contracts`, `@ticket/backend` và package cần thiết.
 
 ## Manifest cần để mở H/R
 
