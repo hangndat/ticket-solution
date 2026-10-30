@@ -146,12 +146,22 @@ test('[AUTH-01] staff (owner/manager) OIDC login bounces to Portal with its own 
       );
       expect(subject.status()).toBe(200);
       const subjectBody = (await subject.json()) as { userId?: string };
-      expect(subjectBody.userId).toBe(actor.userId);
+      expect(subjectBody.userId).toBeTruthy();
 
       // Host-only cookies: no `Domain=.vemoki.com`-style attribute on either
       // surface's jar (ADR-20 §3.2).
       const portalCookies = await context.cookies(manifest.origins.portal);
       const webCookies = await context.cookies(manifest.origins.web);
+      const portalIdToken = portalCookies.find(
+        (cookie) => cookie.name === 'oidc_id_token',
+      );
+      expect(portalIdToken).toBeTruthy();
+      const idPayload = decodeJwtPayload(portalIdToken!.value);
+      // The Portal subject is the real Keycloak `sub` from its own token
+      // exchange — bind it to the real `oidc_id_token` claim for this run's
+      // actor, not to the Web-side Postgres `userId` (a distinct identifier).
+      expect(subjectBody.userId).toBe(idPayload.sub);
+      expect(idPayload.email).toBe(actor.username);
       expect(
         portalCookies.some(
           (cookie) => cookie.name === 'oidc_access_token' && cookie.httpOnly,
