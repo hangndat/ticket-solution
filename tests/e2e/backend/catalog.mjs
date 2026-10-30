@@ -185,7 +185,7 @@ export const notes = {
   'DB-01':
     'D RLS/pool/owner/rollback-exception đủ; H worker/export cross-tenant đã mở (live.test.mjs#[DB-01]).',
   'DB-02':
-    'D membership/revoke/identity đủ; H claim cũ đã mở, issuer+subject qua Keycloak thật vẫn blocked (cần realm thứ hai).',
+    'D membership/revoke/identity đủ; H claim cũ và token realm thứ hai bị từ chối 401, không tạo identity/session/business mutation.',
   'DB-03':
     'D quota/idempotency đủ; H cùng request retry, multi-actor race và audit/outbox matrix đã mở (live.test.mjs#[DB-03]).',
   'DB-04': 'D unverified; thiếu canonicalization IdP và tranh per-email limit.',
