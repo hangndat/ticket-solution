@@ -1160,6 +1160,13 @@ async function web04AssertRejected(
      WHERE tenant_id = $1::uuid AND event_id = $2::uuid`,
     [tenantId, eventId],
   );
+  const beforeOutbox = await web04Query(
+    f,
+    tenantId,
+    `SELECT id, type, aggregate_id FROM outbox
+     WHERE tenant_id = $1::uuid AND event_id = $2::uuid ORDER BY id`,
+    [tenantId, eventId],
+  );
   const beforeQuota = await web04Query(
     f,
     tenantId,
@@ -1206,6 +1213,18 @@ async function web04AssertRejected(
     afterRequestCount[0].n,
     beforeRequestCount[0].n,
     `${label}: must not create redemption_requests`,
+  );
+  const afterOutbox = await web04Query(
+    f,
+    tenantId,
+    `SELECT id, type, aggregate_id FROM outbox
+     WHERE tenant_id = $1::uuid AND event_id = $2::uuid ORDER BY id`,
+    [tenantId, eventId],
+  );
+  assert.deepEqual(
+    afterOutbox,
+    beforeOutbox,
+    `${label}: outbox must not change`,
   );
   const afterQuota = await web04Query(
     f,
