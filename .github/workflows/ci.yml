@@ -253,7 +253,7 @@ jobs:
           - shard: membership-report
             files: test/membership.test.cjs test/reporting.test.cjs test/db02-identity-issuer-subject.test.cjs
           - shard: issue-gate
-            files: test/issue.test.cjs test/gate.test.cjs
+            files: test/issue.test.cjs test/gate.test.cjs test/db04-db05-acceptance.test.cjs
           - shard: account-deletion
             files: test/platform.test.cjs test/account-session-revoke.test.cjs test/account-ack-session-revoke.test.cjs test/account-idp-erasure.test.cjs
           - shard: approval-config-lifecycle
