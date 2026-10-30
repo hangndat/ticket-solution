@@ -121,7 +121,7 @@
     "caseId": "WEB-05",
     "tests": ["H:tests/e2e/http/live.test.mjs#[WEB-05]"],
     "layers": ["H"],
-    "status": "implemented",
-    "reason": "Run mvuurx3f-d9f0ce PASS: FORM_INVALID email; FORM_VERSION_STALE/TERMS_VERSION_STALE; owner publish config v2 trong run, redeem v1 bị từ chối trên secondCode; redeem v2 lưu consent PG. Đối soát web04AssertRejected không ticket/code mutation."
+    "status": "blocked",
+    "reason": "James F01/F02: ma trận HTTP độc lập + web04AssertRejected đối soát redemption_requests/quota; v1 redeem hash khớp seed trước publish v2; v2 redeem hash khớp web05-published-config. Chờ clean-SHA run + DoD PASS."
   }
 ]
