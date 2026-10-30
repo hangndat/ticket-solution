@@ -94,7 +94,7 @@
     "tests": ["H:tests/e2e/http/live.test.mjs#[DB-03]"],
     "layers": ["H"],
     "status": "implemented",
-    "reason": "PASS D/H: D issue/approval PostgreSQL thật chứng minh code CONSUMED đúng một lần, ticket/operation/quota/counter/audit/outbox nhất quán dưới race và replay. H run mvue72wb-898dce PASS trên SHA a19f1488 sạch: cùng key replay trả ticket/operation cũ; khác payload 409; hai retry đồng thời hội tụ một ticket; hai actor tranh một code chỉ một 201/ACTIVE và một 409/CODE_CONSUMED; quota +1; mỗi ticket có một audit ticket.issued và một outbox TicketIssued."
+    "reason": "PASS D/H: D issue/approval PostgreSQL thật chứng minh code CONSUMED đúng một lần, ticket/operation/quota/counter/audit/outbox nhất quán dưới race và replay, gồm outbox của nhánh hai actor tranh mã. H run mvue72wb-898dce PASS trên SHA a19f1488 sạch: cùng key replay trả ticket/operation cũ; khác payload 409; hai retry đồng thời hội tụ một ticket; hai actor tranh một code chỉ một 201/ACTIVE và một 409/CODE_CONSUMED; quota +1, audit ticket.issued đúng một row cho winner. H đối soát outbox TicketIssued ở nhánh replay tuần tự và hai retry cùng key."
   },
   {
     "caseId": "WEB-04",
