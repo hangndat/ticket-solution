@@ -1,5 +1,11 @@
 # Báo cáo Web E2E — 28/10/2026
 
+## WEB-10 fault/recovery B+H — 30/10/2026
+
+- Trước: `coverage.json` ghi `implemented` theo code F03/F05 nhưng chưa có exact-SHA run trên base branch. Sau: đối chiếu PLAN §5.2 P0 B/H với sáu test `fault.spec.ts › [WEB-10]` — catalog/detail/wallet/redeem, fault control `runtime.faultControlPath`, không sửa `apps/web`.
+- Hành vi: detail/catalog/wallet phân biệt unreachable vs empty thật vs recovery; redeem timeout không vé giả; unavailable không commit; lostResponse poll success; delayed commit + operation404 + retry cùng key, PG một vé/operation. Locale VI, actor attendee WEB-10, desktop (harness mặc định).
+- Checkout sạch SHA `85ddecddb8f2128bdcbed60b94c56fc416fc89af` (`evidenceExactShaEligible: true`): `node tests/e2e/harness/run.mjs e2e --case=WEB-10` → run `mvux2lwy-e9069f` PASS 6/6 browser; artifact `tests/e2e/.artifacts/mvux2lwy-e9069f/summary.json`. `pnpm test:e2e:guards` 16/16. Giới hạn: không assert cold-offline; MANUAL pending thuộc WEB-06.
+
 ## WEB-07 idempotent redemption B+H — 30/10/2026
 
 - `redeem.spec.ts › [WEB-07]`: double-click một vé; mất response sau commit BFF thật rồi UI poll tới success; reload/resubmit cùng mã → panel `used`, wallet không tăng; cùng `idempotencyKey` đổi `answers` → BFF `409` `IDEMPOTENCY_CONFLICT`; hai POST BFF đồng thời cùng mã, key khác → `201`/`409` `CODE_CONSUMED`. Mỗi nhánh đối soát PostgreSQL qua `assertIssuedExactlyOnce` (một request ISSUED, ticket ACTIVE, một operation COMPLETED, một TicketIssued outbox, quota +1/bucket); race không có barrier lock — giới hạn ghi trong `coverage.json`.
@@ -124,7 +130,7 @@ Coordinator báo smoke `mvs7d4db-259457`: WEB-02/04/07/08 PASS, AUTH-01 FAIL vì
 1. Harness chưa cung cấp `E2E_MANIFEST`, TLS/run resources/seed, nên chưa có kết quả chạy UI, API hoặc worker. Fixture keys đầy đủ tại `FIXTURES.md`; đặc biệt WEB-13 cần `manualEventId`, `manualEventSlug`, `manualTicketTypeId`, `manualTicketTypeLabel`, hai CSV và account riêng. AUTH-08 phải dùng actor fresh vì request có thể revoke session.
 2. Source `apps/web/src/oidc/authorize.ts` tạo `state` và PKCE nhưng không đặt `nonce`; AUTH-01 assert nonce theo PLAN. Smoke `mvs7d4db-259457` xác nhận `nonce` null, là **product FAIL**. Không sửa product trong scope này.
 3. Source `apps/web/app/(consumer)/redeem/page.tsx` tạo `loginHref('/redeem')` khi URL có `tenantSlug/eventSlug`, nên context từ trang event có nguy cơ mất sau login. WEB-03 assert giữ slug theo PLAN; cần chạy để xác nhận.
-4. WEB-10 cần fault control scoped theo run cho public API, wallet và redeem; không thay bằng route mock. AUTH-05/06/08 và WEB-04/05/06/07/09/12/13 còn những negative, recovery hoặc DB/operation/outbox assertions ghi chi tiết trong `coverage.json`. Không đánh dấu nhóm đó complete.
+4. WEB-10 fault B+H đã covered tại SHA `85ddecddb8f2` (run `mvux2lwy-e9069f`, 6/6); vẫn không cold-offline/PWA. AUTH-05/06/08 và WEB-04/05/06/12 còn AC phụ hoặc blocker ghi trong `coverage.json`.
 5. WEB-13 Portal selectors dựa trên `app/t/[tenantId]/e/[eventId]/guests/page.tsx` và `src/ops/panels/import-invitations-panel.tsx` hiện hành; phải revalidate sau khi harness provision dữ liệu. Import job và Mailpit được poll theo kết quả thật; không suy từ trạng thái SMTP `ACCEPTED` là người nhận đã đọc.
 6. AUTH-08 hiện assert consent disable/enable, đúng một browser POST, HTTP ACK `200/201/202` với `requestId` và `REQUESTED`, rồi UI ACK không hứa xóa ngay. Nếu API gate từ chối sau request, test sẽ fail tại HTTP status; không chuyển sang success giả. Thiếu DB one-open-request và revoke/job evidence.
 7. WEB-01 theo PRD M03: private/unlisted không vào catalog nhưng direct link phải hiển thị event đã publish. Source `loadPublishedEventDetail` hiện chỉ nhận `PUBLIC`, nên assertion mới có thể FAIL sản phẩm; không sửa product trong slice test.
