@@ -104,6 +104,13 @@
     "reason": "Keycloak/HTTP fixture: guest 401, unverified 403 và DB snapshot không đổi; IdP email có dot/plus giữ nguyên; ba mã cùng owner tranh limit=1, chỉ một vé và code/quota/counter/request/operation/audit/outbox nhất quán. Reviewer độc lập cần nghiệm thu trên SHA cuối."
   },
   {
+    "caseId": "DB-09",
+    "tests": ["H:tests/e2e/http/live.test.mjs#[DB-09]"],
+    "layers": ["H"],
+    "status": "blocked",
+    "reason": "Partial H PASS run mvum30ad-4c7c2e: PATCH owner reassignment refused (404) on CS `/tenants/.../tickets/:id`, attendee `/me/tickets/:id`, gate `/gate/events/:e/tickets/:id` with authorized cs/scanner; ticket_runtime snapshot unchanged for owner/state, credential versions, code CONSUMED+allocation, audit/outbox counts. Full DB-09 vẫn BLOCKED (GATE-03 QR credential validation, broader lifecycle H)."
+  },
+  {
     "caseId": "WEB-04",
     "tests": ["H:tests/e2e/http/live.test.mjs#[WEB-04]"],
     "layers": ["H"],
