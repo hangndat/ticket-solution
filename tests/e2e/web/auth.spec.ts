@@ -10,7 +10,14 @@ import {
   webUrl,
   fillPublishedForm,
   openCodeConfirmation,
+  decodeJwtPayload,
+  mintCrossClientAccessToken,
 } from './helpers';
+
+type WebRuntime = {
+  httpPlatformClientId?: string;
+  httpPlatformClientSecret?: string;
+};
 
 test('[AUTH-01] attendee OIDC callback and BFF identity', async ({ page }) => {
   const manifest = loadManifest();
@@ -43,6 +50,39 @@ test('[AUTH-01] attendee OIDC callback and BFF identity', async ({ page }) => {
   ).toBe(true);
 });
 
+test('[AUTH-01] disallowed return path falls back to the default instead of an open redirect', async ({
+  page,
+}) => {
+  const manifest = loadManifest();
+  fixtureFor(manifest, 'AUTH-01');
+  const actor = accountFor(manifest, 'AUTH-01', 'attendee');
+  await login(page, manifest, actor, 'https://evil.example/steal?x=1');
+  const landed = new URL(page.url());
+  expect(landed.origin).toBe(new URL(manifest.origins.web).origin);
+  expect(landed.pathname).toBe('/');
+  await expect(page.getByTestId('wallet-ready')).toHaveCount(0);
+});
+
+test('[AUTH-01] post-login navigation is terminal and does not bounce back to login', async ({
+  page,
+}) => {
+  const manifest = loadManifest();
+  fixtureFor(manifest, 'AUTH-01');
+  const actor = accountFor(manifest, 'AUTH-01', 'attendee');
+  await login(page, manifest, actor, '/wallet');
+  await expect(page.getByTestId('wallet-ready')).toBeVisible();
+  await page.goto(webUrl(manifest, '/wallet'));
+  await expect(page).toHaveURL(
+    new RegExp(
+      `^${manifest.origins.web.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/wallet`,
+    ),
+  );
+  await expect(page.getByTestId('wallet-ready')).toBeVisible();
+  expect(
+    (await page.request.get(webUrl(manifest, '/api/bff/me'))).status(),
+  ).toBe(200);
+});
+
 test('[AUTH-02] wrong password and callback without state do not create a session', async ({
   page,
 }) => {
@@ -68,6 +108,162 @@ test('[AUTH-02] wrong password and callback without state do not create a sessio
   expect(
     (await page.request.get(webUrl(manifest, '/api/bff/me'))).status(),
   ).toBe(401);
+});
+
+test('[AUTH-02] mismatched callback state is rejected locally and never reaches the IdP token exchange', async ({
+  page,
+}) => {
+  const manifest = loadManifest();
+  fixtureFor(manifest, 'AUTH-02');
+  const start = await page.request.get(
+    webUrl(manifest, '/api/auth/login?return=%2Fwallet'),
+    { maxRedirects: 0 },
+  );
+  expect([302, 307]).toContain(start.status());
+  const callback = await page.request.get(
+    webUrl(manifest, '/api/auth/callback?code=irrelevant&state=tampered-state'),
+    { maxRedirects: 0 },
+  );
+  expect([302, 307]).toContain(callback.status());
+  const location = new URL(
+    callback.headers()['location'],
+    manifest.origins.web,
+  );
+  expect(location.pathname).toBe('/auth');
+  expect(location.searchParams.get('error')).toBe('invalid_state');
+  expect(
+    (await page.request.get(webUrl(manifest, '/api/bff/me'))).status(),
+  ).toBe(401);
+  const cookies = await page.context().cookies(manifest.origins.web);
+  expect(cookies.some((cookie) => cookie.name === 'oidc_access_token')).toBe(
+    false,
+  );
+});
+
+test('[AUTH-02] IdP-rejected authorization code is a distinct upstream error, not the local state/validation error', async ({
+  page,
+}) => {
+  const manifest = loadManifest();
+  fixtureFor(manifest, 'AUTH-02');
+  const start = await page.request.get(
+    webUrl(manifest, '/api/auth/login?return=%2Fwallet'),
+    { maxRedirects: 0 },
+  );
+  expect([302, 307]).toContain(start.status());
+  const redirect = new URL(start.headers()['location']);
+  const state = redirect.searchParams.get('state');
+  expect(state).toBeTruthy();
+  const callback = await page.request.get(
+    webUrl(
+      manifest,
+      `/api/auth/callback?code=not-a-real-authorization-code&state=${encodeURIComponent(state!)}`,
+    ),
+    { maxRedirects: 0 },
+  );
+  expect([302, 307]).toContain(callback.status());
+  const location = new URL(
+    callback.headers()['location'],
+    manifest.origins.web,
+  );
+  expect(location.pathname).toBe('/auth');
+  // Keycloak rejects an unknown/garbage authorization_code as invalid_grant —
+  // an IdP-reported (upstream) rejection, distinct from the local
+  // invalid_state validation failure above.
+  expect(location.searchParams.get('error')).not.toBe('invalid_state');
+  expect(location.searchParams.get('error')).toBeTruthy();
+  expect(
+    (await page.request.get(webUrl(manifest, '/api/bff/me'))).status(),
+  ).toBe(401);
+});
+
+test('[AUTH-02] a correctly-signed token for the wrong audience does not grant a valid BFF session', async ({
+  page,
+}) => {
+  const manifest = loadManifest();
+  fixtureFor(manifest, 'AUTH-02');
+  const runtime = manifest.runtime as WebRuntime | undefined;
+  const clientId = runtime?.httpPlatformClientId;
+  const clientSecret = runtime?.httpPlatformClientSecret;
+  if (!clientId || !clientSecret) {
+    throw new Error(
+      'BLOCKED: AUTH-02 wrong-audience cần runtime.httpPlatformClientId/Secret từ harness',
+    );
+  }
+  const operator = manifest.accounts.operator;
+  const wrongAudienceToken = await mintCrossClientAccessToken(
+    manifest,
+    operator,
+    clientId,
+    clientSecret,
+  );
+  const payload = decodeJwtPayload(wrongAudienceToken);
+  const audiences = Array.isArray(payload.aud) ? payload.aud : [payload.aud];
+  expect(audiences).not.toContain('ticket-api');
+  const sub = String(payload.sub ?? '');
+  expect(sub).toBeTruthy();
+
+  await page.goto(webUrl(manifest, '/'));
+  await page.context().addCookies([
+    {
+      name: 'oidc_access_token',
+      value: wrongAudienceToken,
+      url: manifest.origins.web,
+      httpOnly: true,
+      sameSite: 'Lax',
+    },
+    {
+      name: 'web_oidc_sub',
+      value: sub,
+      url: manifest.origins.web,
+      httpOnly: true,
+      sameSite: 'Lax',
+    },
+  ]);
+  const me = await page.request.get(webUrl(manifest, '/api/bff/me'));
+  expect(me.status()).toBe(401);
+  const body = JSON.stringify(await me.json().catch(() => ({})));
+  expect(body).not.toContain(operator.userId ?? '\u0000no-user-id');
+  const cookiesAfter = await page.context().cookies(manifest.origins.web);
+  expect(
+    cookiesAfter.some((cookie) => cookie.name === 'oidc_access_token'),
+  ).toBe(false);
+});
+
+test('[AUTH-02] an expired access token with no refresh token fails closed instead of granting a session', async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  const base = loadManifest();
+  if (!base.origins.shortWeb)
+    throw new Error('BLOCKED: AUTH-02 short-lived isolated Web missing');
+  const manifest = {
+    ...base,
+    origins: { ...base.origins, web: base.origins.shortWeb },
+  };
+  fixtureFor(manifest, 'AUTH-02');
+  await login(page, manifest, accountFor(manifest, 'AUTH-02', 'attendee'));
+  const stale = (await page.context().cookies(manifest.origins.web)).find(
+    (cookie) => cookie.name === 'oidc_access_token',
+  );
+  expect(stale).toBeTruthy();
+  const payload = decodeJwtPayload(stale!.value);
+  const exp = Number(payload.exp);
+  expect(Number.isFinite(exp)).toBe(true);
+  // Drop the refresh cookie so expiry cannot be silently recovered; the BFF
+  // must reject the stale token rather than treat it as still valid.
+  await page.context().clearCookies({
+    name: 'oidc_refresh_token',
+    domain: new URL(manifest.origins.web).hostname,
+  });
+  const delayMs = Math.max(0, exp * 1000 - Date.now() + 1200);
+  await new Promise((resolve) => setTimeout(resolve, delayMs));
+  expect(Date.now()).toBeGreaterThan(exp * 1000);
+  const me = await page.request.get(webUrl(manifest, '/api/bff/me'));
+  expect(me.status()).toBe(401);
+  const cookiesAfter = await page.context().cookies(manifest.origins.web);
+  expect(
+    cookiesAfter.some((cookie) => cookie.name === 'oidc_access_token'),
+  ).toBe(false);
 });
 
 test('[AUTH-03] guest is gated and unverified identity cannot issue a ticket', async ({
@@ -276,8 +472,7 @@ test('[AUTH-06] redeem UI does not claim success after session capability is cle
   const code = fixture.secondCode;
   if (!code) throw new Error('BLOCKED: AUTH-06 secondCode');
   const answers = fixture.data?.answers as
-    | Record<string, string | boolean>
-    | undefined;
+    Record<string, string | boolean> | undefined;
   await login(page, manifest, accountFor(manifest, 'AUTH-06', 'attendee'));
   await openCodeConfirmation(page, manifest, code);
   await fillPublishedForm(page, answers);
