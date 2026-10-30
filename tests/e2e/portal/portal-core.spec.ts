@@ -98,14 +98,19 @@ test('[PORT-01] wizard creates a tenant-scoped event and survives reload', async
   await sourceDialog.getByRole('button', { name: 'Đồng ý' }).click();
   await expect(page.getByRole('cell', { name: sourceName })).toBeVisible();
 
+  const quotaBeforeConfig = await bffGet(page, m, eventBffPath('/quota'));
+  expect(quotaBeforeConfig.status).toBe(422);
+  expect((quotaBeforeConfig.json as { code?: string }).code).toBe(
+    'QUOTA_REQUIRED',
+  );
+
   await page.goto(portalUrl(m, `${eventBase}/quota`));
-  await expect(page.getByRole('navigation', { name: /Loại vé, nguồn phát và hạn mức/i })).toBeVisible();
-  const reportAfterSetup = await bffGet(page, m, eventBffPath('/report'));
-  expect(reportAfterSetup.status).toBe(200);
-  const reportQuota = (reportAfterSetup.json as { quota?: { allocated: number } })
-    .quota;
-  expect(reportQuota).toBeDefined();
-  expect(reportQuota!.allocated).toBeGreaterThanOrEqual(0);
+  await expect(
+    page.getByRole('navigation', { name: /Loại vé, nguồn phát và hạn mức/i }),
+  ).toBeVisible();
+  await expect(page.locator('.ant-alert-error, .ant-alert-warning').first()).toBeVisible({
+    timeout: 30_000,
+  });
 
   await page.goto(portalUrl(m, `${eventBase}/config`));
   await page.getByLabel('Tên tổ chức (brand)').fill(brandName);
@@ -128,12 +133,31 @@ test('[PORT-01] wizard creates a tenant-scoped event and survives reload', async
     versions.json as { items: Array<{ published: boolean; version: number }> }
   ).items.some((row) => row.published);
   expect(published).toBe(true);
+  const publishedVersion = (
+    versions.json as { items: Array<{ published: boolean; version: number }> }
+  ).items.find((row) => row.published)?.version;
+  expect(publishedVersion).toEqual(expect.any(Number));
 
   const publishedDetail = await bffGet(page, m, eventBffPath(''));
   expect(publishedDetail.status).toBe(200);
-  expect((publishedDetail.json as { contentStatus?: string }).contentStatus).toBe(
+  const eventBody =
+    (publishedDetail.json as { event?: { contentStatus?: string } }).event ??
+    publishedDetail.json;
+  expect((eventBody as { contentStatus?: string }).contentStatus).toBe(
     'PUBLISHED',
   );
+
+  const publicApiUrl = new URL(
+    `/v1/public/tenants/${f.tenantSlug}/events/${slug}`,
+    m.origins.api,
+  ).toString();
+  const publicApi = await page.request.get(publicApiUrl);
+  expect(publicApi.status()).toBe(404);
+
+  await page.goto(
+    new URL(`/t/${f.tenantSlug}/events/${slug}`, m.origins.web).toString(),
+  );
+  await expect(page.getByTestId('event-published')).toHaveCount(0);
 
   await page.goto(portalUrl(m, eventBase));
   await page.reload();

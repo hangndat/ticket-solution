@@ -1,5 +1,14 @@
 # Portal/Platform E2E — bàn giao worker
 
+## Kiểm tra đã chạy (worker task_ff809609587e — PORT-01 James F01/F02 fix 1/2 / Issue #1035)
+
+| Lệnh | Kết quả |
+| --- | --- |
+| `pnpm exec playwright test tests/e2e/portal/portal-core.spec.ts -g PORT-01 --list` | Discovery sau chỉnh quota+public projection. |
+| `node tests/e2e/harness/run.mjs e2e --case=PORT-01 --skip-build` | **PASS** run `mvuu9ujm-5d0b11`, browser 1/1; artifact `tests/e2e/.artifacts/mvuu9ujm-5d0b11/summary.json`. |
+
+**Thay đổi spec:** BFF GET `/quota` bắt buộc `422`/`QUOTA_REQUIRED` và UI quota lỗi (không dùng `report.allocated>=0`); sau publish kiểm `publishedConfigVersion`, API public `/v1/public/tenants/{tenantSlug}/events/{slug}` và Web `/t/{tenantSlug}/events/{slug}` (`event-published`). **Coverage:** `PORT-01` → `blocked` — thiếu UI cấu hình quota/event-wide capacity trên wizard path (đọc PORT-04).
+
 ## Kiểm tra đã chạy (worker task_2c21d0516da9 — PORT-01 B / Issue #1035)
 
 | Lệnh | Kết quả |

@@ -3,8 +3,8 @@
     "caseId": "PORT-01",
     "tests": ["portal-core.spec.ts [PORT-01]"],
     "layers": ["B"],
-    "status": "covered",
-    "reason": "PORT-01 B PASS run mvutztg6-81c23b (1/1 browser) on clean SHA affd7b5e: wizard create PUBLIC event, UI ticket type + AUTO source, report quota read, config save + publish, contentStatus PUBLISHED, reload persistence, tenant events list single eventId (no duplicate). Gap: GET /quota BFF 422 on fresh event (quota page nav only); consumer Web /t/{tenant}/events/{slug} 404 despite staff PUBLISHED — public projection not in PORT-01 scope."
+    "status": "blocked",
+    "reason": "James DoD F01/F02: wizard+type+source+config publish+reload+tenant list proven; GET /quota QUOTA_REQUIRED (422) + quota UI error — no Portal UI to set event quota on wizard path (read-only page). Public GET /v1/public/tenants/{tenantSlug}/events/{eventSlug} and Web /t/... still 404 after staff contentStatus PUBLISHED (correct slug route, not wrong URL). Full PORT-01 AC blocked pending quota config surface + public projection sync (PORT-02/04/product)."
   },
   {
     "caseId": "PORT-02",
