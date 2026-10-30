@@ -744,13 +744,30 @@ test('[AUTH-07] another attendee cannot see prior actor ticket after login switc
       manifest,
       `/t/${f.tenantSlug}/tickets/${f.ticketId}?tenantId=${f.tenantId}`,
     );
-    await page.goto(detail);
+    const firstDocument = await page.goto(detail);
+    expect(firstDocument?.headers()['cache-control']).toMatch(/no-store/i);
     await expect(page.getByTestId('owner-ticket-ready')).toBeVisible();
     const response = await page.request.get(
       webUrl(manifest, `/api/bff/tickets/${f.ticketId}?tenantId=${f.tenantId}`),
     );
     expect(response.status()).toBe(200);
     expect(response.headers()['cache-control']).toMatch(/no-store/i);
+    const ticketListUrl = webUrl(
+      manifest,
+      `/api/bff/tickets?tenantId=${f.tenantId}`,
+    );
+    const oldList = await page.request.get(ticketListUrl);
+    expect(oldList.status()).toBe(200);
+    expect(oldList.headers()['cache-control']).toMatch(/no-store/i);
+    expect((await oldList.json()).tickets).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ ticketId: f.ticketId }),
+      ]),
+    );
+    const oldTab = await context.newPage();
+    await oldTab.goto(detail);
+    await expect(oldTab.getByTestId('owner-ticket-ready')).toBeVisible();
+    await oldTab.goto(webUrl(manifest, '/'));
     // Hold a real refresh response until logout has cleared the callback-owned
     // subject anchor. Its late Set-Cookie must not resurrect the old actor.
     let releaseRefresh!: () => void;
@@ -841,7 +858,105 @@ test('[AUTH-07] another attendee cannot see prior actor ticket after login switc
     );
     expect([403, 404]).toContain(forbidden.status());
     expect(forbidden.headers()['cache-control']).toMatch(/no-store/i);
+    const newList = await page.request.get(ticketListUrl);
+    expect(newList.status()).toBe(200);
+    expect(newList.headers()['cache-control']).toMatch(/no-store/i);
+    expect((await newList.json()).tickets).toEqual([]);
+    await page.goto(webUrl(manifest, '/wallet'));
+    await expect(page.getByTestId(`wallet-ticket-${f.ticketId}`)).toHaveCount(
+      0,
+    );
+    await oldTab.goBack();
+    await expect(oldTab.getByTestId('owner-ticket-ready')).toHaveCount(0);
+    await expect(
+      oldTab
+        .getByTestId('owner-ticket-forbidden')
+        .or(oldTab.getByTestId('owner-ticket-missing')),
+    ).toBeVisible();
+    await oldTab.reload();
+    await expect(oldTab.getByTestId('owner-ticket-ready')).toHaveCount(0);
+    const reopened = await context.newPage();
+    const reopenedDocument = await reopened.goto(detail);
+    expect(reopenedDocument?.headers()['cache-control']).toMatch(/no-store/i);
+    await expect(reopened.getByTestId('owner-ticket-ready')).toHaveCount(0);
   } finally {
+    await context.close();
+  }
+});
+
+test('[AUTH-07] an old ticket document response cannot render after an actor switch', async ({
+  browser,
+}) => {
+  test.fail(
+    true,
+    'AUTH-07 blocker: an already fetched A document renders after B signs in',
+  );
+  const manifest = loadManifest();
+  const fixture = fixtureFor(manifest, 'AUTH-07');
+  if (!fixture.ticketId) throw new Error('BLOCKED: AUTH-07 ticketId');
+  const detail = webUrl(
+    manifest,
+    `/t/${fixture.tenantSlug}/tickets/${fixture.ticketId}?tenantId=${fixture.tenantId}`,
+  );
+  const context = await browser.newContext();
+  let releaseOldResponse!: () => void;
+  let signalOldResponse!: () => void;
+  const released = new Promise<void>((resolve) => {
+    releaseOldResponse = resolve;
+  });
+  const fetched = new Promise<void>((resolve) => {
+    signalOldResponse = resolve;
+  });
+  try {
+    const switchPage = await context.newPage();
+    await login(
+      switchPage,
+      manifest,
+      accountFor(manifest, 'AUTH-07', 'attendee'),
+    );
+    const stalePage = await context.newPage();
+    await stalePage.goto(webUrl(manifest, '/'));
+    let oldResponseStatus = 0;
+    let oldResponseHasTicket = false;
+    await context.route(
+      (url) => url.toString() === detail,
+      async (route) => {
+        if (route.request().resourceType() !== 'document') {
+          await route.continue();
+          return;
+        }
+        const upstream = await route.fetch();
+        oldResponseStatus = upstream.status();
+        oldResponseHasTicket = (await upstream.text()).includes(
+          'owner-ticket-ready',
+        );
+        signalOldResponse();
+        await released;
+        await route.fulfill({ response: upstream });
+      },
+    );
+    const staleNavigation = stalePage.goto(detail);
+    await fetched;
+    expect(oldResponseStatus).toBe(200);
+    expect(oldResponseHasTicket).toBe(true);
+    await switchPage.goto(webUrl(manifest, '/api/auth/logout'));
+    await login(
+      switchPage,
+      manifest,
+      accountFor(manifest, 'AUTH-07', 'otherAttendee'),
+    );
+    const denied = await switchPage.request.get(
+      webUrl(
+        manifest,
+        `/api/bff/tickets/${fixture.ticketId}?tenantId=${fixture.tenantId}`,
+      ),
+    );
+    expect([403, 404]).toContain(denied.status());
+    releaseOldResponse();
+    await staleNavigation;
+    await expect(stalePage.getByTestId('owner-ticket-ready')).toHaveCount(0);
+  } finally {
+    releaseOldResponse();
     await context.close();
   }
 });

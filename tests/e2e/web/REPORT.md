@@ -1,5 +1,12 @@
 # Báo cáo Web E2E — 28/10/2026
 
+## AUTH-06/07 F04 — 30/10/2026
+
+- Baseline sạch `4a04a5920e57b9498b0f61d4de4937d0af6e2d38`, `pnpm test:e2e:smoke --case=AUTH-06,AUTH-07`: run `mvuh242s-c77639` PASS. `pnpm test:e2e:http --case=AUTH-06`: run `mvuh5it9-77aece` PASS, trên working tree chỉ có test mới (H code không đổi); HTTP dùng Keycloak thật và xác nhận revoke membership, event assignment, staff session chặn mutation sau đó, check-in success count không tăng.
+- AUTH-06 B: attendee không nhận Portal subject; Web redeem sau clear session không báo success, wallet không hiện vé. **BLOCKED full AC**: Portal gate/check-in UI false-success nằm ngoài slice Web; self-expiry Web UI chưa có shortWeb fixture cho AUTH-06. Không gán H PASS cho hai phần này.
+- AUTH-07 diagnostic `mvuh3r4k-fc5f15` FAIL: response HTML vé của actor A đã được fetch và giữ tại Playwright barrier; sau Keycloak login actor B cùng context và BFF ticket GET 403/404, thả response cũ vẫn render `owner-ticket-ready` của A. Đây là lỗi quan sát UI, không phải race chỉ suy từ cookie. Giữ reproducer với `test.fail` (vẫn chạy, CI kỳ vọng failure) và **BLOCKED full AC**; coordinator đã nhận gap và quyết định contract/ADR riêng trước Web runtime fix. Test còn đối soát back/reload/mở lại URL, wallet, HTTP list/detail và `no-store` cho HTML/BFF; admin data thuộc Portal ngoài scope.
+- Run thăm dò trên working tree dirty không là exact-SHA evidence. Cần targeted clean-SHA run sau commit; không dùng trạng thái PASS của runner khi `test.fail` để báo AUTH-07 PASS.
+
 ## AUTH-02 issuer phụ — 30/10/2026
 
 - Run thăm dò `mvue1iq9-ca9616` với `pnpm test:e2e:smoke --case=AUTH-01,AUTH-02,AUTH-05` PASS 12/12 browser. `summary.json` ghi `gitCommit=15ba60e722fe40882782f957766f65fb0d0e8f46`, `workingTreeDirty=true`, `evidenceExactShaEligible=false`; đây không phải evidence trên commit đó. Preflight xác minh token Keycloak thật của realm chính và realm phụ qua JWKS/issuer/audience tương ứng trước khi browser chạy.
