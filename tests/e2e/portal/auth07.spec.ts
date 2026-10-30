@@ -70,6 +70,7 @@ test('[AUTH-07] Portal drops held staff document and audit JSON after another st
     await documentReady;
 
     await switchPage.goto(portalUrl(manifest, '/api/auth/logout'));
+    await switchPage.goto(portalUrl(manifest, '/auth'));
     await login(switchPage, manifest, 'AUTH-07', 'scanner');
     const after = await bffGet(switchPage, manifest, '/api/auth/identity?surface=staff');
     expect(after.status).toBe(200);
@@ -140,6 +141,7 @@ test('[AUTH-07] late real Keycloak refresh cannot replace a same-sub callback to
 
     const switchPage = await context.newPage();
     await switchPage.goto(portalUrl(manifest, '/api/auth/logout'));
+    await switchPage.goto(portalUrl(manifest, '/auth'));
     await login(switchPage, manifest, 'AUTH-07', 'owner');
     const second = await bffGet(switchPage, manifest, '/api/auth/identity?surface=staff');
     expect(second.status).toBe(200);
