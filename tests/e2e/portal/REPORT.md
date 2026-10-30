@@ -4,8 +4,8 @@
 
 | Lệnh | Kết quả |
 | --- | --- |
-| `node tests/e2e/harness/run.mjs e2e --case=PORT-08` | *(chạy sau commit — ghi runId + artifact)* |
-| SHA | *(exact SHA sau run clean)* |
+| `node tests/e2e/harness/run.mjs e2e --case=PORT-08` | **PASS** run `mvut378v-220ec0`, browser 1/1 (2 spec PORT-08); artifact `tests/e2e/.artifacts/mvut378v-220ec0/summary.json`. |
+| SHA | `9bec814ed992731399ed937d724445ea133cf054` (clean tree, evidenceExactShaEligible). |
 
 PORT-08: seed harness thêm `holdCodeForReview` + notification email `DEAD` thật → `pendingApprovalCount`/`emailNeedsCsCount`>0; spec assert deep-link CTA `#pending`/`#cs`; fault profile upstream GET `/report` (`error500`) → UI `ops.report.unknown`, không render `.portal-gate-report-compact`. **BLOCKED giữ:** confirm APPLIED/undo/reject O12 — evidence Gate `confirmCheckin`/`undoCheckin` + `DB-15`/`reporting.test.cjs`, không Portal.
 
