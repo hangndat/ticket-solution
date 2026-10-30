@@ -5,9 +5,10 @@
 | Lệnh | Kết quả |
 | --- | --- |
 | `pnpm exec playwright test tests/e2e/portal/portal-core.spec.ts -g PORT-01 --list` | Discovery sau chỉnh quota+public projection. |
-| `node tests/e2e/harness/run.mjs e2e --case=PORT-01 --skip-build` | **PASS** run `mvuu9ujm-5d0b11`, browser 1/1; artifact `tests/e2e/.artifacts/mvuu9ujm-5d0b11/summary.json`. |
+| `node tests/e2e/harness/run.mjs e2e --case=PORT-01 --skip-build` | Diagnostic `mvuu9ujm-5d0b11` PASS 1/1 trên working tree dirty; `evidenceExactShaEligible=false`, không dùng làm acceptance evidence. |
+| `pnpm test:e2e --case=PORT-01` | **PASS** run sạch `mvuubgho-341f75`, browser 1/1 tại exact SHA `3ad80f862d8ffc349578d682b4ec9e446acb1d26`; `evidenceExactShaEligible=true`. |
 
-**Thay đổi spec:** BFF GET `/quota` bắt buộc `422`/`QUOTA_REQUIRED` và UI quota lỗi (không dùng `report.allocated>=0`); sau publish kiểm `publishedConfigVersion`, API public `/v1/public/tenants/{tenantSlug}/events/{slug}` và Web `/t/{tenantSlug}/events/{slug}` (`event-published`). **Coverage:** `PORT-01` → `blocked` — thiếu UI cấu hình quota/event-wide capacity trên wizard path (đọc PORT-04).
+**Thay đổi spec:** BFF GET `/quota` bắt buộc `422`/`QUOTA_REQUIRED` và UI quota lỗi (không dùng `report.allocated>=0`); sau publish kiểm có version đã publish trong `/config-versions` và staff `contentStatus=PUBLISHED`. API public `/v1/public/tenants/{tenantSlug}/events/{slug}` trả 404; Web `/t/{tenantSlug}/events/{slug}` không hiển thị `event-published`. **Coverage:** `PORT-01` → `blocked` — thiếu UI cấu hình quota/event-wide capacity trên wizard path và public projection sau staff publish (đọc PORT-02/04).
 
 ## Kiểm tra đã chạy (worker task_2c21d0516da9 — PORT-01 B / Issue #1035)
 
