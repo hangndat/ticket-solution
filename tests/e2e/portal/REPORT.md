@@ -8,8 +8,8 @@
 
 | Lệnh | Kết quả |
 | --- | --- |
-| `node tests/e2e/harness/run.mjs e2e --case=PORT-07` | **PASS** run `mvusj1xy-5e616b`, browser 1/1; artifact `tests/e2e/.artifacts/mvusj1xy-5e616b/summary.json`. |
-| SHA | _(cập nhật sau commit sạch + rerun evidence)_ |
+| `node tests/e2e/harness/run.mjs e2e --case=PORT-07` | **PASS** run `mvusk9f6-1ab717`, browser 1/1; artifact `tests/e2e/.artifacts/mvusk9f6-1ab717/summary.json`. |
+| SHA | `1597891a9ed9724e53f726dfb4e4db17ce93c660` (clean tree, evidenceExactShaEligible). |
 
 PORT-07: giữ owner/scanner/reader; BFF owner path thêm sortOrder `0`/`9999` chấp nhận (min gate qua POST), `-1`/`10000` → 422 `SCOPE_REQUIRED` (upstream envelope qua BFF passthrough, message `between 0 and 9999`); non-int vẫn `SORT_INVALID` tại BFF. Gap sortOrder upstream: đóng trên nhánh H.
 
