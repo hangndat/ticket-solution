@@ -46,25 +46,118 @@ test('[PORT-01] wizard creates a tenant-scoped event and survives reload', async
   const f = fixtureFor(m, 'PORT-01');
   const name = String(f.data?.eventName ?? `E2E ${m.runId}`);
   const slug = String(f.data?.eventSlug ?? `e2e-${m.runId}`);
+  const typeLabel = `Loại vé ${m.runId.slice(0, 8)}`;
+  const sourceName = `Nguồn ${m.runId.slice(0, 8)}`;
+  const brandName = `Brand ${m.runId.slice(0, 8)}`;
+  const termsText = `Điều khoản E2E ${m.runId}`;
+
   await login(page, m, 'PORT-01', 'owner');
   await page.goto(portalUrl(m, `/t/${f.tenantId}/events/new`));
   await page.getByLabel('Tên sự kiện').fill(name);
   await page.getByLabel('Đường dẫn (slug)').fill(slug);
+  await page.getByLabel('Hiển thị').click();
+  await page.locator('.ant-select-dropdown:visible').getByTitle('PUBLIC').click();
   await page.getByRole('button', { name: 'Tiếp' }).click();
   await page.getByRole('button', { name: 'Tiếp' }).click();
   await expect(page.getByText(name)).toBeVisible();
-  await page.getByRole('button', { name: 'Tạo sự kiện' }).click();
+  const createBtn = page.getByRole('button', { name: 'Tạo sự kiện' });
+  await createBtn.click();
   await expect(page).toHaveURL(new RegExp(`/t/${f.tenantId}/e/[0-9a-f-]+`));
   const createdId = new URL(page.url()).pathname.split('/')[4];
-  const result = await bffGet(
+
+  const eventBase = `/t/${f.tenantId}/e/${createdId}`;
+  const eventBffPath = (leaf: string) =>
+    `/api/bff/tenants/${f.tenantId}/events/${createdId}${leaf}`;
+
+  const detail = await bffGet(page, m, eventBffPath(''));
+  expect(detail.status).toBe(200);
+  expect(JSON.stringify(detail.json)).toContain(slug);
+
+  await page.goto(portalUrl(m, `${eventBase}/types`));
+  await page
+    .getByTestId('pro-page-header')
+    .getByRole('button', { name: 'Tạo loại vé' })
+    .click();
+  const typeDialog = page.getByRole('dialog', { name: 'Tạo loại vé' });
+  await typeDialog.getByLabel('Nhãn').fill(typeLabel);
+  await typeDialog.getByRole('button', { name: 'Đồng ý' }).click();
+  await expect(page.getByRole('cell', { name: typeLabel })).toBeVisible();
+
+  await page.goto(portalUrl(m, `${eventBase}/sources`));
+  await page
+    .getByTestId('pro-page-header')
+    .getByRole('button', { name: 'Tạo nguồn' })
+    .click();
+  const sourceDialog = page.getByRole('dialog', { name: 'Tạo nguồn mã' });
+  await sourceDialog.getByLabel('Tên').fill(sourceName);
+  await sourceDialog.getByLabel('Chế độ duyệt').click();
+  await page.locator('.ant-select-dropdown:visible').getByTitle('AUTO').click();
+  await sourceDialog.getByLabel('Loại vé').click();
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('Enter');
+  await sourceDialog.getByRole('button', { name: 'Đồng ý' }).click();
+  await expect(page.getByRole('cell', { name: sourceName })).toBeVisible();
+
+  await page.goto(portalUrl(m, `${eventBase}/quota`));
+  await expect(page.getByRole('navigation', { name: /Loại vé, nguồn phát và hạn mức/i })).toBeVisible();
+  const reportAfterSetup = await bffGet(page, m, eventBffPath('/report'));
+  expect(reportAfterSetup.status).toBe(200);
+  const reportQuota = (reportAfterSetup.json as { quota?: { allocated: number } })
+    .quota;
+  expect(reportQuota).toBeDefined();
+  expect(reportQuota!.allocated).toBeGreaterThanOrEqual(0);
+
+  await page.goto(portalUrl(m, `${eventBase}/config`));
+  await page.getByLabel('Tên tổ chức (brand)').fill(brandName);
+  await page.getByLabel('Màu chính').fill('#9b3a18');
+  await page.getByLabel('Điều khoản (plain text)').fill(termsText);
+  await page.getByRole('button', { name: 'Lưu draft' }).click();
+  await expect(
+    page.getByText('Đã lưu bản nháp cấu hình (chưa publish).'),
+  ).toBeVisible({ timeout: 30_000 });
+  await page.getByRole('button', { name: 'Xuất bản tip' }).click();
+  const publishModal = page.getByRole('dialog', { name: 'Xuất bản cấu hình?' });
+  await publishModal.getByRole('button', { name: 'Xuất bản' }).click();
+  await expect(page.getByText('Đã publish cấu hình.')).toBeVisible({
+    timeout: 30_000,
+  });
+
+  const versions = await bffGet(page, m, eventBffPath('/config-versions'));
+  expect(versions.status).toBe(200);
+  const published = (
+    versions.json as { items: Array<{ published: boolean; version: number }> }
+  ).items.some((row) => row.published);
+  expect(published).toBe(true);
+
+  const publishedDetail = await bffGet(page, m, eventBffPath(''));
+  expect(publishedDetail.status).toBe(200);
+  expect((publishedDetail.json as { contentStatus?: string }).contentStatus).toBe(
+    'PUBLISHED',
+  );
+
+  await page.goto(portalUrl(m, eventBase));
+  await page.reload();
+  await expect(page).toHaveURL(new RegExp(`${eventBase.replace(/\//g, '\\/')}$`));
+  await expect(page.getByTestId('pro-page-header').getByText(name)).toBeVisible();
+
+  await page.goto(portalUrl(m, `${eventBase}/types`));
+  await page.reload();
+  await expect(page.getByRole('cell', { name: typeLabel })).toBeVisible();
+
+  await page.goto(portalUrl(m, `/t/${f.tenantId}/events`));
+  await expect(page.locator(`a[href*="${createdId}"]`)).toHaveCount(1);
+  await expect(page.getByRole('link', { name })).toBeVisible();
+
+  const tenantEvents = await bffGet(
     page,
     m,
-    `/api/bff/tenants/${f.tenantId}/events/${createdId}`,
+    `/api/bff/tenants/${f.tenantId}/events?limit=50`,
   );
-  expect(result.status).toBe(200);
-  expect(JSON.stringify(result.json)).toContain(slug);
-  await page.reload();
-  await expect(page).toHaveURL(new RegExp(`/t/${f.tenantId}/e/${createdId}`));
+  expect(tenantEvents.status).toBe(200);
+  const items = (tenantEvents.json as { items: Array<{ eventId: string }> })
+    .items;
+  expect(items.filter((item) => item.eventId === createdId)).toHaveLength(1);
+  expect(items).toHaveLength(1);
 });
 
 test('[PORT-07] gate create, duplicate and HTTP validation', async ({

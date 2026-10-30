@@ -1,5 +1,16 @@
 # Portal/Platform E2E — bàn giao worker
 
+## Kiểm tra đã chạy (worker task_2c21d0516da9 — PORT-01 B / Issue #1035)
+
+| Lệnh | Kết quả |
+| --- | --- |
+| `node tests/e2e/harness/run.mjs e2e --case=PORT-01 --skip-build` | **PASS** run `mvutyoi9-f0d704`, browser 1/1; artifact `tests/e2e/.artifacts/mvutyoi9-f0d704/summary.json`. |
+| SHA | `fdca450699d8fb34698a59f3d355f352fa7387cf` (pre-commit run dirty; re-run sau commit cho evidenceExactShaEligible). |
+
+PORT-01 B: wizard → loại vé → nguồn AUTO → hạn mức (nav + report quota) → config Lưu draft + Xuất bản → `contentStatus` PUBLISHED, reload, danh sách tenant một event. **Gap ghi nhận:** BFF GET `/quota` 422 trên event mới (UI quota read-only); Web consumer direct link 404 dù staff đã PUBLISHED (không sửa product trong slice test).
+
+- Phạm vi: `tests/e2e/portal/portal-core.spec.ts`, `coverage.json`, `REPORT.md`. Không đụng WEB-11, product, harness seed.
+
 ## Kiểm tra đã chạy (worker task_8721cfd967d7 — PORT-08 B/H gap / Issue #1035)
 
 | Lệnh | Kết quả |

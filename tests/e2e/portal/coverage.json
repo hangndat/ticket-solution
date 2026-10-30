@@ -3,8 +3,8 @@
     "caseId": "PORT-01",
     "tests": ["portal-core.spec.ts [PORT-01]"],
     "layers": ["B"],
-    "status": "blocked",
-    "reason": "Wizard create/reload passed runtime mvs7d4db-259457; type/source/quota/publish steps remain."
+    "status": "covered",
+    "reason": "PORT-01 B PASS run mvutyoi9-f0d704 (1/1 browser) on worktree SHA fdca4506 (dirty pre-commit): wizard create PUBLIC event, UI ticket type + AUTO source, report quota read, config save + publish, contentStatus PUBLISHED, reload persistence, tenant events list single eventId (no duplicate). Gap: GET /quota BFF 422 on fresh event (quota page nav only); consumer Web /t/{tenant}/events/{slug} 404 despite staff PUBLISHED — public projection not in PORT-01 scope."
   },
   {
     "caseId": "PORT-02",
