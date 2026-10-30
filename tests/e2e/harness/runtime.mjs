@@ -18,6 +18,7 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { once } from 'node:events';
 import { setTimeout as delay } from 'node:timers/promises';
+import { captureSourceProvenance } from './source-provenance.mjs';
 
 export const ROOT = resolve(
   dirname(fileURLToPath(import.meta.url)),
@@ -931,6 +932,7 @@ export async function createRuntime(caseIds) {
   };
   state.dir = resolve(E2E, '.artifacts', id);
   mkdirSync(state.dir, { recursive: true, mode: 0o700 });
+  state.sourceProvenance = captureSourceProvenance(ROOT);
   state.tlsPort = await freePort();
   state.origins = Object.fromEntries(
     ['web', 'portal', 'marketing', 'api', 'auth', 'mailpit'].map((key) => [
