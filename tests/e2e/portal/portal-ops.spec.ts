@@ -601,6 +601,22 @@ test('[PORT-09] CS lookup masks PII and resend preserves the ticket with cooldow
   const list = await bffGet(page, m, eventBff(f, '/tickets?limit=50'));
   expect(list.status).toBe(200);
   const listed = (list.json as { items: Array<Record<string, unknown>> }).items;
+  for (const [key, expected] of Object.entries({
+    accepted: 'ACCEPTED',
+    failed: 'FAILED',
+    dead: 'DEAD',
+    pending: 'PENDING',
+    unknown: 'UNKNOWN',
+  })) {
+    const id = matrix[key];
+    const item = listed.find((candidate) => candidate.ticketId === id);
+    const actual = (item?.notification as { providerStatus: string })
+      ?.providerStatus;
+    expect(
+      actual,
+      `PORT-09 ${key} ticket ${id}: expected ${expected}, actual ${String(actual)}`,
+    ).toBe(expected);
+  }
   const statuses = new Set(
     listed
       .map((item) =>
