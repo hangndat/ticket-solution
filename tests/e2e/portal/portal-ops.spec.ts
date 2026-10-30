@@ -56,7 +56,7 @@ async function readTicketResendSnapshot(
   const client = new Client({ connectionString: process.env.DATABASE_URL });
   await client.connect();
   try {
-    await client.query('BEGIN READ ONLY');
+    await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
     await client.query("SELECT set_config('app.tenant_id', $1, true)", [
       tenantId,
     ]);
@@ -70,14 +70,62 @@ async function readTicketResendSnapshot(
        ORDER BY version DESC LIMIT 1`,
       [tenantId, ticketId],
     );
+    // Compare immutable job identity, not delivery leases/attempts that the
+    // worker may legitimately update concurrently with a denied HTTP request.
+    const snapshot = await client.query(
+      `SELECT
+        (SELECT jsonb_agg(to_jsonb(t) ORDER BY id) FROM tickets t
+          WHERE tenant_id=$1::uuid AND id=$2::uuid) AS ticket,
+        (SELECT jsonb_agg(to_jsonb(c) ORDER BY version) FROM ticket_credentials c
+          WHERE tenant_id=$1::uuid AND ticket_id=$2::uuid) AS credentials,
+        (SELECT jsonb_agg(to_jsonb(a) ORDER BY id) FROM audit_logs a
+          WHERE tenant_id=$1::uuid AND resource_id=$2::uuid) AS audits,
+        (SELECT jsonb_agg(jsonb_build_object('id', id, 'businessKey', business_key,
+          'payload', payload) ORDER BY id) FROM notifications
+          WHERE tenant_id=$1::uuid AND business_key LIKE $3) AS notifications,
+        (SELECT jsonb_agg(jsonb_build_object('id', id, 'type', type,
+          'aggregateId', aggregate_id, 'payload', payload) ORDER BY id) FROM outbox
+          WHERE tenant_id=$1::uuid AND aggregate_id=$2::uuid) AS outbox,
+        (SELECT jsonb_agg(to_jsonb(o) ORDER BY id) FROM operations o
+          WHERE tenant_id=$1::uuid AND event_id=$4::uuid
+          AND command='cs.resend') AS operations`,
+      [tenantId, ticketId, `ticket:${ticketId}:%`, eventId],
+    );
     await client.query('COMMIT');
     return {
       ticketCount: tickets.rows[0]?.n ?? 0,
       credentialVersion: credentials.rows[0]?.version ?? null,
+      state: snapshot.rows[0],
     };
   } catch (error) {
     await client.query('ROLLBACK').catch(() => {});
     throw error;
+  } finally {
+    await client.end();
+  }
+}
+
+async function readAcceptedTicketEmail(tenantId: string, ticketId: string) {
+  if (!process.env.DATABASE_URL || !process.env.E2E_RUN_DIR)
+    throw new Error('BLOCKED: PORT-09 SMTP proof requires isolated PostgreSQL');
+  const client = new Client({ connectionString: process.env.DATABASE_URL });
+  await client.connect();
+  try {
+    await client.query('BEGIN READ ONLY');
+    await client.query("SELECT set_config('app.tenant_id', $1, true)", [
+      tenantId,
+    ]);
+    const result = await client.query(
+      `SELECT n.id, n.provider_ref FROM notifications n
+       JOIN notification_attempts a ON a.tenant_id=n.tenant_id AND a.notification_id=n.id
+       WHERE n.tenant_id=$1::uuid AND n.business_key LIKE $2 AND n.channel='email'
+         AND n.state='ACCEPTED' AND a.provider_status='ACCEPTED'
+         AND a.provider_ref=n.provider_ref AND n.provider_ref IS NOT NULL
+       ORDER BY n.created_at DESC LIMIT 1`,
+      [tenantId, `ticket:${ticketId}:%`],
+    );
+    await client.query('COMMIT');
+    return result.rows[0] as { id: string; provider_ref: string } | undefined;
   } finally {
     await client.end();
   }
@@ -506,6 +554,50 @@ test('[PORT-09] CS lookup masks PII and resend preserves the ticket with cooldow
     throw new Error('BLOCKED: PORT-09 notification matrix fixture missing');
   }
   await login(page, m, 'PORT-09', 'cs');
+  // The primary ticket must be sent by the real worker, never promoted by seed SQL.
+  await expect
+    .poll(
+      async () => {
+        const result = await bffGet(
+          page,
+          m,
+          eventBff(f, `/tickets/${matrix.accepted}`),
+        );
+        return (result.json as { notification?: { providerStatus: string } })
+          .notification?.providerStatus;
+      },
+      { timeout: 60_000 },
+    )
+    .toBe('ACCEPTED');
+  const acceptedEmail = await readAcceptedTicketEmail(
+    f.tenantId,
+    matrix.accepted,
+  );
+  expect(acceptedEmail).toBeTruthy();
+  expect(acceptedEmail!.provider_ref).not.toMatch(/^noop:/);
+  const mailResponse = await page.request.get(
+    new URL('/api/v1/messages', m.origins.mailpit).toString(),
+  );
+  expect(mailResponse.status()).toBe(200);
+  const mail = (await mailResponse.json()) as {
+    messages: Array<{ ID: string; MessageID: string }>;
+  };
+  const message = mail.messages.find(
+    (item) =>
+      item.MessageID.replace(/[<>]/g, '') ===
+      acceptedEmail!.provider_ref.replace(/[<>]/g, ''),
+  );
+  expect(
+    message,
+    'Mailpit Message-ID must match the exact accepted notification provider_ref',
+  ).toBeTruthy();
+  const delivered = await page.request.get(
+    new URL(`/api/v1/message/${message!.ID}`, m.origins.mailpit).toString(),
+  );
+  expect(delivered.status()).toBe(200);
+  expect(((await delivered.json()) as { Text: string }).Text).toContain(
+    matrix.accepted,
+  );
   const list = await bffGet(page, m, eventBff(f, '/tickets?limit=50'));
   expect(list.status).toBe(200);
   const listed = (list.json as { items: Array<Record<string, unknown>> }).items;
@@ -518,14 +610,45 @@ test('[PORT-09] CS lookup masks PII and resend preserves the ticket with cooldow
       )
       .filter(Boolean),
   );
-  for (const expected of ['ACCEPTED', 'FAILED', 'DEAD', 'PENDING'] as const) {
+  for (const expected of [
+    'ACCEPTED',
+    'FAILED',
+    'DEAD',
+    'PENDING',
+    'UNKNOWN',
+  ] as const) {
     expect(statuses.has(expected)).toBe(true);
   }
   const unknownRow = listed.find((item) => item.ticketId === matrix.unknown);
   expect(unknownRow?.notification).toBeTruthy();
   expect(
     (unknownRow!.notification as { providerStatus: string }).providerStatus,
-  ).toBe('PENDING');
+  ).toBe('UNKNOWN');
+  for (const [key, expected] of Object.entries({
+    accepted: 'ACCEPTED',
+    failed: 'FAILED',
+    dead: 'DEAD',
+    pending: 'PENDING',
+    unknown: 'UNKNOWN',
+  })) {
+    const id = matrix[key];
+    const item = listed.find((candidate) => candidate.ticketId === id);
+    expect(
+      (item?.notification as { providerStatus: string })?.providerStatus,
+    ).toBe(expected);
+    const detail = await bffGet(page, m, eventBff(f, `/tickets/${id}`));
+    expect(detail.status).toBe(200);
+    const projection = detail.json as {
+      notification: { providerStatus: string };
+      timeline: Array<{ summary: string }>;
+    };
+    expect(projection.notification.providerStatus).toBe(expected);
+    expect(
+      projection.timeline.some(
+        (entry) => entry.summary === `notification ${expected}`,
+      ),
+    ).toBe(true);
+  }
   const response = await bffGet(
     page,
     m,
@@ -588,6 +711,19 @@ test('[PORT-09] CS lookup masks PII and resend preserves the ticket with cooldow
   );
   await page.goto(portalUrl(m, eventPath(f, '/support')));
   const panel = page.locator('#cs');
+  await panel.getByPlaceholder('Mã vé hoặc mã yêu cầu').fill(matrix.unknown);
+  await panel.getByRole('button', { name: 'Tra cứu', exact: true }).click();
+  const unknownBrowserRow = panel
+    .getByRole('row')
+    .filter({ hasText: matrix.unknown });
+  await expect(unknownBrowserRow).toContainText('UNKNOWN');
+  await expect(unknownBrowserRow).not.toContainText('PENDING');
+  await unknownBrowserRow
+    .getByRole('button', { name: 'Chi tiết', exact: true })
+    .click();
+  await expect(
+    panel.getByText('notification UNKNOWN', { exact: true }),
+  ).toBeVisible();
   await panel.getByPlaceholder('Mã vé hoặc mã yêu cầu').fill(f.ticketId);
   await panel.getByRole('button', { name: 'Tra cứu', exact: true }).click();
   const row = panel.getByRole('row').filter({ hasText: f.ticketId });
@@ -605,9 +741,20 @@ test('[PORT-09] CS lookup masks PII and resend preserves the ticket with cooldow
     .getByRole('button', { name: 'Resend email', exact: true })
     .click();
   expect([200, 201]).toContain((await sent).status());
+  const pgBeforeCooldown = await readTicketResendSnapshot(
+    f.tenantId,
+    f.eventId,
+    f.ticketId,
+  );
   const cooldown = await bffMutate(page, `${detailPath}/resend`, {
     idempotencyKey: randomUUID(),
   });
+  const pgAfterCooldown = await readTicketResendSnapshot(
+    f.tenantId,
+    f.eventId,
+    f.ticketId,
+  );
+  expect(pgAfterCooldown).toEqual(pgBeforeCooldown);
   expect(cooldown.status).toBe(429);
   expect((cooldown.json as { code: string }).code).toBe('RESEND_COOLDOWN');
   const after = await bffGet(page, m, detailPath);
@@ -630,6 +777,11 @@ test('[PORT-09] CS lookup masks PII and resend preserves the ticket with cooldow
   const limitPath = eventBff(f, `/tickets/${resendLimitTicketId}`);
   const limitBefore = await bffGet(page, m, limitPath);
   expect(limitBefore.status).toBe(200);
+  const pgBeforeLimit = await readTicketResendSnapshot(
+    f.tenantId,
+    f.eventId,
+    resendLimitTicketId,
+  );
   const limitResend = await bffMutate(
     page,
     portalUrl(m, `${limitPath}/resend`),
@@ -637,6 +789,12 @@ test('[PORT-09] CS lookup masks PII and resend preserves the ticket with cooldow
       idempotencyKey: randomUUID(),
     },
   );
+  const pgAfterLimit = await readTicketResendSnapshot(
+    f.tenantId,
+    f.eventId,
+    resendLimitTicketId,
+  );
+  expect(pgAfterLimit).toEqual(pgBeforeLimit);
   expect(limitResend.status).toBe(429);
   expect((limitResend.json as { code: string }).code).toBe('RESEND_LIMIT');
   const limitAfter = await bffGet(page, m, limitPath);

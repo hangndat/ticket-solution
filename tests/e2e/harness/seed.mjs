@@ -2061,7 +2061,6 @@ export async function seedRuntime(state, caseIds) {
               insertHmac: codeHmac,
             });
           }
-          await setLatestNotificationState(fixture.ticketId, 'ACCEPTED');
           const failedTicket = await redeemOnCode(
             fixture.secondCode,
             accounts.otherAttendee.userId,
@@ -2100,7 +2099,7 @@ export async function seedRuntime(state, caseIds) {
               AND event_id = ${eventId}::uuid
               AND type = 'TicketIssued'
               AND aggregate_id IN (
-                ${fixture.ticketId}::uuid, ${failedTicketId}::uuid,
+                ${failedTicketId}::uuid,
                 ${deadTicketId}::uuid, ${pendingTicketId}::uuid,
                 ${unknownTicketId}::uuid
               )
