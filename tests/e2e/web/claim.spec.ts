@@ -6,6 +6,10 @@ import {
 } from '../harness/fixtures';
 import { walletTicketIds } from './helpers';
 import {
+  assertInvitationQuotaDelta,
+  readInvitationEventSnapshot,
+} from './invitation-db';
+import {
   dispatchWeb13Invitation,
   fillClaim,
   openClaimAsRecipient,
@@ -31,6 +35,7 @@ for (const branch of ['auto', 'manual'] as const) {
       ).toBeEnabled();
       await fillClaim(attendee, answers);
       const before = await walletTicketIds(attendee, manifest, f.tenantId);
+      const quotaBeforeClaim = await readInvitationEventSnapshot(f, eventId);
       const claimResponsePromise = attendee.waitForResponse(
         (response) =>
           response.url().endsWith('/api/bff/claim') &&
@@ -61,6 +66,13 @@ for (const branch of ['auto', 'manual'] as const) {
         await expect(
           attendee.getByTestId('owner-ticket-qr-figure'),
         ).toBeVisible();
+        const afterAuto = await readInvitationEventSnapshot(f, eventId);
+        assertInvitationQuotaDelta(
+          quotaBeforeClaim,
+          afterAuto,
+          1,
+          'AUTO claim',
+        );
       } else {
         await expect(attendee.getByTestId('guest-claim-result')).toContainText(
           'Chưa phải vé',
@@ -68,6 +80,13 @@ for (const branch of ['auto', 'manual'] as const) {
         expect(result.requestId).toBeTruthy();
         expect(await walletTicketIds(attendee, manifest, f.tenantId)).toEqual(
           before,
+        );
+        const pendingState = await readInvitationEventSnapshot(f, eventId);
+        assertInvitationQuotaDelta(
+          quotaBeforeClaim,
+          pendingState,
+          0,
+          'MANUAL claim pending',
         );
         const manager = accountFor(manifest, 'WEB-13', 'manager');
         const managerContext = await browser.newContext();
@@ -106,6 +125,13 @@ for (const branch of ['auto', 'manual'] as const) {
           ).toContainText('thành công');
           const after = await walletTicketIds(attendee, manifest, f.tenantId);
           expect(after.filter((id) => !before.includes(id))).toHaveLength(1);
+          const approvedState = await readInvitationEventSnapshot(f, eventId);
+          assertInvitationQuotaDelta(
+            pendingState,
+            approvedState,
+            1,
+            'MANUAL manager approve',
+          );
         } finally {
           await managerContext.close();
         }
