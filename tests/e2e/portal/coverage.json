@@ -34,10 +34,16 @@
   },
   {
     "caseId": "PORT-05",
-    "tests": ["portal-import-members.spec.ts [PORT-05]"],
+    "tests": [
+      "portal-import-members.spec.ts [PORT-05] CSV upload, preview and commit flow uses isolated event",
+      "portal-import-members.spec.ts [PORT-05] preview reports duplicate rows and error report is reachable",
+      "portal-import-members.spec.ts [PORT-05] commit skips existing codes and idempotent replay does not double-import",
+      "portal-import-members.spec.ts [PORT-05] row limit preview is rejected without extra business mutation",
+      "portal-import-members.spec.ts [PORT-05] foreign tenant and event cannot read owner import jobs or files"
+    ],
     "layers": ["B", "H"],
-    "status": "blocked",
-    "reason": "Valid CSV UI flow written; AntD visible-option selector corrected after runtime failure, retry pending. Invalid row, duplicate, used code, limit, replay and foreign owner branches remain."
+    "status": "covered",
+    "reason": "PORT-05 B/H PASS run mvuwcsq0-b11a06 (5/5 browser) on SHA 7e8cce2 after clean commit: UI happy path upload→AntD visible catalog→preview→commit→list; BFF preview duplicate/error report, commit skip consumed+available codes with idempotent replay, IMPORT_ROW_LIMIT on preview without extra jobs beyond create, cross-tenant/event import GET/create deny. AntD selector fix confirmed. EMPTY CSV row not asserted in browser (isolated CSV blank lines dropped by parser); DUPLICATE_IN_FILE + skip paths cover sai dòng contract with PG/API."
   },
   {
     "caseId": "PORT-06",
