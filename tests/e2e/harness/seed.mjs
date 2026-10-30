@@ -326,6 +326,9 @@ export async function seedRuntime(state, caseIds) {
         });
         fixture.ticketTypeId = inventory.ticketTypeId;
         fixture.sourceId = inventory.sourceId;
+        if (caseId === 'PORT-08') {
+          fixture.data.pendingHoldCodeId = inventory.codeIds[1];
+        }
         if (caseId === 'DB-10') fixture.data.usedCodeId = inventory.codeIds[0];
         if (caseId === 'DB-14') {
           const entitlement = JSON.stringify({
@@ -1650,6 +1653,35 @@ export async function seedRuntime(state, caseIds) {
         });
       }
       if (caseId === 'PORT-08') {
+        const pendingHoldCodeId = fixture.data.pendingHoldCodeId;
+        if (!pendingHoldCodeId) {
+          throw new Error('PORT-08 seed missing pendingHoldCodeId');
+        }
+        await backend.withTenant(db, tenantId, async (tx) => {
+          await backend.holdCodeForReview(tx, {
+            tenantId,
+            eventId,
+            codeId: pendingHoldCodeId,
+            ownerUserId: accounts.otherAttendee.userId,
+          });
+          await tx.$executeRaw`
+            INSERT INTO notifications (
+              tenant_id, event_id, id, business_key, channel, kind,
+              state, attempts, last_error, payload
+            ) VALUES (
+              ${tenantId}::uuid,
+              ${eventId}::uuid,
+              ${randomUUID()}::uuid,
+              ${'ticket:' + fixture.ticketId + ':issued:email-dead-' + state.id},
+              'email',
+              'TicketIssued',
+              'DEAD',
+              5,
+              'smtp down',
+              '{}'::jsonb
+            )
+          `;
+        });
         fixture.data.report = await backend.withTenant(db, tenantId, (tx) =>
           backend.readEventReport(tx, {
             tenantId,

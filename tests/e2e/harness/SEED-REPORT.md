@@ -20,4 +20,4 @@
 
 - Các nhánh mở rộng trong `WEB-04/09`, `AUTH-05/06`, `PORT-05/06`, `PORT-11`, `SEC-01/02` cần state/control riêng theo FIXTURES và browser/backend specs; fixture hiện chỉ phục vụ smoke chính. `PORT-09` thiếu đủ provider states, các case fault/time travel chưa có harness control.
 - `WEB-01` có bất đồng contract ngoài seed: PRD M03 yêu cầu event private mở bằng direct link; ADR-19 và `getPublishedEventDetail` hiện chỉ trả `visibility=PUBLIC`, và browser spec hiện kỳ vọng private direct link không có `event-published`. Theo chỉ đạo leader, fixture giữ private event `UNLISTED` đã publish; leader sẽ đối chiếu quyết định và giao sửa assertion direct link theo requirement nếu không có override. Không tính direct-link assertion PASS ở bước seed.
-- `PORT-08` có ticket/quota row thật, nhưng không seed check-in hay email cần CS; counters này bằng 0 theo DB. Không dùng số giả để làm test xanh.
+- `PORT-08` seeds one ACTIVE ticket, one `PENDING_REVIEW` hold on a second code, and one terminal email `DEAD` (not revoke/cancel last_error); `data.report` is `readEventReport` after seed. Confirm APPLIED/undo/reject remains Gate/DB-15, not Portal.

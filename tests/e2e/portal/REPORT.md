@@ -1,5 +1,16 @@
 # Portal/Platform E2E — bàn giao worker
 
+## Kiểm tra đã chạy (worker task_8721cfd967d7 — PORT-08 B/H gap / Issue #1035)
+
+| Lệnh | Kết quả |
+| --- | --- |
+| `node tests/e2e/harness/run.mjs e2e --case=PORT-08` | *(chạy sau commit — ghi runId + artifact)* |
+| SHA | *(exact SHA sau run clean)* |
+
+PORT-08: seed harness thêm `holdCodeForReview` + notification email `DEAD` thật → `pendingApprovalCount`/`emailNeedsCsCount`>0; spec assert deep-link CTA `#pending`/`#cs`; fault profile upstream GET `/report` (`error500`) → UI `ops.report.unknown`, không render `.portal-gate-report-compact`. **BLOCKED giữ:** confirm APPLIED/undo/reject O12 — evidence Gate `confirmCheckin`/`undoCheckin` + `DB-15`/`reporting.test.cjs`, không Portal.
+
+- Phạm vi: `tests/e2e/portal/**`, `tests/e2e/harness/seed.mjs` (PORT-08 only), `tests/e2e/harness/run.mjs` (fault path PORT-08), `SEED-REPORT.md`. Không sửa WEB-13 seed, product, CI.
+
 ## Kiểm tra đã chạy (worker task_45928c41c91c — PORT-08 B/H / Issue #1035)
 
 | Lệnh | Kết quả |
@@ -53,10 +64,10 @@ PORT-07: zero-gate hướng dẫn VI, create/list đúng event, tên 1–80 và 
 | ID      | Đã viết thêm trong spec                                                                                         | Blocker còn lại                                                                                                                                    |
 | ------- | --------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 | PORT-04 | Quota/report FINITE đồng bộ; UI quota + `event-report-as-of`; BFF quota từ chối POST/PATCH/PUT, snapshot không đổi | Không có UI/BFF sửa capacity; nhánh giảm dưới allocated+hold, validate type/source, actor thiếu quyền cần product + seed `allocatedPlusHold`/editor deny |
-| PORT-08 | KPI BFF đủ quotaRemaining/state; gate asOf, check-in count, refresh GET, deep link, không nút resend trên dashboard | `confirm APPLIED/undo/reject` thuộc Gate app (O12), không Portal; seed không có check-in/emailNeedsCs>0 → CTA nhánh; lỗi upstream không render 0 cần fault profile |
+| PORT-08 | KPI BFF đủ quotaRemaining/state; gate asOf, check-in count, refresh GET, deep link khi count>0, fault upstream không render 0 giả, không nút resend trên dashboard | `confirm APPLIED/undo/reject` thuộc Gate app (O12) + DB-15; Portal chỉ read KPI — BLOCKED với source evidence, không product feature |
 | PORT-09 | Timeline masking; tra cứu UUID lạ rỗng; resend + cooldown 429 giữ ticket/state                               | Seed thiếu ma trận provider PENDING/FAILED/DEAD/UNKNOWN; chưa assert deny cross-event; giới hạn resend ngoài cooldown cần fixture riêng            |
 
-Không sửa `tests/e2e/harness/**` — cần coordinator nếu bổ sung PORT-09 notification states hoặc PORT-08 counters >0.
+Không sửa harness cho PORT-09 notification states (PORT-08 counters/fault đã seed trong worktree này).
 
 ## Kiểm tra đã chạy
 

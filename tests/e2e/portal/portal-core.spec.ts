@@ -1,3 +1,4 @@
+import { readFileSync, writeFileSync } from 'node:fs';
 import { test, expect, loadManifest, fixtureFor } from '../harness/fixtures';
 import {
   bffGet,
@@ -7,6 +8,36 @@ import {
   login,
   portalUrl,
 } from './helpers';
+
+function reportUpstreamPath(f: ReturnType<typeof fixtureFor>): string {
+  return `/v1/tenants/${f.tenantId}/events/${f.eventId}/report`;
+}
+
+function faultControlPathFor(m: ReturnType<typeof loadManifest>): string {
+  const control = m.runtime?.faultControlPath;
+  if (typeof control !== 'string')
+    throw new Error('BLOCKED: run fault control missing');
+  return control;
+}
+
+function setReportFault(
+  control: string,
+  ownerRunId: string,
+  path: string,
+  mode: 'unavailable' | 'error500' | null,
+) {
+  let current: { ownerRunId: string; routes: Record<string, string> };
+  try {
+    current = JSON.parse(readFileSync(control, 'utf8'));
+  } catch {
+    current = { ownerRunId, routes: {} };
+  }
+  current.ownerRunId = ownerRunId;
+  current.routes = current.routes ?? {};
+  if (mode) current.routes[path] = mode;
+  else delete current.routes[path];
+  writeFileSync(control, JSON.stringify(current), { mode: 0o600 });
+}
 
 test('[PORT-01] wizard creates a tenant-scoped event and survives reload', async ({
   page,
@@ -288,6 +319,44 @@ test('[PORT-08] event report shows seeded KPI, asOf and work links', async ({
     .first()
     .click();
   await refreshed;
+});
+
+test('[PORT-08] upstream report fault does not render fake zero KPIs', async ({
+  page,
+}) => {
+  const m = loadManifest();
+  const f = fixtureFor(m, 'PORT-08');
+  const control = faultControlPathFor(m);
+  const upstream = reportUpstreamPath(f);
+  await login(page, m, 'PORT-08', 'owner');
+  await page.goto(portalUrl(m, eventPath(f, '/gate')));
+  await expect(page.getByTestId('event-report-as-of')).toBeVisible();
+  try {
+    setReportFault(control, m.runId, upstream, 'error500');
+    await page.reload();
+    await expect(
+      page.getByText(
+        /Báo cáo chưa biết|Report outcome unknown/i,
+      ),
+    ).toBeVisible();
+    await expect(page.locator('.portal-gate-report-compact')).toHaveCount(0);
+    await expect(page.getByTestId('event-report-cta-pending-approval')).toHaveCount(
+      0,
+    );
+    await expect(page.getByTestId('event-report-cta-email-cs')).toHaveCount(0);
+    setReportFault(control, m.runId, upstream, null);
+    await page.reload();
+    await expect(page.getByTestId('event-report-as-of')).toBeVisible();
+    const expected = f.data?.report as { pendingApprovalCount: number } | undefined;
+    if (!expected) throw new Error('BLOCKED: PORT-08 report fixture missing');
+    if (expected.pendingApprovalCount > 0) {
+      await expect(
+        page.getByTestId('event-report-cta-pending-approval'),
+      ).toBeVisible();
+    }
+  } finally {
+    setReportFault(control, m.runId, upstream, null);
+  }
 });
 
 test('[PORT-10] portfolio only returns assigned report events', async ({
