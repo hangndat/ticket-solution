@@ -115,6 +115,7 @@ test('[AUTH-07] late real Keycloak refresh cannot replace a same-sub callback to
     const first = await bffGet(page, manifest, '/api/auth/identity?surface=staff');
     expect(first.status).toBe(200);
     const actorA = first.json as { actorId: string; authEpoch: string };
+    await page.goto(portalUrl(manifest, '/auth'));
     const oldAccessName = `oidc_access_token__${actorA.authEpoch}`;
     await context.addCookies([{ name: oldAccessName, value: 'expired', url: manifest.origins.portal,
       httpOnly: true, secure: true, sameSite: 'Lax' }]);
