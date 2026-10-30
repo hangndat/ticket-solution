@@ -62,6 +62,7 @@ export const catalog = {
     b('gate', 'gate: one confirm wins'),
     b('ticket-reissue-grants', 'reissue grant migration', 'D'),
     b('db09-ticket-security-invariants', 'DB-09: revoke never reuses a redemption code'),
+    { file: 'tests/e2e/http/live.test.mjs', name: '[DB-09] live HTTP', layer: 'H' },
     { file: 'tests/e2e/backend/reissue-worker-mailpit.test.cjs',
       name: 'R reissue worker Mailpit', layer: 'R' },
     b('event-lifecycle', 'C-E event lifecycle'),
@@ -206,7 +207,7 @@ export const notes = {
   'DB-07': 'D PostgreSQL barrier + H Keycloak/HTTP qua pnpm test:e2e:http --case=DB-07: TTL nguồn, approve/deny/expiry nhiều actor, replay và quota recheck. Chờ evidence SHA sạch và reviewer độc lập.',
   'DB-08':
     'Thiếu fault injection trước commit và lost-response sau commit theo command scope.',
-  'DB-09': 'D revoke, owner invariant, allocation policy và reissue credential/version/grant; R worker/Mailpit PNG v2 + revoke-before-relay DEAD. Thiếu generic PATCH refusal H; GATE-03 vẫn thiếu QR credential validation tại Gate.',
+  'DB-09': 'D revoke, owner invariant, allocation policy và reissue credential/version/grant; R worker/Mailpit PNG v2 + revoke-before-relay DEAD. H partial: generic PATCH owner transfer refused trên CS/me/gate ticket paths + DB snapshot; GATE-03 vẫn thiếu QR credential validation tại Gate.',
   'DB-10': 'D PostgreSQL PASS; H Keycloak/API/MinIO PASS run mvulfv4t-605b10 trên SHA sạch 5f2234bb: hai request cùng importId/key/body chờ event lock khi commit đầu còn in-flight, một original + một replay, một operation và một mã mới; mã CONSUMED giữ nguyên. Actor inventory.import đọc/preview/commit job do actor khác tạo; actor thiếu quyền/revoked và sai tenant/event bị từ chối không mutation. Chờ DoD độc lập trên SHA cuối.',
   'DB-11': 'D import/invite; thiếu H 48h/claim host và wrong-owner matrix.',
   'DB-12':
