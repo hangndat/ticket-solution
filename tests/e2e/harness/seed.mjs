@@ -305,6 +305,17 @@ export async function seedRuntime(state, caseIds) {
             permissions: backend.eventPermissionsForRole(role),
           });
         }
+        if (caseId === 'PORT-07') {
+          // Fixture-only gate panel reader: Portal nav (report.read) + list API
+          // (gate.confirm) without event.update — not a production role preset.
+          await tx.$executeRaw`
+            UPDATE event_assignments
+            SET permissions = ARRAY['report.read', 'gate.confirm']::text[]
+            WHERE tenant_id = ${tenantId}::uuid
+              AND event_id = ${eventId}::uuid
+              AND membership_id = ${memberships.cs.membershipId}::uuid
+          `;
+        }
         const inventory = await backend.seedEventInventory(tx, hmac, {
           tenantId,
           eventId,
