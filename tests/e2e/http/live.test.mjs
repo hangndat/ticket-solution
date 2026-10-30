@@ -552,18 +552,37 @@ function deny(result) {
   assert.equal(typeof result.body.code, 'string');
 }
 
-function patchRefused(result, label) {
-  assert.ok(
-    [403, 404, 405, 422].includes(result.status),
-    `${label}: generic PATCH must be refused (403/404/405/422), got ${result.status} (${result.body.code ?? 'none'})`,
-  );
-  if ([403, 422].includes(result.status)) {
-    assert.equal(
-      typeof result.body.code,
-      'string',
-      `${label}: structured error code`,
-    );
+/** 422 only when API returns a stable code that explicitly denies owner mutation. */
+const PATCH_OWNER_MUTATION_DENIED_CODES = new Set([
+  // Reserved for explicit owner-immutable contract codes when generic PATCH exists.
+]);
+
+function patchOwnerTransferRefused(result, label) {
+  const { status, body } = result;
+  const code = body.code ?? 'none';
+  if (status === 404 || status === 405) {
+    return;
   }
+  if (status === 403) {
+    assert.equal(
+      typeof body.code,
+      'string',
+      `${label}: permission denial must include structured code`,
+    );
+    return;
+  }
+  if (status === 422) {
+    assert.ok(
+      typeof body.code === 'string' &&
+        PATCH_OWNER_MUTATION_DENIED_CODES.has(body.code),
+      `${label}: generic PATCH must not pass on unrelated validation (422/${code}); ` +
+        `only owner-mutation denial codes ${[...PATCH_OWNER_MUTATION_DENIED_CODES].join(', ') || '(none yet)'}`,
+    );
+    return;
+  }
+  assert.fail(
+    `${label}: owner transfer via generic PATCH must be refused with 403/404/405 or explicit owner-denial 422, got ${status} (${code})`,
+  );
 }
 
 function assertNoForbiddenStrings(payload, forbidden, label) {
@@ -3250,10 +3269,14 @@ for (const caseId of CASE_IDS) {
               ) rc) AS code,
               (SELECT allocated FROM quota_buckets
                 WHERE tenant_id = $1::uuid AND event_id = $3::uuid AND scope = 'EVENT') AS allocated,
-              (SELECT count(*)::int FROM audit_logs
-                WHERE tenant_id = $1::uuid AND event_id = $3::uuid) AS audit_count,
-              (SELECT count(*)::int FROM outbox
-                WHERE tenant_id = $1::uuid AND event_id = $3::uuid) AS outbox_count`,
+              (SELECT coalesce(json_agg(row_to_json(a) ORDER BY a.id), '[]'::json) FROM (
+                SELECT id, action, resource_id, operation_id FROM audit_logs
+                WHERE tenant_id = $1::uuid AND event_id = $3::uuid
+              ) a) AS audit_rows,
+              (SELECT coalesce(json_agg(row_to_json(o) ORDER BY o.id), '[]'::json) FROM (
+                SELECT id, type, aggregate_id FROM outbox
+                WHERE tenant_id = $1::uuid AND event_id = $3::uuid
+              ) o) AS outbox_rows`,
             [f.tenantId, ticketId, f.eventId],
           )
         )[0];
@@ -3262,10 +3285,10 @@ for (const caseId of CASE_IDS) {
       };
 
       const before = await snapshot();
-      const transferBody = {
-        ownerUserId: otherUserId,
-        owner_user_id: otherUserId,
-      };
+      const transferBodies = [
+        { label: 'ownerUserId alias', body: { ownerUserId: otherUserId } },
+        { label: 'owner_user_id alias', body: { owner_user_id: otherUserId } },
+      ];
 
       const candidates = [
         {
@@ -3286,19 +3309,24 @@ for (const caseId of CASE_IDS) {
       ];
 
       for (const attempt of candidates) {
-        const result = await request(
-          ctx,
-          'PATCH',
-          attempt.path,
-          attempt.token,
-          transferBody,
-        );
-        patchRefused(result, attempt.label);
-        assert.deepEqual(
-          await snapshot(),
-          before,
-          `${attempt.label}: ticket owner/state, credential, code, quota, audit and outbox must be unchanged`,
-        );
+        for (const transfer of transferBodies) {
+          const result = await request(
+            ctx,
+            'PATCH',
+            attempt.path,
+            attempt.token,
+            transfer.body,
+          );
+          patchOwnerTransferRefused(
+            result,
+            `${attempt.label} (${transfer.label})`,
+          );
+          assert.deepEqual(
+            await snapshot(),
+            before,
+            `${attempt.label} (${transfer.label}): ticket owner/state, credential, code, quota, audit and outbox rows must be unchanged`,
+          );
+        }
       }
       return;
     }
