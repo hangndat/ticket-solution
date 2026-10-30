@@ -8,7 +8,8 @@ const redeemDir = join(process.cwd(), 'app/(consumer)/redeem');
 test('redeem-auth-gate exposes stable SSR marker (PR #722 nit)', () => {
   const gate = readFileSync(join(redeemDir, 'redeem-auth-gate.tsx'), 'utf8');
   assert.match(gate, /data-testid="redeem-auth-gate"/);
-  assert.match(gate, /copy\.loginToRedeemTitle/);
+  assert.match(gate, /data-testid="redeem-global-code"/);
+  assert.match(gate, /copy\.oidcDownTitle/);
 });
 
 test('redeem page stays force-dynamic and wires guest auth gate', () => {
@@ -16,5 +17,7 @@ test('redeem page stays force-dynamic and wires guest auth gate', () => {
   assert.match(page, /export const dynamic = 'force-dynamic'/);
   assert.match(page, /readSubject\(\)/);
   assert.match(page, /<\s*RedeemAuthGate/);
+  assert.match(page, /ssrUpstreamGet\('\/v1\/me'\)/);
+  assert.match(page, /emailVerified === true/);
   assert.match(page, /tenantBound/);
 });
