@@ -35,6 +35,7 @@ export function WalletEventFilters({
     >
       <Link
         href="/wallet"
+        prefetch={false}
         className={attendeeWalletFilterChip(!activeEventId)}
         aria-current={activeEventId ? undefined : 'true'}
         data-testid="wallet-filter-all"
@@ -48,6 +49,7 @@ export function WalletEventFilters({
           <Link
             key={filter.eventId}
             href={`/wallet?event=${encodeURIComponent(filter.eventId)}`}
+            prefetch={false}
             className={attendeeWalletFilterChip(active)}
             aria-current={active ? 'true' : undefined}
             data-testid={`wallet-filter-${filter.eventId}`}
