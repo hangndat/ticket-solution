@@ -1,5 +1,6 @@
 import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
+import { expect } from 'playwright/test';
 import type { CaseFixture } from '../harness/contract';
 
 const requireBackend = createRequire(
@@ -32,6 +33,36 @@ export async function expireDispatchedInvitations(
       `UPDATE guest_invitations
        SET expires_at = now() - interval '1 hour',
            updated_at = now()
+       WHERE tenant_id = $1::uuid
+         AND event_id = $2::uuid
+         AND state = 'DISPATCHED'`,
+      [fixture.tenantId, eventId],
+    );
+    await client.query('COMMIT');
+    return result.rowCount ?? 0;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    await client.end();
+  }
+}
+
+/** Revoke dispatched invitations before claim (run-scoped fixture only). */
+export async function revokeDispatchedInvitations(
+  fixture: CaseFixture,
+  eventId: string,
+): Promise<number> {
+  const client = requirePg();
+  await client.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query("SELECT set_config('app.tenant_id', $1, true)", [
+      fixture.tenantId,
+    ]);
+    const result = await client.query(
+      `UPDATE guest_invitations
+       SET state = 'REVOKED', updated_at = now()
        WHERE tenant_id = $1::uuid
          AND event_id = $2::uuid
          AND state = 'DISPATCHED'`,
@@ -111,5 +142,23 @@ export async function readInvitationEventSnapshot(
     throw error;
   } finally {
     await client.end();
+  }
+}
+
+/** Compare quota bucket allocated counts between two invitation snapshots. */
+export function assertInvitationQuotaDelta(
+  before: Awaited<ReturnType<typeof readInvitationEventSnapshot>>,
+  after: Awaited<ReturnType<typeof readInvitationEventSnapshot>>,
+  delta: number,
+  label = 'quota',
+) {
+  expect(after.quotas.map((row) => row.id)).toEqual(
+    before.quotas.map((row) => row.id),
+  );
+  for (let i = 0; i < after.quotas.length; i++) {
+    expect(
+      Number(after.quotas[i].allocated) - Number(before.quotas[i].allocated),
+      `${label}: bucket ${String(after.quotas[i].scope)}`,
+    ).toBe(delta);
   }
 }

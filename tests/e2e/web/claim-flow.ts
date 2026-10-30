@@ -14,7 +14,9 @@ export type Web13AutoSlot =
   | 'wrongEmail'
   | 'unverified'
   | 'secondClaim'
-  | 'expired';
+  | 'idempotencyReplay'
+  | 'expired'
+  | 'revoked';
 
 export type Web13ManualSlot = 'primary' | 'managerReject';
 
