@@ -71,12 +71,14 @@ export function collectMimeParts(rawMime) {
 
 export function decodeTicketQrPngFromRawMime(rawMime) {
   const parts = collectMimeParts(rawMime);
-  const qrPart = parts.find(
-    (part) =>
-      /Content-ID:\s*<ticket-qr@vemoki>/i.test(part) &&
-      /Content-Type:\s*image\/png/i.test(part) &&
-      /Content-Transfer-Encoding:\s*base64/i.test(part),
-  );
+  const qrPart = parts.find((part) => {
+    const headers = partHeaders(part);
+    return (
+      /Content-ID:\s*<ticket-qr@vemoki>/i.test(headers) &&
+      /Content-Type:\s*image\/png/i.test(headers) &&
+      /Content-Transfer-Encoding:\s*base64/i.test(headers)
+    );
+  });
   if (!qrPart) {
     throw new Error(
       'no MIME part combines Content-ID ticket-qr@vemoki, image/png, and base64 encoding',
