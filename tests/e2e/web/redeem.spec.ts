@@ -23,7 +23,7 @@ import {
   webUrl,
   assertRedeemRejectedWithoutTicket,
 } from './helpers';
-import { ticketLink, waitForMail } from './mailpit';
+import { assertTicketIssuedMail, waitForMail } from './mailpit';
 import {
   assertIssuedExactlyOnce,
   assertNoExtraIssue,
@@ -1071,27 +1071,31 @@ test('[WEB-08] real worker delivers issued ticket email to run Mailpit', async (
     ticketId,
   );
   const actor = accountFor(manifest, 'WEB-08', 'attendee');
-  const mail = await waitForMail(
-    page,
-    manifest,
-    actor.username,
-    caseData<string>(f, 'eventName'),
-  );
-  const url = ticketLink(mail, manifest.origins.web);
-  const mailTicketId = url.match(/\/tickets\/([0-9a-f-]{36})/i)?.[1];
-  expect(mailTicketId).toBe(ticketId);
-  expect(mail.Text ?? '').toContain(mailTicketId!);
-  expect(mail.HTML ?? '').toContain('cid:ticket-qr');
+  const eventName = caseData<string>(f, 'eventName');
+  expect(await walletTicketIds(page, manifest, f.tenantId)).toContain(ticketId);
+  const mail = await waitForMail(page, manifest, actor.username, eventName);
+  const url = assertTicketIssuedMail(mail, {
+    eventName,
+    ticketId: ticketId!,
+    webOrigin: manifest.origins.web,
+  });
   const guest = await browser.newContext();
   try {
     const guestPage = await guest.newPage();
     await guestPage.goto(url);
     await expect(
-      guestPage.getByTestId('owner-ticket-need-login'),
+      guestPage.getByTestId('owner-ticket-need-login-state'),
     ).toBeVisible();
   } finally {
     await guest.close();
   }
   await page.goto(url);
+  await expect(page).toHaveURL(
+    new RegExp(`/tickets/${ticketId!.replace(/-/g, '\\-')}`, 'i'),
+  );
   await expect(page.getByTestId('owner-ticket-qr-figure')).toBeVisible();
+  await expect(page.getByTestId('owner-ticket-id')).toHaveAttribute(
+    'title',
+    ticketId!,
+  );
 });

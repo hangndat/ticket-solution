@@ -69,3 +69,17 @@ export function ticketLink(mail: MailDetail, webOrigin: string): string {
   expect(url.origin).toBe(new URL(webOrigin).origin);
   return url.toString();
 }
+
+/** Mailpit body evidence for TicketIssued — not SMTP ACCEPTED alone. */
+export function assertTicketIssuedMail(
+  mail: MailDetail,
+  opts: { eventName: string; ticketId: string; webOrigin: string },
+): string {
+  expect(mail.Subject ?? '').toContain(opts.eventName);
+  const url = ticketLink(mail, opts.webOrigin);
+  const mailTicketId = url.match(/\/tickets\/([0-9a-f-]{36})/i)?.[1];
+  expect(mailTicketId).toBe(opts.ticketId);
+  expect(mail.Text ?? '').toContain(opts.ticketId);
+  expect(mail.HTML ?? '').toContain('cid:ticket-qr');
+  return url;
+}
