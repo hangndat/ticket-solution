@@ -21,12 +21,19 @@ const cases = planned.map((entry) => ({
 const unknown = reports.filter(
   (entry) => !planned.some((item) => item.caseId === entry.caseId),
 );
+const invalidStatus = reports.filter(
+  (entry) =>
+    !['implemented', 'covered', 'blocked', 'out'].includes(entry.status),
+);
 if (
   planned.length !== 86 ||
   new Set(planned.map((x) => x.caseId)).size !== 86 ||
-  unknown.length
+  unknown.length ||
+  invalidStatus.length
 ) {
-  console.error('Coverage inventory does not match the reviewed 86-case plan');
+  console.error(
+    'Coverage inventory/status does not match the reviewed 86-case plan',
+  );
   process.exit(2);
 }
 // Source coverage is deliberately separate from execution PASS/FAIL. A mapped

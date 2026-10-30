@@ -8,7 +8,7 @@
       "D:packages/backend/test/db01-rls-worker-export-scope.test.cjs#DB-01: ticket_platform_runtime"
     ],
     "layers": ["D"],
-    "status": "pass",
+    "status": "implemented",
     "reason": "PASS D/H: D selectors DB-01 PASS PostgreSQL thật trên SHA a19f1488: A/B xen kẽ, pool reuse, rollback/exception, thiếu tenant context, FK tenant+event, owner aggregate và ticket_platform_runtime không có grant/đọc PII bị permission denied. H run mvue72wb-898dce PASS SHA a19f1488 sạch: owner report cross-tenant/cross-event deny; manager export own được worker xử lý READY và CSV download; foreign create/status/download deny. Worker/export scope được chứng minh bởi role boundary D và xử lý export thực H."
   },
   {
@@ -20,7 +20,7 @@
       "D:packages/backend/test/db02-identity-issuer-subject.test.cjs#DB-02: identity keyed"
     ],
     "layers": ["D", "U"],
-    "status": "pass",
+    "status": "implemented",
     "reason": "PASS D/H: D selectors DB-02 PASS PostgreSQL thật trên SHA a19f1488: role/assignment matrix, active membership/revoke, identity khóa issuer+subject và cùng email không auto-link. H run mvuec1b3-f93191 PASS SHA f61f193c sạch sau PR #1043: secondary Keycloak token thật cùng email, chữ ký/JWKS/issuer/audience/sub hợp lệ bị API 401; không tạo identity, staff session, gate, ticket; primary token cũ bị deny ngay sau revoke assignment/membership, owner report còn 200. Giới hạn: alternate realm có signing key khác nên rejection không cô lập issuer claim khỏi signature validation."
   },
   {
@@ -30,7 +30,7 @@
       "D:packages/backend/test/approval.test.cjs#F01: mixed auto/manual"
     ],
     "layers": ["D"],
-    "status": "pass",
+    "status": "implemented",
     "reason": "PASS D/H: D issue/approval selectors PASS PostgreSQL thật trên SHA a19f1488: race, same-key replay/changed-payload conflict, code/counter/quota/ticket/operation/audit/outbox đối soát nhất quán. H run mvue72wb-898dce PASS SHA a19f1488 sạch: sequential và concurrent same-key retry chỉ một ticket; multi-actor race một 201 một CODE_CONSUMED; quota +1; audit/outbox mỗi ticket đúng một hàng."
   },
   {
