@@ -175,7 +175,7 @@ export default function EventsListPage() {
         );
         const destination = event && firstAllowedEventPath(event);
         return destination ? (
-          <Link href={destination}>{row.name}</Link>
+          <Link prefetch={false} href={destination}>{row.name}</Link>
         ) : (
           row.name
         );
@@ -192,7 +192,7 @@ export default function EventsListPage() {
       title={t('nav.org.events')}
       extra={
         canCreate ? (
-          <Link href={`/t/${tenantId}/events/new`}>
+          <Link prefetch={false} href={`/t/${tenantId}/events/new`}>
             <Button type="primary">{t('events.h_ek93o2')}</Button>
           </Link>
         ) : undefined
@@ -229,7 +229,7 @@ export default function EventsListPage() {
         <Empty description={t('events.h_ssqyjm')} style={{ padding: 48 }}>
           {
             canCreate ? (
-              <Link href={`/t/${tenantId}/events/new`}>
+              <Link prefetch={false} href={`/t/${tenantId}/events/new`}>
                 <Button type="primary">{t('events.h_ek93o2')}</Button>
               </Link>
             ) : undefined
@@ -248,7 +248,7 @@ export default function EventsListPage() {
             toolBarRender={
               canCreate
                 ? () => [
-                    <Link key="new" href={`/t/${tenantId}/events/new`}>
+                    <Link prefetch={false} key="new" href={`/t/${tenantId}/events/new`}>
                       <Button type="primary">{t('events.h_ek93o2')}</Button>
                     </Link>,
                   ]

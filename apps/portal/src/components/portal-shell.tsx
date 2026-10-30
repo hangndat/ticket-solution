@@ -3,6 +3,7 @@
 import { Alert, Button, Drawer, Dropdown, Flex, Layout, Menu, Result, Select, Spin, Typography, message, theme } from 'antd';
 import type { MenuProps } from 'antd';
 import Link from 'next/link';
+import { actorGeneration, beginActorLogout, checkActorMarkers, installActorLifecycle, subscribeActorGeneration } from '../client/actor-gate';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   useCallback,
@@ -156,7 +157,7 @@ function PortalShellChrome({
         label: group.name,
         children: group.children.map((child) => ({
           key: child.key,
-          label: <Link href={child.path}>{child.name}</Link>,
+          label: <Link href={child.path} prefetch={false}>{child.name}</Link>,
         })),
       })),
     [menuData],
@@ -182,13 +183,14 @@ function PortalShellChrome({
       {
         key: 'security',
         label: (
-          <Link href="/account/security">{t('shell.account.security')}</Link>
+          <Link href="/account/security" prefetch={false}>{t('shell.account.security')}</Link>
         ),
       },
       {
         key: 'logout',
         label: t('shell.account.logout'),
         onClick: () => {
+          beginActorLogout();
           window.location.assign('/api/auth/logout');
         },
       },
@@ -299,6 +301,7 @@ function PortalShellChrome({
             </Button>
           ) : null}
           <Link
+            prefetch={false}
             href="/"
             className="portal-brand-link"
             data-testid="portal-brand"
@@ -513,7 +516,7 @@ function PortalShellChrome({
         title={t(SURFACE_MESSAGE_KEYS.pendingActivationTitle)}
         subTitle={t(SURFACE_MESSAGE_KEYS.pendingActivationDescription)}
         extra={
-                    <Link href={`/onboarding/${activeTenant.tenantId}`}>
+                    <Link href={`/onboarding/${activeTenant.tenantId}`} prefetch={false}>
                       <Button type="link">
                         {t('onboarding.pending.openWait')}
                       </Button>
@@ -540,6 +543,8 @@ export function PortalShell({
 }) {
   const { t } = usePortalLocale();
   const pathname = usePathname();
+  const generation = useSyncExternalStore(subscribeActorGeneration, actorGeneration, () => 0);
+  const [readyGeneration, setReadyGeneration] = useState<number | null>(null);
   const shell = useSyncExternalStore(
     subscribePortalShellSnapshot,
     getPortalShellSnapshot,
@@ -553,6 +558,8 @@ export function PortalShell({
   const discoveryGate = useRef(createContextRequestGate());
 
   useEffect(() => installUnsavedNavigation(), []);
+  useEffect(() => installActorLifecycle(), []);
+  useEffect(() => { checkActorMarkers(); }, [pathname]);
 
   useEffect(() => {
     const deny = (event: Event) => {
@@ -580,21 +587,24 @@ export function PortalShell({
 
   const reload = useCallback(() => {
     requestGate.current.begin('shell');
+    const started = actorGeneration();
+    setReadyGeneration(null);
     markPortalShellLoading();
-    void loadShellContext();
+    void loadShellContext().then(() => {
+      if (started === actorGeneration()) setReadyGeneration(started);
+    });
   }, []);
 
   useEffect(() => {
-    const gate = requestGate.current;
     let active = true;
-    queueMicrotask(() => {
-      if (active) reload();
-    });
-    return () => {
-      active = false;
-      gate.invalidate();
-    };
-  }, [reload]);
+    queueMicrotask(() => { if (active) reload(); });
+    return () => { active = false; };
+  }, [generation, reload]);
+
+  useEffect(() => {
+    const gate = requestGate.current;
+    return () => gate.invalidate();
+  }, []);
 
   const staffLoginUrl =
     shell.status === 'unauthenticated' ? staffLoginUrlForPath(pathname) : null;
@@ -784,7 +794,7 @@ export function PortalShell({
     return <>{children}</>;
   }
 
-  if (shell.status === 'loading' || eventDiscoveryLoading) {
+  if (shell.status === 'loading' || readyGeneration !== generation || eventDiscoveryLoading) {
     return (
     <Flex
       vertical
@@ -897,7 +907,7 @@ export function PortalShell({
       effectiveEventId={effectiveEventId}
       activeTenant={activeTenant}
     >
-      {children}
+      <div key={generation}>{children}</div>
     </PortalShellChrome>
   );
 }

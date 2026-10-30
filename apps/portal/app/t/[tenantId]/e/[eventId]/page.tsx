@@ -362,15 +362,15 @@ export default function EventOverviewPage() {
       extra={
         <Space>
           {canAccessEventRoute('setup', access.permissions) ? (
-            <Link href={`/t/${tenantId}/e/${eventId}/setup`}>
+            <Link prefetch={false} href={`/t/${tenantId}/e/${eventId}/setup`}>
               <Button>{t('nav.event.setup')}</Button>
             </Link>
           ) : null}
-          <Link href={`/t/${tenantId}/e/${eventId}/config`}>
+          <Link prefetch={false} href={`/t/${tenantId}/e/${eventId}/config`}>
             <Button>{t('nav.org.settings')}</Button>
           </Link>
           {canPublish ? (
-            <Link href={`/t/${tenantId}/e/${eventId}/config`}>
+            <Link prefetch={false} href={`/t/${tenantId}/e/${eventId}/config`}>
               <Button type="primary">{t('event.home.openPublish')}</Button>
             </Link>
           ) : (
@@ -462,16 +462,16 @@ export default function EventOverviewPage() {
               {t('gate.h_3keb7')}
             </Button>
             {reportShowsPendingApprovalCta(shownReport) ? (
-              <Link href={reportPendingApprovalHref(tenantId, eventId)}>
+              <Link prefetch={false} href={reportPendingApprovalHref(tenantId, eventId)}>
                 <Button size="small">{t('common.h_wa3fk5')}</Button>
               </Link>
             ) : null}
             {reportShowsEmailCsCta(shownReport) ? (
-              <Link href={reportEmailCsHref(tenantId, eventId)}>
+              <Link prefetch={false} href={reportEmailCsHref(tenantId, eventId)}>
                 <Button size="small">{t('common.h_1pfzepi')}</Button>
               </Link>
             ) : null}
-            <Link href={`/t/${tenantId}/e/${eventId}/guests`}>
+            <Link prefetch={false} href={`/t/${tenantId}/e/${eventId}/guests`}>
               <Button size="small">{t('nav.event.guests')}</Button>
             </Link>
           </Space>
@@ -500,7 +500,7 @@ export default function EventOverviewPage() {
       {canReport ? (
         <Typography.Paragraph>
           {t('event.home.gateReportDetail')}{' '}
-          <Link href={`/t/${tenantId}/e/${eventId}/gate`}>
+          <Link prefetch={false} href={`/t/${tenantId}/e/${eventId}/gate`}>
             {t('common.h_1iov4lt')}
           </Link>
           {t('gateDeeplink.h_k7571i')}

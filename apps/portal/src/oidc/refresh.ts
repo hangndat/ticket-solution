@@ -6,7 +6,7 @@ import {
   readPortalOidcConfig,
   type PortalOidcConfig,
 } from './config';
-import { clearStaffSessionCookies, readStaffSubject } from './cookies';
+import { readStaffSubject } from './cookies';
 import { PORTAL_AUTH_COOKIES } from './local-cookies';
 import {
   clearStaffRefreshFlightCache,
@@ -149,7 +149,6 @@ export async function performStaffRefreshFlight(input: {
 export async function refreshStaffAccessToken(): Promise<RefreshOutcome> {
   if (!isPortalOidcConfigured()) {
     clearStaffRefreshFlightCache();
-    await clearStaffSessionCookies();
     return { ok: false, reason: 'misconfigured' };
   }
   const config = readPortalOidcConfig()!;
@@ -157,7 +156,6 @@ export async function refreshStaffAccessToken(): Promise<RefreshOutcome> {
   const refresh = jar.get(SESSION_COOKIES.refresh)?.value?.trim() ?? '';
   if (!refresh) {
     clearStaffRefreshFlightCache();
-    await clearStaffSessionCookies();
     return { ok: false, reason: 'missing_refresh' };
   }
 
@@ -173,7 +171,6 @@ export async function refreshStaffAccessToken(): Promise<RefreshOutcome> {
 
   if (!shared.ok) {
     clearStaffRefreshFlightCache();
-    await clearStaffSessionCookies();
     return shared;
   }
 
