@@ -121,7 +121,7 @@
     "caseId": "WEB-05",
     "tests": ["H:tests/e2e/http/live.test.mjs#[WEB-05]"],
     "layers": ["H"],
-    "status": "blocked",
-    "reason": "SHA b6f9856b: clean H mvuvba97-1446eb PASS; ma trận HTTP + request/quota guards + hash v1/v2. Blocked chờ James DoD."
+    "status": "covered",
+    "reason": "WEB-05 H clean PASS mvuvhn2t-f1e3ab tại SHA tích hợp 42a29788; ma trận HTTP, request/quota guards và hash published v1/v2. James DoD PASS tại PR #1071, CI 41046526455 SUCCESS."
   }
 ]
