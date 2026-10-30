@@ -285,11 +285,12 @@
     "caseId": "JOB-01",
     "tests": [
       "D:packages/backend/test/issue.test.cjs#issue: last-seat",
-      "D:packages/backend/test/outbox-fence.test.cjs#TicketIssued: email outside tx"
+      "D:packages/backend/test/outbox-fence.test.cjs#TicketIssued: email outside tx",
+      "R:tests/e2e/backend/job-01-durable-outbox.test.cjs#[JOB-01] R durable outbox"
     ],
-    "layers": ["D"],
-    "status": "blocked",
-    "reason": "D ticket/outbox atomic; thiếu R worker stop/restart + Mailpit và Redis restart."
+    "layers": ["D", "R"],
+    "status": "implemented",
+    "reason": "D PostgreSQL: ticket và outbox TicketIssued PENDING cùng commit (issue + outbox-fence). R process thật: cấp vé khi worker tắt vẫn đọc vé ACTIVE, outbox/notification PENDING; restart Redis cô lập không đánh dấu COMPLETE/ACCEPTED sớm; worker + Mailpit relay một logical job đúng recipient. Không chứng minh exactly-once SMTP, inbox hoặc đã đọc."
   },
   {
     "caseId": "JOB-02",

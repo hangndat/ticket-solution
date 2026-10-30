@@ -88,6 +88,12 @@ Checks (SHA sau commit): `node tests/e2e/backend/entry.mjs --case DB-14 --suite 
 
 **F01 fix (DoD revalidation):** D/H assert `form_definition_hash` và `terms_content_hash` trên `redemption_requests` khớp hash suy ra từ form/terms published (seed/save payload), khác v1↔v2; vé/request v1 giữ hash v1 sau publish v2. Evidence SHA sạch `0dc5e1f50147a54466e258ac972f47709c02f4f5`: D `entry.mjs --case DB-14 --suite D --no-build` PASS; H `pnpm test:e2e:http -- --case=DB-14` run `mvurdu1z-873d1d` PASS, `workingTreeDirty=false`.
 
+## Cập nhật JOB-01 (Issue #1032, worktree `f04-job01-durable-outbox`)
+
+Thêm `tests/e2e/backend/job-01-durable-outbox.test.cjs` (R) và `redis-fixture.cjs`: cấp vé khi worker tắt → vé ACTIVE, outbox/notification PENDING; restart Redis cô lập không COMPLETE/ACCEPTED sớm và Mailpit trống; worker process thật + Mailpit một email đúng recipient/tenant slug. D giữ `issue.test.cjs` + `outbox-fence.test.cjs`. `coverage.json` JOB-01 → `implemented`, layers D+R.
+
+Checks: `node tests/e2e/backend/entry.mjs --case JOB-01 --no-build` PASS 3/3 selector; artifact `tests/e2e/.artifacts/mvuj01-579677a/summary.json`. Không assert exactly-once SMTP/inbox/read.
+
 ## Giới hạn còn mở
 
 - Các ca H cần HTTPS hostname run, Keycloak issuer/JWT thật và manifest case riêng từ harness; local verifier hay `app.inject` fixture không đủ. Các ca R cần worker process, Mailpit, restart/kill/lease và tài nguyên run riêng. Xem `FIXTURES.md`.
