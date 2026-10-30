@@ -56,6 +56,10 @@ const httpCases = [
   'WEB-04',
 ];
 const match = args.find((arg) => arg.startsWith('--case='));
+const grepTitleMatch = args.find((arg) => arg.startsWith('--grep-title='));
+const grepTitle = grepTitleMatch
+  ? grepTitleMatch.slice('--grep-title='.length).trim()
+  : '';
 const allBrowserCases = [
   ...Array.from(
     { length: 8 },
@@ -124,13 +128,17 @@ function browserArgs(ids, list = false) {
     dirname(requireRoot.resolve('playwright/package.json')),
     'cli.js',
   );
+  let grepPattern = `\\[(${ids.filter((id) => id !== 'SEC-01').join('|')})\\]`;
+  if (grepTitle) {
+    grepPattern += `.*${grepTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`;
+  }
   return [
     cli,
     'test',
     '--config',
     resolve(E2E, 'playwright.config.ts'),
     '--grep',
-    `\\[(${ids.filter((id) => id !== 'SEC-01').join('|')})\\]`,
+    grepPattern,
     ...(list ? ['--list'] : []),
   ];
 }
@@ -228,6 +236,11 @@ if (mode === 'list' || args.includes('--list')) {
       runDir: state.dir,
     });
     const common = processEnvironment(state, {
+      ...Object.fromEntries(
+        Object.entries(process.env).filter(([key]) =>
+          key.startsWith('E2E_WEB13_'),
+        ),
+      ),
       MINIO_ENDPOINT: `http://127.0.0.1:${state.ports.minio}`,
       MINIO_ACCESS_KEY: state.minio.identities.shared.accessKey,
       MINIO_SECRET_KEY: state.minio.identities.shared.secretKey,
