@@ -71,3 +71,45 @@ export async function countTicketsForOwner(
     await client.end();
   }
 }
+
+/** Business state for one isolated invitation event; excludes worker delivery status. */
+export async function readInvitationEventSnapshot(
+  fixture: CaseFixture,
+  eventId: string,
+) {
+  const client = requirePg();
+  await client.connect();
+  try {
+    await client.query('BEGIN READ ONLY');
+    await client.query("SELECT set_config('app.tenant_id', $1, true)", [
+      fixture.tenantId,
+    ]);
+    const rows = async (sql: string) =>
+      (await client.query(sql, [fixture.tenantId, eventId])).rows;
+    const snapshot = {
+      invitations: await rows(`SELECT id, state, claimed_by, redemption_code_id
+        FROM guest_invitations WHERE tenant_id=$1::uuid AND event_id=$2::uuid ORDER BY id`),
+      requests: await rows(`SELECT id, status, actor_user_id, redemption_code_id
+        FROM redemption_requests WHERE tenant_id=$1::uuid AND event_id=$2::uuid ORDER BY id`),
+      tickets: await rows(`SELECT id, state, owner_user_id, request_id
+        FROM tickets WHERE tenant_id=$1::uuid AND event_id=$2::uuid ORDER BY id`),
+      codes: await rows(`SELECT id, status FROM redemption_codes
+        WHERE tenant_id=$1::uuid AND event_id=$2::uuid ORDER BY id`),
+      quotas: await rows(`SELECT id, scope, scope_id, allocated FROM quota_buckets
+        WHERE tenant_id=$1::uuid AND event_id=$2::uuid ORDER BY id`),
+      redeemOperations: await rows(`SELECT id, actor_user_id, client_key, status
+        FROM operations WHERE tenant_id=$1::uuid AND event_id=$2::uuid
+          AND command='redemption.redeem' ORDER BY id`),
+      ticketOutbox: await rows(`SELECT id, aggregate_id FROM outbox
+        WHERE tenant_id=$1::uuid AND event_id=$2::uuid
+          AND type='TicketIssued' ORDER BY id`),
+    };
+    await client.query('COMMIT');
+    return snapshot;
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw error;
+  } finally {
+    await client.end();
+  }
+}
