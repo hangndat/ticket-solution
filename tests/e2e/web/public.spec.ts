@@ -5,7 +5,15 @@ import {
   fixtureFor,
   accountFor,
 } from '../harness/fixtures';
-import { caseData, eventPath, login, webUrl } from './helpers';
+import {
+  assertNoHorizontalOverflow,
+  assertPrimaryButtonOperable,
+  assertRedeemOutcomePanel,
+  caseData,
+  eventPath,
+  login,
+  webUrl,
+} from './helpers';
 import { readWeb09Database } from './web09-db';
 
 test('[WEB-01] only published projection is discoverable', async ({ page }) => {
@@ -165,38 +173,155 @@ test('[WEB-09] multi-tenant owner wallet and private detail/QR/request/operation
   }
 });
 
-test('[WEB-11] 390px event, redemption and ticket CTA stay operable', async ({
+async function assertWeb11ResponsiveSlice(
+  page: import('playwright/test').Page,
+  manifest: import('../harness/contract').E2EManifest,
+  f: import('../harness/contract').CaseFixture,
+  viewport: { width: number; height: number },
+  mobile: boolean,
+  options?: {
+    skipLogin?: boolean;
+    redeemExpectation?: 'issue' | 'used';
+    ticketIdForDetail?: string;
+    onIssuedTicketId?: (ticketId: string) => void;
+  },
+) {
+  await page.setViewportSize(viewport);
+  if (!options?.skipLogin) {
+    await login(page, manifest, accountFor(manifest, 'WEB-11', 'attendee'));
+  }
+
+  await page.goto(webUrl(manifest, '/'));
+  const headerNav = page
+    .locator('header[data-testid="site-header"]')
+    .first()
+    .getByTestId('site-nav')
+    .first();
+  await expect(headerNav).toBeVisible();
+  if (mobile) {
+    await page.getByTestId('nav-menu-toggle').click();
+    await expect(page.getByTestId('nav-mobile-menu')).toBeVisible();
+    await page.getByTestId('nav-mobile-menu').getByTestId('nav-wallet').click();
+    await expect(page).toHaveURL(/\/wallet$/);
+    await expect(page.getByTestId('nav-mobile-menu')).toHaveCount(0);
+  } else {
+    await page.getByTestId('nav-wallet').click();
+    await expect(page).toHaveURL(/\/wallet$/);
+  }
+  await assertNoHorizontalOverflow(page);
+  await expect(page.getByTestId(`wallet-ticket-${f.ticketId}`)).toBeVisible();
+
+  await page.goto(webUrl(manifest, eventPath(f)));
+  await assertNoHorizontalOverflow(page);
+  const eventRedeem = page
+    .getByTestId('event-sidebox')
+    .getByRole('link', { name: 'Đổi mã lấy vé' });
+  await expect(eventRedeem).toBeVisible();
+  await eventRedeem.click();
+  await expect(page.locator('#redeem-code-confirm')).toBeVisible();
+  await expect(page.getByTestId('redeem-terms-consent')).toBeVisible();
+  const answers = f.data?.answers as
+    Record<string, string | boolean> | undefined;
+  if (answers) {
+    for (const [id, value] of Object.entries(answers)) {
+      const field = page.locator(`[name=${JSON.stringify(id)}]`);
+      if (typeof value === 'boolean') {
+        if (value) await field.check();
+        else await field.uncheck();
+      } else if (await field.evaluate((el) => el.tagName === 'SELECT')) {
+        await field.selectOption(value);
+      } else {
+        await field.fill(value);
+      }
+    }
+  }
+  await page.locator('#terms-accepted').check();
+  if (!f.secondCode)
+    throw new Error('BLOCKED: WEB-11 cần secondCode fresh (seed codes[1])');
+  await page.locator('#redeem-code-confirm').fill(f.secondCode);
+  await assertPrimaryButtonOperable(page, 'Đổi mã lấy vé');
+  await assertNoHorizontalOverflow(page);
+
+  const redeemExpectation = options?.redeemExpectation ?? 'issue';
+  const [issueResponse] = await Promise.all([
+    page.waitForResponse(
+      (response) => new URL(response.url()).pathname === '/api/bff/redeem',
+    ),
+    page.getByRole('button', { name: 'Đổi mã lấy vé', exact: true }).click(),
+  ]);
+  if (redeemExpectation === 'issue') {
+    expect(issueResponse.status()).toBe(201);
+    await expect(page.getByTestId('redeem-ux-success')).toBeVisible();
+    const card = page.getByTestId('redeem-ticket-card');
+    await expect(card).toBeVisible();
+    const issuedTicketId = (
+      await card.locator('dd').first().textContent()
+    )?.trim();
+    expect(issuedTicketId).toMatch(/^[0-9a-f-]{36}$/i);
+    options?.onIssuedTicketId?.(issuedTicketId!);
+    await page.getByRole('link', { name: 'Xem vé của tôi' }).click();
+    await expect(page).toHaveURL(/\/wallet$/);
+    await assertNoHorizontalOverflow(page);
+    await page.getByTestId(`wallet-ticket-${issuedTicketId}`).click();
+  } else {
+    await assertRedeemOutcomePanel(page, 'used');
+  }
+  await assertNoHorizontalOverflow(page);
+
+  const detailTicketId = options?.ticketIdForDetail ?? f.ticketId;
+  if (!detailTicketId)
+    throw new Error('BLOCKED: WEB-11 cần ticketId để mở vé qua wallet CTA');
+  if (redeemExpectation === 'used') {
+    await page.goto(webUrl(manifest, '/wallet'));
+    await assertNoHorizontalOverflow(page);
+    await page.getByTestId(`wallet-ticket-${detailTicketId}`).click();
+  }
+  await expect(page.getByTestId('owner-ticket-qr-figure')).toBeVisible();
+  await assertNoHorizontalOverflow(page);
+
+  if (mobile) {
+    await page.getByTestId('nav-menu-toggle').click();
+    await expect(page.getByTestId('nav-mobile-menu')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.getByTestId('nav-mobile-menu')).toHaveCount(0);
+  }
+}
+
+test('[WEB-11] desktop and 390px form, menu sheet, redeem and ticket CTAs operable', async ({
   page,
 }) => {
   const manifest = loadManifest();
   const f = fixtureFor(manifest, 'WEB-11');
   if (!f.ticketId)
     throw new Error('BLOCKED: WEB-11 cần ticketId thuộc attendee');
-  await page.setViewportSize({ width: 390, height: 844 });
   await login(page, manifest, accountFor(manifest, 'WEB-11', 'attendee'));
-  await page.goto(webUrl(manifest, eventPath(f)));
-  await expect(
-    page
-      .getByTestId('event-sidebox')
-      .getByRole('link', { name: 'Đổi mã lấy vé' }),
-  ).toBeVisible();
-  await page
-    .getByTestId('event-sidebox')
-    .getByRole('link', { name: 'Đổi mã lấy vé' })
-    .click();
-  await expect(page.locator('#redeem-code-confirm')).toBeVisible();
-  await page.goto(
-    webUrl(
-      manifest,
-      `/t/${f.tenantSlug}/tickets/${f.ticketId}?tenantId=${f.tenantId}`,
-    ),
+  let issuedTicketId: string | undefined;
+  await assertWeb11ResponsiveSlice(
+    page,
+    manifest,
+    f,
+    { width: 1280, height: 720 },
+    false,
+    {
+      skipLogin: true,
+      redeemExpectation: 'issue',
+      onIssuedTicketId: (id) => {
+        issuedTicketId = id;
+      },
+    },
   );
-  await expect(page.getByTestId('owner-ticket-qr-figure')).toBeVisible();
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= window.innerWidth + 1,
-    ),
-  ).toBe(true);
+  await assertWeb11ResponsiveSlice(
+    page,
+    manifest,
+    f,
+    { width: 390, height: 844 },
+    true,
+    {
+      skipLogin: true,
+      redeemExpectation: 'used',
+      ticketIdForDetail: issuedTicketId ?? f.ticketId,
+    },
+  );
 });
 
 test('[WEB-12] marketing VI/EN, demo CTA, and public links', async ({
