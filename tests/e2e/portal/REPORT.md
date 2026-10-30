@@ -4,6 +4,15 @@
 - Phạm vi sửa: chỉ `tests/e2e/portal/**`. Không sửa product, harness, root package/lockfile/CI hoặc `PLAN.md`.
 - Architecture impact: Không. Spec dùng Playwright browser thật, BFF same-origin và Keycloak login/TOTP; không mock token/cookie/auth.
 
+## Kiểm tra đã chạy (worker task_ac6fd382f590 — PORT-07 / Issue #1035)
+
+| Lệnh | Kết quả |
+| --- | --- |
+| `node tests/e2e/harness/run.mjs e2e --case=PORT-07` | **PASS** run `mvuqtkqt-c9572d`, browser 1/1; artifact `tests/e2e/.artifacts/mvuqtkqt-c9572d/summary.json`. |
+| SHA | `865d4bef793900291a90ca4139d34fed004aa443` (re-run sau commit sạch — xem worker_done). |
+
+PORT-07: zero-gate hướng dẫn VI, create/list đúng event, tên 1–80 và order 0/9999 (UI+ BFF), `GATE_NAME_CONFLICT` UI tiếng Việt + HTTP 409, scanner POST 403 (thiếu `event.update`), không scan/confirm/undo/rename/delete/link Web `/gate`. Gap: chưa có actor Portal read-only trên panel (CS thiếu `report.read`; manager có `event.update`).
+
 ## Kiểm tra đã chạy (worker task_bc250bdc551b — PORT-04/08/09)
 
 | Lệnh                                                                                                                                                                              | Kết quả                                                                                                                   |
