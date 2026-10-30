@@ -25,12 +25,14 @@ export async function waitForMail(
         );
         if (response.status() !== 200) return false;
         const list = (await response.json()) as { messages?: MailSummary[] };
-        found = list.messages?.find(
-          (mail) =>
-            mail.To?.some(
-              (to) => to.Address?.toLowerCase() === recipient.toLowerCase(),
-            ) && (mail.Subject ?? '').includes(subjectPart),
-        );
+        const candidates =
+          list.messages?.filter(
+            (mail) =>
+              mail.To?.some(
+                (to) => to.Address?.toLowerCase() === recipient.toLowerCase(),
+              ) && (mail.Subject ?? '').includes(subjectPart),
+          ) ?? [];
+        found = candidates.length ? candidates[candidates.length - 1] : undefined;
         return Boolean(found);
       },
       { timeout: 30_000, intervals: [250, 500, 1000] },
