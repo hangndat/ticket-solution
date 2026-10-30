@@ -263,6 +263,7 @@ Gap audit [PRODUCTION-READINESS-UX §6 UX-11](./plans/PRODUCTION-READINESS-UX.md
 | 3 | Option B (OTP / magic link guest) | **Sau MVP.** Chỉ mở Task IdP/contract khi user chọn B tường minh; coordinator **không** spawn OTP từ gap này. |
 | 4 | PRD M02 | Wording OTP/magic link giữ tầm nhìn dài hạn; **MVP nghiệm thu** theo Option A + copy trên — không coi thiếu OTP guest là blocker DoD redeem. |
 | 5 | Non-goals | Không code IdP mới; không đổi contract issue ngoài pin hiện tại; không mở anonymous by design (O11). |
+| 6 | F04 làm rõ guest UI (30/10/2026) | Theo AC `AUTH-03` của `tests/e2e/PLAN.md` và PRD M07, trang `/redeem` vẫn hiển thị ô nhập mã và CTA auth trong cùng flow cho guest/chưa verified; mã nhập chỉ ở UI, không lookup/resolve/confirm/cấp vé hoặc giữ code/quota/pending trước Keycloak session có verified email. Tiếp tục dùng copy «Cần đăng nhập»/«Xác minh email» và gate backend hiện hành; không đưa mã vào URL/login redirect hay thêm OTP/anonymous redeem. Nếu không thể giữ invariant này trong Web, ghi BLOCKED và quyết định lại contract trước sửa API/DB. |
 
 **Hệ quả:** Coding/DoD redeem giữ pin fail-closed hiện tại; unit `redeem-messages` + UAT auth «Cần đăng nhập» đủ AC auth MVP. Nguồn tip: [`docs/design/D11-PRODUCTION-UX-UI.md`](./design/D11-PRODUCTION-UX-UI.md) §2.1 auth row / AC-A3.
 
