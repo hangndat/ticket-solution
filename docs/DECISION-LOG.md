@@ -1,10 +1,14 @@
 # Decision log — sản phẩm & kỹ thuật
 
-Ngày cập nhật: 2026-10-28
+Ngày cập nhật: 2026-10-30
 Nguồn: [PRD](./PRD.md) mục 15, [Technical Design](./TECHNICAL-DESIGN.md) mục 2 & 18, [ROADMAP](./ROADMAP.md)
 Tracking: Issues [#10](https://github.com/hangndat/ticket-solution/issues/10), [#11](https://github.com/hangndat/ticket-solution/issues/11)
 
 **Kiến trúc hiện trạng (canonical, Epic [#891](https://github.com/hangndat/ticket-solution/issues/891) / F06):** [`docs/architecture/ar891-current-architecture.md`](./architecture/ar891-current-architecture.md) — deployed / tested / proposed; không thay nội dung quyết định lịch sử bên dưới.
+
+## F04 AUTH-07 — Actor epoch cho Web và Portal (30/10/2026)
+
+Coordinator chấp nhận phương án B và cấp [ADR-23](./ops/ADR-23-AUTH-ACTOR-EPOCH.md): HTML/RSC riêng là shell không payload; dữ liệu riêng tải qua BFF sau document load và chỉ commit khi actor + `authEpoch` theo origin/surface + generation còn khớp. Web, Portal staff và Portal platform tách namespace; callback/logout xoay epoch, refresh hợp lệ giữ nguyên; API owner/authz không đổi. Triển khai theo owner và chỉ công nhận AUTH-07 PASS khi đủ evidence F04 trên exact SHA.
 
 ## O33 — Waive a11y UAT cho MVP/pilot (28/10/2026)
 
