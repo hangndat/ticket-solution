@@ -1,3 +1,4 @@
+import { createHmac } from 'node:crypto';
 import type { Page, Response } from 'playwright/test';
 import { expect } from '../harness/fixtures';
 import type {
@@ -8,6 +9,117 @@ import type {
 
 export function webUrl(manifest: E2EManifest, path: string): string {
   return new URL(path, manifest.origins.web).toString();
+}
+
+export function realmTokenUrl(manifest: E2EManifest): string {
+  return new URL(
+    `/realms/e2e-${manifest.runId}/protocol/openid-connect/token`,
+    manifest.origins.auth,
+  ).toString();
+}
+
+export function decodeJwtPayload(token: string): Record<string, unknown> {
+  const segment = token.split('.')[1];
+  if (!segment) throw new Error('BLOCKED: malformed JWT in test');
+  return JSON.parse(Buffer.from(segment, 'base64url').toString('utf8'));
+}
+
+/** Only used for synthetic test fixtures provisioned by the local harness. */
+function totpCode(secret: string, epochMs = Date.now()): string {
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  const normalized = secret.toUpperCase().replace(/[^A-Z2-7]/g, '');
+  let bits = 0;
+  let value = 0;
+  const bytes: number[] = [];
+  for (const char of normalized) {
+    const digit = alphabet.indexOf(char);
+    if (digit < 0) throw new Error('BLOCKED: invalid TOTP fixture secret');
+    value = (value << 5) | digit;
+    bits += 5;
+    if (bits >= 8) {
+      bytes.push((value >>> (bits - 8)) & 255);
+      bits -= 8;
+    }
+  }
+  const counter = Buffer.alloc(8);
+  counter.writeBigUInt64BE(BigInt(Math.floor(epochMs / 30_000)));
+  const digest = createHmac('sha1', Buffer.from(bytes))
+    .update(counter)
+    .digest();
+  const offset = digest[digest.length - 1] & 15;
+  const binary = (digest.readUInt32BE(offset) & 0x7fffffff) % 1_000_000;
+  return String(binary).padStart(6, '0');
+}
+
+/**
+ * Mint a REAL Keycloak token for a different client/audience than the Web
+ * BFF expects (e.g. the platform client), to assert the BFF rejects a
+ * correctly-signed-but-wrong-audience token rather than trusting cookie shape.
+ */
+export async function mintCrossClientAccessToken(
+  manifest: E2EManifest,
+  account: TestAccount,
+  clientId: string,
+  clientSecret: string,
+): Promise<string> {
+  const body = new URLSearchParams({
+    grant_type: 'password',
+    client_id: clientId,
+    client_secret: clientSecret,
+    username: account.username,
+    password: account.password,
+    scope: 'openid profile email',
+  });
+  if (account.totpSecret) body.set('totp', totpCode(account.totpSecret));
+  const response = await fetch(realmTokenUrl(manifest), {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body,
+  });
+  if (response.status !== 200) {
+    throw new Error(
+      `BLOCKED: cross-client password grant failed (${response.status})`,
+    );
+  }
+  const payload = (await response.json()) as { access_token?: string };
+  if (!payload.access_token)
+    throw new Error('BLOCKED: no access_token in grant');
+  return payload.access_token;
+}
+
+/**
+ * Mint a REAL Keycloak token from the harness's secondary, fully independent
+ * Keycloak realm (own signing keypair) — a genuinely different `iss` than
+ * the primary run realm — to assert the BFF rejects a correctly-signed,
+ * correct-audience token issued by a different realm.
+ */
+export async function mintSecondaryIssuerAccessToken(
+  issuer: string,
+  clientId: string,
+  clientSecret: string,
+  account: TestAccount,
+): Promise<string> {
+  const response = await fetch(`${issuer}/protocol/openid-connect/token`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'password',
+      client_id: clientId,
+      client_secret: clientSecret,
+      username: account.username,
+      password: account.password,
+      scope: 'openid profile email',
+    }),
+  });
+  if (response.status !== 200) {
+    throw new Error(
+      `BLOCKED: secondary issuer password grant failed (${response.status})`,
+    );
+  }
+  const payload = (await response.json()) as { access_token?: string };
+  if (!payload.access_token)
+    throw new Error('BLOCKED: no access_token in secondary-issuer grant');
+  return payload.access_token;
 }
 
 export function eventPath(f: CaseFixture): string {
