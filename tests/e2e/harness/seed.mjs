@@ -533,6 +533,50 @@ export async function seedRuntime(state, caseIds) {
         if (['WEB-06', 'PORT-06'].includes(caseId)) {
           await tx.$executeRaw`UPDATE issuance_sources SET approval_mode='MANUAL' WHERE tenant_id=${tenantId}::uuid AND id=${fixture.sourceId}::uuid`;
         }
+        if (caseId === 'WEB-06') {
+          const approveCode = `E2E-${state.id}-${caseId}-AP`;
+          const rejectCode = `E2E-${state.id}-${caseId}-RJ`;
+          const expiryCode = `E2E-${state.id}-${caseId}-EX`;
+          fixture.data.approveCode = approveCode;
+          fixture.data.rejectCode = rejectCode;
+          fixture.data.expiryCode = expiryCode;
+          fixture.data.denyReason = 'E2E WEB-06 manager reject';
+          fixture.data.codeIds = {
+            ...(fixture.data.codeIds ?? {}),
+            primary: fixture.data.codeIds?.primary ?? inventory.codeIds[0],
+          };
+          for (const [name, raw] of Object.entries({
+            approve: approveCode,
+            reject: rejectCode,
+            expiry: expiryCode,
+          })) {
+            const codeId = randomUUID();
+            fixture.data.codeIds[name] = codeId;
+            const codeHmac = backend.hashRedemptionCode(hmac, raw);
+            await tx.$executeRaw`
+              INSERT INTO redemption_codes (
+                tenant_id, event_id, id, code_hmac, code_pepper_version,
+                source_id, ticket_type_id, status, created_at, updated_at
+              ) VALUES (
+                ${tenantId}::uuid, ${eventId}::uuid, ${codeId}::uuid,
+                ${codeHmac}, ${hmac.version},
+                ${fixture.sourceId}::uuid, ${fixture.ticketTypeId}::uuid,
+                'AVAILABLE', now(), now()
+              )
+            `;
+            await backend.attachCodeRoutingOnInsert(tx, {
+              peppers: [hmac],
+              fpSecret: state.secrets.hmac,
+              tenantId,
+              eventId,
+              redemptionCodeId: codeId,
+              rawCode: raw,
+              codeStatus: 'AVAILABLE',
+              insertPepperVersion: 1,
+              insertHmac: codeHmac,
+            });
+          }
+        }
         if (caseId === 'WEB-07') {
           // Extra single-use codes for the replay/reload/conflict cases — the
           // double-submit case keeps using the generic fixture.code.
