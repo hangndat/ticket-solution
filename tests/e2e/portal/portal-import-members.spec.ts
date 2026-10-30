@@ -10,8 +10,25 @@ import {
   login,
   portalUrl,
 } from './helpers';
+import {
+  readCodeStatuses,
+  readImportBusinessSnapshot,
+  businessRowsUnchanged,
+  snapshotEqual,
+} from './import-db';
 import type { CaseFixture, E2EManifest } from '../harness/contract';
 import type { Page } from 'playwright/test';
+
+async function relogin(
+  page: Page,
+  m: E2EManifest,
+  caseId: string,
+  actor: 'owner' | 'otherAttendee',
+) {
+  await page.context().clearCookies();
+  await login(page, m, caseId, actor);
+  await page.waitForFunction(() => document.cookie.includes('portal_csrf='));
+}
 
 async function selectImportCatalog(
   page: Page,
@@ -125,10 +142,15 @@ test('[PORT-05] CSV upload, preview and commit flow uses isolated event', async 
   const f = fixtureFor(m, 'PORT-05');
   const sourceLabel = f.data?.sourceLabel;
   const typeLabel = f.data?.ticketTypeLabel;
+  const expectedCode = readFileSync(f.csvPath!, 'utf8')
+    .trim()
+    .split('\n')
+    .slice(1)[0];
   if (
     !f.csvPath ||
     typeof sourceLabel !== 'string' ||
-    typeof typeLabel !== 'string'
+    typeof typeLabel !== 'string' ||
+    !expectedCode
   ) {
     throw new Error('BLOCKED: PORT-05 CSV and catalog labels missing');
   }
@@ -136,7 +158,9 @@ test('[PORT-05] CSV upload, preview and commit flow uses isolated event', async 
   await page.goto(portalUrl(m, eventPath(f, '/guests#import')));
   await page.getByText('Vận hành', { exact: true }).click();
   await selectImportCatalog(page, sourceLabel, typeLabel);
+  await expect(page.getByRole('textbox').first()).toHaveValue('code');
   await page.locator('input[type=file]').setInputFiles(f.csvPath);
+  await expect(page.getByText(/Ghép cột/i)).toBeVisible();
   const create = page.waitForResponse(
     (r) =>
       r.url().includes(`${eventBff(f, '/imports')}`) &&
@@ -144,23 +168,58 @@ test('[PORT-05] CSV upload, preview and commit flow uses isolated event', async 
       !r.url().includes('/upload'),
   );
   await page.getByRole('button', { name: 'Upload + tạo job' }).click();
-  expect((await create).status()).toBeLessThan(300);
+  const createResponse = await create;
+  expect(createResponse.status()).toBeLessThan(300);
+  const createBody = (await createResponse.json()) as {
+    importId: string;
+  };
   await expect(page.getByTestId('import-job-result')).toBeVisible();
+  await expect(page.getByTestId('import-job-result')).toContainText(
+    createBody.importId.slice(0, 8),
+  );
   const preview = page.waitForResponse(
     (r) => r.url().includes('/preview') && r.request().method() === 'POST',
   );
   await page.getByRole('button', { name: 'Xem trước' }).click();
-  expect((await preview).status()).toBe(201);
-  await expect(page.getByTestId('import-job-result')).toBeVisible();
+  const previewResponse = await preview;
+  expect(previewResponse.status()).toBe(201);
+  const previewBody = (await previewResponse.json()) as {
+    validRowCount: number;
+    errorRowCount: number;
+    sampleRows?: Array<{ code?: string }>;
+  };
+  expect(previewBody.validRowCount).toBe(1);
+  expect(previewBody.errorRowCount).toBe(0);
+  await expect(page.getByTestId('import-job-result')).toContainText('1 hợp lệ');
+  await expect(page.getByTestId('import-job-result')).toContainText('0 lỗi');
   const commit = page.waitForResponse(
     (r) => r.url().includes('/commit') && r.request().method() === 'POST',
   );
   await page.getByRole('button', { name: 'Ghi nhận import' }).click();
-  expect((await commit).status()).toBeLessThan(300);
-  await expect(page.getByTestId('import-job-result')).toBeVisible();
+  const commitResponse = await commit;
+  expect(commitResponse.status()).toBeLessThan(300);
+  const commitBody = (await commitResponse.json()) as {
+    committedRowCount: number;
+    skippedRowCount: number;
+  };
+  expect(commitBody.committedRowCount).toBe(1);
+  expect(commitBody.skippedRowCount).toBe(0);
+  await expect(page.getByTestId('import-job-result')).toContainText(
+    'Đã ghi nhận: 1 dòng',
+  );
+  await page.getByRole('button', { name: 'Làm mới' }).click();
+  await expect(
+    page.locator('tr.ant-table-row').filter({ hasText: 'COMPLETED' }).first(),
+  ).toBeVisible();
   const jobs = await bffGet(page, m, eventBff(f, '/imports?limit=20'));
   expect(jobs.status).toBe(200);
-  expect((jobs.json as { items: unknown[] }).items.length).toBeGreaterThan(0);
+  const items = (jobs.json as { items: Array<{ importId: string; status: string }> })
+    .items;
+  const row = items.find((item) => item.importId === createBody.importId);
+  expect(row?.status).toBe('COMPLETED');
+  const codes = await readCodeStatuses(f);
+  const imported = codes.find((c) => c.status === 'AVAILABLE');
+  expect(imported).toBeTruthy();
 });
 
 test('[PORT-05] preview reports duplicate rows and error report is reachable', async ({
@@ -188,12 +247,70 @@ test('[PORT-05] preview reports duplicate rows and error report is reachable', a
   expect(
     dupBody.sampleErrors?.some((row) => row.code === 'DUPLICATE_IN_FILE'),
   ).toBe(true);
-  const errors = await bffGet(
-    page,
+  const errorsPath = portalUrl(
     m,
     `${eventBff(f, '/imports')}/${encodeURIComponent(dupJobId)}/errors`,
   );
-  expect(errors.status).toBe(200);
+  const errorsRes = await page.request.get(errorsPath, {
+    failOnStatusCode: false,
+  });
+  expect(errorsRes.status()).toBe(200);
+  const errorCsv = await errorsRes.text();
+  expect(errorCsv).toContain('DUPLICATE_IN_FILE');
+  await page.goto(portalUrl(m, eventPath(f, '/guests#import')));
+  await page.getByRole('button', { name: 'Làm mới' }).click();
+  await page
+    .locator('tr.ant-table-row')
+    .filter({ hasText: 'PREVIEW_READY' })
+    .first()
+    .getByRole('button', { name: 'Tiếp tục job' })
+    .click();
+  await page.getByRole('button', { name: 'Xem trước' }).click();
+  await expect(page.getByTestId('import-job-result')).toContainText('1 lỗi', {
+    timeout: 15_000,
+  });
+  await expect(
+    page.locator('section[aria-label="Lỗi mẫu theo dòng"]'),
+  ).toContainText('DUPLICATE_IN_FILE');
+  const download = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Tải lỗi' }).click();
+  const file = await download;
+  const uiCsv = readFileSync(await file.path(), 'utf8');
+  expect(uiCsv).toContain('DUPLICATE_IN_FILE');
+});
+
+test('[PORT-05] malformed nonblank row preview rejects without PG mutation', async ({
+  page,
+}) => {
+  const m = loadManifest();
+  const f = fixtureFor(m, 'PORT-05');
+  const invalidPath = f.data?.invalidMixCsvPath;
+  if (typeof invalidPath !== 'string') {
+    throw new Error('BLOCKED: PORT-05 invalid row CSV fixture missing');
+  }
+  await login(page, m, 'PORT-05', 'owner');
+  await waitForImportSurface(page, m, f);
+  const before = await readImportBusinessSnapshot(f);
+  const csv = readFileSync(invalidPath, 'utf8');
+  const { importId } = await createCodesImportJob(page, m, f, csv);
+  const preview = await previewImportJob(page, m, f, importId);
+  expect(preview.status).toBe(201);
+  const previewBody = preview.json as {
+    validRowCount: number;
+    errorRowCount: number;
+    sampleErrors?: Array<{ code: string }>;
+  };
+  expect(previewBody.validRowCount).toBe(1);
+  expect(previewBody.errorRowCount).toBe(1);
+  expect(previewBody.sampleErrors?.some((row) => row.code === 'EMPTY')).toBe(
+    true,
+  );
+  const afterPreview = await readImportBusinessSnapshot(f);
+  expect(businessRowsUnchanged(before, afterPreview)).toBe(true);
+  const reject = await previewImportJob(page, m, f, importId);
+  expect(reject.status).toBe(201);
+  const afterReplay = await readImportBusinessSnapshot(f);
+  expect(businessRowsUnchanged(before, afterReplay)).toBe(true);
 });
 
 test('[PORT-05] commit skips existing codes and idempotent replay does not double-import', async ({
@@ -202,11 +319,18 @@ test('[PORT-05] commit skips existing codes and idempotent replay does not doubl
   const m = loadManifest();
   const f = fixtureFor(m, 'PORT-05');
   const csvPath = f.data?.existingCodesCsvPath;
-  if (typeof csvPath !== 'string') {
+  const consumedId = (f.data?.codeIds as { consumed?: string } | undefined)
+    ?.consumed;
+  if (typeof csvPath !== 'string' || typeof consumedId !== 'string') {
     throw new Error('BLOCKED: PORT-05 existing-code CSV fixture missing');
   }
   await login(page, m, 'PORT-05', 'owner');
   await waitForImportSurface(page, m, f);
+  const before = await readImportBusinessSnapshot(f);
+  const codesBefore = await readCodeStatuses(f);
+  expect(codesBefore.find((c) => c.id === consumedId)?.status).toBe(
+    'CONSUMED',
+  );
   const csv = readFileSync(csvPath, 'utf8');
   const { importId } = await createCodesImportJob(page, m, f, csv);
   const preview = await previewImportJob(page, m, f, importId);
@@ -240,6 +364,11 @@ test('[PORT-05] commit skips existing codes and idempotent replay does not doubl
   expect(commitBody.replayed).toBe(false);
   expect(commitBody.committedRowCount).toBe(1);
   expect(commitBody.skippedRowCount).toBe(2);
+  const codesAfter = await readCodeStatuses(f);
+  expect(codesAfter.find((c) => c.id === consumedId)?.status).toBe('CONSUMED');
+  expect(codesAfter.filter((c) => c.status === 'AVAILABLE').length).toBe(
+    codesBefore.filter((c) => c.status === 'AVAILABLE').length + 1,
+  );
   const replay = await commitImportJob(
     page,
     m,
@@ -259,6 +388,9 @@ test('[PORT-05] commit skips existing codes and idempotent replay does not doubl
   };
   expect(replayBody.replayed).toBe(true);
   expect(replayBody.committedRowCount).toBe(commitBody.committedRowCount);
+  const after = await readImportBusinessSnapshot(f);
+  expect(after.commit_ops).toBe(before.commit_ops + 1);
+  expect(after.codes).toBe(before.codes + 1);
 });
 
 test('[PORT-05] row limit preview is rejected without extra business mutation', async ({
@@ -272,14 +404,20 @@ test('[PORT-05] row limit preview is rejected without extra business mutation', 
   }
   await login(page, m, 'PORT-05', 'owner');
   await waitForImportSurface(page, m, f);
-  const before = await bffGet(page, m, eventBff(f, '/imports?limit=50'));
-  expect(before.status).toBe(200);
-  const beforeCount = (before.json as { items: unknown[] }).items.length;
+  const before = await readImportBusinessSnapshot(f);
+  const beforeList = await bffGet(page, m, eventBff(f, '/imports?limit=50'));
+  expect(beforeList.status).toBe(200);
+  const beforeCount = (beforeList.json as { items: unknown[] }).items.length;
   const csv = readFileSync(limitPath, 'utf8');
   const { importId, fileHash } = await createCodesImportJob(page, m, f, csv);
+  const afterCreate = await readImportBusinessSnapshot(f);
+  expect(afterCreate.import_jobs).toBe(before.import_jobs + 1);
+  expect(businessRowsUnchanged(before, afterCreate)).toBe(true);
   const preview = await previewImportJob(page, m, f, importId, fileHash);
   expect(preview.status).toBe(422);
   expect((preview.json as { code: string }).code).toBe('IMPORT_ROW_LIMIT');
+  const afterPreview = await readImportBusinessSnapshot(f);
+  expect(businessRowsUnchanged(afterCreate, afterPreview)).toBe(true);
   const after = await bffGet(page, m, eventBff(f, '/imports?limit=50'));
   expect(after.status).toBe(200);
   expect((after.json as { items: unknown[] }).items.length).toBe(
@@ -294,41 +432,54 @@ test('[PORT-05] foreign tenant and event cannot read owner import jobs or files'
   const f = fixtureFor(m, 'PORT-05');
   const foreignTenantId = f.data?.foreignTenantId;
   const foreignEventId = f.data?.foreignEventId;
+  const otherEventId = f.data?.otherEventId;
   if (
     typeof foreignTenantId !== 'string' ||
     typeof foreignEventId !== 'string' ||
+    typeof otherEventId !== 'string' ||
     !f.csvPath
   ) {
     throw new Error('BLOCKED: PORT-05 foreign scope fixture missing');
   }
   await login(page, m, 'PORT-05', 'owner');
   await waitForImportSurface(page, m, f);
+  const before = await readImportBusinessSnapshot(f);
   const csv = readFileSync(f.csvPath, 'utf8');
-  const { importId } = await createCodesImportJob(page, m, f, csv);
-  const foreignList = await bffGet(
+  const { importId, fileId } = await createCodesImportJob(page, m, f, csv);
+  const preview = await previewImportJob(page, m, f, importId);
+  expect(preview.status).toBe(201);
+  const beforeDeny = await readImportBusinessSnapshot(f);
+  await relogin(page, m, 'PORT-05', 'otherAttendee');
+  const wrongEvent = await bffGet(
+    page,
+    m,
+    `/api/bff/tenants/${encodeURIComponent(f.tenantId)}/events/${encodeURIComponent(otherEventId)}/imports/${encodeURIComponent(importId)}`,
+  );
+  expect(wrongEvent.status).toBeGreaterThanOrEqual(400);
+  const wrongTenant = await bffGet(
     page,
     m,
     `/api/bff/tenants/${encodeURIComponent(foreignTenantId)}/events/${encodeURIComponent(foreignEventId)}/imports/${encodeURIComponent(importId)}`,
   );
-  expect(foreignList.status).toBeGreaterThanOrEqual(400);
-  const wrongEvent = await bffGet(
+  expect(wrongTenant.status).toBeGreaterThanOrEqual(400);
+  const ownerEventDenied = await bffGet(
     page,
     m,
-    `/api/bff/tenants/${encodeURIComponent(f.tenantId)}/events/${encodeURIComponent(foreignEventId)}/imports/${encodeURIComponent(importId)}`,
+    `/api/bff/tenants/${encodeURIComponent(f.tenantId)}/events/${encodeURIComponent(f.eventId)}/imports/${encodeURIComponent(importId)}`,
   );
-  expect(wrongEvent.status).toBeGreaterThanOrEqual(400);
+  expect(ownerEventDenied.status).toBeGreaterThanOrEqual(400);
   const rogueKey = randomUUID();
   const foreignCreate = await bffMutate(
     page,
     portalUrl(
       m,
-      `/api/bff/tenants/${encodeURIComponent(foreignTenantId)}/events/${encodeURIComponent(f.eventId)}/imports`,
+      `/api/bff/tenants/${encodeURIComponent(foreignTenantId)}/events/${encodeURIComponent(foreignEventId)}/imports`,
     ),
     {
       kind: 'CODES',
-      sourceId: f.sourceId,
-      ticketTypeId: f.ticketTypeId,
-      fileId: randomUUID(),
+      sourceId: f.data.foreignSourceId,
+      ticketTypeId: f.data.foreignTicketTypeId,
+      fileId,
       columnMapping: { code: 'code' },
       idempotencyKey: rogueKey,
     },
@@ -336,6 +487,14 @@ test('[PORT-05] foreign tenant and event cannot read owner import jobs or files'
     rogueKey,
   );
   expect(foreignCreate.status).toBeGreaterThanOrEqual(400);
+  const errorsDenied = await bffGet(
+    page,
+    m,
+    `/api/bff/tenants/${encodeURIComponent(f.tenantId)}/events/${encodeURIComponent(f.eventId)}/imports/${encodeURIComponent(importId)}/errors`,
+  );
+  expect(errorsDenied.status).toBeGreaterThanOrEqual(400);
+  const after = await readImportBusinessSnapshot(f);
+  expect(businessRowsUnchanged(beforeDeny, after)).toBe(true);
 });
 
 test('[PORT-11] Portal staff invite emits a real worker email to Mailpit', async ({

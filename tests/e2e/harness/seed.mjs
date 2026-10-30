@@ -754,6 +754,10 @@ export async function seedRuntime(state, caseIds) {
         if (caseId === 'PORT-05') {
           fixture.data.sourceLabel = 'E2E Auto';
           fixture.data.controlDatabaseUrl = state.databaseUrl;
+          fixture.data.codeIds = {
+            consumed: inventory.codeIds[0],
+            available: inventory.codeIds[1],
+          };
           await tx.$executeRaw`
             UPDATE redemption_codes SET status = 'CONSUMED'
             WHERE tenant_id = ${tenantId}::uuid AND id = ${inventory.codeIds[0]}::uuid
@@ -1152,8 +1156,43 @@ export async function seedRuntime(state, caseIds) {
       if (caseId === 'PORT-05') {
         const foreignTenantId = randomUUID();
         const foreignEventId = randomUUID();
+        const otherEventId = randomUUID();
         fixture.data.foreignTenantId = foreignTenantId;
         fixture.data.foreignEventId = foreignEventId;
+        fixture.data.otherEventId = otherEventId;
+        await backend.withTenant(db, tenantId, async (tx) => {
+          await tx.event.create({
+            data: {
+              tenantId,
+              id: otherEventId,
+              slug: 'other-import-event',
+              name: 'Other PORT-05 event',
+              status: 'PUBLISHED',
+            },
+          });
+          const scopedMembership = await backend.grantMembership(tx, {
+            tenantId,
+            userId: accounts.otherAttendee.userId,
+            role: 'Manager',
+            permissions: backend.tenantPermissionsForRole('Manager'),
+          });
+          await backend.grantEventAssignment(tx, {
+            tenantId,
+            eventId: otherEventId,
+            membershipId: scopedMembership.membershipId,
+            permissions: backend.eventPermissionsForRole('Manager'),
+          });
+          const otherInventory = await backend.seedEventInventory(tx, hmac, {
+            tenantId,
+            eventId: otherEventId,
+            eventQuota: 20,
+            rawCodes: [],
+            ticketTypeLabel: 'Other PORT-05 type',
+            sourceName: 'Other PORT-05 source',
+          });
+          fixture.data.otherSourceId = otherInventory.sourceId;
+          fixture.data.otherTicketTypeId = otherInventory.ticketTypeId;
+        });
         await backend.withTenant(db, foreignTenantId, async (tx) => {
           await tx.tenant.create({
             data: {
@@ -1165,6 +1204,12 @@ export async function seedRuntime(state, caseIds) {
           const membership = await backend.grantMembership(tx, {
             tenantId: foreignTenantId,
             userId: accounts.owner.userId,
+            role: 'Owner',
+            permissions: backend.tenantPermissionsForRole('Owner'),
+          });
+          const scopedMembership = await backend.grantMembership(tx, {
+            tenantId: foreignTenantId,
+            userId: accounts.otherAttendee.userId,
             role: 'Owner',
             permissions: backend.tenantPermissionsForRole('Owner'),
           });
@@ -1181,6 +1226,12 @@ export async function seedRuntime(state, caseIds) {
             tenantId: foreignTenantId,
             eventId: foreignEventId,
             membershipId: membership.membershipId,
+            permissions: backend.eventPermissionsForRole('Owner'),
+          });
+          await backend.grantEventAssignment(tx, {
+            tenantId: foreignTenantId,
+            eventId: foreignEventId,
+            membershipId: scopedMembership.membershipId,
             permissions: backend.eventPermissionsForRole('Owner'),
           });
           const inventory = await backend.seedEventInventory(tx, hmac, {
@@ -1298,7 +1349,7 @@ export async function seedRuntime(state, caseIds) {
         fixture.data.newImportCode = newCode;
         fixture.data.invalidMixCsvPath = writeCsv(
           `${caseId}-invalid.csv`,
-          `code\n \n${newCode}\n`,
+          `code,notes\n${newCode},ok\n,row-without-code\n`,
         );
         fixture.data.duplicateCsvPath = writeCsv(
           `${caseId}-dup.csv`,

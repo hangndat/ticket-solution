@@ -119,6 +119,16 @@ Không sửa harness cho PORT-09 notification states (PORT-08 counters/fault đ�
 | Runtime do coordinator chạy, `mvs7lq8o-b4964d`                                                                                                                                    | PLAT-01 và PLAT-05 PASS; Operator MFA/TOTP, Owner bị từ chối Platform, và Portal lỗi cấu hình chạy ở process HTTPS riêng. |
 | Runtime do coordinator chạy, `mvs7goky-950046`                                                                                                                                    | PORT-05 FAIL tại AntD option ẩn; selector đã đổi sang dropdown hiện, cần retry.                                           |
 
+## Kiểm tra đã chạy (worker task_6e7e5a20feff — James DoD F01–F03 / PR #1074)
+
+| Lệnh | Kết quả |
+| --- | --- |
+| `node tests/e2e/harness/run.mjs e2e --case=PORT-05` | **PASS** run `mvux2cef-af8a55`, browser **6/6**; artifact `tests/e2e/.artifacts/mvux2cef-af8a55/summary.json`. |
+| `pnpm test:e2e:guards` | PASS 16/16. |
+| SHA (pre-commit tree) | `dbd3d762d53f1663624cd95c4d5f3c774a4f075e` — `evidenceExactShaEligible` sau commit sạch trên cùng SHA. |
+
+PORT-05 DoD fix: UI mapping/preview/commit/list + error report download; EMPTY malformed row (two-column CSV); PostgreSQL `businessRowsUnchanged` + code status; `otherAttendee` actor deny với `fileId` thật và PG không đổi khi từ chối scope.
+
 ## Kiểm tra đã chạy (worker task_0d776f472c26 — PORT-05 B/H / Issue #1035)
 
 | Lệnh | Kết quả |
