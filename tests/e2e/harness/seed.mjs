@@ -248,7 +248,7 @@ export async function seedRuntime(state, caseIds) {
         // Private, run-scoped control. The test uses ticket_runtime + tenant RLS.
         fixture.data.controlDatabaseUrl = state.databaseUrl;
       }
-      if (['AUTH-03', 'WEB-04', 'DB-03', 'DB-04', 'DB-07', 'DB-02'].includes(caseId)) {
+      if (['AUTH-03', 'WEB-04', 'DB-03', 'DB-04', 'DB-07', 'DB-02', 'DB-10'].includes(caseId)) {
         // Private, run-scoped control for H/DB reconciliation under tenant RLS.
         fixture.data.controlDatabaseUrl = state.databaseUrl;
       }
@@ -264,7 +264,7 @@ export async function seedRuntime(state, caseIds) {
         fixture.data.registrationName = `New Tenant ${state.id}`;
         fixture.data.registrationSlug = `new-${slug}`;
       }
-      if (['AUTH-03', 'DB-03', 'DB-04', 'DB-07', 'SEC-04', 'SEC-05', 'WEB-04'].includes(caseId)) {
+      if (['AUTH-03', 'DB-03', 'DB-04', 'DB-07', 'DB-10', 'SEC-04', 'SEC-05', 'WEB-04'].includes(caseId)) {
         fixture.data.formVersion = 'form-v1';
         fixture.data.termsVersion = 'terms-v1';
         if (caseId === 'AUTH-03')
@@ -315,6 +315,7 @@ export async function seedRuntime(state, caseIds) {
         });
         fixture.ticketTypeId = inventory.ticketTypeId;
         fixture.sourceId = inventory.sourceId;
+        if (caseId === 'DB-10') fixture.data.usedCodeId = inventory.codeIds[0];
         if (caseId === 'DB-07') {
           await tx.$executeRaw`UPDATE issuance_sources
             SET approval_mode='MANUAL', pending_ttl_hours=3
@@ -1006,6 +1007,58 @@ export async function seedRuntime(state, caseIds) {
             data: { status: 'SUSPENDED' },
           }),
         );
+      }
+      if (caseId === 'DB-10') {
+        const otherEventId = randomUUID();
+        fixture.data.otherEventId = otherEventId;
+        await backend.withTenant(db, tenantId, async (tx) => {
+          await tx.event.create({ data: {
+            tenantId, id: otherEventId, slug: 'other-event',
+            name: 'Other DB-10 event', status: 'PUBLISHED',
+          } });
+          const membership = await tx.membership.findFirstOrThrow({
+            where: { tenantId, userId: accounts.owner.userId },
+          });
+          await backend.grantEventAssignment(tx, {
+            tenantId, eventId: otherEventId, membershipId: membership.id,
+            permissions: backend.eventPermissionsForRole('Owner'),
+          });
+          const inventory = await backend.seedEventInventory(tx, hmac, {
+            tenantId, eventId: otherEventId, eventQuota: 20, rawCodes: [],
+            ticketTypeLabel: 'Other DB-10 type', sourceName: 'Other DB-10 source',
+          });
+          fixture.data.otherSourceId = inventory.sourceId;
+          fixture.data.otherTicketTypeId = inventory.ticketTypeId;
+        });
+        const foreignTenantId = randomUUID();
+        const foreignEventId = randomUUID();
+        fixture.data.foreignTenantId = foreignTenantId;
+        fixture.data.foreignEventId = foreignEventId;
+        await backend.withTenant(db, foreignTenantId, async (tx) => {
+          await tx.tenant.create({ data: {
+            id: foreignTenantId, slug: `${slug}-foreign`, name: 'Foreign DB-10 tenant',
+          } });
+          const membership = await backend.grantMembership(tx, {
+            tenantId: foreignTenantId, userId: accounts.owner.userId,
+            role: 'Owner', permissions: backend.tenantPermissionsForRole('Owner'),
+          });
+          await tx.event.create({ data: {
+            tenantId: foreignTenantId, id: foreignEventId, slug: 'event',
+            name: 'Foreign DB-10 event', status: 'PUBLISHED',
+          } });
+          await backend.grantEventAssignment(tx, {
+            tenantId: foreignTenantId, eventId: foreignEventId,
+            membershipId: membership.membershipId,
+            permissions: backend.eventPermissionsForRole('Owner'),
+          });
+          const inventory = await backend.seedEventInventory(tx, hmac, {
+            tenantId: foreignTenantId, eventId: foreignEventId,
+            eventQuota: 20, rawCodes: [], ticketTypeLabel: 'Foreign DB-10 type',
+            sourceName: 'Foreign DB-10 source',
+          });
+          fixture.data.foreignSourceId = inventory.sourceId;
+          fixture.data.foreignTicketTypeId = inventory.ticketTypeId;
+        });
       }
       const csvPath = resolve(state.dir, `${caseId}-codes.csv`);
       writeFileSync(csvPath, `code\nIMPORTED-${state.id}-${caseId}\n`, {
