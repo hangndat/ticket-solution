@@ -3245,6 +3245,14 @@ for (const caseId of CASE_IDS) {
         assert.equal(row.event_id, f.eventId);
         assert.equal(row.file_id, file.fileId);
       });
+      const managerReadsOwnerJob = await request(ctx, 'GET', `${base}/${jobs[0].importId}`, manager);
+      expectStatus(managerReadsOwnerJob, 200);
+      assert.equal(managerReadsOwnerJob.body.importId, jobs[0].importId);
+      const beforePermissionDeny = await snapshot();
+      deny(await request(ctx, 'GET', `${base}/${jobs[0].importId}`, attendee));
+      deny(await request(ctx, 'POST', `${base}/${jobs[0].importId}/preview`, attendee, {}));
+      assert.deepEqual(await snapshot(), beforePermissionDeny,
+        'actor without inventory.import must not read or preview another actor job');
       const beforeWrongScope = await snapshot();
       const otherEvent = `/tenants/${f.tenantId}/events/${f.data.otherEventId}/imports`;
       const foreign = `/tenants/${f.data.foreignTenantId}/events/${f.data.foreignEventId}/imports`;
@@ -3266,7 +3274,7 @@ for (const caseId of CASE_IDS) {
       const previews = [];
       for (let i = 0; i < 2; i++) {
         const preview = await request(ctx, 'POST', `${base}/${jobs[i].importId}/preview`,
-          i === 0 ? owner : manager, {});
+          i === 0 ? manager : owner, {});
         expectStatus(preview, 201);
         assert.equal(preview.body.validRowCount, 2);
         assert.equal(preview.body.estimatedQuota, 2);
@@ -3293,7 +3301,7 @@ for (const caseId of CASE_IDS) {
         await lock.query("SELECT set_config('app.tenant_id', $1, true)", [f.tenantId]);
         await lock.query('SELECT id FROM events WHERE tenant_id=$1::uuid AND id=$2::uuid FOR UPDATE',
           [f.tenantId, f.eventId]);
-        pending = [commit(0, owner, commitKeys[0]), commit(1, manager, commitKeys[1])];
+        pending = [commit(0, manager, commitKeys[0]), commit(1, owner, commitKeys[1])];
         let waiting = 0;
         for (let i = 0; i < 100; i++) {
           const result = await observer.query(`SELECT count(*)::int AS n FROM pg_stat_activity
@@ -3314,7 +3322,7 @@ for (const caseId of CASE_IDS) {
       assert.deepEqual(outcomes.map((r) => r.body.committedRowCount).sort(), [0, 1]);
       assert.deepEqual(outcomes.map((r) => r.body.skippedRowCount).sort(), [1, 2]);
       for (let i = 0; i < 2; i++) {
-        const token = i === 0 ? owner : manager;
+        const token = i === 0 ? manager : owner;
         const replay = await commit(i, token, commitKeys[i]);
         expectStatus(replay, 201);
         assert.equal(replay.body.replayed, true);
@@ -3351,6 +3359,85 @@ for (const caseId of CASE_IDS) {
         assert.equal(row.status, 'COMPLETED');
         assert.ok(jobs.some((job) => job.importId === row.import_id));
       });
+      assert.deepEqual(ops.find((row) => row.import_id === jobs[0].importId)?.actor_user_id,
+        f.accounts.manager.userId, 'manager commits the job created by owner');
+
+      // F01: both HTTP requests for one importId/key/body reach the DB lock
+      // before either can finish. The second is a replay of the in-flight first.
+      const retryFile = await upload('CODES', `code\nDB10-RETRY-${ctx.fixture.tenantSlug}\n${f.code}\n`, owner);
+      const retryCreated = await create(owner, { ...createBody, fileId: retryFile.fileId }, randomUUID());
+      expectStatus(retryCreated, 201);
+      const retryId = retryCreated.body.importId;
+      const retryPreviewResult = await request(ctx, 'POST', `${base}/${retryId}/preview`, manager, {});
+      expectStatus(retryPreviewResult, 201);
+      const retryBody = retryPreviewResult.body;
+      const retryKey = randomUUID();
+      const retryCommit = () => request(ctx, 'POST', `${base}/${retryId}/commit`, manager, {
+        previewRevision: retryBody.previewRevision,
+        mappingRevision: retryBody.mappingRevision,
+        fileHash: retryBody.fileHash,
+      }, { 'idempotency-key': retryKey });
+      const beforeRetry = await snapshot();
+      const retryLock = new Client({ connectionString: f.data.controlDatabaseUrl });
+      const retryObserver = new Client({ connectionString: f.data.controlDatabaseUrl });
+      await retryLock.connect();
+      await retryObserver.connect();
+      let firstRetry;
+      let secondRetry;
+      const waitForRetryWaiters = async (minimum) => {
+        for (let attempt = 0; attempt < 100; attempt++) {
+          const observed = await retryObserver.query(`SELECT count(*)::int AS n FROM pg_stat_activity
+            WHERE wait_event_type='Lock' AND query LIKE '%SELECT id, status FROM events%'
+              AND pid <> pg_backend_pid()`);
+          if (observed.rows[0].n >= minimum) return;
+          await new Promise((resolve) => setTimeout(resolve, 30));
+        }
+        assert.fail(`${minimum} same-key HTTP commits must reach the event lock`);
+      };
+      try {
+        await retryLock.query('BEGIN');
+        await retryLock.query('SET LOCAL ROLE ticket_runtime');
+        await retryLock.query("SELECT set_config('app.tenant_id', $1, true)", [f.tenantId]);
+        await retryLock.query('SELECT id FROM events WHERE tenant_id=$1::uuid AND id=$2::uuid FOR UPDATE',
+          [f.tenantId, f.eventId]);
+        firstRetry = retryCommit();
+        await waitForRetryWaiters(1);
+        secondRetry = retryCommit();
+        await waitForRetryWaiters(2);
+      } finally {
+        await retryLock.query('ROLLBACK');
+        await retryLock.end();
+        await retryObserver.end();
+      }
+      const retryResults = await Promise.all([firstRetry, secondRetry]);
+      retryResults.forEach((result) => expectStatus(result, 201));
+      assert.deepEqual(retryResults.map((result) => result.body.replayed).sort(), [false, true]);
+      retryResults.forEach((result) => {
+        assert.equal(result.body.importId, retryId);
+        assert.equal(result.body.committedRowCount, 1);
+        assert.equal(result.body.skippedRowCount, 1);
+      });
+      const afterRetry = await snapshot();
+      assert.equal(afterRetry.codes, beforeRetry.codes + 1);
+      assert.equal(afterRetry.commit_ops, beforeRetry.commit_ops + 1);
+      for (const field of ['tickets', 'invitations', 'outbox', 'audit', 'allocated', 'users'])
+        assert.equal(afterRetry[field], beforeRetry[field], field);
+      const sameKeyOps = await db03Query(f, `SELECT actor_user_id, status, response_json->>'importId' AS import_id
+        FROM operations WHERE tenant_id=$1::uuid AND event_id=$2::uuid
+          AND command='import.commit' AND client_key=$3`, [f.tenantId, f.eventId, retryKey]);
+      assert.deepEqual(sameKeyOps, [{ actor_user_id: f.accounts.manager.userId,
+        status: 'COMPLETED', import_id: retryId }]);
+      assert.deepEqual((await db03Query(f, `SELECT id, status, source_id, ticket_type_id
+        FROM redemption_codes WHERE tenant_id=$1::uuid AND event_id=$2::uuid AND id=$3::uuid`,
+        [f.tenantId, f.eventId, f.data.usedCodeId]))[0], usedBefore);
+      const beforeCommitDeny = await snapshot();
+      deny(await request(ctx, 'POST', `${base}/${retryId}/commit`, attendee, {
+        previewRevision: retryBody.previewRevision,
+        mappingRevision: retryBody.mappingRevision,
+        fileHash: retryBody.fileHash,
+      }, { 'idempotency-key': randomUUID() }));
+      assert.deepEqual(await snapshot(), beforeCommitDeny,
+        'actor without inventory.import must not commit another actor job');
 
       const guests = await upload('GUESTS', `email\nnew-${f.tenantSlug}@example.test\n`, owner);
       const guestJob = await create(owner, { kind: 'GUESTS', sourceId: f.sourceId,
@@ -3391,6 +3478,7 @@ for (const caseId of CASE_IDS) {
         WHERE tenant_id=$1::uuid AND event_id=$2::uuid AND membership_id=(
           SELECT id FROM memberships WHERE tenant_id=$1::uuid AND user_id=$3::uuid)
           AND revoked_at IS NULL`, [f.tenantId, f.eventId, f.accounts.manager.userId]);
+      deny(await request(ctx, 'GET', `${base}/${jobs[0].importId}`, manager));
       deny(await request(ctx, 'GET', `${base}/${jobs[1].importId}`, manager));
       deny(await request(ctx, 'GET', `${base}/${jobs[1].importId}/errors`, manager));
       deny(await request(ctx, 'POST', `${base}/${jobs[1].importId}/preview`, manager, {}));

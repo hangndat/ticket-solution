@@ -649,6 +649,96 @@ test(
       for (const field of ['tickets', 'invitations', 'outbox', 'audit'])
         assert.equal(raceStateAfter[field], raceStateBefore[field], field);
 
+      // DB-10 F01: two requests for the same job/key/body are already in
+      // PostgreSQL transactions while the first commit is still in flight.
+      const retryFile = await uploadImportFile(db, store, {
+        tenantId: tenantA, eventId: eventA, actorUserId: manager.userId,
+        kind: 'CODES', filename: 'retry-db10.csv', contentType: 'text/csv',
+        body: Buffer.from(`code\nRETRY-DB10\n${usedCode}\n`),
+      });
+      const retryJob = await createImportJob(db, {
+        tenantId: tenantA, eventId: eventA, actorUserId: manager.userId,
+        idempotencyKey: randomUUID(),
+        body: { kind: 'CODES', sourceId, ticketTypeId, fileId: retryFile.fileId },
+      });
+      const retryPreview = await previewImportJob(db, store, {
+        tenantId: tenantA, eventId: eventA, actorUserId: manager.userId,
+        importId: retryJob.importId,
+      });
+      const retryKey = randomUUID();
+      const retryCommit = () => commitImportJob(db, store, HMAC, {
+        tenantId: tenantA, eventId: eventA, actorUserId: manager.userId,
+        importId: retryJob.importId, idempotencyKey: retryKey,
+        body: {
+          previewRevision: retryPreview.previewRevision,
+          mappingRevision: retryPreview.mappingRevision,
+          fileHash: retryPreview.fileHash,
+        },
+      });
+      let unlockRetry;
+      let retryLocked;
+      const retryLockReady = new Promise((resolve) => { retryLocked = resolve; });
+      const retryReleased = new Promise((resolve) => { unlockRetry = resolve; });
+      const retryBlocker = withTenant(db, tenantA, async (tx) => {
+        await tx.$queryRaw`SELECT id FROM events WHERE tenant_id = ${tenantA}::uuid
+          AND id = ${eventA}::uuid FOR UPDATE`;
+        retryLocked();
+        await retryReleased;
+      });
+      await retryLockReady;
+      const retryObserver = new Client({ connectionString: boot.url });
+      const waitForRetryWaiters = async (minimum) => {
+        for (let attempt = 0; attempt < 100; attempt++) {
+          const observed = await retryObserver.query(`SELECT count(*)::int AS n
+            FROM pg_stat_activity WHERE wait_event_type = 'Lock'
+              AND query LIKE '%SELECT id, status FROM events%'
+              AND pid <> pg_backend_pid()`);
+          if (observed.rows[0].n >= minimum) return;
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        }
+        assert.fail(`${minimum} same-key commits must reach the event lock`);
+      };
+      let firstRetry;
+      let secondRetry;
+      try {
+        await retryObserver.connect();
+        firstRetry = retryCommit();
+        await waitForRetryWaiters(1);
+        secondRetry = retryCommit();
+        await waitForRetryWaiters(2);
+      } finally {
+        unlockRetry();
+        await retryBlocker;
+        await retryObserver.end().catch(() => {});
+      }
+      const retryResults = await Promise.all([firstRetry, secondRetry]);
+      assert.deepEqual(retryResults.map((result) => result.replayed).sort(), [false, true]);
+      retryResults.forEach((result) => {
+        assert.equal(result.importId, retryJob.importId);
+        assert.equal(result.committedRowCount, 1);
+        assert.equal(result.skippedRowCount, 1);
+      });
+      const retryStateAfter = await withTenant(db, tenantA, async (tx) => {
+        const state = await tx.$queryRaw`SELECT
+          (SELECT count(*)::int FROM redemption_codes WHERE tenant_id = ${tenantA}::uuid AND event_id = ${eventA}::uuid) AS codes,
+          (SELECT count(*)::int FROM operations WHERE tenant_id = ${tenantA}::uuid AND event_id = ${eventA}::uuid AND command = 'import.commit') AS commit_ops,
+          (SELECT count(*)::int FROM operations WHERE tenant_id = ${tenantA}::uuid AND event_id = ${eventA}::uuid AND command = 'import.commit' AND client_key = ${retryKey}) AS same_key_ops,
+          (SELECT count(*)::int FROM tickets WHERE tenant_id = ${tenantA}::uuid AND event_id = ${eventA}::uuid) AS tickets,
+          (SELECT count(*)::int FROM guest_invitations WHERE tenant_id = ${tenantA}::uuid AND event_id = ${eventA}::uuid) AS invitations,
+          (SELECT count(*)::int FROM outbox WHERE tenant_id = ${tenantA}::uuid AND event_id = ${eventA}::uuid) AS outbox,
+          (SELECT count(*)::int FROM audit_logs WHERE tenant_id = ${tenantA}::uuid AND event_id = ${eventA}::uuid) AS audit`;
+        const used = await tx.$queryRaw`SELECT id, status, source_id, ticket_type_id, code_pepper_version
+          FROM redemption_codes WHERE tenant_id = ${tenantA}::uuid
+            AND event_id = ${eventA}::uuid AND code_hmac = ${usedCodeHmac}`;
+        assert.deepEqual(used[0], usedBefore);
+        return state[0];
+      });
+      assert.equal(retryStateAfter.codes, raceStateAfter.codes + 1);
+      assert.equal(retryStateAfter.commit_ops, raceStateAfter.commit_ops + 1);
+      assert.equal(retryStateAfter.same_key_ops, 1);
+      for (const field of ['tickets', 'invitations', 'outbox', 'audit'])
+        assert.equal(retryStateAfter[field], raceStateAfter[field], field);
+
       // I7 — legacy sync path still works
       const legacy = await withTenant(db, tenantA, (tx) =>
         importRedemptionCodes(tx, HMAC, {
