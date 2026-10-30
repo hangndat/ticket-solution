@@ -248,7 +248,7 @@ export async function seedRuntime(state, caseIds) {
         // Private, run-scoped control. The test uses ticket_runtime + tenant RLS.
         fixture.data.controlDatabaseUrl = state.databaseUrl;
       }
-      if (['AUTH-03', 'WEB-04', 'DB-03', 'DB-04', 'DB-07', 'DB-02', 'DB-09', 'DB-10', 'DB-11'].includes(caseId)) {
+      if (['AUTH-03', 'WEB-04', 'DB-03', 'DB-04', 'DB-07', 'DB-02', 'DB-09', 'DB-10', 'DB-11', 'DB-12'].includes(caseId)) {
         // Private, run-scoped control for H/DB reconciliation under tenant RLS.
         fixture.data.controlDatabaseUrl = state.databaseUrl;
       }
@@ -1058,6 +1058,42 @@ export async function seedRuntime(state, caseIds) {
           });
           fixture.data.foreignSourceId = inventory.sourceId;
           fixture.data.foreignTicketTypeId = inventory.ticketTypeId;
+        });
+      }
+      if (caseId === 'DB-12') {
+        // The generic block above already saved+published version 1 of
+        // `eventId` (brand.organizationName = `Tenant ${caseId}`). Only add
+        // the never-published sibling event here.
+        const draftId = randomUUID();
+        fixture.data.draftEventId = draftId;
+        await backend.withTenant(db, tenantId, async (tx) => {
+          await tx.event.create({
+            data: {
+              tenantId,
+              id: draftId,
+              slug: 'draft-only',
+              name: 'Draft Only DB-12',
+              status: 'DRAFT',
+              visibility: 'PUBLIC',
+            },
+          });
+          const membership = await tx.membership.findFirstOrThrow({
+            where: { tenantId, userId: accounts.owner.userId },
+          });
+          await backend.grantEventAssignment(tx, {
+            tenantId,
+            eventId: draftId,
+            membershipId: membership.id,
+            permissions: backend.eventPermissionsForRole('Owner'),
+          });
+          // Saved but intentionally never published — proves draft/unpublished
+          // stays invisible on the public projection (ADR-19 fail-closed).
+          await backend.saveEventConfigVersion(tx, {
+            tenantId,
+            eventId: draftId,
+            actorUserId: accounts.owner.userId,
+            payload: eventPayload('Draft Org', 'Draft Hero'),
+          });
         });
       }
       const csvPath = resolve(state.dir, `${caseId}-codes.csv`);

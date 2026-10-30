@@ -129,11 +129,12 @@
     "caseId": "DB-12",
     "tests": [
       "D:packages/backend/test/config-publish.test.cjs#config publish is versioned",
-      "D:packages/backend/test/published-events.test.cjs#public published events"
+      "D:packages/backend/test/published-events.test.cjs#public published events",
+      "H:tests/e2e/http/live.test.mjs#[DB-12] live HTTP"
     ],
-    "layers": ["D"],
+    "layers": ["D", "H"],
     "status": "blocked",
-    "reason": "D publish/projection; thiếu H cache version/locale/no-store và rollback."
+    "reason": "D PostgreSQL PASS: publish versioned/immutable, preview no-store (data-layer field), rollback optimistic concurrency (stale expectedVersion/expectedRevision rejected, không mutate quota/codes), draft/unpublished/UNLISTED fail-closed, tenant SUSPENDED fail-closed. H Keycloak/HTTP PASS run `mvuphcyf-88857a` qua endpoint thật (POST config-versions/publish/config-rollback, GET public/tenants/.../events[/:slug]): save+publish v2 qua HTTP, rollback với expectedPublishedVersion/expectedRevision cũ bị 409 không đổi public projection/quota/codes, rollback đúng token tạo version mới từ target và audit event.publish+event.config.rollback đều có; draft/unpublished event không xuất hiện ở public detail/list, publish sau đó thì xuất hiện; preview yêu cầu auth (401 không token). Regression `--case=DB-09` và `--case=DB-10,DB-11` PASS sau khi sửa harness dùng chung (seed.mjs/run.mjs/entry.mjs/live.test.mjs CASE_IDS). BLOCKED thật: public cache key theo canonical host+tenant+event+published version+locale (TECHNICAL-DESIGN.md §405) và Cache-Control: no-store trên preview response header (§379) không tồn tại ở runtime — apps/api/src/published-events.ts không set Cache-Control nào; apps/api/src/config.ts dòng ~374 đọc cache-control của client vào biến bỏ đi thay vì set response header; không có field locale ở packages/contracts hay implementation cache-key edge (infra/admission/Caddyfile không có directive /public/*). Đây là runtime/contract gap đã báo coordinator (escalation msg_63b8cae5c655, xác nhận msg_69030d65a81d) — không tự sửa runtime trong Dispatch test-only này; cache/no-store/locale giữ BLOCKED tới khi có review sản phẩm riêng."
   },
   {
     "caseId": "DB-13",
