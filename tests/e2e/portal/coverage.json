@@ -53,10 +53,13 @@
   },
   {
     "caseId": "PORT-08",
-    "tests": ["portal-core.spec.ts [PORT-08]"],
+    "tests": [
+      "portal-core.spec.ts [PORT-08] event report shows seeded KPI, asOf and work links",
+      "portal-core.spec.ts [PORT-08] upstream report fault does not render fake zero KPIs"
+    ],
     "layers": ["B", "H"],
     "status": "blocked",
-    "reason": "B/H read path extended: full seeded report quota fields, gate asOf line, check-in KPI, manual refresh GET, deep links, no resend on dashboard. BLOCKED: confirm APPLIED/undo/reject is Gate/mobile (O12 scan), not Portal; seed lacks check-in/emailNeedsCs>0 for CTA branches; error-state must not show fake zero needs fault profile plus runtime."
+    "reason": "PORT-08 B/H PASS run mvut378v-220ec0 (2/2 browser specs) on SHA 9bec814e: BFF /report matches readEventReport seed with pendingApprovalCount>0, emailNeedsCsCount>0, FINITE quota; gate asOf, KPI counts, deep-link CTAs (#pending, #cs), manual refresh GET, no resend on dashboard, no Portal scan/confirm/undo; upstream /report fault (error500) shows unknown state without fake zero KPIs. BLOCKED: O12 confirm APPLIED/undo/reject — source Gate confirmCheckin/undoCheckin + packages/backend/test/reporting.test.cjs check-in counts; DB-15/GATE E2E, not Portal dashboard."
   },
   {
     "caseId": "PORT-09",
