@@ -360,6 +360,10 @@ async function db02MutationSnapshot(f, ctx) {
       'SELECT count(*)::int AS n FROM users WHERE issuer = $1 AND subject = $2',
       [ctx.runtime.secondaryIssuer, ctx.secondaryActor.subject],
     );
+    const sameEmail = await client.query(
+      'SELECT count(*)::int AS n FROM users WHERE email = $1',
+      [ctx.secondaryActor.username],
+    );
     await client.query('BEGIN');
     await client.query('SET LOCAL ROLE ticket_runtime');
     await client.query("SELECT set_config('app.tenant_id', $1, true)", [f.tenantId]);
@@ -371,7 +375,11 @@ async function db02MutationSnapshot(f, ctx) {
       [f.tenantId, f.eventId],
     );
     await client.query('COMMIT');
-    return { identity: identity.rows[0].n, ...counts.rows[0] };
+    return {
+      identity: identity.rows[0].n,
+      sameEmailUsers: sameEmail.rows[0].n,
+      ...counts.rows[0],
+    };
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;
@@ -2683,8 +2691,10 @@ for (const caseId of CASE_IDS) {
       const manager = await bearer(ctx, 'manager');
       const gates = gatePath(f, 'gates');
       const alternate = await secondaryBearer(ctx);
+      assert.equal(ctx.secondaryActor.username, f.accounts.attendee.username);
       const beforeAlternate = await db02MutationSnapshot(f, ctx);
       assert.equal(beforeAlternate.identity, 0, 'secondary identity must start absent');
+      assert.ok(beforeAlternate.sameEmailUsers > 0, 'primary same-email identity must exist');
       expectStatus(
         await request(ctx, 'GET', `/me/tickets?tenantId=${f.tenantId}`, alternate),
         401,
