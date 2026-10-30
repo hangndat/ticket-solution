@@ -17,6 +17,8 @@ const CASE_IDS = [
   'AUTH-06',
   'GATE-01',
   'GATE-03',
+  'DB-01',
+  'DB-02',
   'DB-03',
   'WEB-04',
 ];
@@ -93,6 +95,7 @@ function context(caseId) {
     ),
     platformClientId: manifest.runtime?.httpPlatformClientId,
     platformClientSecret: manifest.runtime?.httpPlatformClientSecret,
+    secondaryActor: manifest.secondaryActor,
   };
 }
 
@@ -310,6 +313,79 @@ async function bearer(ctx, actor) {
   );
   const payload = await response.json();
   return required(payload.access_token, `access token for ${actor}`);
+}
+
+async function secondaryBearer(ctx) {
+  const issuer = required(ctx.runtime.secondaryIssuer, 'runtime.secondaryIssuer');
+  const actor = required(ctx.secondaryActor, 'secondaryActor');
+  const response = await fetch(`${issuer}/protocol/openid-connect/token`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'password',
+      client_id: required(ctx.runtime.secondaryHttpClientId, 'secondaryHttpClientId'),
+      client_secret: required(ctx.runtime.secondaryHttpClientSecret, 'secondaryHttpClientSecret'),
+      username: required(actor.username, 'secondaryActor.username'),
+      password: required(actor.password, 'secondaryActor.password'),
+      scope: 'openid profile email',
+    }),
+  });
+  assert.equal(response.status, 200, 'BLOCKED: secondary Keycloak grant');
+  const token = required((await response.json()).access_token, 'secondary access token');
+  const requireBackend = createRequire(
+    new URL('../../../packages/backend/package.json', import.meta.url),
+  );
+  const jose = requireBackend('jose');
+  const { payload } = await jose.jwtVerify(
+    token,
+    jose.createRemoteJWKSet(new URL(required(ctx.runtime.secondaryJwksUrl, 'secondaryJwksUrl'))),
+    { issuer, audience: 'ticket-api', algorithms: ['RS256', 'ES256'] },
+  );
+  assert.equal(payload.sub, required(actor.subject, 'secondaryActor.subject'));
+  assert.notEqual(issuer, ctx.tokenUrl.href.split('/protocol/')[0]);
+  return token;
+}
+
+async function db02MutationSnapshot(f, ctx) {
+  const requireBackend = createRequire(
+    new URL('../../../packages/backend/package.json', import.meta.url),
+  );
+  const { Client } = requireBackend('pg');
+  const client = new Client({
+    connectionString: required(f.data?.controlDatabaseUrl, 'DB-02 controlDatabaseUrl'),
+  });
+  await client.connect();
+  try {
+    const identity = await client.query(
+      'SELECT count(*)::int AS n FROM users WHERE issuer = $1 AND subject = $2',
+      [ctx.runtime.secondaryIssuer, ctx.secondaryActor.subject],
+    );
+    const sameEmail = await client.query(
+      'SELECT count(*)::int AS n FROM users WHERE email = $1',
+      [ctx.secondaryActor.username],
+    );
+    await client.query('BEGIN');
+    await client.query('SET LOCAL ROLE ticket_runtime');
+    await client.query("SELECT set_config('app.tenant_id', $1, true)", [f.tenantId]);
+    const counts = await client.query(
+      `SELECT
+         (SELECT count(*)::int FROM staff_sessions WHERE tenant_id = $1 AND event_id = $2) AS sessions,
+         (SELECT count(*)::int FROM gates WHERE tenant_id = $1 AND event_id = $2) AS gates,
+         (SELECT count(*)::int FROM tickets WHERE tenant_id = $1 AND event_id = $2) AS tickets`,
+      [f.tenantId, f.eventId],
+    );
+    await client.query('COMMIT');
+    return {
+      identity: identity.rows[0].n,
+      sameEmailUsers: sameEmail.rows[0].n,
+      ...counts.rows[0],
+    };
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    await client.end();
+  }
 }
 
 const FORGED_FORWARDED = {
@@ -626,7 +702,7 @@ async function auth06Revoke(f, statement, values) {
   const client = new Client({
     connectionString: required(
       f.data?.controlDatabaseUrl,
-      'AUTH-06 controlDatabaseUrl',
+      'controlDatabaseUrl',
     ),
   });
   await client.connect();
@@ -640,7 +716,7 @@ async function auth06Revoke(f, statement, values) {
     assert.equal(
       changed.rowCount,
       1,
-      'AUTH-06 scoped revocation must change one row under tenant RLS',
+      'scoped revocation must change one row under tenant RLS',
     );
     await client.query('COMMIT');
   } catch (error) {
@@ -668,6 +744,35 @@ async function web04Query(f, tenantId, statement, values) {
     await client.query('SET LOCAL ROLE ticket_runtime');
     await client.query("SELECT set_config('app.tenant_id', $1, true)", [
       tenantId,
+    ]);
+    const result = await client.query(statement, values);
+    await client.query('COMMIT');
+    return result.rows;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    await client.end();
+  }
+}
+
+async function db03Query(f, statement, values) {
+  const requireBackend = createRequire(
+    new URL('../../../packages/backend/package.json', import.meta.url),
+  );
+  const { Client } = requireBackend('pg');
+  const client = new Client({
+    connectionString: required(
+      f.data?.controlDatabaseUrl,
+      'DB-03 controlDatabaseUrl',
+    ),
+  });
+  await client.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query('SET LOCAL ROLE ticket_runtime');
+    await client.query("SELECT set_config('app.tenant_id', $1, true)", [
+      f.tenantId,
     ]);
     const result = await client.query(statement, values);
     await client.query('COMMIT');
@@ -2512,6 +2617,142 @@ for (const caseId of CASE_IDS) {
       );
       return;
     }
+    if (caseId === 'DB-01') {
+      // Worker/export role boundary at the HTTP layer: the D suite proves
+      // ticket_platform_runtime has no grant on PII tables cross-tenant; H
+      // must prove the export/report endpoints a worker serves also refuse
+      // cross-tenant access end to end, not only via DB role grants.
+      const owner = await bearer(ctx, 'owner');
+      const manager = await bearer(ctx, 'manager');
+      const foreignTenantId = required(
+        f.data?.foreignTenantId,
+        'DB-01 foreignTenantId',
+      );
+      const foreignEventId = required(
+        f.data?.foreignEventId,
+        'DB-01 foreignEventId',
+      );
+      const ownReport = await request(ctx, 'GET', reportPath(f), owner);
+      expectStatus(ownReport, 200);
+      assert.equal(ownReport.body.eventId, f.eventId);
+      deny(
+        await request(
+          ctx,
+          'GET',
+          reportPath(f, foreignTenantId, foreignEventId),
+          owner,
+        ),
+      );
+      deny(
+        await request(ctx, 'GET', reportPath(f, f.tenantId, foreignEventId), owner),
+      );
+      const exportsPath = `/tenants/${f.tenantId}/events/${f.eventId}/exports`;
+      const ownExport = await request(ctx, 'POST', exportsPath, manager, {
+        format: 'csv',
+        filter: { states: ['ACTIVE'] },
+      }, { 'idempotency-key': randomUUID() });
+      expectStatus(ownExport, 201);
+      const exportId = required(ownExport.body.exportId, 'DB-01 exportId');
+      await waitExportReady(ctx, f, manager, exportId);
+      const csv = await downloadExportCsv(ctx, f, manager, exportId);
+      assert.ok(csv.length > 0, 'DB-01 own-tenant export must return rows');
+
+      const foreignExportsPath = `/tenants/${foreignTenantId}/events/${foreignEventId}/exports`;
+      deny(
+        await request(ctx, 'POST', foreignExportsPath, manager, {
+          format: 'csv',
+          filter: { states: ['ACTIVE'] },
+        }, { 'idempotency-key': randomUUID() }),
+      );
+      deny(
+        await request(
+          ctx,
+          'GET',
+          `/tenants/${foreignTenantId}/events/${f.eventId}/exports/${exportId}`,
+          manager,
+        ),
+      );
+      deny(
+        await request(
+          ctx,
+          'GET',
+          `/tenants/${foreignTenantId}/events/${f.eventId}/exports/${exportId}/download`,
+          manager,
+        ),
+      );
+      return;
+    }
+    if (caseId === 'DB-02') {
+      // Role/assignment revocation must take effect immediately against the
+      // DB, even for an access token that is still cryptographically valid
+      // and was cached before the revoke (PG is the source of truth, not
+      // whatever role/tenant claim the token carried at mint time).
+      const owner = await bearer(ctx, 'owner');
+      const manager = await bearer(ctx, 'manager');
+      const gates = gatePath(f, 'gates');
+      const alternate = await secondaryBearer(ctx);
+      assert.equal(ctx.secondaryActor.username, f.accounts.attendee.username);
+      const beforeAlternate = await db02MutationSnapshot(f, ctx);
+      assert.equal(beforeAlternate.identity, 0, 'secondary identity must start absent');
+      assert.ok(beforeAlternate.sameEmailUsers > 0, 'primary same-email identity must exist');
+      expectStatus(
+        await request(ctx, 'GET', `/me/tickets?tenantId=${f.tenantId}`, alternate),
+        401,
+      );
+      expectStatus(
+        await request(ctx, 'POST', gatePath(f, 'sessions'), alternate, {
+          tenantId: f.tenantId,
+        }),
+        401,
+      );
+      expectStatus(
+        await request(ctx, 'POST', gates, alternate, {
+          tenantId: f.tenantId,
+          name: `DB-02 alternate issuer ${randomUUID()}`,
+        }),
+        401,
+      );
+      assert.deepEqual(
+        await db02MutationSnapshot(f, ctx),
+        beforeAlternate,
+        'alternate issuer must not create identity, staff session, gate or ticket',
+      );
+      expectStatus(
+        await request(ctx, 'POST', gates, manager, {
+          tenantId: f.tenantId,
+          name: `DB-02 before ${randomUUID()}`,
+        }),
+        201,
+      );
+      await auth06Revoke(
+        f,
+        `UPDATE event_assignments SET revoked_at = now()
+         WHERE tenant_id = $1::uuid AND event_id = $2::uuid
+           AND membership_id = (SELECT id FROM memberships WHERE tenant_id = $1::uuid AND user_id = $3::uuid)
+           AND revoked_at IS NULL`,
+        [f.tenantId, f.eventId, f.accounts.manager.userId],
+      );
+      deny(
+        await request(ctx, 'POST', gates, manager, {
+          tenantId: f.tenantId,
+          name: `DB-02 after assignment revoke ${randomUUID()}`,
+        }),
+      );
+      const reportStillOk = await request(ctx, 'GET', reportPath(f), owner);
+      expectStatus(reportStillOk, 200);
+      await auth06Revoke(
+        f,
+        'UPDATE memberships SET revoked_at = now() WHERE tenant_id = $1::uuid AND user_id = $2::uuid AND revoked_at IS NULL',
+        [f.tenantId, f.accounts.manager.userId],
+      );
+      deny(
+        await request(ctx, 'POST', gates, manager, {
+          tenantId: f.tenantId,
+          name: `DB-02 after membership revoke ${randomUUID()}`,
+        }),
+      );
+      return;
+    }
     if (caseId === 'DB-03') {
       const attendee = await bearer(ctx, 'attendee');
       const owner = await bearer(ctx, 'owner');
@@ -2563,6 +2804,134 @@ for (const caseId of CASE_IDS) {
         afterReport.body.quota.allocated,
         beforeReport.body.quota.allocated + 1,
       );
+
+      // Full audit matrix for the issued ticket: exactly one audit_logs row
+      // and exactly one outbox row, proving the sequential replay above did
+      // not duplicate side effects alongside the HTTP-visible response reuse.
+      const auditRows = await db03Query(
+        f,
+        `SELECT action, resource_id, operation_id FROM audit_logs
+         WHERE resource_id = $1 AND action = 'ticket.issued'`,
+        [first.body.ticketId],
+      );
+      assert.equal(
+        auditRows.length,
+        1,
+        'DB-03 replay must not duplicate the ticket.issued audit row',
+      );
+      assert.equal(auditRows[0].operation_id, first.body.operationId);
+      const outboxRows = await db03Query(
+        f,
+        `SELECT type, aggregate_id FROM outbox
+         WHERE aggregate_id = $1 AND type = 'TicketIssued'`,
+        [first.body.ticketId],
+      );
+      assert.equal(
+        outboxRows.length,
+        1,
+        'DB-03 replay must not duplicate the TicketIssued outbox row',
+      );
+
+      // Same-request concurrent retry: two HTTP requests racing the same
+      // idempotency key/body, not a sequential replay, must still collapse
+      // onto one business outcome (ON CONFLICT DO NOTHING + wait-for-first).
+      const raceBody = { ...body, code: required(f.secondCode, 'DB-03 secondCode') };
+      const raceKey = randomUUID();
+      const beforeRaceReport = await request(ctx, 'GET', reportPath(f), owner);
+      expectStatus(beforeRaceReport, 200);
+      const [raceA, raceB] = await Promise.all([
+        request(ctx, 'POST', path, attendee, raceBody, {
+          'idempotency-key': raceKey,
+        }),
+        request(ctx, 'POST', path, attendee, raceBody, {
+          'idempotency-key': raceKey,
+        }),
+      ]);
+      expectStatus(raceA, 201);
+      expectStatus(raceB, 201);
+      assert.equal(raceA.body.ticketId, raceB.body.ticketId);
+      assert.equal(raceA.body.operationId, raceB.body.operationId);
+      assert.equal(
+        [raceA.body.replayed, raceB.body.replayed].filter((v) => v === false)
+          .length,
+        1,
+        'DB-03 concurrent same-key retry must settle on exactly one winner',
+      );
+      const afterRaceReport = await request(ctx, 'GET', reportPath(f), owner);
+      expectStatus(afterRaceReport, 200);
+      assert.equal(
+        afterRaceReport.body.quota.allocated,
+        beforeRaceReport.body.quota.allocated + 1,
+        'DB-03 concurrent same-key retry must allocate quota exactly once',
+      );
+      const raceAuditRows = await db03Query(
+        f,
+        `SELECT action FROM audit_logs
+         WHERE resource_id = $1 AND action = 'ticket.issued'`,
+        [raceA.body.ticketId],
+      );
+      assert.equal(raceAuditRows.length, 1);
+      const raceOutboxRows = await db03Query(
+        f,
+        `SELECT type FROM outbox WHERE aggregate_id = $1 AND type = 'TicketIssued'`,
+        [raceA.body.ticketId],
+      );
+      assert.equal(raceOutboxRows.length, 1);
+
+      // Multi-actor race on one code: two different actors redeem the same
+      // code concurrently; the code's FOR UPDATE lock must serialize them so
+      // exactly one wins ACTIVE and the other observes CODE_CONSUMED, with
+      // quota/counter advancing once, not twice.
+      const otherAttendee = await bearer(ctx, 'otherAttendee');
+      const multiActorCode = required(f.data?.raceCode, 'DB-03 raceCode');
+      const beforeMultiReport = await request(ctx, 'GET', reportPath(f), owner);
+      expectStatus(beforeMultiReport, 200);
+      const [actorA, actorB] = await Promise.all([
+        request(
+          ctx,
+          'POST',
+          path,
+          attendee,
+          { ...body, code: multiActorCode },
+          { 'idempotency-key': randomUUID() },
+        ),
+        request(
+          ctx,
+          'POST',
+          path,
+          otherAttendee,
+          {
+            ...body,
+            code: multiActorCode,
+            answers: required(f.data?.manualAnswers, 'DB-03 manualAnswers'),
+          },
+          { 'idempotency-key': randomUUID() },
+        ),
+      ]);
+      const statuses = [actorA.status, actorB.status].sort();
+      assert.deepEqual(
+        statuses,
+        [201, 409],
+        `DB-03 multi-actor race on one code must split 201/409, got ${actorA.status}/${actorB.status}`,
+      );
+      const winner = actorA.status === 201 ? actorA : actorB;
+      const loser = actorA.status === 201 ? actorB : actorA;
+      assert.equal(winner.body.state, 'ACTIVE');
+      assert.equal(loser.body.code, 'CODE_CONSUMED');
+      const afterMultiReport = await request(ctx, 'GET', reportPath(f), owner);
+      expectStatus(afterMultiReport, 200);
+      assert.equal(
+        afterMultiReport.body.quota.allocated,
+        beforeMultiReport.body.quota.allocated + 1,
+        'DB-03 multi-actor race must allocate quota exactly once',
+      );
+      const multiAuditRows = await db03Query(
+        f,
+        `SELECT action FROM audit_logs
+         WHERE resource_id = $1 AND action = 'ticket.issued'`,
+        [winner.body.ticketId],
+      );
+      assert.equal(multiAuditRows.length, 1);
     }
     if (caseId === 'WEB-04') {
       await web04AssertRejected(ctx, {
