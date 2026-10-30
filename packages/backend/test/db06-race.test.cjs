@@ -208,6 +208,15 @@ function assertState(s, issued, rejectionCode = null) {
   assert.equal(s.outbox.filter((row) => row.type === 'TicketIssued').length, issued);
 }
 
+function assertPolicyApplied(s, policy) {
+  if (policy === 'close') {
+    assert.equal(s.event.redemption_closes_at?.toISOString(),
+      '2020-01-01T00:00:00.000Z');
+  } else {
+    assert.equal(s.event.published_config_version, 1);
+  }
+}
+
 test('DB-06: issue and close/config commands serialize on event row in both orders',
   { timeout: 180000 }, async (t) => {
     const base = await fixture(t);
@@ -232,7 +241,9 @@ test('DB-06: issue and close/config commands serialize on event row in both orde
           const rejection = policy === 'close'
             ? ISSUE_ERROR_CODES.REDEMPTION_WINDOW_CLOSED : ISSUE_ERROR_CODES.TERMS_REQUIRED;
           assert.equal(outcome.rejection.code, rejection);
-          assertState(await state(f), 0, rejection);
+          const after = await state(f);
+          assertPolicyApplied(after, policy);
+          assertState(after, 0, rejection);
         } else {
           const held = await heldTransaction(f, (tx) =>
             redeemAndIssueTicket(tx, HMAC, CREDENTIAL_KEY, f.value));
@@ -245,7 +256,9 @@ test('DB-06: issue and close/config commands serialize on event row in both orde
           }
           assert.equal((await held.result).ok, true);
           await contender;
-          assertState(await state(f), 1);
+          const after = await state(f);
+          assertPolicyApplied(after, policy);
+          assertState(after, 1);
         }
       }
     }
