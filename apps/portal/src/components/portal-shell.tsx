@@ -615,11 +615,14 @@ export function PortalShell({
   }, [staffLoginUrl]);
 
   const ready = shell.status === 'ready' ? shell : null;
-  const caps: PortalShellCapabilities | null = ready?.caps ?? null;
+  const platformOnly = pathname === '/platform' || pathname.startsWith('/platform/');
+  const caps: PortalShellCapabilities | null = ready?.caps
+    ? { ...ready.caps, showOrgChrome: !platformOnly && ready.caps.showOrgChrome }
+    : null;
 
   const discoveredTenants: MeTenantItem[] = useMemo(
-    () => ready?.meTenants?.items ?? [],
-    [ready],
+    () => platformOnly ? [] : ready?.meTenants?.items ?? [],
+    [ready, platformOnly],
   );
   const tenants: MeTenantItem[] = useMemo(
     () => discoveredTenants.filter(isStaffPortalTenant),
@@ -632,8 +635,8 @@ export function PortalShell({
     tenants.length === 0 &&
     discoveredTenants.some((tenant) => tenant.role === 'Attendee');
   const events: MeEventItem[] = useMemo(
-    () => ready?.meEvents?.items ?? [],
-    [ready],
+    () => platformOnly ? [] : ready?.meEvents?.items ?? [],
+    [ready, platformOnly],
   );
 
   const resolvedTenantId =
