@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { test, expect, loadManifest, fixtureFor } from '../harness/fixtures';
 import {
   annotateAuth07BfcacheEvidence,
+  assertAuth07AuditTableNotActorA,
   auth07BfcacheProbeInit,
   readAuth07BfcacheEvidence,
   readForwardPageshowPersisted,
@@ -43,6 +44,31 @@ test('[AUTH-07] Portal drops held staff document and audit JSON after another st
     expect(oldDocument?.status()).toBe(200);
     noStore(oldDocument?.headers()['cache-control']);
     expect(await oldDocument?.text()).not.toContain('E2E AUTH-07');
+    await expect(oldTab.getByTestId('audit-table')).toBeVisible();
+
+    const staffHomePath = eventPath(fixture);
+    const staffHome = portalUrl(manifest, staffHomePath);
+    await oldTab.goto(staffHome);
+    await oldTab.goBack();
+    await expect(oldTab).toHaveURL(auditUrl, { ignoreTrailingSlash: true });
+    await oldTab.waitForLoadState('domcontentloaded');
+    await resetAuth07PageshowObservation(oldTab);
+    const controlForwardDocument = await oldTab.goForward();
+    if (controlForwardDocument) noStore(controlForwardDocument.headers()['cache-control']);
+    await expect(oldTab).toHaveURL(staffHome);
+    await oldTab.waitForLoadState('domcontentloaded');
+    const controlForwardPersisted = await readForwardPageshowPersisted(oldTab);
+    const controlCookieEpoch = (await context.cookies(auditUrl)).find(
+      (cookie) => cookie.name === 'portal_staff_epoch',
+    )?.value;
+    expect(controlCookieEpoch).toBe(actorA.authEpoch);
+    const controlBfcacheEvidence = await readAuth07BfcacheEvidence(oldTab, controlForwardPersisted);
+    annotateAuth07BfcacheEvidence(test.info(), controlBfcacheEvidence, {
+      actorAEpoch: actorA.authEpoch,
+      actorBEpoch: actorA.authEpoch,
+      cookieStaffEpoch: controlCookieEpoch,
+    }, { phase: 'control' });
+    await oldTab.goto(auditUrl);
     await expect(oldTab.getByTestId('audit-table')).toBeVisible();
 
     let heldJson = false;
@@ -99,12 +125,14 @@ test('[AUTH-07] Portal drops held staff document and audit JSON after another st
       await expect(tab.getByTestId('audit-table')).toHaveCount(0);
     }
     await oldTab.goBack();
+    await oldTab.waitForLoadState('domcontentloaded');
     await resetAuth07PageshowObservation(oldTab);
     const forwardDocument = await oldTab.goForward();
     if (forwardDocument) noStore(forwardDocument.headers()['cache-control']);
     await expect(oldTab).toHaveURL(auditUrl);
     await oldTab.waitForLoadState('domcontentloaded');
     const forwardPersisted = await readForwardPageshowPersisted(oldTab);
+    await assertAuth07AuditTableNotActorA(oldTab, actorA);
     await oldTab.waitForTimeout(0);
     const cookieStaffEpoch = (await context.cookies(auditUrl)).find(
       (cookie) => cookie.name === 'portal_staff_epoch',
@@ -115,7 +143,7 @@ test('[AUTH-07] Portal drops held staff document and audit JSON after another st
       actorAEpoch: actorA.authEpoch,
       actorBEpoch: actorB.authEpoch,
       cookieStaffEpoch,
-    });
+    }, { phase: 'post-switch' });
     const reloaded = await oldTab.reload();
     noStore(reloaded?.headers()['cache-control']);
     await expect(oldTab.getByTestId('audit-table')).toHaveCount(0);

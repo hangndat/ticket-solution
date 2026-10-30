@@ -1,4 +1,4 @@
-import type { Page, TestInfo } from 'playwright/test';
+import { expect, type Page, type TestInfo } from 'playwright/test';
 
 /** Installed via addInitScript before the audit history stack is built. */
 export function auth07BfcacheProbeInit(): void {
@@ -111,6 +111,15 @@ export async function readAuth07BfcacheEvidence(
   return last!;
 }
 
+export async function assertAuth07AuditTableNotActorA(
+  page: Page,
+  actorA: { actorId: string },
+): Promise<void> {
+  const table = page.getByTestId('audit-table');
+  if ((await table.count()) === 0) return;
+  await expect(table).not.toContainText(actorA.actorId);
+}
+
 export function annotateAuth07BfcacheEvidence(
   testInfo: TestInfo,
   evidence: Auth07BfcacheEvidence,
@@ -119,16 +128,18 @@ export function annotateAuth07BfcacheEvidence(
     actorBEpoch: string;
     cookieStaffEpoch: string | undefined;
   },
+  options?: { phase?: 'control' | 'post-switch' },
 ): void {
+  const tag = options?.phase === 'control' ? 'control' : options?.phase === 'post-switch' ? 'switch' : 'default';
   const restored =
     evidence.forwardPersisted === true ||
     (evidence.forwardPersisted === null && evidence.restoredFlag);
   testInfo.annotations.push({
-    type: 'portal-bfcache',
+    type: tag === 'default' ? 'portal-bfcache' : `portal-bfcache-${tag}`,
     description: restored ? 'restored' : 'new-document',
   });
   testInfo.annotations.push({
-    type: 'portal-bfcache-persisted',
+    type: tag === 'default' ? 'portal-bfcache-persisted' : `portal-bfcache-${tag}-persisted`,
     description:
       evidence.forwardPersisted === null
         ? 'forward-unobserved'
@@ -166,7 +177,7 @@ export function annotateAuth07BfcacheEvidence(
     });
   }
   testInfo.annotations.push({
-    type: 'portal-bfcache-epoch',
+    type: tag === 'default' ? 'portal-bfcache-epoch' : `portal-bfcache-${tag}-epoch`,
     description: `cookie=${context.cookieStaffEpoch ?? 'missing'} expected=${context.actorBEpoch} prior=${context.actorAEpoch}`,
   });
 }
