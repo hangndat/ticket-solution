@@ -844,14 +844,17 @@ async function db04ControlledRequests(ctx, path, token, body, codes) {
     while (Date.now() < deadline) {
       const { rows } = await observer.query(`SELECT pid FROM pg_stat_activity
         WHERE pid <> pg_backend_pid() AND wait_event_type = 'Lock'
-          AND $1::int = ANY(pg_blocking_pids(pid))
-          AND query LIKE '%attendee_counters%'`, [blockerPid]);
+          AND $1::int = ANY(pg_blocking_pids(pid))`, [blockerPid]);
       blocked = rows;
       if (blocked.length === codes.length) break;
       await new Promise((resolve) => setTimeout(resolve, 30));
     }
+    const activity = blocked.length === codes.length ? [] : (await observer.query(`
+      SELECT pid, state, wait_event_type, pg_blocking_pids(pid) AS blockers
+      FROM pg_stat_activity WHERE datname = current_database() AND pid <> pg_backend_pid()
+    `)).rows;
     assert.equal(blocked.length, codes.length,
-      'all HTTP requests must reach the same owner counter while it is locked');
+      `all HTTP requests must reach the same owner counter while it is locked; activity=${JSON.stringify(activity)}`);
   } catch (error) {
     requests.forEach((pending) => pending.catch(() => undefined));
     throw error;
