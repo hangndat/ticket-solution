@@ -104,6 +104,8 @@ Checks: `node tests/e2e/backend/entry.mjs --case JOB-02` PASS 2/2 selector (D+R,
 
 Thêm `tests/e2e/backend/job-03-smtp-failures.test.cjs` (R), `tests/e2e/backend/smtp-fixture.cjs`, `packages/backend/test/fixtures/exit-after-smtp.cjs`. D giữ `issue.test.cjs` (relay fail + retry) và U `worker-provider-deadline.test.cjs`. R: worker process + SMTP reject/stall/Mailpit; crash-after-accept qua relay subprocess + SMTP thật (Mailpit), reclaim worker main.js. `coverage.json` JOB-03 → `implemented`, layers D+U+R. Không assert exactly-once SMTP.
 
+Checks (SHA `d54f3e3d8ce2d4f177fb8f6d2957e89b09516f19`): `node tests/e2e/backend/entry.mjs --case JOB-03` PASS 4/4 selector (1 D, 1 U, 2 R). Crash window: `exit-after-smtp.cjs` + real `createSmtpEmailAdapter`/Mailpit, not SIGKILL of worker mid-accept; recovery via `apps/worker/dist/main.js`.
+
 ## Giới hạn còn mở
 
 - Các ca H cần HTTPS hostname run, Keycloak issuer/JWT thật và manifest case riêng từ harness; local verifier hay `app.inject` fixture không đủ. Các ca R cần worker process, Mailpit, restart/kill/lease và tài nguyên run riêng. Xem `FIXTURES.md`.
