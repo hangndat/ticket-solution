@@ -64,6 +64,6 @@ export interface CoverageEntry {
   caseId: string;
   tests: string[];
   layers: string[];
-  status: 'implemented' | 'blocked' | 'out';
+  status: 'implemented' | 'covered' | 'blocked' | 'out';
   reason?: string;
 }
