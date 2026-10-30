@@ -30,6 +30,7 @@ export const REDEEM_FORM_COPY_CATALOG = {
     'Mã chưa được tra cứu hoặc lưu. Sau khi đăng nhập và xác minh email, hãy nhập lại mã.',
     'The code is not looked up or saved. Enter it again after signing in and verifying your email.',
   ),
+  checkingSession: dual('Đang kiểm tra phiên đăng nhập…', 'Checking your session…'),
   oidcDownTitle: dual('Cần đăng nhập', 'Sign in required'),
   oidcDownDetail: dual(
     'Đăng nhập chưa sẵn sàng trên môi trường này — không thể đổi mã.',

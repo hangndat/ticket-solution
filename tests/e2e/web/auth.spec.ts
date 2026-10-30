@@ -732,6 +732,37 @@ test('[AUTH-05] expired access token refreshes inside BFF', async ({
     .toBe(true);
 });
 
+test('[AUTH-05] redeem verifies email after refreshing an expired access token', async ({
+  page,
+}) => {
+  test.setTimeout(70_000);
+  const base = loadManifest();
+  if (!base.origins.shortWeb)
+    throw new Error('BLOCKED: AUTH-05 short-lived isolated Web missing');
+  const manifest = {
+    ...base,
+    origins: { ...base.origins, web: base.origins.shortWeb },
+  };
+  fixtureFor(manifest, 'AUTH-05');
+  await login(page, manifest, accountFor(manifest, 'AUTH-05', 'attendee'));
+  const first = (await page.context().cookies(manifest.origins.web)).find(
+    (cookie) => cookie.name === 'oidc_access_token',
+  );
+  expect(first).toBeTruthy();
+  const exp = Number(decodeJwtPayload(first!.value).exp);
+  expect(Number.isFinite(exp)).toBe(true);
+  await new Promise((resolve) =>
+    setTimeout(resolve, Math.max(0, exp * 1000 - Date.now() + 1200)),
+  );
+  await page.goto(webUrl(manifest, '/redeem'));
+  await expect(page.getByTestId('redeem-global-code')).toBeVisible();
+  await expect(page.getByTestId('redeem-auth-gate')).toHaveCount(0);
+  const current = (await page.context().cookies(manifest.origins.web)).find(
+    (cookie) => cookie.name === 'oidc_access_token',
+  );
+  expect(current?.value).not.toBe(first!.value);
+});
+
 test('[AUTH-05] revoked Keycloak refresh fails closed and actors stay isolated', async ({
   browser,
 }) => {
