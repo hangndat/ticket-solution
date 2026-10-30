@@ -158,7 +158,7 @@ export default function TenantOverviewPage() {
       <Result status="info" title={t('onboarding.pending.title')} subTitle={t('onboarding.pending.body', {
           name: tenant.name,
           slug: tenant.slug,
-        })} extra={<Link href={`/onboarding/${tenantId}`}>
+        })} extra={<Link prefetch={false} href={`/onboarding/${tenantId}`}>
             <Button type="primary">{t('onboarding.pending.openWait')}</Button>
           </Link>} />
     );
@@ -186,17 +186,17 @@ export default function TenantOverviewPage() {
       extra={
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {canList ? (
-            <Link href={`/t/${tenantId}/events`}>
+            <Link prefetch={false} href={`/t/${tenantId}/events`}>
               <Button>{t('common.h_8mpr7p')}</Button>
             </Link>
           ) : null}
           {canCreate ? (
-            <Link href={`/t/${tenantId}/events/new`}>
+            <Link prefetch={false} href={`/t/${tenantId}/events/new`}>
               <Button type="primary">{t('events.h_ek93o2')}</Button>
             </Link>
           ) : null}
           {canPerformTenantAction('manageMembers', tenant.tenantPermissions) ? (
-            <Link href={`/t/${tenantId}/members`}>
+            <Link prefetch={false} href={`/t/${tenantId}/members`}>
               <Button>{t('nav.org.members')}</Button>
             </Link>
           ) : null}
@@ -241,7 +241,7 @@ export default function TenantOverviewPage() {
               },
               actions: {
                 render: (_, row) => [
-                  <Link key="open" href={row.href} data-testid={`overview-work-${row.id}`}>
+                  <Link prefetch={false} key="open" href={row.href} data-testid={`overview-work-${row.id}`}>
                     {t('common.mo')}
                   </Link>,
                 ],
@@ -255,7 +255,7 @@ export default function TenantOverviewPage() {
         <Empty description={t('common.h_1bzxqwd')} style={{ padding: 48 }}>
           {
             canCreate ? (
-              <Link href={`/t/${tenantId}/events/new`}>
+              <Link prefetch={false} href={`/t/${tenantId}/events/new`}>
                 <Button type="primary">{t('events.h_ek93o2')}</Button>
               </Link>
             ) : undefined
@@ -274,7 +274,7 @@ export default function TenantOverviewPage() {
             actions: {
               render: (_, row) => [
                 firstAllowedEventPath(row) ? (
-                  <Link key="open" href={firstAllowedEventPath(row)!}>
+                  <Link prefetch={false} key="open" href={firstAllowedEventPath(row)!}>
                     {t('common.mo')}
                   </Link>
                 ) : null,

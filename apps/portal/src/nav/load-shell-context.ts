@@ -16,6 +16,8 @@ import {
   type PortalShellCapabilities,
 } from './capabilities';
 import { publishPortalShellSnapshot } from './portal-shell-snapshot';
+import { portalGet } from '../client/portal-fetch';
+import { actorGeneration } from '../client/actor-gate';
 
 const REQUEST_TIMEOUT_MS = 8_000;
 
@@ -36,26 +38,8 @@ export type ShellLoadState =
 async function getJson(
   path: string,
 ): Promise<{ status: number; json: unknown }> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-  try {
-    const res = await fetch(path, {
-      method: 'GET',
-      credentials: 'same-origin',
-      cache: 'no-store',
-      signal: controller.signal,
-      headers: { Accept: 'application/json' },
-    });
-    let json: unknown = null;
-    try {
-      json = await res.json();
-    } catch {
-      json = null;
-    }
-    return { status: res.status, json };
-  } finally {
-    clearTimeout(timer);
-  }
+  const { status, json } = await portalGet(path, REQUEST_TIMEOUT_MS);
+  return { status, json };
 }
 
 /**
@@ -63,6 +47,7 @@ async function getJson(
  * Platform me uses a separate cookie; 401 there does not imply staff signed out.
  */
 let shellContextInflight: Promise<ShellLoadState> | null = null;
+let shellContextGeneration = -1;
 
 export type DiscoveryHttpResult = { status: number; json: unknown };
 
@@ -134,12 +119,14 @@ export function resolveShellLoadState(input: {
 }
 
 async function loadShellContextOnce(): Promise<ShellLoadState> {
+  const started = actorGeneration();
   try {
     const [tenantsResult, eventsResult, platformResult] = await Promise.all([
       getJson('/api/bff/me/tenants'),
       getJson('/api/bff/me/events'),
       getJson('/api/bff/platform/me'),
     ]);
+    if (started !== actorGeneration()) return { status: 'loading' };
     return resolveShellLoadState({
       tenantsResult,
       eventsResult,
@@ -154,18 +141,22 @@ async function loadShellContextOnce(): Promise<ShellLoadState> {
 }
 
 function trackShellLoad(promise: Promise<ShellLoadState>): Promise<ShellLoadState> {
+  const started = actorGeneration();
   return promise.then((result) => {
-    publishPortalShellSnapshot(result);
+    if (started === actorGeneration()) publishPortalShellSnapshot(result);
     return result;
   });
 }
 
 /** Dedupe parallel discovery calls (shell + route guards share one flight). */
 export function loadShellContext(): Promise<ShellLoadState> {
-  if (!shellContextInflight) {
-    shellContextInflight = trackShellLoad(loadShellContextOnce()).finally(() => {
-      shellContextInflight = null;
+  const generation = actorGeneration();
+  if (!shellContextInflight || shellContextGeneration !== generation) {
+    shellContextGeneration = generation;
+    const current = trackShellLoad(loadShellContextOnce()).finally(() => {
+      if (shellContextInflight === current) shellContextInflight = null;
     });
+    shellContextInflight = current;
   }
   return shellContextInflight;
 }

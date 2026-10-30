@@ -10,6 +10,7 @@ import {
   readPortalOidcConfig,
 } from '../../../../src/oidc/config';
 import { PORTAL_AUTH_COOKIES } from '../../../../src/oidc/local-cookies';
+import { rotateActorEpoch } from '../../../../src/oidc/actor-epoch';
 import { requirePublicOrigin } from '../../../../src/oidc/public-origin';
 import type { TokenGrantResponse } from '../../../../src/oidc/refresh';
 import { sanitizePortalReturnPath } from '../../../../src/oidc/return-path';
@@ -137,6 +138,7 @@ export async function GET(request: NextRequest) {
     grant.subject,
     sessionCookieOptions(60 * 60 * 24 * 30),
   );
+  await rotateActorEpoch('staff', grant.subject);
   jar.delete(SESSION_COOKIES.pkce);
   jar.delete(SESSION_COOKIES.state);
   jar.delete(PORTAL_AUTH_COOKIES.nonce);

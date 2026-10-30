@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { after, NextRequest, NextResponse } from 'next/server';
 import {
   discoveryBase,
   isPortalOidcConfigured,
@@ -11,6 +11,7 @@ import {
 } from '../../../../src/oidc/cookies';
 import { requirePublicOrigin } from '../../../../src/oidc/public-origin';
 import { clearStaffRefreshFlightCache } from '../../../../src/oidc/refresh-flight';
+import { rotateActorEpoch } from '../../../../src/oidc/actor-epoch';
 
 async function bestEffortRevokeRefresh(
   issuer: string,
@@ -42,17 +43,18 @@ export async function GET(request: NextRequest) {
   if (!originResult.ok) return originResult.response;
   const origin = originResult.origin;
 
+  await rotateActorEpoch('staff');
   const idToken = (await readStaffIdToken()) ?? '';
   const refresh = (await readStaffRefreshToken()) ?? '';
 
   if (isPortalOidcConfigured() && refresh) {
     const config = readPortalOidcConfig()!;
-    await bestEffortRevokeRefresh(
+    after(() => bestEffortRevokeRefresh(
       config.issuer,
       config.clientId,
       config.clientSecret,
       refresh,
-    );
+    ));
   }
 
   clearStaffRefreshFlightCache();

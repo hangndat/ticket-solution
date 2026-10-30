@@ -257,7 +257,7 @@ export default function AnalyticsPortfolioPage() {
         <Empty description={t('analytics.empty')} style={{ padding: 48 }}>
           {
             canListEvents ? (
-              <Link href={`/t/${tenantId}/events`}>
+              <Link prefetch={false} href={`/t/${tenantId}/events`}>
                 <Button type="primary">{t('analytics.viewEvents')}</Button>
               </Link>
             ) : undefined
@@ -303,7 +303,7 @@ export default function AnalyticsPortfolioPage() {
                   const destination = eventPath(row.eventId);
                   if (!destination) return <span>{label}</span>;
                   return (
-                    <Link
+                    <Link prefetch={false}
                       href={destination}
                       onClick={(e) => e.stopPropagation()}
                     >
