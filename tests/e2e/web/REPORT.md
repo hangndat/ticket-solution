@@ -1,5 +1,10 @@
 # Báo cáo Web E2E — 28/10/2026
 
+## WEB-07 idempotent redemption B+H — 30/10/2026
+
+- `redeem.spec.ts › [WEB-07]`: double-click một vé; mất response sau commit BFF thật rồi UI poll tới success; reload/resubmit cùng mã → panel `used`, wallet không tăng; cùng `idempotencyKey` đổi `answers` → BFF `409` `IDEMPOTENCY_CONFLICT`; hai POST BFF đồng thời cùng mã, key khác → `201`/`409` `CODE_CONSUMED`. Mỗi nhánh đối soát PostgreSQL qua `assertIssuedExactlyOnce` (một request ISSUED, ticket ACTIVE, một operation COMPLETED, một TicketIssued outbox, quota +1/bucket); race không có barrier lock — giới hạn ghi trong `coverage.json`.
+- Checkout sạch SHA `7e8cce2dee502cb12163d2b384012952bfd6ac45` (`evidenceExactShaEligible: true`): `node tests/e2e/harness/run.mjs e2e --case=WEB-07` (build production) → run `mvuw3xnz-3dad02` PASS 5/5 browser; artifact `tests/e2e/.artifacts/mvuw3xnz-3dad02/summary.json`. `pnpm test:e2e:guards` 16/16 trên cùng SHA. Không sửa `apps/web` runtime trong dispatch này.
+
 ## WEB-05 tích hợp — 30/10/2026
 
 - Rebase lên `main`, giữ đủ worklog append-only. Checkout sạch SHA `42a29788b252d4f17937c0401187512b1e7b47ea`: browser `mvuvgow7-f39e4e` PASS 7/7, HTTP `mvuvhn2t-f1e3ab` PASS; cả hai `evidenceExactShaEligible: true`. CI PR #1071 run `41046526455` SUCCESS, mergeable.
@@ -84,6 +89,10 @@ HTTP run `mvsyhf8g-55a61e` (`node tests/e2e/harness/run.mjs http --case=AUTH-06`
 - **AUTH-05** (`auth.spec.ts:114`, `:149`): test đầu xác nhận access token TTL ngắn tự rotate qua BFF. Test thứ hai revoke refresh token thật qua Keycloak `/protocol/openid-connect/revoke`, chờ đúng `exp` thật của access token hết hạn rồi mới gọi `/api/auth/refresh`: actor bị revoke nhận redirect `/auth`, mất cả ba cookie `oidc_access_token`/`oidc_refresh_token`/`web_oidc_sub`, `/api/bff/me` trả 401. Actor khác (context/cookie-jar riêng) vẫn refresh thành công, `/api/bff/me` 200 và body không lộ `userId` của actor bị revoke. Test còn phân biệt rõ: gọi trực tiếp API bằng access token đã hết hạn vẫn 200 trong 5 phút vì JWT verification của API cho phép clock skew theo thiết kế (không phải lỗi) — đường BFF cookie-refresh dùng refresh token nên fail-closed ngay khi bị revoke, hai đường này độc lập.
 - **AUTH-06** (`auth.spec.ts:252` + `http/live.test.mjs#[AUTH-06]`): browser xác nhận attendee session không tự có Portal `/api/bff/me/subject` (401). HTTP test revoke thật ba lớp dưới `SET LOCAL ROLE ticket_runtime` + tenant RLS (yêu cầu `rowCount=1` mỗi lần revoke, không revoke rộng): `memberships.revoked_at` → scanner tạo gate-session kế tiếp bị deny; `event_assignments.revoked_at` → manager tạo gate bị deny; owner revoke staff session đang mở qua API → supervisor confirm reservation đang chờ trả `409 SESSION_NOT_ACTIVE`, báo cáo `checkInSuccessCount` không tăng (không có false-success).
 - Gap còn lại: AUTH-06 chưa kiểm "UI không báo thành công từ capability cũ" ở tầng UI gate/check-in (Portal). Web browser đã bổ sung redeem sau clear session và wallet sau refresh-revoke + access self-expiry (shortWeb); chạy targeted `--case=AUTH-06` để ghi evidence run id. AUTH-05 chưa có case H riêng cho actor tự để access token hết hạn rồi không refresh. Các entry coverage vẫn `blocked`; các run trên chứng minh những nhánh đã kiểm.
+
+## Bổ sung WEB-09 — 30/10/2026
+
+Run cô lập `mvuwgqol-9172ce` trên clean checkout SHA `6c4254bc0d9063bba9a77b027ea2df8efda9090e`: `node tests/e2e/harness/run.mjs e2e --case=WEB-09` PASS 1/1 browser (`summary.json` `evidenceExactShaEligible` true). Bổ sung assert: detail ACTIVE của X có QR; Y bị chặn trên vé REVOKED/CANCELLED, ticket id giả và `tenantId` lệch ngoài BFF. PG isolation, ví/list/detail/QR/request/operation và nhãn REVOKED/CANCELLED giữ như run `mvsy2fr7-514bd0`; fixture vẫn gán hai trạng thái trực tiếp trong DB, không kiểm transition/cascade. `pnpm test:e2e:guards` PASS 16/16.
 
 ## Bổ sung WEB-09 — 29/10/2026
 
