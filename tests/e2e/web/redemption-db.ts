@@ -288,6 +288,27 @@ export function assertWeb04NegativeUnchanged(
   }
 }
 
+/** WEB-05 negative: no request/ticket/code/quota mutation (operations may audit-reject). */
+export function assertWeb05BusinessUnchanged(
+  before: RedemptionState,
+  after: RedemptionState,
+  label: string,
+): void {
+  expect(after.code, `${label}: code row`).toEqual(before.code);
+  expect(after.requests, `${label}: requests`).toEqual(before.requests);
+  expect(after.tickets, `${label}: tickets`).toEqual(before.tickets);
+  expect(after.quotas, `${label}: quotas`).toEqual(before.quotas);
+  for (const op of after.operations) {
+    expect(op.status, `${label}: no dangling IN_PROGRESS operation`).not.toBe(
+      'IN_PROGRESS',
+    );
+    expect(
+      (op.response_json as { ticketId?: string } | null)?.ticketId,
+      `${label}: rejected op must not issue ticket`,
+    ).toBeUndefined();
+  }
+}
+
 export function assertRedemptionStateUnchanged(
   before: RedemptionState,
   after: RedemptionState,
@@ -363,15 +384,14 @@ export async function readRequestConsent(
     const row = rows.rows[0] as Row;
     return {
       formVersion: row.form_version != null ? String(row.form_version) : null,
-      termsVersion: row.terms_version != null ? String(row.terms_version) : null,
+      termsVersion:
+        row.terms_version != null ? String(row.terms_version) : null,
       formDefinitionHash:
         row.form_definition_hash != null
           ? String(row.form_definition_hash)
           : null,
       termsContentHash:
-        row.terms_content_hash != null
-          ? String(row.terms_content_hash)
-          : null,
+        row.terms_content_hash != null ? String(row.terms_content_hash) : null,
     };
   } catch (error) {
     await client.query('ROLLBACK').catch(() => {});
