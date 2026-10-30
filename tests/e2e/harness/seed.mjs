@@ -175,6 +175,7 @@ export async function seedRuntime(state, caseIds) {
     origins: state.origins,
     accounts: state.accounts,
     cases: {},
+    ...(state.secondaryActor ? { secondaryActor: state.secondaryActor } : {}),
   };
   try {
     for (const accounts of [
@@ -1583,6 +1584,14 @@ export async function seedRuntime(state, caseIds) {
     httpPlatformClientId: 'e2e-http-platform',
     httpPlatformClientSecret: state.clientSecrets['e2e-http-platform'],
     sourceProvenance: state.sourceProvenance,
+    ...(state.secondaryRealm
+      ? {
+          secondaryIssuer: `${state.origins.auth}/realms/${state.secondaryRealm}`,
+          secondaryJwksUrl: `${state.origins.auth}/realms/${state.secondaryRealm}/protocol/openid-connect/certs`,
+          secondaryHttpClientId: 'e2e-http-secondary',
+          secondaryHttpClientSecret: state.secondaryClientSecret,
+        }
+      : {}),
   };
   state.manifest = manifest;
   state.manifestPath = resolve(state.dir, 'manifest.json');

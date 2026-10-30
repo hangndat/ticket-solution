@@ -178,6 +178,8 @@ export function validateManifest(value, options = {}) {
   }
   const accounts = record(manifest.accounts, 'accounts');
   for (const actor of ACTORS) account(accounts[actor], `accounts.${actor}`);
+  if (manifest.secondaryActor !== undefined)
+    account(manifest.secondaryActor, 'secondaryActor');
   const cases = record(manifest.cases, 'cases');
   if (
     options.requiredCaseIds !== undefined &&
