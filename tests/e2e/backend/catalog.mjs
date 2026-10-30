@@ -151,6 +151,16 @@ export const catalog = {
   'JOB-03': [
     b('issue', 'issue: last-seat'),
     b('worker-provider-deadline', 'stalled SMTP transport', 'U'),
+    {
+      file: 'tests/e2e/backend/job-03-smtp-failures.test.cjs',
+      name: '[JOB-03] R SMTP failure and timeout: bounded retry, truthful PG state, ticket stays committed',
+      layer: 'R',
+    },
+    {
+      file: 'tests/e2e/backend/job-03-smtp-failures.test.cjs',
+      name: '[JOB-03] R crash after SMTP accept before PG ack: ticket not rolled back, recovery may duplicate SMTP',
+      layer: 'R',
+    },
   ],
   'JOB-04': [
     b('csv-guard', 'providerStatus maps', 'U'),
@@ -271,7 +281,7 @@ export const notes = {
   'JOB-02':
     'D fence + R process kill sau claim, lease PG hết hạn/reclaim, stale ack fenced; một logical email (ADR-17 at-least-once SMTP).',
   'JOB-03':
-    'D retry và U deadline; thiếu R SMTP timeout/accept-before-ack crash.',
+    'D issue relay fail/retry; U SMTP deadline; R worker + reject/stall/Mailpit bounded retry và exit-after-smtp recovery (ADR-17, không assert exactly-once SMTP).',
   'JOB-04':
     'D/U provider mapping; thiếu resend caps/cooldown/final failure full matrix.',
   'JOB-05': 'U template; thiếu D/H preview/publish/reminder schedule.',

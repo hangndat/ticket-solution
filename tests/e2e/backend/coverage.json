@@ -306,11 +306,13 @@
     "caseId": "JOB-03",
     "tests": [
       "D:packages/backend/test/issue.test.cjs#issue: last-seat",
-      "U:packages/backend/test/worker-provider-deadline.test.cjs#stalled SMTP transport"
+      "U:packages/backend/test/worker-provider-deadline.test.cjs#stalled SMTP transport",
+      "R:tests/e2e/backend/job-03-smtp-failures.test.cjs#[JOB-03] R SMTP failure and timeout: bounded retry, truthful PG state, ticket stays committed",
+      "R:tests/e2e/backend/job-03-smtp-failures.test.cjs#[JOB-03] R crash after SMTP accept before PG ack: ticket not rolled back, recovery may duplicate SMTP"
     ],
-    "layers": ["D", "U"],
-    "status": "blocked",
-    "reason": "D retry và U deadline; thiếu R SMTP timeout/accept-before-ack crash."
+    "layers": ["D", "U", "R"],
+    "status": "implemented",
+    "reason": "D PostgreSQL: ticket ACTIVE when relay fails, outbox PENDING then COMPLETE after successful relay (issue.test.cjs mail segment). U: stalled SMTP returns UNKNOWN and closes socket by deadline. R process thật: worker + rejecting/stalling SMTP surfaces FAILED/UNKNOWN with attempts ≤ NOTIFICATION_MAX_ATTEMPTS, ticket không rollback; Mailpit recovery tới ACCEPTED/COMPLETE. R crash window: exit-after-smtp.cjs gọi createSmtpEmailAdapter/sendMimeMailViaSmtp thật rồi process.exit trước PG ack; ticket ACTIVE, outbox chưa COMPLETE; worker reclaim hoàn tất. Không assert exactly-once SMTP (ADR-17)."
   },
   {
     "caseId": "JOB-04",

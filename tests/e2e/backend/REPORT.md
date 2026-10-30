@@ -100,6 +100,10 @@ Thêm `tests/e2e/backend/job-02-lease-fence.test.cjs` (R): cấp vé khi worker 
 
 Checks: `node tests/e2e/backend/entry.mjs --case JOB-02` PASS 2/2 selector (D+R, ~54s build+run). Không assert exactly-once SMTP delivery.
 
+## Cập nhật JOB-03 (Issue #1032, worktree `f04-job03-smtp-failures`)
+
+Thêm `tests/e2e/backend/job-03-smtp-failures.test.cjs` (R), `tests/e2e/backend/smtp-fixture.cjs`, `packages/backend/test/fixtures/exit-after-smtp.cjs`. D giữ `issue.test.cjs` (relay fail + retry) và U `worker-provider-deadline.test.cjs`. R: worker process + SMTP reject/stall/Mailpit; crash-after-accept qua relay subprocess + SMTP thật (Mailpit), reclaim worker main.js. `coverage.json` JOB-03 → `implemented`, layers D+U+R. Không assert exactly-once SMTP.
+
 ## Giới hạn còn mở
 
 - Các ca H cần HTTPS hostname run, Keycloak issuer/JWT thật và manifest case riêng từ harness; local verifier hay `app.inject` fixture không đủ. Các ca R cần worker process, Mailpit, restart/kill/lease và tài nguyên run riêng. Xem `FIXTURES.md`.
