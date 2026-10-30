@@ -17,7 +17,9 @@ import {
   portalUrl,
 } from './helpers';
 
-const requireBackend = createRequire(resolve(process.cwd(), 'packages/backend/package.json'));
+const requireBackend = createRequire(
+  resolve(process.cwd(), 'packages/backend/package.json'),
+);
 const { Client } = requireBackend('pg');
 
 async function expirePendingRequest(tenantId: string, requestId: string) {
@@ -27,7 +29,9 @@ async function expirePendingRequest(tenantId: string, requestId: string) {
   await client.connect();
   try {
     await client.query('BEGIN');
-    await client.query("SELECT set_config('app.tenant_id', $1, true)", [tenantId]);
+    await client.query("SELECT set_config('app.tenant_id', $1, true)", [
+      tenantId,
+    ]);
     const updated = await client.query(
       "UPDATE redemption_requests SET expires_at = now() - interval '1 hour' WHERE tenant_id=$1::uuid AND id=$2::uuid AND status='PENDING_REVIEW' RETURNING id",
       [tenantId, requestId],
@@ -42,14 +46,55 @@ async function expirePendingRequest(tenantId: string, requestId: string) {
   }
 }
 
-async function readDecisionState(tenantId: string, requestId: string) {
+async function readTicketResendSnapshot(
+  tenantId: string,
+  eventId: string,
+  ticketId: string,
+) {
   if (!process.env.DATABASE_URL || !process.env.E2E_RUN_DIR)
-    throw new Error('BLOCKED: PORT-06 state check requires isolated PostgreSQL');
+    throw new Error('BLOCKED: PORT-09 snapshot requires isolated PostgreSQL');
   const client = new Client({ connectionString: process.env.DATABASE_URL });
   await client.connect();
   try {
     await client.query('BEGIN READ ONLY');
-    await client.query("SELECT set_config('app.tenant_id', $1, true)", [tenantId]);
+    await client.query("SELECT set_config('app.tenant_id', $1, true)", [
+      tenantId,
+    ]);
+    const tickets = await client.query(
+      'SELECT COUNT(*)::int AS n FROM tickets WHERE tenant_id=$1::uuid AND event_id=$2::uuid',
+      [tenantId, eventId],
+    );
+    const credentials = await client.query(
+      `SELECT version FROM ticket_credentials
+       WHERE tenant_id=$1::uuid AND ticket_id=$2::uuid
+       ORDER BY version DESC LIMIT 1`,
+      [tenantId, ticketId],
+    );
+    await client.query('COMMIT');
+    return {
+      ticketCount: tickets.rows[0]?.n ?? 0,
+      credentialVersion: credentials.rows[0]?.version ?? null,
+    };
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw error;
+  } finally {
+    await client.end();
+  }
+}
+
+async function readDecisionState(tenantId: string, requestId: string) {
+  if (!process.env.DATABASE_URL || !process.env.E2E_RUN_DIR)
+    throw new Error(
+      'BLOCKED: PORT-06 state check requires isolated PostgreSQL',
+    );
+  const client = new Client({ connectionString: process.env.DATABASE_URL });
+  await client.connect();
+  try {
+    await client.query('BEGIN READ ONLY');
+    await client.query("SELECT set_config('app.tenant_id', $1, true)", [
+      tenantId,
+    ]);
     const tickets = await client.query(
       'SELECT id, owner_user_id FROM tickets WHERE tenant_id=$1::uuid AND request_id=$2::uuid',
       [tenantId, requestId],
@@ -151,10 +196,16 @@ test('[PORT-06] Manager approves a pending request in Portal', async ({
       owner_user_id: accountFor(m, 'PORT-06', 'attendee').userId,
     }),
   ]);
-  expect(state.audits.filter((item: { action: string }) => item.action === 'redemption.approved')).toEqual([
+  expect(
+    state.audits.filter(
+      (item: { action: string }) => item.action === 'redemption.approved',
+    ),
+  ).toEqual([
     expect.objectContaining({
       actor_user_id: accountFor(m, 'PORT-06', 'manager').userId,
-      sanitized_diff: expect.objectContaining({ ownerUserId: accountFor(m, 'PORT-06', 'attendee').userId }),
+      sanitized_diff: expect.objectContaining({
+        ownerUserId: accountFor(m, 'PORT-06', 'attendee').userId,
+      }),
     }),
   ]);
 });
@@ -197,7 +248,9 @@ test('[PORT-06] Manager denies a pending request with a reason and audit records
     status: 'REJECTED',
     ticketId: null,
   });
-  await expect(pending.getByTestId('pending-notice')).toContainText(`Đã từ chối yêu cầu ${requestId}`);
+  await expect(pending.getByTestId('pending-notice')).toContainText(
+    `Đã từ chối yêu cầu ${requestId}`,
+  );
   const notFoundAnymore = await bffGet(
     page,
     m,
@@ -229,11 +282,17 @@ test('[PORT-06] Manager denies a pending request with a reason and audit records
     expect(entry).not.toHaveProperty(key);
   const state = await readDecisionState(f.tenantId, requestId);
   expect(state.tickets).toHaveLength(0);
-  expect(state.audits.filter((item: { action: string }) => item.action === 'redemption.denied')).toEqual([
+  expect(
+    state.audits.filter(
+      (item: { action: string }) => item.action === 'redemption.denied',
+    ),
+  ).toEqual([
     expect.objectContaining({
       actor_user_id: accountFor(m, 'PORT-06', 'manager').userId,
       reason,
-      sanitized_diff: expect.objectContaining({ ownerUserId: accountFor(m, 'PORT-06', 'attendee').userId }),
+      sanitized_diff: expect.objectContaining({
+        ownerUserId: accountFor(m, 'PORT-06', 'attendee').userId,
+      }),
     }),
   ]);
 });
@@ -289,7 +348,9 @@ test('[PORT-06] Deciding an expired pending request fails closed without issuing
       (item) => item.resourceId === requestId,
     ),
   ).toBe(false);
-  expect((await readDecisionState(f.tenantId, requestId)).tickets).toHaveLength(0);
+  expect((await readDecisionState(f.tenantId, requestId)).tickets).toHaveLength(
+    0,
+  );
 });
 
 test('[PORT-06] Quota exhausted between request and decision blocks approval and links to quota', async ({
@@ -319,8 +380,12 @@ test('[PORT-06] Quota exhausted between request and decision blocks approval and
   await row.getByRole('button', { name: 'Duyệt' }).click();
   const rejectedResponse = await rejected;
   expect(rejectedResponse.status()).toBe(409);
-  expect(((await rejectedResponse.json()) as { code: string }).code).toBe('QUOTA_EXHAUSTED');
-  await expect(page.getByText('QUOTA_EXHAUSTED', { exact: true })).toBeVisible();
+  expect(((await rejectedResponse.json()) as { code: string }).code).toBe(
+    'QUOTA_EXHAUSTED',
+  );
+  await expect(
+    page.getByText('QUOTA_EXHAUSTED', { exact: true }),
+  ).toBeVisible();
   await expect(pending.getByTestId('pending-notice')).toContainText(
     'QUOTA_EXHAUSTED',
   );
@@ -345,7 +410,9 @@ test('[PORT-06] Quota exhausted between request and decision blocks approval and
       (item) => item.resourceId === requestId,
     ),
   ).toBe(false);
-  expect((await readDecisionState(f.tenantId, requestId)).tickets).toHaveLength(0);
+  expect((await readDecisionState(f.tenantId, requestId)).tickets).toHaveLength(
+    0,
+  );
 });
 
 test('[PORT-06] Replaying an already-decided approval is idempotent and does not double-issue', async ({
@@ -413,11 +480,52 @@ test('[PORT-06] Replaying an already-decided approval is idempotent and does not
 
 test('[PORT-09] CS lookup masks PII and resend preserves the ticket with cooldown', async ({
   page,
+  browser,
 }) => {
   const m = loadManifest();
   const f = fixtureFor(m, 'PORT-09');
   if (!f.ticketId) throw new Error('BLOCKED: PORT-09 ticket missing');
+  const matrix = f.data?.matrixTicketIds as Record<string, string> | undefined;
+  const resendLimitTicketId = f.data?.resendLimitTicketId;
+  const otherEventTicketId = f.data?.otherEventTicketId;
+  const foreignTenantId = f.data?.foreignTenantId;
+  const foreignEventId = f.data?.foreignEventId;
+  const foreignTicketId = f.data?.foreignTicketId;
+  if (
+    !matrix?.accepted ||
+    !matrix.failed ||
+    !matrix.dead ||
+    !matrix.pending ||
+    !matrix.unknown ||
+    typeof resendLimitTicketId !== 'string' ||
+    typeof otherEventTicketId !== 'string' ||
+    typeof foreignTenantId !== 'string' ||
+    typeof foreignEventId !== 'string' ||
+    typeof foreignTicketId !== 'string'
+  ) {
+    throw new Error('BLOCKED: PORT-09 notification matrix fixture missing');
+  }
   await login(page, m, 'PORT-09', 'cs');
+  const list = await bffGet(page, m, eventBff(f, '/tickets?limit=50'));
+  expect(list.status).toBe(200);
+  const listed = (list.json as { items: Array<Record<string, unknown>> }).items;
+  const statuses = new Set(
+    listed
+      .map((item) =>
+        item.notification
+          ? (item.notification as { providerStatus: string }).providerStatus
+          : null,
+      )
+      .filter(Boolean),
+  );
+  for (const expected of ['ACCEPTED', 'FAILED', 'DEAD', 'PENDING'] as const) {
+    expect(statuses.has(expected)).toBe(true);
+  }
+  const unknownRow = listed.find((item) => item.ticketId === matrix.unknown);
+  expect(unknownRow?.notification).toBeTruthy();
+  expect(
+    (unknownRow!.notification as { providerStatus: string }).providerStatus,
+  ).toBe('PENDING');
   const response = await bffGet(
     page,
     m,
@@ -460,6 +568,24 @@ test('[PORT-09] CS lookup masks PII and resend preserves the ticket with cooldow
   );
   expect(outOfScope.status).toBe(200);
   expect((outOfScope.json as { items: unknown[] }).items).toHaveLength(0);
+  const crossEvent = await bffGet(
+    page,
+    m,
+    eventBff(f, `/tickets?q=${otherEventTicketId}&limit=20`),
+  );
+  expect(crossEvent.status).toBe(200);
+  expect((crossEvent.json as { items: unknown[] }).items).toHaveLength(0);
+  const crossTenant = await bffGet(
+    page,
+    m,
+    `/api/bff/tenants/${encodeURIComponent(foreignTenantId)}/events/${encodeURIComponent(foreignEventId)}/tickets?q=${encodeURIComponent(foreignTicketId)}&limit=20`,
+  );
+  expect(crossTenant.status).toBeGreaterThanOrEqual(400);
+  const pgBeforeResend = await readTicketResendSnapshot(
+    f.tenantId,
+    f.eventId,
+    f.ticketId,
+  );
   await page.goto(portalUrl(m, eventPath(f, '/support')));
   const panel = page.locator('#cs');
   await panel.getByPlaceholder('Mã vé hoặc mã yêu cầu').fill(f.ticketId);
@@ -492,7 +618,53 @@ test('[PORT-09] CS lookup masks PII and resend preserves the ticket with cooldow
   expect((after.json as { state: string }).state).toBe(
     (before.json as { state: string }).state,
   );
-  await expect(page.getByText('DELIVERED', { exact: true })).toHaveCount(0);
+  const pgAfterResend = await readTicketResendSnapshot(
+    f.tenantId,
+    f.eventId,
+    f.ticketId,
+  );
+  expect(pgAfterResend.ticketCount).toBe(pgBeforeResend.ticketCount);
+  expect(pgAfterResend.credentialVersion).toBe(
+    pgBeforeResend.credentialVersion,
+  );
+  const limitPath = eventBff(f, `/tickets/${resendLimitTicketId}`);
+  const limitBefore = await bffGet(page, m, limitPath);
+  expect(limitBefore.status).toBe(200);
+  const limitResend = await bffMutate(
+    page,
+    portalUrl(m, `${limitPath}/resend`),
+    {
+      idempotencyKey: randomUUID(),
+    },
+  );
+  expect(limitResend.status).toBe(429);
+  expect((limitResend.json as { code: string }).code).toBe('RESEND_LIMIT');
+  const limitAfter = await bffGet(page, m, limitPath);
+  expect((limitAfter.json as { state: string }).state).toBe(
+    (limitBefore.json as { state: string }).state,
+  );
+  const managerContext = await browser.newContext();
+  const managerPage = await managerContext.newPage();
+  try {
+    await login(managerPage, m, 'PORT-09', 'manager');
+    const unknownList = await bffGet(
+      managerPage,
+      m,
+      eventBff(f, '/notifications?state=UNKNOWN&limit=50'),
+    );
+    expect(unknownList.status).toBe(200);
+    const unknownItems = (
+      unknownList.json as { items: Array<{ providerStatus: string }> }
+    ).items;
+    expect(unknownItems.some((item) => item.providerStatus === 'UNKNOWN')).toBe(
+      true,
+    );
+    await expect(
+      managerPage.getByText('DELIVERED', { exact: true }),
+    ).toHaveCount(0);
+  } finally {
+    await managerContext.close();
+  }
 });
 
 test('[PORT-12] self-serve registration remains PENDING', async ({ page }) => {

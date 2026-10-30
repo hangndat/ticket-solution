@@ -74,8 +74,8 @@
     "caseId": "PORT-09",
     "tests": ["portal-ops.spec.ts [PORT-09]"],
     "layers": ["B", "H"],
-    "status": "blocked",
-    "reason": "CS BFF/UI lookup, timeline PII masking, out-of-scope empty search, resend+cooldown and ticket state preservation written. BLOCKED: fixture lacks multi-status notification matrix (PENDING/FAILED/DEAD/UNKNOWN), cross-event scope deny, and resend limit beyond cooldown; runtime HTTPS fixture required."
+    "status": "pass",
+    "reason": "CS BFF/UI lookup and timeline mask PII; cross-event search is empty and cross-tenant access denied. Fixture covers PENDING/ACCEPTED/FAILED/DEAD/UNKNOWN; resend checks cooldown and hourly tenant/user limit beyond cooldown while preserving ticket count/state and QR credential version. ACCEPTED means provider accepted only, not inbox/read. Exact-SHA runtime evidence is tracked in the PR."
   },
   {
     "caseId": "PORT-10",
