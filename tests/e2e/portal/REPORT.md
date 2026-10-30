@@ -1,5 +1,9 @@
 # Portal/Platform E2E — bàn giao worker
 
+## PORT-09 — checkpoint hiện tại 30/10/2026
+
+**BLOCKED**, PR #1084 Draft. Fix 2/2 tại `f2d3a34afd006012a86ebe7eb8f5b26a420a2359`, clean run `mvv336sk-a389d0` thất bại ở ma trận provider status (`portal-ops.spec.ts:620`); log chưa cho biết giá trị nào thiếu. Primary đã đạt ACCEPTED bằng worker thật, PG notification attempt/provider reference và Mailpit correlation; các assertion F02/F03 phía sau chưa chạy. Typecheck, discovery và 19 guards PASS; cleanup đã gỡ stack cô lập. Các PASS lịch sử bên dưới không thay thế kết quả này. Đã dừng 2/2; owner chẩn đoán: Minh, tối đa 10 phút, chưa dùng ngoại lệ.
+
 ## Kiểm tra đã chạy (worker task_b9427e2110b4 — James DoD F01/F02 fix 1/2 / PR #1072)
 
 | Lệnh | Kết quả |

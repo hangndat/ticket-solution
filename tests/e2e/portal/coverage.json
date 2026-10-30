@@ -74,8 +74,8 @@
     "caseId": "PORT-09",
     "tests": ["portal-ops.spec.ts [PORT-09]"],
     "layers": ["B", "H"],
-    "status": "pass",
-    "reason": "CS BFF/UI lookup and timeline mask PII; cross-event search is empty and cross-tenant access denied. Fixture covers PENDING/ACCEPTED/FAILED/DEAD/UNKNOWN; resend checks cooldown and hourly tenant/user limit beyond cooldown while preserving ticket count/state and QR credential version. ACCEPTED means provider accepted only, not inbox/read. Exact-SHA runtime evidence is tracked in the PR."
+    "status": "blocked",
+    "reason": "Fix 2/2 clean exact-SHA f2d3a34a run mvv336sk-a389d0 FAIL at provider status matrix. Primary real-worker ACCEPTED, PG attempt/provider_ref and Mailpit correlation passed; UNKNOWN detail/browser and cooldown/limit PG no-mutation assertions were not reached. Historical PASS does not apply. PR #1084 Draft; coordinator diagnosis required before any bounded exception."
   },
   {
     "caseId": "PORT-10",
