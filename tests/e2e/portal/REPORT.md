@@ -4,8 +4,8 @@
 
 | Lệnh | Kết quả |
 | --- | --- |
-| `node tests/e2e/harness/run.mjs e2e --case=PORT-01 --skip-build` | **PASS** run `mvutyoi9-f0d704`, browser 1/1; artifact `tests/e2e/.artifacts/mvutyoi9-f0d704/summary.json`. |
-| SHA | `fdca450699d8fb34698a59f3d355f352fa7387cf` (pre-commit run dirty; re-run sau commit cho evidenceExactShaEligible). |
+| `node tests/e2e/harness/run.mjs e2e --case=PORT-01 --skip-build` | **PASS** run `mvutztg6-81c23b`, browser 1/1; artifact `tests/e2e/.artifacts/mvutztg6-81c23b/summary.json`. |
+| SHA | `affd7b5eaf73e86be05a124d683d2bb09fac7b81` (clean tree, evidenceExactShaEligible). |
 
 PORT-01 B: wizard → loại vé → nguồn AUTO → hạn mức (nav + report quota) → config Lưu draft + Xuất bản → `contentStatus` PUBLISHED, reload, danh sách tenant một event. **Gap ghi nhận:** BFF GET `/quota` 422 trên event mới (UI quota read-only); Web consumer direct link 404 dù staff đã PUBLISHED (không sửa product trong slice test).
 
