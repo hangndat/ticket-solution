@@ -1,5 +1,14 @@
 # Portal/Platform E2E — bàn giao worker
 
+## Kiểm tra đã chạy (worker task_b9427e2110b4 — James DoD F01/F02 fix 1/2 / PR #1072)
+
+| Lệnh | Kết quả |
+| --- | --- |
+| `node tests/e2e/harness/run.mjs e2e --case=PORT-02` | **PASS** run `mvuvg7n2-768c19`, browser 1/1; artifact `tests/e2e/.artifacts/mvuvg7n2-768c19/summary.json`. |
+| SHA | _(exact SHA sau commit — xem `git rev-parse HEAD` trên nhánh PR)_ |
+
+**Thay đổi:** Portal config rollback dùng `useIntentMutation` (`config.rollback`) gửi UUID `idempotencyKey`; nút rollback hiện trên mọi phiên bản khác live published pointer. E2E [PORT-02] click UI rollback, PG snapshot sau mỗi stale 409 (save + rollback), public hero + ticket consent. **Gap:** Web ISR publish delta; PORT-01 public 404 wizard path.
+
 ## Kiểm tra đã chạy (worker task_8898495f4d3f — PORT-02 B/H / Issue #1035)
 
 | Lệnh | Kết quả |
