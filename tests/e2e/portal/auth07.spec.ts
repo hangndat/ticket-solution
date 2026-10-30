@@ -1,5 +1,6 @@
+import { randomUUID } from 'node:crypto';
 import { test, expect, loadManifest, fixtureFor } from '../harness/fixtures';
-import { bffGet, eventBff, eventPath, login, portalUrl } from './helpers';
+import { bffGet, bffMutate, eventBff, eventPath, login, portalUrl } from './helpers';
 
 const noStore = (value: string | undefined) => expect(value).toMatch(/private.*no-store/i);
 
@@ -160,6 +161,76 @@ test('[AUTH-07] late real Keycloak refresh cannot replace a same-sub callback to
     expect(afterRelease.find((cookie) => cookie.name === newerAccessName)?.value).toBe(newerToken);
     expect(afterRelease.find((cookie) => cookie.name === 'portal_staff_epoch')?.value).toBe(actorB.authEpoch);
     expect((await bffGet(switchPage, manifest, '/api/auth/identity?surface=staff')).status).toBe(200);
+  } finally {
+    release();
+    await context.close();
+  }
+});
+
+test('[AUTH-07] held staff CSV download cannot commit after platform login', async ({ browser }) => {
+  const manifest = loadManifest();
+  const fixture = fixtureFor(manifest, 'AUTH-07');
+  const context = await browser.newContext();
+  const staffPage = await context.newPage();
+  const exportsPath = eventBff(fixture, '/exports');
+  let release!: () => void;
+  let fetched!: () => void;
+  const released = new Promise<void>((resolve) => { release = resolve; });
+  const ready = new Promise<void>((resolve) => { fetched = resolve; });
+  try {
+    await login(staffPage, manifest, 'AUTH-07', 'owner');
+    const created = await bffMutate(staffPage, exportsPath,
+      { format: 'csv', filter: {}, idempotencyKey: randomUUID() });
+    expect([200, 201]).toContain(created.status);
+    const exportId = (created.json as { exportId?: string }).exportId;
+    expect(exportId).toMatch(/^[0-9a-f-]{36}$/);
+    const statusPath = `${exportsPath}/${exportId}`;
+    await expect.poll(async () => {
+      const status = await bffGet(staffPage, manifest, statusPath);
+      expect(status.status).toBe(200);
+      return (status.json as { status?: string }).status;
+    }, { timeout: 30_000 }).toBe('READY');
+
+    await staffPage.goto(portalUrl(manifest, `${eventPath(fixture, '/audit')}#jobs`));
+    const input = staffPage.getByTestId('export-id-input');
+    await expect(input).toBeVisible();
+    await input.fill(exportId!);
+    const downloadPath = `${statusPath}/download`;
+    let held = false;
+    await context.route((url) => url.pathname === downloadPath, async (route) => {
+      if (held) { await route.continue(); return; }
+      held = true;
+      const upstream = await route.fetch();
+      expect(upstream.status()).toBe(200);
+      noStore(upstream.headers()['cache-control']);
+      expect(upstream.headers()['content-type']).toMatch(/text\/csv/i);
+      fetched();
+      await released;
+      await route.fulfill({ response: upstream });
+    });
+    let downloads = 0;
+    staffPage.on('download', () => { downloads++; });
+    await staffPage.getByRole('button', { name: 'Tải CSV' }).click();
+    await ready;
+    const finished = staffPage.waitForEvent('requestfinished',
+      (request) => new URL(request.url()).pathname === downloadPath);
+
+    const platformPage = await context.newPage();
+    await platformPage.goto(portalUrl(manifest, '/api/auth/logout'));
+    await platformPage.goto(portalUrl(manifest, '/auth'));
+    await login(platformPage, manifest, 'AUTH-07', 'operator', 'platform');
+    const platform = await bffGet(platformPage, manifest, '/api/auth/identity?surface=platform');
+    expect(platform.status).toBe(200);
+    expect((platform.json as { surface: string }).surface).toBe('platform');
+    const denied = await bffGet(platformPage, manifest, downloadPath);
+    expect(denied.status).toBe(401);
+    noStore(denied.headers['cache-control']);
+
+    release();
+    await finished;
+    await expect(staffPage.getByTestId('export-result')).toHaveCount(0);
+    expect(downloads).toBe(0);
+    await expect(platformPage.getByTestId('audit-table')).toHaveCount(0);
   } finally {
     release();
     await context.close();
