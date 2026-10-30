@@ -122,6 +122,6 @@
     "tests": ["H:tests/e2e/http/live.test.mjs#[WEB-05]"],
     "layers": ["H"],
     "status": "blocked",
-    "reason": "James F01/F02: ma trận HTTP độc lập + web04AssertRejected đối soát redemption_requests/quota; v1 redeem hash khớp seed trước publish v2; v2 redeem hash khớp web05-published-config. Chờ clean-SHA run + DoD PASS."
+    "reason": "SHA b6f9856b: clean H mvuvba97-1446eb PASS; ma trận HTTP + request/quota guards + hash v1/v2. Blocked chờ James DoD."
   }
 ]
