@@ -53,6 +53,8 @@ Thêm case `[DB-11] live HTTP` vào `tests/e2e/http/live.test.mjs` (đăng ký �
 
 Regression H lân cận sau khi sửa harness dùng chung (`seed.mjs`/`run.mjs`/`entry.mjs`): `pnpm test:e2e:http -- --case=DB-09,DB-10` **PASS** cả hai, không bị ảnh hưởng bởi thay đổi.
 
+Evidence trên checkout sạch đúng SHA (sau commit): SHA `730c78fea5745947bcf0d5a209acee5cb3869b14`, `pnpm test:e2e:http -- --case=DB-11` run `mvuob2lw-a7465e`, `sourceProvenance.evidenceExactShaEligible=true`, `workingTreeDirty=false`; không còn container Docker nào sau run.
+
 **Finding khi viết test (đã sửa trong test, không sửa runtime):** `invited_email` ở `guest_invitations` được backend canonicalize (trim + lowercase) tại commit; test ban đầu dùng case gốc của account `otherAttendee` (camelCase) để tra lại invitation id nên không khớp — đã sửa test tự lowercase trước khi tra. Không phải bug runtime.
 
 Giới hạn: không tạo thêm Keycloak account mới để test "một lần dùng" theo đúng nghĩa hai actor khác nhau *cùng một email thật* (D-layer đã chứng minh trực tiếp qua actorUserId khác nhau trong DB); ở H, "một lần dùng" được chứng minh tương đương qua idempotency-key mới trên invitation đã CLAIMED (cùng actor) — đủ để phủ accept-path thực tế qua HTTP mà không thêm fixture/account chung mới có thể ảnh hưởng case khác.
