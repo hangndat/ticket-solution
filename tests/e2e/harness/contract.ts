@@ -53,6 +53,8 @@ export interface E2EManifest {
     shortWeb?: string;
   };
   accounts: Record<ActorName, TestAccount>;
+  /** Synthetic actor from the optional second Keycloak realm. */
+  secondaryActor?: TestAccount;
   cases: Record<string, CaseFixture>;
   /** Chỉ runtime harness sử dụng; không ghi nguyên manifest vào report. */
   runtime?: Record<string, unknown>;
