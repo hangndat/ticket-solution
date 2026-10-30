@@ -104,18 +104,21 @@ export async function bffMutate(
   path: string,
   body: unknown,
   method = 'POST',
+  idempotencyKey?: string,
 ) {
   return page.evaluate(
-    async ({ path, body, method }) => {
+    async ({ path, body, method, idempotencyKey }) => {
       const csrf =
         document.cookie.match(/(?:^|;\s*)portal_csrf=([^;]+)/)?.[1] ?? '';
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'x-portal-csrf': decodeURIComponent(csrf),
+      };
+      if (idempotencyKey) headers['Idempotency-Key'] = idempotencyKey;
       const response = await fetch(path, {
         method,
         credentials: 'same-origin',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-portal-csrf': decodeURIComponent(csrf),
-        },
+        headers,
         body: JSON.stringify(body),
       });
       let json: unknown = null;
@@ -130,6 +133,6 @@ export async function bffMutate(
         headers: Object.fromEntries(response.headers),
       };
     },
-    { path, body, method },
+    { path, body, method, idempotencyKey },
   );
 }

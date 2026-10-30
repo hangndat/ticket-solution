@@ -8,10 +8,12 @@
   },
   {
     "caseId": "PORT-02",
-    "tests": ["portal-event-lifecycle.spec.ts [PORT-02]"],
+    "tests": [
+      "portal-event-lifecycle.spec.ts [PORT-02] draft preview publish rollback and stale save preserve public and ticket consent"
+    ],
     "layers": ["B", "H"],
-    "status": "blocked",
-    "reason": "Draft/public and stale-version conflict BFF path written; UI save, publish/rollback and immutable ticket terms plus runtime remain."
+    "status": "covered",
+    "reason": "PORT-02 B/H PASS run mvuv2f70-c94658 (1/1 browser) on branch hangndat/f04-port02-publish: seeded publish exposes GET /v1/public/tenants/{tenantSlug}/events/{eventSlug} 200; draft save+preview and stale save (same tab + second browser context) leave public hero unchanged; BFF publish/rollback with optimistic tokens updates API projection and stale rollback 409; PostgreSQL ticket entitlement/form/terms hashes unchanged after publish+rollback. Portal config UI save/publish/rollback buttons not exercised (BFF parity); consumer Web ISR revalidate=60 not asserted on publish delta — API is SoT per ADR-19. Wizard-created events (PORT-01) may still 404 public until product sync."
   },
   {
     "caseId": "PORT-03",
