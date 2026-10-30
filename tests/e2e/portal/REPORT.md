@@ -4,6 +4,15 @@
 - Phạm vi sửa: chỉ `tests/e2e/portal/**`. Không sửa product, harness, root package/lockfile/CI hoặc `PLAN.md`.
 - Architecture impact: Không. Spec dùng Playwright browser thật, BFF same-origin và Keycloak login/TOTP; không mock token/cookie/auth.
 
+## Kiểm tra đã chạy (worker task_f43f26c1cfc5 — PORT-07 sortOrder H / Issue #1035)
+
+| Lệnh | Kết quả |
+| --- | --- |
+| `node tests/e2e/harness/run.mjs e2e --case=PORT-07` | **PASS** run `mvusj1xy-5e616b`, browser 1/1; artifact `tests/e2e/.artifacts/mvusj1xy-5e616b/summary.json`. |
+| SHA | _(cập nhật sau commit sạch + rerun evidence)_ |
+
+PORT-07: giữ owner/scanner/reader; BFF owner path thêm sortOrder `0`/`9999` chấp nhận (min gate qua POST), `-1`/`10000` → 422 `SCOPE_REQUIRED` (upstream envelope qua BFF passthrough, message `between 0 and 9999`); non-int vẫn `SORT_INVALID` tại BFF. Gap sortOrder upstream: đóng trên nhánh H.
+
 ## Kiểm tra đã chạy (worker task_563b98d49ff0 — PORT-07 fix iter 1/2 / Issue #1035)
 
 | Lệnh | Kết quả |
