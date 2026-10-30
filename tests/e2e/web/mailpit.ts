@@ -1,6 +1,7 @@
 import type { Page } from 'playwright/test';
 import { expect } from '../harness/fixtures';
 import type { E2EManifest } from '../harness/contract';
+import { decodeTicketQrPngFromRawMime } from './mailpit-mime.mjs';
 
 type MailSummary = {
   ID: string;
@@ -66,17 +67,8 @@ export async function assertTicketQrInlineAttachment(
   );
   expect(rawResponse.status()).toBe(200);
   const rawMime = await rawResponse.text();
-  expect(rawMime).toMatch(/Content-Type:\s*image\/png/i);
-  expect(rawMime).toMatch(/Content-ID:\s*<ticket-qr@vemoki>/i);
-  const part = rawMime.match(
-    /Content-Type:\s*image\/png[^\r\n]*[\s\S]*?Content-Transfer-Encoding:\s*base64\s*\r?\n[\s\S]*?\r?\n\r?\n([A-Za-z0-9+/=\r\n]+)\r?\n--/i,
-  );
-  expect(part, 'Mailpit MIME must carry inline ticket-qr PNG bytes').toBeTruthy();
-  const png = Buffer.from(part![1].replace(/\s/g, ''), 'base64');
+  const png = decodeTicketQrPngFromRawMime(rawMime);
   expect(png.length).toBeGreaterThan(0);
-  expect(png.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))).toBe(
-    true,
-  );
 }
 
 export function claimLink(mail: MailDetail, webOrigin: string): string {
