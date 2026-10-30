@@ -150,8 +150,8 @@
       "redeem.spec.ts › [WEB-07] idempotent redemption › two concurrent requests for one code issue only one ticket"
     ],
     "layers": ["B", "H"],
-    "status": "implemented",
-    "reason": "Double submit, lost-response sau commit rồi UI poll, reload/resubmit CODE_CONSUMED, same-key đổi payload IDEMPOTENCY_CONFLICT và hai POST BFF thật đồng thời với key khác cho cùng mã (201/409). PostgreSQL runtime role + tenant transaction-local RLS đối soát đúng một request/ticket/operation thành công, code CONSUMED, quota +1 mỗi bucket và một TicketIssued outbox; reload không tăng state. Targeted WEB-02/07 PASS run mvsw7lum-c9f6a7; race gửi Promise.all qua mạng, không có barrier bảo đảm hai transaction cùng lúc giữ lock."
+    "status": "covered",
+    "reason": "PLAN §5.2 WEB-07 P0 B/H: double-click, lost response sau commit + poll, reload/resubmit không vé thứ hai, same-key payload khác IDEMPOTENCY_CONFLICT, concurrent POST BFF (201/409 CODE_CONSUMED). PG runtime role + tenant transaction-local: một request/ticket/operation/outbox/quota per success path. Clean checkout SHA 7e8cce2dee502cb12163d2b384012952bfd6ac45: run mvuw3xnz-3dad02 PASS 5/5 browser, summary.json evidenceExactShaEligible true; guards 16/16. Race dùng Promise.all không barrier — không chứng minh lock đồng thời tuyệt đối."
   },
   {
     "caseId": "WEB-08",
