@@ -30,6 +30,32 @@ test('decodeTicketQrPngFromRawMime accepts PNG bytes on the ticket-qr part', () 
   assert.equal(png[0], 0x89);
 });
 
+test('decodeTicketQrPngFromRawMime rejects text/plain part with PNG in body and forged Content-Type line', () => {
+  const adversarial = [
+    'Content-Type: multipart/mixed; boundary="bound"',
+    '',
+    '--bound',
+    'Content-Type: text/plain; charset=utf-8',
+    'Content-Transfer-Encoding: base64',
+    'Content-ID: <ticket-qr@vemoki>',
+    '',
+    Buffer.from(
+      [
+        'Forged header line in body:',
+        'Content-Type: image/png',
+        '',
+        FIXTURE_PNG_B64,
+      ].join('\n'),
+    ).toString('base64'),
+    '--bound--',
+    '',
+  ].join('\r\n');
+  assert.throws(
+    () => decodeTicketQrPngFromRawMime(adversarial),
+    /no MIME part combines/,
+  );
+});
+
 test('decodeTicketQrPngFromRawMime rejects CID on one part and PNG on another', () => {
   const mismatched = [
     'Content-Type: multipart/mixed; boundary="bound"',
