@@ -59,7 +59,7 @@
     ],
     "layers": ["B", "H"],
     "status": "blocked",
-    "reason": "PORT-08 B/H: BFF /report matches readEventReport seed with pendingApprovalCount>0, emailNeedsCsCount>0, FINITE quota; gate asOf, KPI counts, deep-link CTAs (#pending, #cs), manual refresh GET, no resend on dashboard, no Portal scan/confirm/undo; upstream /report fault (error500) shows unknown state without fake zero KPIs (interpretEventReport + gate page). BLOCKED: O12 confirm APPLIED/undo/reject — source Gate scan confirmCheckin/undoCheckin + packages/backend/test/reporting.test.cjs check-in counts; DB-15/GATE E2E, not Portal dashboard (portal-core.spec asserts zero scan/confirm/undo buttons only)."
+    "reason": "PORT-08 B/H PASS run mvut378v-220ec0 (2/2 browser specs) on SHA 9bec814e: BFF /report matches readEventReport seed with pendingApprovalCount>0, emailNeedsCsCount>0, FINITE quota; gate asOf, KPI counts, deep-link CTAs (#pending, #cs), manual refresh GET, no resend on dashboard, no Portal scan/confirm/undo; upstream /report fault (error500) shows unknown state without fake zero KPIs. BLOCKED: O12 confirm APPLIED/undo/reject — source Gate confirmCheckin/undoCheckin + packages/backend/test/reporting.test.cjs check-in counts; DB-15/GATE E2E, not Portal dashboard."
   },
   {
     "caseId": "PORT-09",
