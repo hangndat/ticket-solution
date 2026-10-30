@@ -207,7 +207,7 @@ export const notes = {
   'DB-08':
     'Thiếu fault injection trước commit và lost-response sau commit theo command scope.',
   'DB-09': 'D revoke, owner invariant, allocation policy và reissue credential/version/grant; R worker/Mailpit PNG v2 + revoke-before-relay DEAD. Thiếu generic PATCH refusal H; GATE-03 vẫn thiếu QR credential validation tại Gate.',
-  'DB-10': 'D PostgreSQL PASS: hai request cùng importId/key/body chờ event lock khi commit đầu còn in-flight, một original + một replay, một operation và một mã mới; mã CONSUMED giữ nguyên. H có cùng barrier và actor inventory.import đọc/preview/commit job do actor khác tạo, actor thiếu quyền/revoked và sai tenant/event bị từ chối không mutation; chờ H run SHA sạch và DoD độc lập.',
+  'DB-10': 'D PostgreSQL PASS; H Keycloak/API/MinIO PASS run mvulfv4t-605b10 trên SHA sạch 5f2234bb: hai request cùng importId/key/body chờ event lock khi commit đầu còn in-flight, một original + một replay, một operation và một mã mới; mã CONSUMED giữ nguyên. Actor inventory.import đọc/preview/commit job do actor khác tạo; actor thiếu quyền/revoked và sai tenant/event bị từ chối không mutation. Chờ DoD độc lập trên SHA cuối.',
   'DB-11': 'D import/invite; thiếu H 48h/claim host và wrong-owner matrix.',
   'DB-12':
     'D publish/projection; thiếu H cache version/locale/no-store và rollback.',
