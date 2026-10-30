@@ -18,11 +18,12 @@
       "auth.spec.ts › [AUTH-02] mismatched callback state is rejected locally and never reaches the IdP token exchange",
       "auth.spec.ts › [AUTH-02] IdP-rejected authorization code is a distinct upstream error, not the local state/validation error",
       "auth.spec.ts › [AUTH-02] a correctly-signed token for the wrong audience does not grant a valid BFF session",
+      "auth.spec.ts › [AUTH-02] a correctly-signed, correct-audience token from a different issuer does not grant a valid BFF session",
       "auth.spec.ts › [AUTH-02] an expired access token with no refresh token fails closed instead of granting a session"
     ],
     "layers": ["B"],
-    "status": "blocked",
-    "reason": "Run browser mới PASS 5/5 tại SHA d34389bda71afd6b393d2784952dda3aad24ec82 (run ID mvud61d3-11a635, evidenceExactShaEligible: true): sai mật khẩu và callback thiếu state giữ 401/không session (cũ); state giả mạo bị chặn local (error=invalid_state) trước khi gọi IdP; code rác bị Keycloak từ chối ở bước token exchange với error khác invalid_state (phân biệt lỗi auth cục bộ và lỗi IdP/upstream thật); token audience sai (mint thật qua client platform runtime.httpPlatformClientId/Secret, cùng realm) đặt trực tiếp vào cookie bị BFF từ chối 401 và xóa cookie, không lộ userId; access token hết hạn (shortWeb) không có refresh token cũng fail-closed 401, không âm thầm coi là hợp lệ. Gap còn lại (audited, không sửa harness/backend trong dispatch này): issuer sai cần một issuer thứ hai hợp lệ mà `tests/e2e/harness/runtime.mjs` (`realmConfig`) chỉ dựng đúng một realm `e2e-<runId>` mỗi run — không có client/scope nào phát `iss` khác trong run hiện tại nên slice web không có cách mint token issuer sai thật để kiểm. Đề xuất tối thiểu cho coordinator (chưa làm): thêm một `oidc-hardcoded-claim-mapper` override claim `iss` trên một client E2E-only trong CÙNG realm (cùng mẫu đã dùng cho ACR ở `ticket-platform-web`, runtime.mjs dòng ~298-315) — không cần dựng realm Keycloak thứ hai/DB phụ. Vẫn giữ BLOCKED chờ coordinator quyết định."
+    "status": "implemented",
+    "reason": "AUTH-02 có browser assertions cho sai mật khẩu, callback thiếu/sai state, code bị IdP từ chối với lỗi phân biệt local/upstream, audience sai, issuer sai và access token hết hạn. Với issuer sai: preflight xác minh token thật của realm phụ bằng JWKS của chính realm đó, `iss` khác realm chính và `aud` có ticket-api; Web BFF /me trả 401, xóa session cookies, wallet không render actor trước và response/UI không lộ token. Run mvue1iq9-ca9616 PASS 12/12 cho AUTH-01/02/05 nhưng dùng working tree dirty tại HEAD 15ba60e722fe40882782f957766f65fb0d0e8f46, evidenceExactShaEligible=false; không gán run này cho SHA commit sau. Realm phụ có signing key khác nên kết quả fail-closed không cô lập check iss khỏi JWKS/signature; không kết luận verifier từ chối do một nguyên nhân nội bộ duy nhất."
   },
   {
     "caseId": "AUTH-03",

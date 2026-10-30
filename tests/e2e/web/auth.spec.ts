@@ -12,11 +12,15 @@ import {
   openCodeConfirmation,
   decodeJwtPayload,
   mintCrossClientAccessToken,
+  mintSecondaryIssuerAccessToken,
 } from './helpers';
 
 type WebRuntime = {
   httpPlatformClientId?: string;
   httpPlatformClientSecret?: string;
+  secondaryIssuer?: string;
+  secondaryHttpClientId?: string;
+  secondaryHttpClientSecret?: string;
 };
 
 test('[AUTH-01] attendee OIDC callback and BFF identity', async ({ page }) => {
@@ -320,6 +324,109 @@ test('[AUTH-02] a correctly-signed token for the wrong audience does not grant a
   expect(
     cookiesAfter.some((cookie) => cookie.name === 'oidc_access_token'),
   ).toBe(false);
+});
+
+test('[AUTH-02] a correctly-signed, correct-audience token from a different issuer does not grant a valid BFF session', async ({
+  page,
+}) => {
+  const manifest = loadManifest();
+  fixtureFor(manifest, 'AUTH-02');
+  const runtime = manifest.runtime as WebRuntime | undefined;
+  const secondaryIssuer = runtime?.secondaryIssuer;
+  const secondaryClientId = runtime?.secondaryHttpClientId;
+  const secondaryClientSecret = runtime?.secondaryHttpClientSecret;
+  const secondaryActor = manifest.secondaryActor;
+  if (
+    !secondaryIssuer ||
+    !secondaryClientId ||
+    !secondaryClientSecret ||
+    !secondaryActor
+  ) {
+    throw new Error(
+      'BLOCKED: AUTH-02 wrong-issuer cần runtime.secondaryIssuer/secondaryActor từ harness (chạy --case=AUTH-02 để dựng realm phụ)',
+    );
+  }
+
+  // Establish a real session for the primary attendee first so the later
+  // wrong-issuer cookie swap is a genuine replacement, not an empty jar.
+  const actor = accountFor(manifest, 'AUTH-02', 'attendee');
+  await login(page, manifest, actor, '/wallet');
+  await expect(page.getByTestId('wallet-ready')).toBeVisible();
+  const primaryAccess = (
+    await page.context().cookies(manifest.origins.web)
+  ).find((cookie) => cookie.name === 'oidc_access_token');
+  expect(primaryAccess).toBeTruthy();
+  const primarySubject = decodeJwtPayload(primaryAccess!.value).sub;
+
+  const wrongIssuerToken = await mintSecondaryIssuerAccessToken(
+    secondaryIssuer,
+    secondaryClientId,
+    secondaryClientSecret,
+    secondaryActor,
+  );
+  const payload = decodeJwtPayload(wrongIssuerToken);
+  expect(payload.iss).toBe(secondaryIssuer);
+  expect(payload.iss).not.toBe(
+    `${manifest.origins.auth}/realms/e2e-${manifest.runId}`,
+  );
+  // The audience is the real API audience. This realm has its own signing key,
+  // so rejection cannot isolate issuer validation from JWKS/signature checks.
+  const audiences = Array.isArray(payload.aud) ? payload.aud : [payload.aud];
+  expect(audiences).toContain('ticket-api');
+  const sub = String(payload.sub ?? '');
+  expect(sub).toBeTruthy();
+  expect(sub).not.toBe(primarySubject);
+
+  // A valid primary refresh cookie would restore the original actor after an
+  // upstream 401 and hide whether the secondary access token was rejected.
+  await page.context().clearCookies({ name: 'oidc_refresh_token' });
+
+  await page.context().addCookies([
+    {
+      name: 'oidc_access_token',
+      value: wrongIssuerToken,
+      url: manifest.origins.web,
+      httpOnly: true,
+      sameSite: 'Lax',
+    },
+    {
+      name: 'web_oidc_sub',
+      value: sub,
+      url: manifest.origins.web,
+      httpOnly: true,
+      sameSite: 'Lax',
+    },
+  ]);
+
+  const me = await page.request.get(webUrl(manifest, '/api/bff/me'));
+  expect(me.status()).toBe(401);
+  const body = JSON.stringify(await me.json().catch(() => ({})));
+  expect(body).not.toContain(actor.userId ?? '\u0000no-user-id');
+  expect(body).not.toContain(sub);
+  expect(body).not.toContain(wrongIssuerToken);
+
+  // The browser surface must not keep rendering the previous (real) actor's
+  // wallet once the session cookie has been replaced by a wrong-issuer
+  // token: it must fall back to the logged-out state, not stale content.
+  await page.goto(webUrl(manifest, '/wallet'));
+  await expect(page.getByTestId('wallet-need-login')).toBeVisible();
+  await expect(page.getByTestId('wallet-ready')).toHaveCount(0);
+  await expect(page.getByTestId('wallet-ticket-grid')).toHaveCount(0);
+  const pageText = await page.locator('body').innerText();
+  expect(pageText).not.toContain(actor.userId ?? '\u0000no-user-id');
+  expect(pageText).not.toContain(wrongIssuerToken);
+
+  const cookiesAfter = await page.context().cookies(manifest.origins.web);
+  expect(
+    cookiesAfter.filter((cookie) =>
+      [
+        'oidc_access_token',
+        'oidc_refresh_token',
+        'oidc_id_token',
+        'web_oidc_sub',
+      ].includes(cookie.name),
+    ),
+  ).toEqual([]);
 });
 
 test('[AUTH-02] an expired access token with no refresh token fails closed instead of granting a session', async ({

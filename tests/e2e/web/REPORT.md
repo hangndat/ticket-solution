@@ -1,5 +1,12 @@
 # Báo cáo Web E2E — 28/10/2026
 
+## AUTH-02 issuer phụ — 30/10/2026
+
+- Run thăm dò `mvue1iq9-ca9616` với `pnpm test:e2e:smoke --case=AUTH-01,AUTH-02,AUTH-05` PASS 12/12 browser. `summary.json` ghi `gitCommit=15ba60e722fe40882782f957766f65fb0d0e8f46`, `workingTreeDirty=true`, `evidenceExactShaEligible=false`; đây không phải evidence trên commit đó. Preflight xác minh token Keycloak thật của realm chính và realm phụ qua JWKS/issuer/audience tương ứng trước khi browser chạy.
+- Test mới AUTH-02 lấy token thật từ `manifest.runtime.secondaryIssuer`/`secondaryHttpClientId`/`secondaryHttpClientSecret` với `manifest.secondaryActor`, xác nhận `iss` khác realm chính và `aud` chứa `ticket-api`. Sau login primary attendee, test bỏ refresh cookie primary để một lần refresh hợp lệ không che kết quả, thay access/subject cookies bằng token phụ: BFF `/api/bff/me` trả 401, không lộ user ID/subject/token; cookie phiên bị xóa; `/wallet` chuyển về `wallet-need-login`, không còn grid của actor cũ. Không mock JWT.
+- AUTH-01 **PASS** theo bốn browser test: attendee đúng client/callback/PKCE/state/nonce, `/me` đúng actor, return path allowlist, không login loop; staff owner/manager bounce sang Portal với client/callback/cookies riêng. AUTH-02 **PASS** theo sáu browser test: sai mật khẩu, callback thiếu/sai state, code bị IdP từ chối phân biệt lỗi local/upstream, audience sai, issuer sai, token hết hạn đều không cấp phiên hợp lệ. Realm phụ có signing key khác, nên kết quả từ chối chứng minh fail-closed với token issuer khác nhưng không cô lập check `iss` khỏi JWKS/signature; không quy kết verifier từ chối bởi một nguyên nhân nội bộ duy nhất.
+- Cần gắn bằng chứng clean checkout SHA cuối ở PR/Issue sau commit và run lại; không dùng run thăm dò dirty để tuyên bố exact-SHA PASS.
+
 ## Bổ sung AUTH-01 staff/Portal bounce + audit AUTH-02 issuer — 30/10/2026
 
 SHA `d34389bda71afd6b393d2784952dda3aad24ec82` (checkout sạch, `evidenceExactShaEligible: true`). Run `node tests/e2e/harness/run.mjs smoke --case=AUTH-01,AUTH-02,AUTH-05` (build đầy đủ, không `--skip-build`) → `mvud61d3-11a635` PASS 11/11 browser, dùng Keycloak/PostgreSQL/API/Worker thật.
