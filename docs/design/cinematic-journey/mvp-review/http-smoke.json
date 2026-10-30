@@ -1,0 +1,38 @@
+{
+  "/experience": {
+    "status": 200,
+    "experienceInSitemap": null
+  },
+  "/en/experience": {
+    "status": 200,
+    "experienceInSitemap": null
+  },
+  "/marketing": {
+    "status": 200,
+    "experienceInSitemap": null
+  },
+  "/en": {
+    "status": 200,
+    "experienceInSitemap": null
+  },
+  "/privacy": {
+    "status": 200,
+    "experienceInSitemap": null
+  },
+  "/en/privacy": {
+    "status": 200,
+    "experienceInSitemap": null
+  },
+  "/support": {
+    "status": 200,
+    "experienceInSitemap": null
+  },
+  "/en/support": {
+    "status": 200,
+    "experienceInSitemap": null
+  },
+  "/sitemap.xml": {
+    "status": 200,
+    "experienceInSitemap": false
+  }
+}
