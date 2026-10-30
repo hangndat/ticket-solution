@@ -78,6 +78,14 @@ Evidence trên checkout sạch đúng SHA (sau commit `b6ff8a9ee504182e590cf37cf
 
 **BLOCKED thật, không phải thiếu test — đã báo coordinator trước khi mở nhánh:** `docs/TECHNICAL-DESIGN.md` §379 ("Critical responses `Cache-Control: no-store`") và §405 ("Public content cache key chứa canonical host + tenant + event + published config version + locale") chưa có ở runtime. Bằng chứng: `apps/api/src/published-events.ts` (public catalog/detail controller) không có decorator `Cache-Control` nào, khác các controller khác cùng repo (`inventory.ts`, `gate.ts`, `reporting.ts`, `tickets.ts`, `tenant-limits.ts` đều dùng `@Header('Cache-Control', 'private, no-store')`); `apps/api/src/config.ts` dòng ~374 route preview đọc header `cache-control` của client vào biến `_cacheControl` không dùng, không set response header tương ứng. Không có field `locale` ở bất kỳ đâu trong `packages/contracts`. `infra/admission/Caddyfile` không có cache directive cho `/public/*`. Coordinator xác nhận (msg_69030d65a81d, trả lời escalation msg_63b8cae5c655) giữ nguyên trạng BLOCKED và không mở sửa runtime/contract trong Dispatch test-only này; quyết định runtime để ở review sản phẩm riêng. `coverage.json` DB-12 giữ `status: "blocked"` phản ánh đúng việc này — không thêm failing acceptance selector vào CI cho phần cache/locale/no-store.
 
+## Cập nhật DB-14 (PR liên kết #1030, worktree `f04-db14-form-entitlement`)
+
+Thêm `packages/backend/test/db14-form-entitlement.test.cjs` (PostgreSQL cô lập): consent `form_version`/`terms_version` + hash trên `redemption_requests`, từ chối config có markup/script/unknown body keys/field type ngoài allowlist, `entitlement_snapshot` trên `tickets` không đổi sau publish/rebrand và sau khi `ticket_types.entitlement_snapshot` bị sửa; redeem stale `terms-v1` sau publish `terms-v2` trả `TERMS_VERSION_STALE` (idempotency envelope `ok:false`).
+
+Thêm case `[DB-14] live HTTP` (`live.test.mjs`, `entry.mjs`, `run.mjs`, `seed.mjs` entitlement seed + `controlDatabaseUrl`): Keycloak bearer thật — redeem lưu entitlement v1, HTTP `config-versions` từ chối `<style>` và unknown body keys, publish v2 đổi public brand/terms, vé cũ giữ entitlement + consent v1, `TERMS_VERSION_STALE` trên redeem stale, redeem v2 thành công.
+
+Checks (SHA sau commit): `node tests/e2e/backend/entry.mjs --case DB-14 --suite D --no-build` PASS; `pnpm test:e2e:http -- --case=DB-14` run `mvuqsqyn-c0f918` PASS. `coverage.json` DB-14 → `pass`, layers D+H. Không đổi runtime/contract.
+
 ## Giới hạn còn mở
 
 - Các ca H cần HTTPS hostname run, Keycloak issuer/JWT thật và manifest case riêng từ harness; local verifier hay `app.inject` fixture không đủ. Các ca R cần worker process, Mailpit, restart/kill/lease và tài nguyên run riêng. Xem `FIXTURES.md`.

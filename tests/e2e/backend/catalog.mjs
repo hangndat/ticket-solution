@@ -88,6 +88,11 @@ export const catalog = {
   'DB-14': [
     b('form-consent', 'F-BE: form/consent'),
     b('config-publish', 'config publish is versioned'),
+    b(
+      'db14-form-entitlement',
+      'DB-14: form/terms version, allowlist rejection, immutable entitlement snapshot',
+    ),
+    { file: 'tests/e2e/http/live.test.mjs', name: '[DB-14] live HTTP', layer: 'H' },
   ],
   'DB-15': [
     b('reporting', 'event report counts'),
@@ -224,7 +229,7 @@ export const notes = {
   'DB-13':
     'D lifecycle; thiếu UTC/IANA/deadline sau lock và archived ticket policy.',
   'DB-14':
-    'D form snapshot; thiếu H allowlist rich content và entitlement matrix.',
+    'D PostgreSQL PASS: form/terms version + consent hashes on request, structural allowlist rejects script/unknown keys/non-allowlisted field types, entitlement_snapshot on ticket immutable after publish/rebrand and ticket_type mutation; stale terms rejected. H Keycloak/HTTP PASS qua redeem + config-versions/publish + public projection và control DB snapshot. Chờ DoD độc lập trên SHA cuối.',
   'DB-15':
     'D report; thiếu full undo/cancel/final notification reconciliation.',
   'DB-16':
