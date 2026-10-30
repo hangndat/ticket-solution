@@ -31,7 +31,7 @@ export function JourneyStaticFallback({ locale }: { locale: MarketingLocale }) {
                 loading={index === 0 ? 'eager' : 'lazy'} fetchPriority={index === 0 ? 'high' : 'auto'}
                 className="absolute inset-0 h-full w-full object-cover" />
               <div className="absolute inset-0 bg-gradient-to-t from-[#03040c] via-[#03040c]/30 to-transparent" />
-              <div className="relative max-w-xl">
+              <div className="relative w-full max-w-[36rem]">
                 <p className="text-sm text-[#ffb547]">{chapter.index} · {chapter.label}</p>
                 <Heading className="mt-4 font-display text-4xl font-bold">{chapter.title}</Heading>
                 <p className="mt-4 text-lg leading-relaxed text-[#c2c6de]">{chapter.body}</p>
@@ -41,7 +41,7 @@ export function JourneyStaticFallback({ locale }: { locale: MarketingLocale }) {
         })}
         <section className="px-5 py-20 text-center">
           <h2 className="font-display text-4xl font-bold">{copy.brandTitle}</h2>
-          <p className="mx-auto mt-5 max-w-xl text-lg text-[#c2c6de]">{copy.brandBody}</p>
+          <p className="mx-auto mt-5 max-w-[36rem] text-lg text-[#c2c6de]">{copy.brandBody}</p>
           <div className="mt-8 flex flex-wrap justify-center gap-6">
             <a className="rounded-xl bg-[#7c4ded] px-6 py-3 font-semibold text-white" href={demoHref(productOriginFromEnv())}>{t(locale, 'demo.cta')}</a>
             <a className="px-6 py-3 underline" href={`${salesHref(locale)}#interest`}>{t(locale, 'nav.interest')}</a>
