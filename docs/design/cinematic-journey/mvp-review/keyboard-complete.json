@@ -1,0 +1,15 @@
+{
+  "inert": false,
+  "rect": {
+    "bottom": 659.203125,
+    "height": 44,
+    "left": 494.359375,
+    "right": 642.4375,
+    "top": 615.203125,
+    "width": 148.078125,
+    "x": 494.359375,
+    "y": 615.203125
+  },
+  "testid": "cta-interest",
+  "text": "Book a consult"
+}
