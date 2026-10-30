@@ -111,7 +111,7 @@
     ],
     "layers": ["D", "H"],
     "status": "implemented",
-    "reason": "D PostgreSQL PASS: hai request cùng importId/key/body chờ event lock khi commit đầu còn in-flight, một original + một replay, một operation và một mã mới; mã CONSUMED giữ nguyên. H có cùng barrier và actor inventory.import đọc/preview/commit job do actor khác tạo, actor thiếu quyền/revoked và sai tenant/event bị từ chối không mutation; chờ H run SHA sạch và DoD độc lập."
+    "reason": "D PostgreSQL PASS; H Keycloak/API/MinIO PASS run mvulfv4t-605b10 trên SHA sạch 5f2234bb: hai request cùng importId/key/body chờ event lock khi commit đầu còn in-flight, một original + một replay, một operation và một mã mới; mã CONSUMED giữ nguyên. Actor inventory.import đọc/preview/commit job do actor khác tạo; actor thiếu quyền/revoked và sai tenant/event bị từ chối không mutation. Chờ DoD độc lập trên SHA cuối."
   },
   {
     "caseId": "DB-11",
