@@ -116,5 +116,12 @@
     "layers": ["H"],
     "status": "blocked",
     "reason": "Run mvszl1xq-f016aa PASS (working tree chưa commit dựa trên 504d6da2, 2026-10-29): 7 nhánh negative redeem qua HTTP đúng error group — invalid CODE_INVALID 422, expired window REDEMPTION_WINDOW_CLOSED 409, event CANCELLED EVENT_CANCELLED 409, used code CODE_CONSUMED 409, quota hết QUOTA_EXHAUSTED 409, max_tickets_per_attendee=1 đã dùng ATTENDEE_LIMIT 409, tenant SUSPENDED TENANT_SUSPENDED 503; mỗi nhánh đối soát dưới ticket_runtime + tenant RLS (web04Query/web04AssertRejected): không ticket mới, code status không đổi, không operation IN_PROGRESS dangling. Positive control cùng event vẫn issue vé + quota.allocated+1 bình thường. Phát hiện và sửa product bug: apps/api/src/tickets.ts (TicketIssueService.redeem) không bắt PlatformError nên tenant SUSPENDED/PENDING rơi về 500 không cấu trúc; đã thêm nhánh instanceof PlatformError → platformRouteFail (cùng helper route platform dùng) để trả đúng code/status 503. Fixture mở rộng tests/e2e/harness/seed.mjs: limitEventId/limitCode/limitConsumedCode (ATTENDEE_LIMIT), expiredEventId/closedEventId/suspendedEventId lộ ra fixture.data để H dùng trực tiếp. Gaps: approval (MANUAL) redeem path (approval.ts/approvals controller) chưa kiểm có cùng lỗ PlatformError-uncaught hay không — ngoài scope WEB-04; browser B (redeem.spec.ts) đã PASS từ trước, không chạy lại trong lượt này."
+  },
+  {
+    "caseId": "WEB-05",
+    "tests": ["H:tests/e2e/http/live.test.mjs#[WEB-05]"],
+    "layers": ["H"],
+    "status": "covered",
+    "reason": "WEB-05 H clean PASS mvuvhn2t-f1e3ab tại SHA tích hợp 42a29788; ma trận HTTP, request/quota guards và hash published v1/v2. James DoD PASS tại PR #1071, CI 41046526455 SUCCESS."
   }
 ]

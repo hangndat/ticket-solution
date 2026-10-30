@@ -1,5 +1,23 @@
 # Báo cáo Web E2E — 28/10/2026
 
+## WEB-05 tích hợp — 30/10/2026
+
+- Rebase lên `main`, giữ đủ worklog append-only. Checkout sạch SHA `42a29788b252d4f17937c0401187512b1e7b47ea`: browser `mvuvgow7-f39e4e` PASS 7/7, HTTP `mvuvhn2t-f1e3ab` PASS; cả hai `evidenceExactShaEligible: true`. CI PR #1071 run `41046526455` SUCCESS, mergeable.
+- James revalidate F01/F02 và DoD PASS tại https://github.com/hangndat/ticket-solution/pull/1071#issuecomment-6521341187. Bản ghi coverage chuyển `covered`; commit này chỉ cập nhật tài liệu.
+
+## WEB-05 form/terms validation B+H — 30/10/2026 (James F01/F02 lượt 1/2)
+
+- F01: Tách ma trận B/H — mỗi nhánh invalid (required/type/select allowlist/termsAccepted=false/forged schema, stale form/terms) assert status+code riêng; PG `assertWeb05BusinessUnchanged` (browser) và `web04AssertRejected` + `redemption_requests`/quota (HTTP) không đổi request/ticket/code/quota.
+- F02: `web05-published-config.mjs` + `web05-hashes.mjs` — consent hash trên PG khớp nguồn published v1/v2 (`hashFormDefinition`/`hashTermsContent` body), `assert.notEqual` v2↔v1; HTTP redeem v1 trên `secondCode` trước publish v2, redeem v2 trên `primary` sau publish.
+- Run thăm dò dirty trên HEAD cũ: browser `mvuv8zmi-a02db4` PASS 7/7; HTTP `mvuv9phi-457559` PASS; `pnpm test:e2e:guards` 16/16. Evidence exact SHA ghi sau commit sạch. `coverage.json` giữ **blocked** chờ James revalidate.
+- Checkout sạch SHA `b6f9856b5e7b013278e1a9e66a61f6eb00fa3ed0` (`evidenceExactShaEligible: true`): `node tests/e2e/harness/run.mjs e2e --case=WEB-05 --skip-build` → `mvuvanf0-3fc114` PASS 7/7; `pnpm test:e2e:http --case=WEB-05 --skip-build` → `mvuvba97-1446eb` PASS; `pnpm test:e2e:guards` 16/16.
+
+## WEB-05 form/terms validation B+H — 30/10/2026
+
+- Mở rộng `redeem.spec.ts › [WEB-05]`: client gate terms/required/type (email/phone/checkbox) không POST; BFF `postRedeemDirect` từ chối `FORM_INVALID`, `FORM_VERSION_STALE`, `TERMS_VERSION_STALE` với `assertRedemptionStateUnchanged`; redeem thành công trên `secondCode` đối soát `form_version`/`terms_version` + hash trên `redemption_requests`.
+- HTTP `live.test.mjs#[WEB-05]`: cùng ma trận lỗi qua API Keycloak bearer; owner publish config v2 trong run, client không tự chấp nhận v1; redeem v2 lưu consent PG.
+- Seed WEB-05: `formVersion`/`termsVersion`/`controlDatabaseUrl`/`codeIds.primary+secondary`. Checkout sạch SHA `85754809a63dc90cc6baffcca5382805f52aa07d` (`evidenceExactShaEligible: true`): `node tests/e2e/harness/run.mjs e2e --case=WEB-05 --skip-build` → `mvuuuf0j-5208aa` PASS 4/4; `pnpm test:e2e:http --case=WEB-05 --skip-build` → `mvuuv3my-d98585` PASS; `pnpm test:e2e:guards` 16/16.
+
 ## WEB-11 responsive B — 30/10/2026
 
 - F01 fix `public.spec.ts › [WEB-11]`: desktop 1280×720 redeem `secondCode` submit (BFF 201) → wallet link → wallet-ticket CTA → QR; mobile 390×844 lặp nav/sheet, submit cùng mã → panel `used`, mở vé qua wallet CTA (vé vừa phát hành); không `page.goto` thẳng URL vé; giữ Keycloak/fixture PLAN B.
