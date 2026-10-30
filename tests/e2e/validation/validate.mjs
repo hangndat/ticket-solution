@@ -1,4 +1,5 @@
 import { isAbsolute, relative, resolve } from 'node:path';
+import { validateSourceProvenance } from '../harness/source-provenance.mjs';
 
 const ACTORS = [
   'attendee',
@@ -171,6 +172,9 @@ export function validateManifest(value, options = {}) {
     if (runtime.hostSuffix !== undefined && runtime.hostSuffix !== suffix)
       blocked('runtime.hostSuffix', 'must match runId');
     checkControls(runtime, 'runtime', allowedOrigins, runDir);
+    if (runtime.sourceProvenance !== undefined) {
+      validateSourceProvenance(runtime.sourceProvenance);
+    }
   }
   const accounts = record(manifest.accounts, 'accounts');
   for (const actor of ACTORS) account(accounts[actor], `accounts.${actor}`);
