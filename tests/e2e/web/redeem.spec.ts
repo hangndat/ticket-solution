@@ -23,7 +23,7 @@ import {
   webUrl,
   assertRedeemRejectedWithoutTicket,
 } from './helpers';
-import { ticketLink, waitForMail } from './mailpit';
+import { assertTicketIssuedMail, waitForMail } from './mailpit';
 import {
   assertIssuedExactlyOnce,
   assertNoExtraIssue,
@@ -1071,27 +1071,75 @@ test('[WEB-08] real worker delivers issued ticket email to run Mailpit', async (
     ticketId,
   );
   const actor = accountFor(manifest, 'WEB-08', 'attendee');
-  const mail = await waitForMail(
-    page,
-    manifest,
-    actor.username,
-    caseData<string>(f, 'eventName'),
-  );
-  const url = ticketLink(mail, manifest.origins.web);
-  const mailTicketId = url.match(/\/tickets\/([0-9a-f-]{36})/i)?.[1];
-  expect(mailTicketId).toBe(ticketId);
-  expect(mail.Text ?? '').toContain(mailTicketId!);
-  expect(mail.HTML ?? '').toContain('cid:ticket-qr');
+  const eventName = caseData<string>(f, 'eventName');
+  expect(await walletTicketIds(page, manifest, f.tenantId)).toContain(ticketId);
+  const mail = await waitForMail(page, manifest, actor.username, eventName);
+  const url = await assertTicketIssuedMail(page, manifest, mail, {
+    eventName,
+    ticketId: ticketId!,
+    webOrigin: manifest.origins.web,
+  });
   const guest = await browser.newContext();
   try {
     const guestPage = await guest.newPage();
     await guestPage.goto(url);
     await expect(
-      guestPage.getByTestId('owner-ticket-need-login'),
+      guestPage.getByTestId('owner-ticket-need-login-state'),
     ).toBeVisible();
+    await expect(guestPage.getByTestId('owner-ticket-qr-figure')).toHaveCount(0);
+    await expect(guestPage.getByTestId('owner-ticket-id')).toHaveCount(0);
   } finally {
     await guest.close();
   }
+  const otherAttendee = accountFor(manifest, 'WEB-08', 'otherAttendee');
+  const otherCtx = await browser.newContext();
+  try {
+    const otherPage = await otherCtx.newPage();
+    await login(otherPage, manifest, otherAttendee);
+    const deniedBff = await otherPage.request.get(
+      webUrl(
+        manifest,
+        `/api/bff/tickets/${ticketId}?tenantId=${f.tenantId}`,
+      ),
+    );
+    expect([403, 404]).toContain(deniedBff.status());
+    if (deniedBff.status() === 200) {
+      const payload = (await deniedBff.json()) as { id?: string };
+      expect(payload.id).not.toBe(ticketId);
+    } else {
+      const body = await deniedBff.text();
+      expect(body).not.toContain(ticketId!);
+    }
+    await otherPage.goto(url);
+    await expect(otherPage.getByTestId('owner-ticket-loading-state')).toHaveCount(0, {
+      timeout: 30_000,
+    });
+    await expect(otherPage.getByTestId('owner-ticket-ready')).toHaveCount(0);
+    await expect(otherPage.getByTestId('owner-ticket-qr-figure')).toHaveCount(0);
+    await expect(otherPage.getByTestId('owner-ticket-id')).toHaveCount(0);
+    await expect(
+      otherPage
+        .getByTestId('owner-ticket-forbidden-state')
+        .or(otherPage.getByTestId('owner-ticket-missing-state'))
+        .or(otherPage.getByTestId('owner-ticket-tenant-unresolved-state')),
+    ).toBeVisible();
+    const deniedAfterNav = await otherPage.request.get(
+      webUrl(
+        manifest,
+        `/api/bff/tickets/${ticketId}?tenantId=${f.tenantId}`,
+      ),
+    );
+    expect([403, 404]).toContain(deniedAfterNav.status());
+  } finally {
+    await otherCtx.close();
+  }
   await page.goto(url);
+  await expect(page).toHaveURL(
+    new RegExp(`/tickets/${ticketId!.replace(/-/g, '\\-')}`, 'i'),
+  );
   await expect(page.getByTestId('owner-ticket-qr-figure')).toBeVisible();
+  await expect(page.getByTestId('owner-ticket-id')).toHaveAttribute(
+    'title',
+    ticketId!,
+  );
 });
