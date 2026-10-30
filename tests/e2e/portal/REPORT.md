@@ -8,8 +8,8 @@
 
 | Lệnh | Kết quả |
 | --- | --- |
-| `node tests/e2e/harness/run.mjs e2e --case=PORT-07` | **PASS** run `mvuqtkqt-c9572d`, browser 1/1; artifact `tests/e2e/.artifacts/mvuqtkqt-c9572d/summary.json`. |
-| SHA | `865d4bef793900291a90ca4139d34fed004aa443` (re-run sau commit sạch — xem worker_done). |
+| `node tests/e2e/harness/run.mjs e2e --case=PORT-07` | **PASS** run `mvuqvewt-f6a776`, browser 1/1; artifact `tests/e2e/.artifacts/mvuqvewt-f6a776/summary.json`. |
+| SHA | `c45632602b4dfe820a6d42d2f7fe86931b755b22` (clean tree, run `mvuqvewt-f6a776`, evidenceEligible). |
 
 PORT-07: zero-gate hướng dẫn VI, create/list đúng event, tên 1–80 và order 0/9999 (UI+ BFF), `GATE_NAME_CONFLICT` UI tiếng Việt + HTTP 409, scanner POST 403 (thiếu `event.update`), không scan/confirm/undo/rename/delete/link Web `/gate`. Gap: chưa có actor Portal read-only trên panel (CS thiếu `report.read`; manager có `event.update`).
 
