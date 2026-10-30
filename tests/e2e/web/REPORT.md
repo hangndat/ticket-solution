@@ -4,6 +4,7 @@
 
 - F01 fix `public.spec.ts › [WEB-11]`: desktop 1280×720 redeem `secondCode` submit (BFF 201) → wallet link → wallet-ticket CTA → QR; mobile 390×844 lặp nav/sheet, submit cùng mã → panel `used`, mở vé qua wallet CTA (vé vừa phát hành); không `page.goto` thẳng URL vé; giữ Keycloak/fixture PLAN B.
 - Run targeted sau sửa (working tree dirty): `node tests/e2e/harness/run.mjs e2e --case=WEB-11 --skip-build` → `mvuu0by7-149fc3` PASS 1/1; `pnpm test:e2e:guards` 16/16. Evidence exact SHA ghi sau commit sạch.
+- Checkout sạch SHA `c5af5f1df2653ff9e490eb23dba1f00370a32557` (`evidenceExactShaEligible: true`): `node tests/e2e/harness/run.mjs e2e --case=WEB-11 --skip-build` → `mvuu1bx0-e34021` PASS 1/1; `pnpm test:e2e:guards` 16/16.
 - `coverage.json` WEB-11 → `implemented` theo PLAN §5.2 P1 B; không sửa `apps/web`.
 
 ## WEB-11 responsive B — 30/10/2026 (trước F01)
