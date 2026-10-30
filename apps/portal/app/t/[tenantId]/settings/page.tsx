@@ -4,7 +4,8 @@ import { ProForm, ProFormText } from '@ant-design/pro-components';
 import { Alert, Button, Flex, Form, Result, Spin, Typography } from 'antd';
 import { PortalPage } from '../../../../src/components/portal-page';
 import { useParams } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect } from 'react';
+import { useActorState as useState } from '../../../../src/client/use-actor-state';
 import {
   apiErrorMessage,
   portalGet,

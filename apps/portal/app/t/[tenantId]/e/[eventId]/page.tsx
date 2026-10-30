@@ -5,7 +5,8 @@ import { Alert, Button, Descriptions, Flex, Result, Space, Spin, Typography } fr
 import { PortalPage } from '../../../../../src/components/portal-page';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
+import { useActorState as useState } from '../../../../../src/client/use-actor-state';
 import type { ConfigVersionSummary, EventDetail } from '@ticket/contracts';
 import {
   apiErrorMessage,

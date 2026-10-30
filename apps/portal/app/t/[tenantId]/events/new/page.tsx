@@ -15,7 +15,8 @@ import {
 } from 'antd';
 import { PortalPage } from '../../../../../src/components/portal-page';
 import { useParams, useRouter } from 'next/navigation';
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useRef } from 'react';
+import { useActorState as useState } from '../../../../../src/client/use-actor-state';
 import {
   apiErrorCode,
   apiErrorMessage,

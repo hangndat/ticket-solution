@@ -3,7 +3,8 @@
 import { Alert, Button, Card, Flex, Form, Input, Result, Select, Space, Spin, Typography } from 'antd';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
+import { useActorState as useState } from '../../src/client/use-actor-state';
 import {
   apiErrorCode,
   apiErrorMessage,

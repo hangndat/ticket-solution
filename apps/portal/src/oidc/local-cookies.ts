@@ -17,3 +17,15 @@ export const PLATFORM_AUTH_COOKIES = {
   epoch: 'portal_platform_epoch',
   epochSnapshot: 'portal_platform_epoch_snapshot',
 } as const;
+
+/** A late refresh can only write cookies belonging to the epoch it started in. */
+export function staffTokenCookieName(base: string, epoch: string): string {
+  if (!isStaffEpoch(epoch)) {
+    throw new Error('Invalid staff auth epoch');
+  }
+  return `${base}__${epoch}`;
+}
+
+export function isStaffEpoch(epoch: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(epoch);
+}
