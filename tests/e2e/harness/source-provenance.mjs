@@ -1,5 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
+import { lstatSync, readFileSync, readlinkSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 const COMMIT_RE = /^[0-9a-f]{40}$/;
 const FINGERPRINT_RE = /^[0-9a-f]{64}$/;
@@ -13,8 +15,32 @@ function git(root, ...args) {
   }).trim();
 }
 
-function fingerprintPorcelain(porcelain) {
-  return createHash('sha256').update(porcelain).digest('hex');
+function gitBytes(root, ...args) {
+  return execFileSync('git', ['-C', root, ...args], {
+    stdio: ['ignore', 'pipe', 'pipe'],
+    maxBuffer: 64 * 1024 * 1024,
+  });
+}
+
+function fingerprintWorkingTree(root) {
+  const hash = createHash('sha256');
+  hash.update(gitBytes(root, 'status', '--porcelain=v1', '-z', '--untracked-files=all'));
+  hash.update('\0tracked-diff\0');
+  hash.update(gitBytes(root, 'diff', '--no-ext-diff', '--no-textconv', '--binary', 'HEAD', '--'));
+  hash.update('\0untracked-content\0');
+  const untracked = gitBytes(root, 'ls-files', '--others', '--exclude-standard', '-z');
+  for (const path of untracked.toString('utf8').split('\0').filter(Boolean)) {
+    const file = resolve(root, path);
+    const stat = lstatSync(file);
+    hash.update(path);
+    hash.update('\0');
+    hash.update(String(stat.mode));
+    hash.update('\0');
+    if (stat.isSymbolicLink()) hash.update(readlinkSync(file));
+    else if (stat.isFile()) hash.update(readFileSync(file));
+    hash.update('\0');
+  }
+  return hash.digest('hex');
 }
 
 function evidenceFields(workingTreeDirty) {
@@ -42,7 +68,7 @@ export function captureSourceProvenance(root) {
   const porcelain = git(root, 'status', '--porcelain');
   const lines = porcelain ? porcelain.split('\n').filter(Boolean) : [];
   const workingTreeDirty = lines.length > 0;
-  const workingTreeFingerprint = fingerprintPorcelain(porcelain);
+  const workingTreeFingerprint = fingerprintWorkingTree(root);
   const preview = lines
     .slice(0, 10)
     .map((line) => line.slice(3).slice(0, 120))
