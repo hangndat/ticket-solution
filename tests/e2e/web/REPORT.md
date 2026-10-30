@@ -1,5 +1,11 @@
 # Báo cáo Web E2E — 28/10/2026
 
+## WEB-05 form/terms validation B+H — 30/10/2026
+
+- Mở rộng `redeem.spec.ts › [WEB-05]`: client gate terms/required/type (email/phone/checkbox) không POST; BFF `postRedeemDirect` từ chối `FORM_INVALID`, `FORM_VERSION_STALE`, `TERMS_VERSION_STALE` với `assertRedemptionStateUnchanged`; redeem thành công trên `secondCode` đối soát `form_version`/`terms_version` + hash trên `redemption_requests`.
+- HTTP `live.test.mjs#[WEB-05]`: cùng ma trận lỗi qua API Keycloak bearer; owner publish config v2 trong run, client không tự chấp nhận v1; redeem v2 lưu consent PG.
+- Seed WEB-05: `formVersion`/`termsVersion`/`controlDatabaseUrl`/`codeIds.primary+secondary`. Run targeted `node tests/e2e/harness/run.mjs e2e --case=WEB-05 --skip-build` → `mvuur1i8-67d0bb` PASS 4/4; `pnpm test:e2e:http --case=WEB-05 --skip-build` → `mvuurx3f-d9f0ce` PASS; `pnpm test:e2e:guards` 16/16. Evidence exact SHA: recheck sau commit sạch.
+
 ## WEB-11 responsive B — 30/10/2026
 
 - F01 fix `public.spec.ts › [WEB-11]`: desktop 1280×720 redeem `secondCode` submit (BFF 201) → wallet link → wallet-ticket CTA → QR; mobile 390×844 lặp nav/sheet, submit cùng mã → panel `used`, mở vé qua wallet CTA (vé vừa phát hành); không `page.goto` thẳng URL vé; giữ Keycloak/fixture PLAN B.

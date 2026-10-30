@@ -328,3 +328,55 @@ export function assertNoExtraIssue(
     ),
   ).toHaveLength(1);
 }
+
+export type RequestConsentSnapshot = {
+  formVersion: string | null;
+  termsVersion: string | null;
+  formDefinitionHash: string | null;
+  termsContentHash: string | null;
+};
+
+/** Consent columns on the redemption request row (WEB-05 / form gate evidence). */
+export async function readRequestConsent(
+  fixture: CaseFixture,
+  requestId: string,
+): Promise<RequestConsentSnapshot> {
+  if (!process.env.DATABASE_URL || !process.env.E2E_RUN_DIR)
+    throw new Error(
+      'BLOCKED: PostgreSQL assertion requires isolated E2E runtime',
+    );
+  const client = new Client({ connectionString: process.env.DATABASE_URL });
+  await client.connect();
+  try {
+    await client.query('BEGIN READ ONLY');
+    await client.query("SELECT set_config('app.tenant_id', $1, true)", [
+      fixture.tenantId,
+    ]);
+    const rows = await client.query(
+      `SELECT form_version, terms_version, form_definition_hash, terms_content_hash
+       FROM redemption_requests
+       WHERE tenant_id = $1::uuid AND id = $2::uuid`,
+      [fixture.tenantId, requestId],
+    );
+    await client.query('COMMIT');
+    expect(rows.rows).toHaveLength(1);
+    const row = rows.rows[0] as Row;
+    return {
+      formVersion: row.form_version != null ? String(row.form_version) : null,
+      termsVersion: row.terms_version != null ? String(row.terms_version) : null,
+      formDefinitionHash:
+        row.form_definition_hash != null
+          ? String(row.form_definition_hash)
+          : null,
+      termsContentHash:
+        row.terms_content_hash != null
+          ? String(row.terms_content_hash)
+          : null,
+    };
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw error;
+  } finally {
+    await client.end();
+  }
+}

@@ -28,6 +28,7 @@ const CASE_IDS = [
   'DB-12',
   'DB-14',
   'WEB-04',
+  'WEB-05',
 ];
 const EVIL_HOST = 'evil.example';
 const EVIL_ORIGIN = 'https://evil.example';
@@ -1051,17 +1052,20 @@ async function web04AssertRejected(ctx, {
   code,
   errorStatus,
   errorCode,
+  redeemBody,
 }) {
   const f = ctx.fixture;
   const attendee = await bearer(ctx, 'attendee');
   const path = `/tenants/${tenantId}/events/${eventId}/redemptions`;
-  const body = {
-    code,
-    formVersion: required(f.data?.formVersion, `${label} formVersion`),
-    termsVersion: required(f.data?.termsVersion, `${label} termsVersion`),
-    answers: required(f.data?.answers, `${label} answers`),
-    termsAccepted: true,
-  };
+  const body =
+    redeemBody ??
+    {
+      code,
+      formVersion: required(f.data?.formVersion, `${label} formVersion`),
+      termsVersion: required(f.data?.termsVersion, `${label} termsVersion`),
+      answers: required(f.data?.answers, `${label} answers`),
+      termsAccepted: true,
+    };
   const beforeCodeRows = await web04Query(
     f,
     tenantId,
@@ -4387,6 +4391,191 @@ for (const caseId of CASE_IDS) {
         beforeReport.body.quota.allocated + 1,
         'WEB-04 positive control: valid code must still allocate quota',
       );
+    }
+    if (caseId === 'WEB-05') {
+      const answers = required(f.data?.answers, 'WEB-05 answers');
+      const secondCode = required(f.secondCode, 'WEB-05 secondCode');
+      await web04AssertRejected(ctx, {
+        label: 'WEB-05 invalid email',
+        tenantId: f.tenantId,
+        eventId: f.eventId,
+        code: f.code,
+        errorStatus: 422,
+        errorCode: 'FORM_INVALID',
+        redeemBody: {
+          code: f.code,
+          formVersion: required(f.data?.formVersion, 'WEB-05 formVersion'),
+          termsVersion: required(f.data?.termsVersion, 'WEB-05 termsVersion'),
+          answers: { ...answers, email: 'not-an-email' },
+          termsAccepted: true,
+        },
+      });
+      await web04AssertRejected(ctx, {
+        label: 'WEB-05 stale form version',
+        tenantId: f.tenantId,
+        eventId: f.eventId,
+        code: f.code,
+        errorStatus: 409,
+        errorCode: 'FORM_VERSION_STALE',
+        redeemBody: {
+          code: f.code,
+          formVersion: 'form-v-stale',
+          termsVersion: required(f.data?.termsVersion, 'WEB-05 termsVersion'),
+          answers,
+          termsAccepted: true,
+        },
+      });
+      await web04AssertRejected(ctx, {
+        label: 'WEB-05 stale terms version',
+        tenantId: f.tenantId,
+        eventId: f.eventId,
+        code: f.code,
+        errorStatus: 409,
+        errorCode: 'TERMS_VERSION_STALE',
+        redeemBody: {
+          code: f.code,
+          formVersion: required(f.data?.formVersion, 'WEB-05 formVersion'),
+          termsVersion: 'terms-v-stale',
+          answers,
+          termsAccepted: true,
+        },
+      });
+
+      const owner = await bearer(ctx, 'owner');
+      const attendee = await bearer(ctx, 'attendee');
+      const configBase = `/tenants/${f.tenantId}/events/${f.eventId}`;
+      const listed = await request(ctx, 'GET', `${configBase}/config-versions`, owner);
+      expectStatus(listed, 200);
+      const headVersion = Math.max(
+        ...(listed.body.items ?? []).map((row) => row.version),
+      );
+      assert.ok(Number.isFinite(headVersion), 'WEB-05 config version list required');
+      const publishV2 = await request(ctx, 'POST', `${configBase}/config-versions`, owner, {
+        payload: {
+          schemaVersion: 1,
+          brand: {
+            primaryColor: '#164E63',
+            organizationName: `Tenant WEB-05 v2`,
+          },
+          sections: [
+            {
+              kind: 'hero',
+              id: 'hero',
+              visible: true,
+              order: 0,
+              body: { title: `E2E WEB-05 v2`, text: 'Synthetic' },
+            },
+            {
+              kind: 'info',
+              id: 'info',
+              visible: true,
+              order: 1,
+              body: { title: 'Info', text: 'v2' },
+            },
+            {
+              kind: 'redeem',
+              id: 'redeem',
+              visible: true,
+              order: 2,
+              body: { title: 'Redeem', text: '' },
+            },
+            {
+              kind: 'guide',
+              id: 'guide',
+              visible: false,
+              order: 3,
+              body: { title: 'Guide', text: '' },
+            },
+            {
+              kind: 'faq',
+              id: 'faq',
+              visible: true,
+              order: 4,
+              body: { title: 'FAQ', items: [{ question: 'Q', answer: 'A' }] },
+            },
+            {
+              kind: 'terms',
+              id: 'terms',
+              visible: true,
+              order: 5,
+              body: {
+                title: 'Terms',
+                termsVersion: 'terms-v2',
+                text: 'Synthetic v2',
+              },
+            },
+          ],
+          formDefinitionId: 'form-v2',
+          termsVersion: 'terms-v2',
+          form: {
+            formVersion: 'form-v2',
+            fields: [
+              { id: 'full_name', label: 'Name', type: 'text', required: true },
+              { id: 'email', label: 'Email', type: 'email', required: true },
+              { id: 'phone', label: 'Phone', type: 'phone', required: true },
+              {
+                id: 'shirt',
+                label: 'Shirt',
+                type: 'select',
+                required: true,
+                options: [{ id: 'm', label: 'M' }],
+              },
+              { id: 'agree', label: 'Agree', type: 'checkbox', required: true },
+            ],
+          },
+        },
+        expectedVersion: headVersion,
+      });
+      expectStatus(publishV2, 201);
+      const publishedV2 = await request(ctx, 'POST', `${configBase}/publish`, owner, {
+        expectedVersion: publishV2.body.version,
+      });
+      expectStatus(publishedV2, 201);
+
+      await web04AssertRejected(ctx, {
+        label: 'WEB-05 client cannot self-accept stale v1 after publish v2',
+        tenantId: f.tenantId,
+        eventId: f.eventId,
+        code: secondCode,
+        errorStatus: 409,
+        errorCode: 'FORM_VERSION_STALE',
+        redeemBody: {
+          code: secondCode,
+          formVersion: required(f.data?.formVersion, 'WEB-05 formVersion'),
+          termsVersion: required(f.data?.termsVersion, 'WEB-05 termsVersion'),
+          answers,
+          termsAccepted: true,
+        },
+      });
+
+      const v2Answers = { ...answers, agree: true };
+      const issued = await request(
+        ctx,
+        'POST',
+        redemptionPath(f),
+        attendee,
+        {
+          code: secondCode,
+          formVersion: 'form-v2',
+          termsVersion: 'terms-v2',
+          answers: v2Answers,
+          termsAccepted: true,
+        },
+        { 'idempotency-key': randomUUID() },
+      );
+      expectStatus(issued, 201);
+      const [consentRow] = await web04Query(
+        f,
+        f.tenantId,
+        `SELECT form_version, terms_version, form_definition_hash, terms_content_hash
+         FROM redemption_requests
+         WHERE tenant_id = $1::uuid AND id = $2::uuid`,
+        [f.tenantId, issued.body.requestId],
+      );
+      assert.equal(consentRow.form_version, 'form-v2');
+      assert.equal(consentRow.terms_version, 'terms-v2');
+      assert.match(String(consentRow.form_definition_hash), /^[a-f0-9]{64}$/i);
+      assert.match(String(consentRow.terms_content_hash), /^[a-f0-9]{64}$/i);
     }
     if (caseId === 'DB-12') {
       // PLAN §6.1 DB-12 H: publish/rollback optimistic concurrency and

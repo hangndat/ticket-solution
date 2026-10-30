@@ -54,6 +54,7 @@ const httpCases = [
   'DB-12',
   'DB-14',
   'WEB-04',
+  'WEB-05',
 ];
 const match = args.find((arg) => arg.startsWith('--case='));
 const grepTitleMatch = args.find((arg) => arg.startsWith('--grep-title='));

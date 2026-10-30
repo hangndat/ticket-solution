@@ -30,6 +30,7 @@ import {
   readEventQuotas,
   readManualPendingHold,
   readRedemptionState,
+  readRequestConsent,
   readWeb04EventSnapshot,
 } from './redemption-db';
 import { withLegacyCodeCollision } from './web03-ambiguity';
@@ -502,35 +503,193 @@ test.describe('[WEB-04] negative redeem matrix', () => {
   });
 });
 
-test('[WEB-05] published form and terms block incomplete submission', async ({
-  page,
-}) => {
-  const manifest = loadManifest();
-  const f = fixtureFor(manifest, 'WEB-05');
-  if (!f.code) throw new Error('BLOCKED: WEB-05 cần code');
-  await login(page, manifest, accountFor(manifest, 'WEB-05', 'attendee'));
-  await openCodeConfirmation(page, manifest, f.code);
-  let posted = false;
-  page.on('request', (request) => {
-    if (
-      request.method() === 'POST' &&
-      request.url().endsWith('/api/bff/redeem')
-    )
-      posted = true;
+test.describe('[WEB-05] published form and terms validation', () => {
+  function web05Payload(
+    f: ReturnType<typeof fixtureFor>,
+    code: string,
+    answers: Record<string, string | boolean>,
+    overrides: Record<string, unknown> = {},
+  ) {
+    return {
+      tenantId: f.tenantId,
+      eventId: f.eventId,
+      code,
+      formVersion: caseData<string>(f, 'formVersion'),
+      termsVersion: caseData<string>(f, 'termsVersion'),
+      answers,
+      termsAccepted: true,
+      ...overrides,
+    };
+  }
+
+  test('blocks incomplete submission without POST', async ({ page }) => {
+    const manifest = loadManifest();
+    const f = fixtureFor(manifest, 'WEB-05');
+    if (!f.code) throw new Error('BLOCKED: WEB-05 cần code');
+    await login(page, manifest, accountFor(manifest, 'WEB-05', 'attendee'));
+    await openCodeConfirmation(page, manifest, f.code);
+    let posted = false;
+    page.on('request', (request) => {
+      if (
+        request.method() === 'POST' &&
+        request.url().endsWith('/api/bff/redeem')
+      )
+        posted = true;
+    });
+    await page
+      .getByRole('button', { name: 'Đổi mã lấy vé', exact: true })
+      .click();
+    await expect(page.locator('#terms-accepted')).toHaveAttribute(
+      'aria-invalid',
+      'true',
+    );
+    expect(posted).toBe(false);
   });
-  await page
-    .getByRole('button', { name: 'Đổi mã lấy vé', exact: true })
-    .click();
-  await expect(page.locator('#terms-accepted')).toHaveAttribute(
-    'aria-invalid',
-    'true',
-  );
-  expect(posted).toBe(false);
-  await fillPublishedForm(
+
+  test('client-side field type and required gates block POST', async ({
     page,
-    f.data?.answers as Record<string, string | boolean> | undefined,
-  );
-  await expect(page.locator('#terms-accepted')).toBeChecked();
+  }) => {
+    const manifest = loadManifest();
+    const f = fixtureFor(manifest, 'WEB-05');
+    const answers = f.data?.answers as Record<string, string | boolean>;
+    await login(page, manifest, accountFor(manifest, 'WEB-05', 'attendee'));
+    await openCodeConfirmation(page, manifest, f.code!);
+    let posted = false;
+    page.on('request', (request) => {
+      if (
+        request.method() === 'POST' &&
+        request.url().endsWith('/api/bff/redeem')
+      )
+        posted = true;
+    });
+    await fillPublishedForm(
+      page,
+      {
+        ...answers,
+        email: 'not-an-email',
+        phone: '!!',
+        agree: false,
+      },
+      { acceptTerms: false },
+    );
+    await page
+      .getByRole('button', { name: 'Đổi mã lấy vé', exact: true })
+      .click();
+    await expect(page.locator('[name="email"]')).toHaveAttribute(
+      'aria-invalid',
+      'true',
+    );
+    await expect(page.locator('[name="phone"]')).toHaveAttribute(
+      'aria-invalid',
+      'true',
+    );
+    await expect(page.locator('[name="agree"]')).toHaveAttribute(
+      'aria-invalid',
+      'true',
+    );
+    await expect(page.locator('#terms-accepted')).toHaveAttribute(
+      'aria-invalid',
+      'true',
+    );
+    expect(posted).toBe(false);
+  });
+
+  test('BFF rejects invalid and stale consent without mutating code state', async ({
+    page,
+  }) => {
+    const manifest = loadManifest();
+    const f = fixtureFor(manifest, 'WEB-05');
+    const codeId = codeIdFor(f);
+    const answers = f.data?.answers as Record<string, string | boolean>;
+    const dbBefore = await readRedemptionState(f, codeId);
+    await login(page, manifest, accountFor(manifest, 'WEB-05', 'attendee'));
+
+    const invalid = await postRedeemDirect(page, manifest, {
+      ...web05Payload(f, f.code!, answers),
+      answers: {
+        ...answers,
+        email: 'not-an-email',
+        shirt: 'xl',
+        surprise: 'x',
+      },
+    });
+    expect(invalid.status).toBe(422);
+    expect((invalid.json as { code?: string }).code).toBe('FORM_INVALID');
+
+    const staleForm = await postRedeemDirect(
+      page,
+      manifest,
+      web05Payload(f, f.code!, answers, { formVersion: 'form-v-stale' }),
+    );
+    expect(staleForm.status).toBe(409);
+    expect((staleForm.json as { code?: string }).code).toBe(
+      'FORM_VERSION_STALE',
+    );
+
+    const staleTerms = await postRedeemDirect(
+      page,
+      manifest,
+      web05Payload(f, f.code!, answers, { termsVersion: 'terms-v-stale' }),
+    );
+    expect(staleTerms.status).toBe(409);
+    expect((staleTerms.json as { code?: string }).code).toBe(
+      'TERMS_VERSION_STALE',
+    );
+
+    const after = await readRedemptionState(f, codeId);
+    expect(after.code).toEqual(dbBefore.code);
+    expect(after.requests).toEqual(dbBefore.requests);
+    expect(after.tickets).toEqual(dbBefore.tickets);
+    expect(after.quotas).toEqual(dbBefore.quotas);
+    expect(after.operations.length).toBeGreaterThan(dbBefore.operations.length);
+    for (const op of after.operations) {
+      expect(op.status).not.toBe('IN_PROGRESS');
+      expect(
+        (op.response_json as { ticketId?: string } | null)?.ticketId,
+      ).toBeUndefined();
+    }
+  });
+
+  test('successful redeem persists published form and terms version', async ({
+    page,
+  }) => {
+    const manifest = loadManifest();
+    const f = fixtureFor(manifest, 'WEB-05');
+    const secondCode = f.secondCode;
+    if (!secondCode) throw new Error('BLOCKED: WEB-05 cần secondCode');
+    const codeId = codeIdFor(f, 'secondary');
+    const dbBefore = await readRedemptionState(f, codeId);
+    const actor = accountFor(manifest, 'WEB-05', 'attendee');
+    await login(page, manifest, actor);
+    const beforeWallet = await walletTicketIds(page, manifest, f.tenantId);
+    await openCodeConfirmation(page, manifest, secondCode);
+    await submitGlobalRedeemForm(
+      page,
+      f.data?.answers as Record<string, string | boolean> | undefined,
+    );
+    await expect(page.getByTestId('redeem-ux-success')).toBeVisible();
+    const issued = await readRedemptionState(f, codeId);
+    const ticketId = assertIssuedExactlyOnce(
+      dbBefore,
+      issued,
+      f,
+      actor.userId!,
+    );
+    expect(await walletTicketIds(page, manifest, f.tenantId)).toContain(
+      ticketId,
+    );
+    expect(
+      beforeWallet.filter((id) => id === ticketId),
+    ).toHaveLength(0);
+    const consent = await readRequestConsent(
+      f,
+      String(issued.requests[0].id),
+    );
+    expect(consent.formVersion).toBe(caseData<string>(f, 'formVersion'));
+    expect(consent.termsVersion).toBe(caseData<string>(f, 'termsVersion'));
+    expect(consent.formDefinitionHash).toMatch(/^[a-f0-9]{64}$/i);
+    expect(consent.termsContentHash).toMatch(/^[a-f0-9]{64}$/i);
+  });
 });
 
 test('[WEB-06] manual source stays pending without a QR before approval', async ({
