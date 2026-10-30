@@ -42,6 +42,21 @@ Căn cứ trực tiếp: `packages/backend/src/account-deletion.ts` dòng 428–
 
 H Keycloak/HTTP cho DB-11 **BLOCKED**: `tests/e2e/http/live.test.mjs` + `tests/e2e/harness/seed.mjs` + `FIXTURES.md` cần case mới (staff invite accept endpoint + attendee claim endpoint qua HTTPS/Keycloak issuer thật, fixture PENDING/EXPIRED/REVOKED/CLAIMED). Đây là harness dùng chung cho mọi ID H khác; đề xuất Dispatch riêng (role backend + coordinator) để thêm case an toàn, không rủi ro case H đang PASS khác (DB-02/DB-09/DB-10).
 
+## Cập nhật DB-11 H (Dispatch riêng, PR #1061/worktree `f04-db11-invite`)
+
+Thêm case `[DB-11] live HTTP` vào `tests/e2e/http/live.test.mjs` (đăng ký ở `CASE_IDS` cùng file, và ở `tests/e2e/http/entry.mjs`/`tests/e2e/harness/run.mjs` — hai danh sách case trùng lặp khác cần sửa riêng), cộng fixture generic cho DB-11 trong `tests/e2e/harness/seed.mjs` (`controlDatabaseUrl`, `formVersion`/`termsVersion`). Không dùng account/harness mới — chỉ tái dùng `owner`/`attendee`/`otherAttendee` sẵn có của mọi case để tránh rủi ro cho DB-09/DB-10.
+
+`pnpm test:e2e:http -- --case=DB-11` **PASS** qua endpoint thật + Keycloak password grant thật cho owner/attendee/otherAttendee:
+- Staff invite (`POST /tenants/:id/invites`, `POST /me/membership-invites/accept`): TTL đúng 48h (`security.inviteTtlSeconds`); accept thành công tạo đúng 1 membership; replay cùng actor/cùng token idempotent không tạo membership thứ hai; backdate `expires_at` qua control DB → `INVITE_INVALID_OR_EXPIRED` (422), không membership; token đúng nhưng actor verified khác email → cùng mã, không đổi membership hiện có.
+- Attendee claim (import GUESTS thật qua `/imports/files` → job → preview → commit, rồi `dispatch-preview`/`dispatch`, rồi `POST invitations/claim`): happy-path mint đúng 1 ticket và +1 `quota_buckets.allocated`; replay cùng Idempotency-Key idempotent (cùng `ticketId`, không mint thêm); replay Idempotency-Key mới trên invitation đã `CLAIMED` → `INVITATION_TOKEN_INVALID` (410), không ticket thứ hai; backdate `expires_at` qua control DB → `INVITATION_EXPIRED` (410), không ticket/quota mutation; actor khác (otherAttendee, email khác) claim invitation của attendee → `INVITATION_EMAIL_MISMATCH` (403), không ticket.
+- Cross-use cả hai chiều: token staff invite gọi `invitations/claim` → `INVITATION_TOKEN_INVALID` (410); token guest invitation gọi `me/membership-invites/accept` → `INVITE_INVALID_OR_EXPIRED` (422); không bên nào đổi membership/ticket/quota.
+
+Regression H lân cận sau khi sửa harness dùng chung (`seed.mjs`/`run.mjs`/`entry.mjs`): `pnpm test:e2e:http -- --case=DB-09,DB-10` **PASS** cả hai, không bị ảnh hưởng bởi thay đổi.
+
+**Finding khi viết test (đã sửa trong test, không sửa runtime):** `invited_email` ở `guest_invitations` được backend canonicalize (trim + lowercase) tại commit; test ban đầu dùng case gốc của account `otherAttendee` (camelCase) để tra lại invitation id nên không khớp — đã sửa test tự lowercase trước khi tra. Không phải bug runtime.
+
+Giới hạn: không tạo thêm Keycloak account mới để test "một lần dùng" theo đúng nghĩa hai actor khác nhau *cùng một email thật* (D-layer đã chứng minh trực tiếp qua actorUserId khác nhau trong DB); ở H, "một lần dùng" được chứng minh tương đương qua idempotency-key mới trên invitation đã CLAIMED (cùng actor) — đủ để phủ accept-path thực tế qua HTTP mà không thêm fixture/account chung mới có thể ảnh hưởng case khác.
+
 ## Giới hạn còn mở
 
 - Các ca H cần HTTPS hostname run, Keycloak issuer/JWT thật và manifest case riêng từ harness; local verifier hay `app.inject` fixture không đủ. Các ca R cần worker process, Mailpit, restart/kill/lease và tài nguyên run riêng. Xem `FIXTURES.md`.

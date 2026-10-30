@@ -24,6 +24,7 @@ const CASE_IDS = [
   'DB-07',
   'DB-09',
   'DB-10',
+  'DB-11',
   'WEB-04',
 ];
 const EVIL_HOST = 'evil.example';
@@ -3636,6 +3637,320 @@ for (const caseId of CASE_IDS) {
       deny(await request(ctx, 'GET', `${base}/${jobs[1].importId}/errors`, manager));
       deny(await request(ctx, 'POST', `${base}/${jobs[1].importId}/preview`, manager, {}));
       assert.deepEqual(await snapshot(), beforeDeny, 'revoked actor denial must have no mutation');
+      return;
+    }
+    if (caseId === 'DB-11') {
+      // PLAN §6.1 DB-11 H: staff invite TTL 48h/one-use/email matching, and
+      // attendee invitation claim host separation/expired/replay/wrong-owner,
+      // proven end to end through the real invite + claim endpoints.
+      const owner = await bearer(ctx, 'owner');
+      const attendee = await bearer(ctx, 'attendee');
+      const otherAttendee = await bearer(ctx, 'otherAttendee');
+      const attendeeEmail = required(
+        f.accounts.attendee.username,
+        'DB-11 attendee.username',
+      );
+      const otherEmail = required(
+        f.accounts.otherAttendee.username,
+        'DB-11 otherAttendee.username',
+      );
+      const invitesBase = `/tenants/${f.tenantId}/invites`;
+      const acceptPath = '/me/membership-invites/accept';
+      const importsBase = `/tenants/${f.tenantId}/events/${f.eventId}/imports`;
+      const invitationsBase = `/tenants/${f.tenantId}/events/${f.eventId}/invitations`;
+      const claimPath = `${invitationsBase}/claim`;
+
+      const rawInviteToken = async (inviteId) =>
+        required(
+          (
+            await web04Query(
+              f,
+              f.tenantId,
+              `SELECT payload->>'token' AS token FROM outbox
+               WHERE tenant_id=$1::uuid AND type='MembershipInvite' AND aggregate_id=$2::uuid
+               ORDER BY created_at DESC LIMIT 1`,
+              [f.tenantId, inviteId],
+            )
+          )[0]?.token,
+          'DB-11 membership invite rawToken',
+        );
+      const rawClaimToken = async (invitationId) =>
+        required(
+          (
+            await web04Query(
+              f,
+              f.tenantId,
+              `SELECT payload->>'token' AS token FROM outbox
+               WHERE tenant_id=$1::uuid AND type='InvitationTokenMinted' AND aggregate_id=$2::uuid
+               ORDER BY created_at DESC LIMIT 1`,
+              [f.tenantId, invitationId],
+            )
+          )[0]?.token,
+          'DB-11 guest invitation rawToken',
+        );
+      const membershipCount = async (email) =>
+        (
+          await web04Query(
+            f,
+            f.tenantId,
+            `SELECT count(*)::int AS n FROM memberships m
+             JOIN users u ON u.id = m.user_id
+             WHERE m.tenant_id=$1::uuid AND lower(u.email)=lower($2) AND m.revoked_at IS NULL`,
+            [f.tenantId, email],
+          )
+        )[0].n;
+      const ticketCountForInvitation = async (invitationId) =>
+        (
+          await web04Query(
+            f,
+            f.tenantId,
+            `SELECT count(*)::int AS n FROM tickets t
+             JOIN redemption_codes rc ON rc.id = t.redemption_code_id
+             JOIN guest_invitations gi ON gi.redemption_code_id = rc.id
+             WHERE gi.tenant_id=$1::uuid AND gi.id=$2::uuid`,
+            [f.tenantId, invitationId],
+          )
+        )[0].n;
+      const allocatedQuota = async () =>
+        (
+          await web04Query(
+            f,
+            f.tenantId,
+            `SELECT allocated FROM quota_buckets
+             WHERE tenant_id=$1::uuid AND event_id=$2::uuid AND scope='EVENT'`,
+            [f.tenantId, f.eventId],
+          )
+        )[0].allocated;
+
+      // --- Staff invite: TTL 48h, accept, idempotent same-actor replay ---
+      const before = Date.now();
+      const invite1 = await request(ctx, 'POST', invitesBase, owner, {
+        email: attendeeEmail,
+        role: 'CS',
+      });
+      expectStatus(invite1, 201);
+      assert.equal(invite1.body.state, 'PENDING');
+      const ttlMs = new Date(invite1.body.expiresAt).getTime() - before;
+      assert.ok(
+        Math.abs(ttlMs - 48 * 3600 * 1000) < 5 * 60 * 1000,
+        `DB-11 staff invite TTL must be configured 48h, got ${ttlMs}ms`,
+      );
+      const token1 = await rawInviteToken(invite1.body.inviteId);
+      assert.equal(await membershipCount(attendeeEmail), 0);
+      const accept1 = await request(ctx, 'POST', acceptPath, attendee, {
+        token: token1,
+      });
+      expectStatus(accept1, 201);
+      assert.equal(accept1.body.tenantId, f.tenantId);
+      assert.equal(await membershipCount(attendeeEmail), 1);
+      const acceptReplaySame = await request(ctx, 'POST', acceptPath, attendee, {
+        token: token1,
+      });
+      expectStatus(acceptReplaySame, 201);
+      assert.equal(
+        await membershipCount(attendeeEmail),
+        1,
+        'same-actor token replay must stay idempotent, not duplicate membership',
+      );
+
+      // --- Staff invite expired: real TTL expiry via control DB, no membership ---
+      const invite2 = await request(ctx, 'POST', invitesBase, owner, {
+        email: otherEmail,
+        role: 'CS',
+      });
+      expectStatus(invite2, 201);
+      await web04Query(
+        f,
+        f.tenantId,
+        `UPDATE membership_invites SET expires_at = now() - interval '1 minute'
+         WHERE tenant_id=$1::uuid AND id=$2::uuid`,
+        [f.tenantId, invite2.body.inviteId],
+      );
+      const token2 = await rawInviteToken(invite2.body.inviteId);
+      const acceptExpired = await request(ctx, 'POST', acceptPath, otherAttendee, {
+        token: token2,
+      });
+      expectStatus(acceptExpired, 422, 'INVITE_INVALID_OR_EXPIRED');
+      assert.equal(await membershipCount(otherEmail), 0);
+
+      // --- Staff invite email mismatch: correct token, different verified actor ---
+      const invite3 = await request(ctx, 'POST', invitesBase, owner, {
+        email: attendeeEmail,
+        role: 'Manager',
+      });
+      expectStatus(invite3, 201);
+      const token3 = await rawInviteToken(invite3.body.inviteId);
+      const acceptMismatch = await request(ctx, 'POST', acceptPath, otherAttendee, {
+        token: token3,
+      });
+      expectStatus(acceptMismatch, 422, 'INVITE_INVALID_OR_EXPIRED');
+      assert.equal(
+        await membershipCount(attendeeEmail),
+        1,
+        'email-mismatch attempt must not touch the existing membership',
+      );
+
+      // --- Cross-use: a staff invite token must not work on attendee claim ---
+      const crossClaim = await request(
+        ctx,
+        'POST',
+        claimPath,
+        attendee,
+        { token: token3 },
+        { 'idempotency-key': randomUUID() },
+      );
+      expectStatus(crossClaim, 410, 'INVITATION_TOKEN_INVALID');
+
+      // --- Attendee invitation claim: real import (GUESTS) + dispatch + claim ---
+      const uploadGuests = async (csv) => {
+        const form = new FormData();
+        form.set('kind', 'GUESTS');
+        form.set('file', new Blob([csv], { type: 'text/csv' }), 'guests.csv');
+        const response = await fetch(new URL(`/v1${importsBase}/files`, ctx.api), {
+          method: 'POST',
+          headers: { authorization: `Bearer ${owner}` },
+          body: form,
+        });
+        const body = await response.json();
+        expectStatus({ status: response.status, body }, 201);
+        return body;
+      };
+      const commitGuestImport = async (rawEmail) => {
+        // Commit canonicalizes (trim + lowercase) before storing invited_email.
+        const email = rawEmail.trim().toLowerCase();
+        const file = await uploadGuests(`email\n${email}\n`);
+        const created = await request(
+          ctx,
+          'POST',
+          importsBase,
+          owner,
+          { kind: 'GUESTS', sourceId: f.sourceId, ticketTypeId: f.ticketTypeId, fileId: file.fileId },
+          { 'idempotency-key': randomUUID() },
+        );
+        expectStatus(created, 201);
+        const preview = await request(
+          ctx, 'POST', `${importsBase}/${created.body.importId}/preview`, owner, {},
+        );
+        expectStatus(preview, 201);
+        assert.equal(preview.body.invitationCount, 1);
+        const commit = await request(
+          ctx,
+          'POST',
+          `${importsBase}/${created.body.importId}/commit`,
+          owner,
+          {
+            previewRevision: preview.body.previewRevision,
+            mappingRevision: preview.body.mappingRevision,
+            fileHash: preview.body.fileHash,
+          },
+          { 'idempotency-key': randomUUID() },
+        );
+        expectStatus(commit, 201);
+        assert.equal(commit.body.invitationCount, 1);
+        const rows = await web04Query(
+          f, f.tenantId,
+          `SELECT id FROM guest_invitations
+           WHERE tenant_id=$1::uuid AND event_id=$2::uuid AND invited_email=$3`,
+          [f.tenantId, f.eventId, email],
+        );
+        return required(rows[0]?.id, 'DB-11 guest invitation id');
+      };
+      const dispatchInvitation = async (invitationId) => {
+        const preview = await request(
+          ctx, 'POST', `${invitationsBase}/dispatch-preview`, owner,
+          { invitationIds: [invitationId] },
+        );
+        expectStatus(preview, 201);
+        const dispatch = await request(
+          ctx,
+          'POST',
+          `${invitationsBase}/dispatch`,
+          owner,
+          { invitationIds: [invitationId], previewRevision: preview.body.previewRevision },
+          { 'idempotency-key': randomUUID() },
+        );
+        expectStatus(dispatch, 201);
+        assert.equal(dispatch.body.dispatchedCount, 1);
+      };
+
+      const invitationA = await commitGuestImport(attendeeEmail);
+      await dispatchInvitation(invitationA);
+      const invitationB = await commitGuestImport(otherEmail);
+      await dispatchInvitation(invitationB);
+
+      // wrong-owner: a different real actor with a different verified email
+      // cannot claim someone else's invitation.
+      const wrongOwner = await request(
+        ctx, 'POST', claimPath, otherAttendee,
+        { token: await rawClaimToken(invitationA) },
+        { 'idempotency-key': randomUUID() },
+      );
+      expectStatus(wrongOwner, 403, 'INVITATION_EMAIL_MISMATCH');
+      assert.equal(await ticketCountForInvitation(invitationA), 0);
+
+      // expired: real TTL expiry via control DB, no ticket/quota mutation.
+      const quotaBeforeExpiry = await allocatedQuota();
+      await web04Query(
+        f, f.tenantId,
+        `UPDATE guest_invitations SET expires_at = now() - interval '1 minute'
+         WHERE tenant_id=$1::uuid AND id=$2::uuid`,
+        [f.tenantId, invitationB],
+      );
+      const expiredClaim = await request(
+        ctx, 'POST', claimPath, otherAttendee,
+        { token: await rawClaimToken(invitationB) },
+        { 'idempotency-key': randomUUID() },
+      );
+      expectStatus(expiredClaim, 410, 'INVITATION_EXPIRED');
+      assert.equal(await ticketCountForInvitation(invitationB), 0);
+      assert.equal(await allocatedQuota(), quotaBeforeExpiry);
+
+      // happy path claim + one-time-use: same key is idempotent, a new key
+      // against an already-CLAIMED invitation must not mint a second ticket.
+      const quotaBeforeClaim = await allocatedQuota();
+      const claimKey = randomUUID();
+      const claimBody = {
+        token: await rawClaimToken(invitationA),
+        formVersion: required(f.data?.formVersion, 'DB-11 formVersion'),
+        termsVersion: required(f.data?.termsVersion, 'DB-11 termsVersion'),
+        answers: required(f.data?.answers, 'DB-11 answers'),
+        termsAccepted: true,
+      };
+      const claimed = await request(
+        ctx, 'POST', claimPath, attendee, claimBody,
+        { 'idempotency-key': claimKey },
+      );
+      expectStatus(claimed, 201);
+      assert.equal(await ticketCountForInvitation(invitationA), 1);
+      assert.equal(await allocatedQuota(), quotaBeforeClaim + 1);
+
+      const claimedReplaySameKey = await request(
+        ctx, 'POST', claimPath, attendee, claimBody,
+        { 'idempotency-key': claimKey },
+      );
+      expectStatus(claimedReplaySameKey, 201);
+      assert.equal(claimedReplaySameKey.body.ticketId, claimed.body.ticketId);
+      assert.equal(await ticketCountForInvitation(invitationA), 1);
+      assert.equal(await allocatedQuota(), quotaBeforeClaim + 1);
+
+      const claimedReplayNewKey = await request(
+        ctx, 'POST', claimPath, attendee,
+        { token: await rawClaimToken(invitationA) },
+        { 'idempotency-key': randomUUID() },
+      );
+      expectStatus(claimedReplayNewKey, 410, 'INVITATION_TOKEN_INVALID');
+      assert.equal(
+        await ticketCountForInvitation(invitationA), 1,
+        'a new Idempotency-Key against a CLAIMED invitation must not mint a second ticket',
+      );
+      assert.equal(await allocatedQuota(), quotaBeforeClaim + 1);
+
+      // Cross-use: a guest invitation token must not work on the staff accept endpoint.
+      const crossAccept = await request(ctx, 'POST', acceptPath, attendee, {
+        token: await rawClaimToken(invitationA),
+      });
+      expectStatus(crossAccept, 422, 'INVITE_INVALID_OR_EXPIRED');
+      assert.equal(await membershipCount(attendeeEmail), 1);
       return;
     }
     if (caseId === 'DB-01') {
