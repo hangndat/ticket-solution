@@ -107,7 +107,7 @@ async function readRelayState(db, tenantId, ticketId) {
         AND type = 'TicketIssued'
       LIMIT 1`;
     const notifications = await tx.$queryRaw`
-      SELECT state, attempts, last_error
+      SELECT state, attempts, last_error, next_attempt_at
       FROM notifications
       WHERE tenant_id = ${tenantId}::uuid
         AND business_key = ${`ticket:${ticketId}:issued:email`}
