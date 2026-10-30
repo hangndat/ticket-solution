@@ -332,6 +332,27 @@ async function denyGate(
 }
 
 const PERMISSION_EVENT_UPDATE = 'event.update';
+const GATE_SORT_ORDER_MIN = 0;
+const GATE_SORT_ORDER_MAX = 9999;
+
+function resolveGateSortOrder(sortOrder: number | undefined): number {
+  if (sortOrder === undefined) {
+    return GATE_SORT_ORDER_MIN;
+  }
+  if (!Number.isInteger(sortOrder)) {
+    throw new GateError(
+      GATE_ERROR_CODES.GATE_NOT_FOUND,
+      'sortOrder must be an integer',
+    );
+  }
+  if (sortOrder < GATE_SORT_ORDER_MIN || sortOrder > GATE_SORT_ORDER_MAX) {
+    throw new GateError(
+      GATE_ERROR_CODES.GATE_NOT_FOUND,
+      'sortOrder must be between 0 and 9999',
+    );
+  }
+  return sortOrder;
+}
 
 type GateRow = { id: string; event_id: string; name: string; sort_order: number };
 
@@ -397,6 +418,7 @@ export async function createEventGate(
   if (!events[0]) {
     throw new GateError(GATE_ERROR_CODES.EVENT_NOT_FOUND, 'Event not found');
   }
+  const sortOrder = resolveGateSortOrder(input.sortOrder);
   const gateId = randomUUID();
   const rows = await tx.$queryRaw<GateRow[]>`
     INSERT INTO gates (tenant_id, event_id, id, name, sort_order)
@@ -405,7 +427,7 @@ export async function createEventGate(
       ${input.eventId}::uuid,
       ${gateId}::uuid,
       ${name},
-      ${input.sortOrder ?? 0}::int
+      ${sortOrder}::int
     )
     ON CONFLICT (tenant_id, event_id, name) DO NOTHING
     RETURNING id, event_id, name, sort_order
