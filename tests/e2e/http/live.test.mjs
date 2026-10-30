@@ -4423,6 +4423,34 @@ for (const caseId of CASE_IDS) {
         return { quota, codes };
       };
 
+      const publishConcurrencySnapshot = async () => {
+        const [row] = await web04Query(
+          f,
+          f.tenantId,
+          `SELECT
+             e.published_config_version AS published_version,
+             e.revision,
+             (SELECT count(*)::int FROM event_config_versions
+              WHERE tenant_id = $1::uuid AND event_id = $2::uuid) AS config_version_count,
+             (SELECT count(*)::int FROM audit_logs
+              WHERE tenant_id = $1::uuid AND event_id = $2::uuid) AS audit_count,
+             (SELECT count(*)::int FROM tickets
+              WHERE tenant_id = $1::uuid AND event_id = $2::uuid) AS ticket_count
+           FROM events e
+           WHERE e.tenant_id = $1::uuid AND e.id = $2::uuid`,
+          [f.tenantId, f.eventId],
+        );
+        return row;
+      };
+
+      const assertConcurrencyUnchanged = (before, after, label) => {
+        assert.deepEqual(
+          after,
+          before,
+          `${label}: published pointer/revision/config-version/audit/ticket counts must be unchanged after 409`,
+        );
+      };
+
       // --- Baseline: seeded version 1 is live on the public projection ---
       const baselinePublic = await request(
         ctx,
@@ -4475,11 +4503,39 @@ for (const caseId of CASE_IDS) {
       });
       expectStatus(savedV2, 201);
       assert.equal(savedV2.body.version, 2);
+      const publishV2AuditBefore = await web04Query(
+        f,
+        f.tenantId,
+        `SELECT id FROM audit_logs
+         WHERE tenant_id = $1::uuid AND event_id = $2::uuid
+           AND action = 'event.publish'
+           AND (sanitized_diff->>'version')::int = 2`,
+        [f.tenantId, f.eventId],
+      );
+      assert.equal(
+        publishV2AuditBefore.length,
+        0,
+        'DB-12: no publish-v2 audit row must exist before HTTP publish of v2',
+      );
       const published2 = await request(ctx, 'POST', `${configBase}/publish`, owner, {
         expectedVersion: 2,
       });
       expectStatus(published2, 201);
       assert.equal(published2.body.publishedConfigVersion, 2);
+      const publishV2AuditAfter = await web04Query(
+        f,
+        f.tenantId,
+        `SELECT id, sanitized_diff FROM audit_logs
+         WHERE tenant_id = $1::uuid AND event_id = $2::uuid
+           AND action = 'event.publish'
+           AND (sanitized_diff->>'version')::int = 2`,
+        [f.tenantId, f.eventId],
+      );
+      assert.equal(
+        publishV2AuditAfter.length,
+        1,
+        'DB-12: HTTP publish v2 must append exactly one event.publish audit row for version 2',
+      );
       // revision is a monotonic publish/rollback counter, not the config
       // version number; the generic seed's own publish of v1 already bumped
       // it from 1 to 2, so this second publish (of v2) bumps it to 3.
@@ -4495,23 +4551,60 @@ for (const caseId of CASE_IDS) {
       assert.equal(publicAfterPublish.body.publishedConfigVersion, 2);
       assert.equal(publicAfterPublish.body.brand.organizationName, 'DB-12 Org v2');
 
-      // --- Rollback with a stale optimistic-concurrency token must be
-      // rejected with no mutation to the public projection or business state ---
-      const staleRollback = await request(
+      // --- Stale rollback: one wrong token per request; assert exact error
+      // code and no mutation to pointer/revision/config counts/audit/tickets ---
+      const concurrencyBeforeStale = await publishConcurrencySnapshot();
+      const staleRevisionRollback = await request(
         ctx,
         'POST',
         `${configBase}/config/rollback`,
         owner,
-        { targetVersion: 1, expectedPublishedVersion: 1, expectedRevision: 1 },
+        { targetVersion: 1, expectedPublishedVersion: 2, expectedRevision: 1 },
         { 'idempotency-key': randomUUID() },
       );
-      expectStatus(staleRollback, 409);
-      assert.ok(
-        ['CONFIG_VERSION_MISMATCH', 'REVISION_CONFLICT'].includes(
-          staleRollback.body.code,
-        ),
-        `DB-12 stale rollback: unexpected code ${staleRollback.body.code}`,
+      expectStatus(staleRevisionRollback, 409);
+      assert.equal(
+        staleRevisionRollback.body.code,
+        'REVISION_CONFLICT',
+        'DB-12: stale expectedRevision must surface REVISION_CONFLICT',
       );
+      assertConcurrencyUnchanged(
+        concurrencyBeforeStale,
+        await publishConcurrencySnapshot(),
+        'DB-12 stale expectedRevision rollback',
+      );
+      assert.deepEqual(
+        await businessState(),
+        stateBeforeAny,
+        'DB-12: stale expectedRevision rollback must not mutate quota/codes',
+      );
+
+      const concurrencyBeforeStalePublished = await publishConcurrencySnapshot();
+      const stalePublishedRollback = await request(
+        ctx,
+        'POST',
+        `${configBase}/config/rollback`,
+        owner,
+        { targetVersion: 1, expectedPublishedVersion: 1, expectedRevision: 3 },
+        { 'idempotency-key': randomUUID() },
+      );
+      expectStatus(stalePublishedRollback, 409);
+      assert.equal(
+        stalePublishedRollback.body.code,
+        'CONFIG_VERSION_MISMATCH',
+        'DB-12: stale expectedPublishedVersion must surface CONFIG_VERSION_MISMATCH',
+      );
+      assertConcurrencyUnchanged(
+        concurrencyBeforeStalePublished,
+        await publishConcurrencySnapshot(),
+        'DB-12 stale expectedPublishedVersion rollback',
+      );
+      assert.deepEqual(
+        await businessState(),
+        stateBeforeAny,
+        'DB-12: stale expectedPublishedVersion rollback must not mutate quota/codes',
+      );
+
       const publicAfterStale = await request(
         ctx,
         'GET',
@@ -4523,11 +4616,6 @@ for (const caseId of CASE_IDS) {
         publicAfterStale.body.publishedConfigVersion,
         2,
         'DB-12: rejected rollback must not advance the published version',
-      );
-      assert.deepEqual(
-        await businessState(),
-        stateBeforeAny,
-        'DB-12: rejected rollback must not mutate quota/codes',
       );
 
       // --- Correct rollback: optimistic concurrency accepted, new version
@@ -4565,22 +4653,22 @@ for (const caseId of CASE_IDS) {
         'DB-12: successful rollback must not mutate quota/codes/tickets',
       );
 
-      const auditRows = await web04Query(
+      const rollbackAuditRows = await web04Query(
         f,
         f.tenantId,
-        `SELECT action FROM audit_logs
+        `SELECT action, sanitized_diff FROM audit_logs
          WHERE tenant_id = $1::uuid AND event_id = $2::uuid
-           AND action IN ('event.publish', 'event.config.rollback')
+           AND action = 'event.config.rollback'
          ORDER BY created_at`,
         [f.tenantId, f.eventId],
       );
       assert.ok(
-        auditRows.some((r) => r.action === 'event.publish'),
-        'DB-12: publish must be audited',
-      );
-      assert.ok(
-        auditRows.some((r) => r.action === 'event.config.rollback'),
-        'DB-12: rollback must be audited',
+        rollbackAuditRows.some(
+          (r) =>
+            r.sanitized_diff?.sourceVersion === 1 &&
+            r.sanitized_diff?.newVersion === 3,
+        ),
+        'DB-12: successful rollback must append event.config.rollback audit with sourceVersion 1 and newVersion 3',
       );
 
       // --- Preview is an authenticated admin surface, not public ---
