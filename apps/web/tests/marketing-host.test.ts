@@ -55,7 +55,7 @@ describe('marketing host helpers', () => {
     assert.equal(localeSwitchHref('vi', 'journey'), '/experience');
     assert.equal(
       decideHostRouting({ host: 'vemoki.com', pathname: '/en/experience' }).type,
-      'rewrite',
+      'next',
     );
   });
 

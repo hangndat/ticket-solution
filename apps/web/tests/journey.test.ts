@@ -29,7 +29,7 @@ describe('cinematic journey release candidate', () => {
       const path = journeyHref(locale);
       for (const host of ['vemoki.com', '127.0.0.1', 'app.vemoki.com']) {
         assert.deepEqual(decideHostRouting({ host, pathname: path }), {
-          type: 'rewrite', pathname: locale === 'vi' ? '/marketing/journey' : '/marketing/en/journey',
+          type: 'next',
           locale, surface: 'marketing',
         });
       }
