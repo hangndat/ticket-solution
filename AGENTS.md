@@ -12,6 +12,7 @@ Roadmap, Project, Issue, status, progress: **Tiếng Việt** (giữ ID/API/comm
 - Architect: ADR/handoff trong scope; không sở hữu đa slice — `docs/agents/roles/architect.md`.
 - Backend: `apps/api`, `apps/worker`, `packages/backend`, DB.
 - Web: `apps/web` only.
+- Portal: `apps/portal` only — role `docs/agents/roles/portal.md`.
 - iOS: `apps/mobile` only — đọc Expo overview trước code.
 - Không sửa slice khác để build pass; hỏi coordinator cho contract.
 
