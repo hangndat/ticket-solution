@@ -123,8 +123,8 @@ Không sửa harness cho PORT-09 notification states (PORT-08 counters/fault đ�
 
 | Lệnh | Kết quả |
 | --- | --- |
-| `node tests/e2e/harness/run.mjs e2e --case=PORT-05` | **PASS** run `mvuwcsq0-b11a06`, browser 5/5; artifact `tests/e2e/.artifacts/mvuwcsq0-b11a06/summary.json` (post-commit clean tree re-run for evidenceExactShaEligible). |
-| SHA | `7e8cce2dee502cb12163d2b384012952bfd6ac45` |
+| `node tests/e2e/harness/run.mjs e2e --case=PORT-05` | **PASS** run `mvuwdtj0-b1f0b9`, browser 5/5; artifact `tests/e2e/.artifacts/mvuwdtj0-b1f0b9/summary.json`; `evidenceExactShaEligible=true`. |
+| SHA | `405f305c3b731a02132c9fd5e949dd25234871a6` |
 
 PORT-05: seed harness thêm CSV duplicate/existing/row-limit, consumed code PG, foreign tenant/event; spec mở rộng BFF upload/create (idempotencyKey body+header), preview duplicate + `/errors`, commit skip + replay, row limit preview 422, cross-scope deny. UI smoke giữ AntD `.ant-select-dropdown:visible`. **Gap nhỏ:** EMPTY CSV row chưa assert browser (parser bỏ dòng trống trong fixture); DUPLICATE_IN_FILE + skip used codes đáp ứng sai dòng/trùng/mã đã dùng.
 
