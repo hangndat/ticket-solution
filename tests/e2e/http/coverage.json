@@ -79,8 +79,8 @@
     "caseId": "DB-01",
     "tests": ["H:tests/e2e/http/live.test.mjs#[DB-01]"],
     "layers": ["H"],
-    "status": "blocked",
-    "reason": "Run mvud30a6-64e1fe PASS, exact SHA c5aecdba3a61401f018b362f666bed861a55574c (clean tree, evidenceExactShaEligible=true), lệnh `pnpm test:e2e:http -- --case=DB-01`: owner report own-tenant 200; owner report cross-tenant (foreign tenantId, và home tenantId + foreign eventId) 403/404; manager tạo export own-tenant 201 → READY → download CSV non-empty; manager tạo export cross-tenant 403/404; GET export status với foreign tenantId 403/404; download export qua foreign tenantId 403/404. Đóng gap D-only: ticket_platform_runtime thiếu grant PII qua DB (D) nay có thêm H chứng minh endpoint export/report thực tế cũng chặn cross-tenant qua HTTP, không chỉ qua role grant. Fixture mới tests/e2e/harness/seed.mjs: foreignTenantId/foreignEventId cho DB-01 (tái dùng pattern SEC-01/02). Gaps còn lại: chưa có H cho worker R thật (BullMQ/outbox poll) tiêu thụ export job cross-tenant — nằm trong JOB-xx, ngoài scope DB-01; source counter per-type/per-source cross-tenant chưa có case riêng."
+    "status": "pass",
+    "reason": "PASS D/H: D PostgreSQL RLS transaction-local A/B xen kẽ, pool reuse cùng PID, rollback/exception, thiếu context, tenant+event FK, owner aggregate và role ticket_platform_runtime không có grant PII. H run mvue72wb-898dce PASS trên SHA a19f1488 sạch: owner report own 200, foreign tenant/event deny; manager tạo export own 201, worker đưa READY và CSV download có dữ liệu, foreign create/status/download đều deny. Worker/export scope có evidence D role boundary và H worker xử lý export hợp lệ; không có job cross-tenant lọt queue qua API."
   },
   {
     "caseId": "DB-02",
@@ -93,8 +93,8 @@
     "caseId": "DB-03",
     "tests": ["H:tests/e2e/http/live.test.mjs#[DB-03]"],
     "layers": ["H"],
-    "status": "blocked",
-    "reason": "Run mvud30a6-64e1fe PASS, exact SHA c5aecdba3a61401f018b362f666bed861a55574c (clean tree, evidenceExactShaEligible=true), lệnh `pnpm test:e2e:http -- --case=DB-03`: (1) issue/sequential replay/changed-payload 409 IDEMPOTENCY_CONFLICT và đối soát ticket/quota như trước; (2) MỚI — concurrent same-key retry: hai request HTTP thật race cùng idempotency-key/body qua Promise.all (không phải replay tuần tự) vẫn hội tụ về đúng 1 ticketId/operationId, đúng 1 request replayed=false, quota chỉ +1; (3) MỚI — multi-actor race trên cùng một code: hai actor khác nhau redeem đồng thời cùng code, khóa FOR UPDATE của code serialize đúng 1 actor ACTIVE/201 và 1 actor CODE_CONSUMED/409, quota +1 duy nhất; (4) MỚI — audit/outbox matrix dưới ticket_runtime + tenant RLS (db03Query): mỗi ticket issue (sequential, concurrent-retry, multi-actor) có đúng 1 row audit_logs action=ticket.issued và đúng 1 row outbox type=TicketIssued, chứng minh replay/race không nhân đôi side effect. Đóng toàn bộ gap 'thiếu H cùng request retry và audit matrix đầy đủ' đã ghi trước đây. Fixture mới tests/e2e/harness/seed.mjs: code thứ 3 (raceCode) riêng cho nhánh multi-actor, controlDatabaseUrl cho DB-03."
+    "status": "pass",
+    "reason": "PASS D/H: D issue/approval PostgreSQL thật chứng minh code CONSUMED đúng một lần, ticket/operation/quota/counter/audit/outbox nhất quán dưới race và replay. H run mvue72wb-898dce PASS trên SHA a19f1488 sạch: cùng key replay trả ticket/operation cũ; khác payload 409; hai retry đồng thời hội tụ một ticket; hai actor tranh một code chỉ một 201/ACTIVE và một 409/CODE_CONSUMED; quota +1; mỗi ticket có một audit ticket.issued và một outbox TicketIssued."
   },
   {
     "caseId": "WEB-04",
