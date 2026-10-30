@@ -4,7 +4,7 @@
     "tests": ["portal-core.spec.ts [PORT-01]"],
     "layers": ["B"],
     "status": "covered",
-    "reason": "PORT-01 B PASS run mvutyoi9-f0d704 (1/1 browser) on worktree SHA fdca4506 (dirty pre-commit): wizard create PUBLIC event, UI ticket type + AUTO source, report quota read, config save + publish, contentStatus PUBLISHED, reload persistence, tenant events list single eventId (no duplicate). Gap: GET /quota BFF 422 on fresh event (quota page nav only); consumer Web /t/{tenant}/events/{slug} 404 despite staff PUBLISHED — public projection not in PORT-01 scope."
+    "reason": "PORT-01 B PASS run mvutztg6-81c23b (1/1 browser) on clean SHA affd7b5e: wizard create PUBLIC event, UI ticket type + AUTO source, report quota read, config save + publish, contentStatus PUBLISHED, reload persistence, tenant events list single eventId (no duplicate). Gap: GET /quota BFF 422 on fresh event (quota page nav only); consumer Web /t/{tenant}/events/{slug} 404 despite staff PUBLISHED — public projection not in PORT-01 scope."
   },
   {
     "caseId": "PORT-02",
