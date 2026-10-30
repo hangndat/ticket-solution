@@ -1,5 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import {
   NON_EVIDENCE_DIRTY,
   assertSourceProvenanceStable,
@@ -78,6 +82,43 @@ test('assertSourceProvenanceStable rejects working tree fingerprint drift', () =
       }),
     /working tree fingerprint changed during E2E run/,
   );
+});
+
+test('fingerprint detects changed content while dirty paths and statuses stay the same', () => {
+  const root = mkdtempSync(join(tmpdir(), 'vemoki-source-provenance-'));
+  try {
+    execFileSync('git', ['init', '-q', root]);
+    const tracked = join(root, 'tracked.txt');
+    writeFileSync(tracked, 'initial');
+    execFileSync('git', ['-C', root, 'add', 'tracked.txt']);
+    execFileSync('git', [
+      '-C', root, '-c', 'user.name=Test', '-c', 'user.email=test@example.test',
+      'commit', '-qm', 'initial',
+    ]);
+
+    const clean = captureSourceProvenance(root);
+    assert.equal(clean.evidenceEligible, true);
+    writeFileSync(tracked, 'modified once');
+    assert.throws(() => assertSourceProvenanceStable(root, clean), /dirty flag changed/);
+
+    const dirtyTracked = captureSourceProvenance(root);
+    writeFileSync(tracked, 'modified twice');
+    assert.throws(
+      () => assertSourceProvenanceStable(root, dirtyTracked),
+      /working tree fingerprint changed/,
+    );
+
+    const untracked = join(root, 'untracked.txt');
+    writeFileSync(untracked, 'first');
+    const dirtyUntracked = captureSourceProvenance(root);
+    writeFileSync(untracked, 'second');
+    assert.throws(
+      () => assertSourceProvenanceStable(root, dirtyUntracked),
+      /working tree fingerprint changed/,
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });
 
 test('validateManifest accepts runtime.sourceProvenance on isolated manifest', () => {
