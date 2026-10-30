@@ -25,6 +25,10 @@ User đã chọn tách các nhóm chưa đạt full functional AC khỏi gate c�
 
 `JOB-08` là P1 **OUT** theo PLAN §6.3, không tính vào 85 ID. GATE-03 và WEB-13 vẫn là blocker sản phẩm bên trong issue GATE/WEB, không được đếm hai lần; roadmap phải review trước khi mở feature mới. Tách scope PR không đổi expected outcome của bất kỳ ID nào.
 
+### Checkpoint acceptance tích hợp — 30/10/2026
+
+Trên `main` `7382a4bdfb5de85cbcda96a8ef57a569e96e6b63`, F04 có **5 PASS, 80 BLOCKED, 1 OUT**. `AUTH-01/02` qua [PR #1041](https://github.com/hangndat/ticket-solution/pull/1041), CI main `40996941396` SUCCESS, browser run sạch `mvueewq9-6443b7`; `DB-01/02/03` qua [PR #1040](https://github.com/hangndat/ticket-solution/pull/1040), CI main `40998352474` SUCCESS, HTTP run sạch `mvuesfb3-a7f229`. James review độc lập từng PR trên exact head; giới hạn DB-02: alternate issuer có signing key khác nên HTTP 401 không cô lập issuer check khỏi JWKS/signature. Các ID còn lại giữ BLOCKED tới khi đủ AC và gate tích hợp. Bảng 0/85 phía trên là baseline lịch sử khi tách PR #1028, không phải trạng thái hiện tại; `coverage.json` chỉ là inventory selector source.
+
 - Người phụ trách tài liệu: Minh — `coordinator`, hồ sơ [company/employees.json](../../company/employees.json). Biên soạn trong phiên trực tiếp hiện có; không tạo worker chỉ cho tracking.
 - Architecture impact: **Không** — tài liệu không đổi kiến trúc, API, policy hoặc runtime.
 - Routing worker theo yêu cầu user mới nhất: ưu tiên **Claude** khi khả dụng, Codex fallback theo cost catalog; tier phải được phân loại theo task khi thực thi. Các lượt Codex trước đây giữ nguyên provenance trong báo cáo riêng.
