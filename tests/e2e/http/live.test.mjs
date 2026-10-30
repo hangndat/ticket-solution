@@ -22,6 +22,7 @@ const CASE_IDS = [
   'DB-03',
   'DB-04',
   'DB-07',
+  'DB-10',
   'WEB-04',
 ];
 const EVIL_HOST = 'evil.example';
@@ -3174,6 +3175,226 @@ for (const caseId of CASE_IDS) {
         reportAfter.body.rejectByReason.TICKET_NOT_FOUND ?? 0,
         (reportBefore.body.rejectByReason.TICKET_NOT_FOUND ?? 0) + 1,
       );
+      return;
+    }
+    if (caseId === 'DB-10') {
+      const owner = await bearer(ctx, 'owner');
+      const manager = await bearer(ctx, 'manager');
+      const attendee = await bearer(ctx, 'attendee');
+      const base = `/tenants/${f.tenantId}/events/${f.eventId}/imports`;
+      const codes = `code\nDB10-${ctx.fixture.tenantSlug}\n${f.code}\n`;
+      const used = await request(ctx, 'POST', redemptionPath(f), attendee,
+        redemptionBody(f, caseId), { 'idempotency-key': randomUUID() });
+      expectStatus(used, 201);
+      const snapshot = async () => (await db03Query(f, `
+        SELECT
+          (SELECT count(*)::int FROM redemption_codes WHERE tenant_id=$1::uuid AND event_id=$2::uuid) AS codes,
+          (SELECT count(*)::int FROM tickets WHERE tenant_id=$1::uuid AND event_id=$2::uuid) AS tickets,
+          (SELECT count(*)::int FROM guest_invitations WHERE tenant_id=$1::uuid AND event_id=$2::uuid) AS invitations,
+          (SELECT count(*)::int FROM outbox WHERE tenant_id=$1::uuid AND event_id=$2::uuid) AS outbox,
+          (SELECT count(*)::int FROM audit_logs WHERE tenant_id=$1::uuid AND event_id=$2::uuid) AS audit,
+          (SELECT count(*)::int FROM operations WHERE tenant_id=$1::uuid AND event_id=$2::uuid AND command='import.commit') AS commit_ops,
+          (SELECT allocated FROM quota_buckets WHERE tenant_id=$1::uuid AND event_id=$2::uuid AND scope='EVENT') AS allocated,
+          (SELECT count(*)::int FROM users) AS users
+      `, [f.tenantId, f.eventId]))[0];
+      const usedBefore = (await db03Query(f, `
+        SELECT id, status, source_id, ticket_type_id FROM redemption_codes
+        WHERE tenant_id=$1::uuid AND event_id=$2::uuid AND id=$3::uuid
+      `, [f.tenantId, f.eventId, required(f.data?.usedCodeId, 'usedCodeId')]))[0];
+      assert.equal(usedBefore.status, 'CONSUMED');
+      const upload = async (kind, csv, token) => {
+        const form = new FormData();
+        form.set('kind', kind);
+        form.set('file', new Blob([csv], { type: 'text/csv' }), `${kind}.csv`);
+        const response = await fetch(new URL(`/v1${base}/files`, ctx.api), {
+          method: 'POST', headers: { authorization: `Bearer ${token}` }, body: form,
+        });
+        const body = await response.json();
+        expectStatus({ status: response.status, body }, 201);
+        return body;
+      };
+      const file = await upload('CODES', codes, owner);
+      const createBody = { kind: 'CODES', sourceId: f.sourceId,
+        ticketTypeId: f.ticketTypeId, fileId: file.fileId };
+      const create = (token, body, key, path = base) =>
+        request(ctx, 'POST', path, token, body, { 'idempotency-key': key });
+      const keys = [randomUUID(), randomUUID()];
+      const jobs = [];
+      for (const [i, token] of [owner, manager].entries()) {
+        const created = await create(token, createBody, keys[i]);
+        expectStatus(created, 201);
+        assert.equal(created.body.status, 'CREATED');
+        jobs.push(created.body);
+      }
+      const createReplay = await create(owner, createBody, keys[0]);
+      expectStatus(createReplay, 201);
+      assert.equal(createReplay.body.importId, jobs[0].importId);
+      assert.equal(createReplay.body.replayed, true);
+      expectStatus(await create(owner, { ...createBody, mappingRevision: 2 }, keys[0]),
+        409, 'IDEMPOTENCY_CONFLICT');
+      const provenance = await db03Query(f, `SELECT f.created_by AS uploader,
+        j.created_by AS job_actor, j.event_id, j.file_id FROM import_jobs j
+        JOIN import_files f ON f.tenant_id=j.tenant_id AND f.id=j.file_id
+        WHERE j.tenant_id=$1::uuid AND j.event_id=$2::uuid AND j.id=ANY($3::uuid[])
+        ORDER BY j.created_by`, [f.tenantId, f.eventId, jobs.map((j) => j.importId)]);
+      assert.equal(provenance.length, 2);
+      assert.deepEqual(provenance.map((row) => row.job_actor).sort(),
+        [f.accounts.owner.userId, f.accounts.manager.userId].sort());
+      provenance.forEach((row) => {
+        assert.equal(row.uploader, f.accounts.owner.userId);
+        assert.equal(row.event_id, f.eventId);
+        assert.equal(row.file_id, file.fileId);
+      });
+      const beforeWrongScope = await snapshot();
+      const otherEvent = `/tenants/${f.tenantId}/events/${f.data.otherEventId}/imports`;
+      const foreign = `/tenants/${f.data.foreignTenantId}/events/${f.data.foreignEventId}/imports`;
+      deny(await create(owner, { ...createBody,
+        sourceId: f.data.otherSourceId, ticketTypeId: f.data.otherTicketTypeId },
+        randomUUID(), otherEvent));
+      deny(await create(owner, { ...createBody,
+        sourceId: f.data.foreignSourceId, ticketTypeId: f.data.foreignTicketTypeId },
+        randomUUID(), foreign));
+      deny(await request(ctx, 'GET', `${otherEvent}/${jobs[0].importId}`, owner));
+      deny(await request(ctx, 'GET', `${foreign}/${jobs[0].importId}`, owner));
+      assert.deepEqual(await snapshot(), beforeWrongScope,
+        'wrong tenant/event file and job access must not mutate owner event');
+      const foreignJobs = await web04Query(f, f.data.foreignTenantId,
+        `SELECT count(*)::int AS n FROM import_jobs WHERE tenant_id=$1::uuid AND event_id=$2::uuid`,
+        [f.data.foreignTenantId, f.data.foreignEventId]);
+      assert.equal(foreignJobs[0].n, 0);
+      const beforePreview = await snapshot();
+      const previews = [];
+      for (let i = 0; i < 2; i++) {
+        const preview = await request(ctx, 'POST', `${base}/${jobs[i].importId}/preview`,
+          i === 0 ? owner : manager, {});
+        expectStatus(preview, 201);
+        assert.equal(preview.body.validRowCount, 2);
+        assert.equal(preview.body.estimatedQuota, 2);
+        previews.push(preview.body);
+      }
+      assert.deepEqual(await snapshot(), beforePreview, 'preview must not reserve quota or mutate business rows');
+      const commit = (i, token, key, body = previews[i]) =>
+        request(ctx, 'POST', `${base}/${jobs[i].importId}/commit`, token, {
+          previewRevision: body.previewRevision,
+          mappingRevision: body.mappingRevision,
+          fileHash: body.fileHash,
+        }, { 'idempotency-key': key });
+      const requireBackend = createRequire(new URL('../../../packages/backend/package.json', import.meta.url));
+      const { Client } = requireBackend('pg');
+      const lock = new Client({ connectionString: f.data.controlDatabaseUrl });
+      const observer = new Client({ connectionString: f.data.controlDatabaseUrl });
+      await lock.connect();
+      await observer.connect();
+      let pending;
+      const commitKeys = [randomUUID(), randomUUID()];
+      try {
+        await lock.query('BEGIN');
+        await lock.query('SET LOCAL ROLE ticket_runtime');
+        await lock.query("SELECT set_config('app.tenant_id', $1, true)", [f.tenantId]);
+        await lock.query('SELECT id FROM events WHERE tenant_id=$1::uuid AND id=$2::uuid FOR UPDATE',
+          [f.tenantId, f.eventId]);
+        pending = [commit(0, owner, commitKeys[0]), commit(1, manager, commitKeys[1])];
+        let waiting = 0;
+        for (let i = 0; i < 100; i++) {
+          const result = await observer.query(`SELECT count(*)::int AS n FROM pg_stat_activity
+            WHERE wait_event_type='Lock' AND query LIKE '%SELECT id, status FROM events%'
+              AND pid <> pg_backend_pid()`);
+          waiting = result.rows[0].n;
+          if (waiting >= 2) break;
+          await new Promise((resolve) => setTimeout(resolve, 30));
+        }
+        assert.ok(waiting >= 2, 'both HTTP commits must overlap at PostgreSQL event lock');
+      } finally {
+        await lock.query('ROLLBACK');
+        await lock.end();
+        await observer.end();
+      }
+      const outcomes = await Promise.all(pending);
+      outcomes.forEach((result) => expectStatus(result, 201));
+      assert.deepEqual(outcomes.map((r) => r.body.committedRowCount).sort(), [0, 1]);
+      assert.deepEqual(outcomes.map((r) => r.body.skippedRowCount).sort(), [1, 2]);
+      for (let i = 0; i < 2; i++) {
+        const token = i === 0 ? owner : manager;
+        const replay = await commit(i, token, commitKeys[i]);
+        expectStatus(replay, 201);
+        assert.equal(replay.body.replayed, true);
+        assert.equal(replay.body.committedRowCount, outcomes[i].body.committedRowCount);
+        expectStatus(await commit(i, token, commitKeys[i], {
+          ...previews[i], previewRevision: previews[i].previewRevision + 1,
+        }), 409, 'IDEMPOTENCY_CONFLICT');
+      }
+      const afterCommit = await snapshot();
+      assert.equal(afterCommit.codes, beforePreview.codes + 1);
+      assert.equal(afterCommit.commit_ops, beforePreview.commit_ops + 2);
+      for (const field of ['tickets', 'invitations', 'outbox', 'audit', 'allocated', 'users'])
+        assert.equal(afterCommit[field], beforePreview[field], field);
+      assert.deepEqual((await db03Query(f, `SELECT id, status, source_id, ticket_type_id
+        FROM redemption_codes WHERE tenant_id=$1::uuid AND event_id=$2::uuid AND id=$3::uuid`,
+        [f.tenantId, f.eventId, f.data.usedCodeId]))[0], usedBefore);
+      const jobRows = await db03Query(f, `SELECT status, commit_response IS NOT NULL AS has_response
+        FROM import_jobs WHERE tenant_id=$1::uuid AND event_id=$2::uuid
+          AND id=ANY($3::uuid[])`, [f.tenantId, f.eventId, jobs.map((j) => j.importId)]);
+      assert.equal(jobRows.length, 2);
+      jobRows.forEach((row) => assert.deepEqual(row, { status: 'COMPLETED', has_response: true }));
+      const consumed = await db03Query(f, `SELECT consumed_at IS NOT NULL AS consumed
+        FROM import_files WHERE tenant_id=$1::uuid AND id=$2::uuid`,
+        [f.tenantId, file.fileId]);
+      assert.deepEqual(consumed, [{ consumed: true }]);
+      const ops = await db03Query(f, `SELECT actor_user_id, status,
+        response_json->>'importId' AS import_id FROM operations
+        WHERE tenant_id=$1::uuid AND event_id=$2::uuid AND command='import.commit'
+          AND client_key=ANY($3::text[])`, [f.tenantId, f.eventId, commitKeys]);
+      assert.equal(ops.length, 2);
+      assert.deepEqual(ops.map((row) => row.actor_user_id).sort(),
+        [f.accounts.owner.userId, f.accounts.manager.userId].sort());
+      ops.forEach((row) => {
+        assert.equal(row.status, 'COMPLETED');
+        assert.ok(jobs.some((job) => job.importId === row.import_id));
+      });
+
+      const guests = await upload('GUESTS', `email\nnew-${f.tenantSlug}@example.test\n`, owner);
+      const guestJob = await create(owner, { kind: 'GUESTS', sourceId: f.sourceId,
+        ticketTypeId: f.ticketTypeId, fileId: guests.fileId }, randomUUID());
+      expectStatus(guestJob, 201);
+      const guestPreview = await request(ctx, 'POST', `${base}/${guestJob.body.importId}/preview`, owner, {});
+      expectStatus(guestPreview, 201);
+      assert.equal(guestPreview.body.invitationCount, 1);
+      const beforeGuest = await snapshot();
+      const guestCommit = await request(ctx, 'POST', `${base}/${guestJob.body.importId}/commit`,
+        owner, { previewRevision: guestPreview.body.previewRevision,
+          mappingRevision: guestPreview.body.mappingRevision, fileHash: guestPreview.body.fileHash },
+        { 'idempotency-key': randomUUID() });
+      expectStatus(guestCommit, 201);
+      assert.equal(guestCommit.body.invitationCount, 1);
+      const afterGuest = await snapshot();
+      assert.equal(afterGuest.invitations, beforeGuest.invitations + 1);
+      assert.equal(afterGuest.outbox, beforeGuest.outbox + 1);
+      for (const field of ['tickets', 'users', 'allocated', 'codes', 'audit'])
+        assert.equal(afterGuest[field], beforeGuest[field], field);
+      const invitation = await db03Query(f, `SELECT state, import_job_id FROM guest_invitations
+        WHERE tenant_id=$1::uuid AND event_id=$2::uuid AND import_job_id=$3::uuid`,
+        [f.tenantId, f.eventId, guestJob.body.importId]);
+      assert.deepEqual(invitation, [{ state: 'PENDING', import_job_id: guestJob.body.importId }]);
+      const minted = await db03Query(f, `SELECT type, aggregate_id FROM outbox
+        WHERE tenant_id=$1::uuid AND event_id=$2::uuid AND type='InvitationTokenMinted'`,
+        [f.tenantId, f.eventId]);
+      assert.equal(minted.length, 1);
+      const expired = await db03Query(f, `UPDATE import_jobs
+        SET error_report_expires_at=now()-interval '1 second'
+        WHERE tenant_id=$1::uuid AND event_id=$2::uuid AND id=$3::uuid RETURNING id`,
+        [f.tenantId, f.eventId, guestJob.body.importId]);
+      assert.equal(expired.length, 1);
+      expectStatus(await request(ctx, 'GET', `${base}/${guestJob.body.importId}/errors`, owner), 410);
+      deny(await request(ctx, 'GET', `${foreign}/${guestJob.body.importId}/errors`, owner));
+      const beforeDeny = await snapshot();
+      await auth06Revoke(f, `UPDATE event_assignments SET revoked_at=now()
+        WHERE tenant_id=$1::uuid AND event_id=$2::uuid AND membership_id=(
+          SELECT id FROM memberships WHERE tenant_id=$1::uuid AND user_id=$3::uuid)
+          AND revoked_at IS NULL`, [f.tenantId, f.eventId, f.accounts.manager.userId]);
+      deny(await request(ctx, 'GET', `${base}/${jobs[1].importId}`, manager));
+      deny(await request(ctx, 'GET', `${base}/${jobs[1].importId}/errors`, manager));
+      deny(await request(ctx, 'POST', `${base}/${jobs[1].importId}/preview`, manager, {}));
+      assert.deepEqual(await snapshot(), beforeDeny, 'revoked actor denial must have no mutation');
       return;
     }
     if (caseId === 'DB-01') {

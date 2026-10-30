@@ -106,11 +106,12 @@
   {
     "caseId": "DB-10",
     "tests": [
-      "D:packages/backend/test/import-invitations.test.cjs#H-I1/H-I2/H-I3 import jobs"
+      "D:packages/backend/test/import-invitations.test.cjs#H-I1/H-I2/H-I3 import jobs",
+      "H:tests/e2e/http/live.test.mjs#[DB-10] live HTTP"
     ],
-    "layers": ["D"],
-    "status": "blocked",
-    "reason": "D import; thiếu H preview/commit race và file ownership."
+    "layers": ["D", "H"],
+    "status": "implemented",
+    "reason": "D/H PostgreSQL và F04 Keycloak/API/MinIO: hai commit chờ lock, một mã mới; mã CONSUMED giữ nguyên, retry không trùng, preview không reserve; import GUESTS chỉ tạo invitation/outbox, tenant/event và quyền actor được kiểm. Chờ DoD độc lập trên SHA cuối."
   },
   {
     "caseId": "DB-11",
