@@ -158,7 +158,7 @@
     "tests": ["redeem.spec.ts › [WEB-08]"],
     "layers": ["B", "H", "R"],
     "status": "covered",
-    "reason": "PLAN §5.2 WEB-08 P0 B/H/R: redeem UI verified attendee + wallet một vé; PG assertIssuedExactlyOnce (TicketIssued outbox, quota +1); worker thật — Mailpit API poll recipient/subject event, assertTicketIssuedMail (text/HTML ticketId + cid:ticket-qr), không suy SMTP ACCEPTED. Guest mở link → owner-ticket-need-login-state; owner đã login → URL vé + QR + owner-ticket-id. Clean checkout SHA bef4f36955604886a13ab042e227b1c566bc7c57: run mvuy8ksx-56d1a3 PASS 1/1 browser, summary.json evidenceExactShaEligible true; pnpm test:e2e:guards 16/16. Mailpit = run sink, không chứng minh inbox internet/APNs (PLAN M09)."
+    "reason": "PLAN §5.2 WEB-08 P0 B/H/R: redeem UI verified attendee + wallet một vé; PG assertIssuedExactlyOnce (TicketIssued outbox, quota +1); worker thật — Mailpit poll recipient/subject event, assertTicketIssuedMail + raw MIME inline PNG ticket-qr (không suy cid HTML). Guest mở link → need-login, không QR/id; otherAttendee fresh context + login → cùng URL email → BFF detail 403/404 không lộ ticketId, UI forbidden/missing/tenant-unresolved; owner → URL vé + QR + owner-ticket-id. Clean checkout SHA e1c6c22e6b2bf5ecdbb45a583adcf153a8844586: run mvuyn4d9-296c6f PASS 1/1 browser, summary.json evidenceExactShaEligible true; pnpm test:e2e:guards 16/16. Mailpit = run sink, không chứng minh inbox internet/APNs (PLAN M09)."
   },
   {
     "caseId": "WEB-09",
