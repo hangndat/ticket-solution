@@ -740,12 +740,33 @@ test('[AUTH-07] another attendee cannot see prior actor ticket after login switc
   });
   try {
     await login(page, manifest, accountFor(manifest, 'AUTH-07', 'attendee'));
+    const firstIdentityResponse = await page.request.get(webUrl(manifest, '/api/auth/identity'));
+    expect(firstIdentityResponse.status()).toBe(200);
+    expect(firstIdentityResponse.headers()['cache-control']).toMatch(/private.*no-store/i);
+    const firstIdentity = (await firstIdentityResponse.json()) as {
+      actorId: string;
+      authEpoch: string;
+      surface: string;
+    };
+    expect(firstIdentity.surface).toBe('web-attendee');
+    const firstCookies = await context.cookies(manifest.origins.web);
+    const epochCookie = firstCookies.find((cookie) => cookie.name === 'web_auth_epoch');
+    const markerCookie = firstCookies.find((cookie) => cookie.name === 'web_auth_marker');
+    expect(epochCookie?.httpOnly).toBe(true);
+    expect(markerCookie?.httpOnly).toBe(false);
+    expect(epochCookie?.value).toBe(firstIdentity.authEpoch);
+    expect(markerCookie?.value).toBe(firstIdentity.authEpoch);
     const detail = webUrl(
       manifest,
       `/t/${f.tenantSlug}/tickets/${f.ticketId}?tenantId=${f.tenantId}`,
     );
+    const walletDocument = await page.goto(webUrl(manifest, '/wallet'));
+    expect(walletDocument?.headers()['cache-control']).toMatch(/private.*no-store/i);
+    expect(await walletDocument?.text()).not.toContain(`wallet-ticket-${f.ticketId}`);
+    await expect(page.getByTestId(`wallet-ticket-${f.ticketId}`)).toBeVisible();
     const firstDocument = await page.goto(detail);
     expect(firstDocument?.headers()['cache-control']).toMatch(/no-store/i);
+    expect(await firstDocument?.text()).not.toContain('owner-ticket-card');
     await expect(page.getByTestId('owner-ticket-ready')).toBeVisible();
     const response = await page.request.get(
       webUrl(manifest, `/api/bff/tickets/${f.ticketId}?tenantId=${f.tenantId}`),
@@ -767,6 +788,9 @@ test('[AUTH-07] another attendee cannot see prior actor ticket after login switc
     const oldTab = await context.newPage();
     await oldTab.goto(detail);
     await expect(oldTab.getByTestId('owner-ticket-ready')).toBeVisible();
+    const activeTab = await context.newPage();
+    await activeTab.goto(detail);
+    await expect(activeTab.getByTestId('owner-ticket-ready')).toBeVisible();
     await oldTab.goto(webUrl(manifest, '/'));
     // Hold a real refresh response until logout has cleared the callback-owned
     // subject anchor. Its late Set-Cookie must not resurrect the old actor.
@@ -799,9 +823,14 @@ test('[AUTH-07] another attendee cannot see prior actor ticket after login switc
     } finally {
       releaseRefresh();
     }
+    const logoutEpoch = (await context.cookies(manifest.origins.web)).find((cookie) => cookie.name === 'web_auth_epoch')?.value;
+    expect(logoutEpoch).toBeTruthy();
+    expect(logoutEpoch).not.toBe(firstIdentity.authEpoch);
     await staleRefresh;
     await context.unroute('**/api/auth/refresh?*');
     const lateCookies = await context.cookies(manifest.origins.web);
+    expect(lateCookies.find((cookie) => cookie.name === 'web_auth_epoch')?.value).toBe(logoutEpoch);
+    expect(lateCookies.find((cookie) => cookie.name === 'web_auth_marker')?.value).toBe(logoutEpoch);
     expect(
       lateCookies.some((cookie) => cookie.name === 'oidc_access_token'),
     ).toBe(true);
@@ -837,6 +866,12 @@ test('[AUTH-07] another attendee cannot see prior actor ticket after login switc
         { cause: error },
       );
     }
+    const secondIdentityResponse = await page.request.get(webUrl(manifest, '/api/auth/identity'));
+    expect(secondIdentityResponse.status()).toBe(200);
+    const secondIdentity = (await secondIdentityResponse.json()) as typeof firstIdentity;
+    expect(secondIdentity.actorId).not.toBe(firstIdentity.actorId);
+    expect(secondIdentity.authEpoch).not.toBe(firstIdentity.authEpoch);
+    await expect(activeTab.getByTestId('owner-ticket-ready')).toHaveCount(0);
     const guestBffPendingDelete = cookieOrder.some(
       (entry) =>
         entry.startsWith('/api/bff/') &&
@@ -887,10 +922,6 @@ test('[AUTH-07] another attendee cannot see prior actor ticket after login switc
 test('[AUTH-07] an old ticket document response cannot render after an actor switch', async ({
   browser,
 }) => {
-  test.fail(
-    true,
-    'AUTH-07 blocker: an already fetched A document renders after B signs in',
-  );
   const manifest = loadManifest();
   const fixture = fixtureFor(manifest, 'AUTH-07');
   if (!fixture.ticketId) throw new Error('BLOCKED: AUTH-07 ticketId');
@@ -904,6 +935,7 @@ test('[AUTH-07] an old ticket document response cannot render after an actor swi
   const released = new Promise<void>((resolve) => {
     releaseOldResponse = resolve;
   });
+
   const fetched = new Promise<void>((resolve) => {
     signalOldResponse = resolve;
   });
@@ -915,6 +947,7 @@ test('[AUTH-07] an old ticket document response cannot render after an actor swi
       accountFor(manifest, 'AUTH-07', 'attendee'),
     );
     const stalePage = await context.newPage();
+    await stalePage.setViewportSize({ width: 390, height: 844 });
     await stalePage.goto(webUrl(manifest, '/'));
     let oldResponseStatus = 0;
     let oldResponseHasTicket = false;
@@ -938,7 +971,7 @@ test('[AUTH-07] an old ticket document response cannot render after an actor swi
     const staleNavigation = stalePage.goto(detail);
     await fetched;
     expect(oldResponseStatus).toBe(200);
-    expect(oldResponseHasTicket).toBe(true);
+    expect(oldResponseHasTicket).toBe(false);
     await switchPage.goto(webUrl(manifest, '/api/auth/logout'));
     await login(
       switchPage,
@@ -957,6 +990,62 @@ test('[AUTH-07] an old ticket document response cannot render after an actor swi
     await expect(stalePage.getByTestId('owner-ticket-ready')).toHaveCount(0);
   } finally {
     releaseOldResponse();
+    await context.close();
+  }
+});
+
+test('[AUTH-07] held ticket JSON from a prior same-sub login never commits', async ({ browser }) => {
+  const manifest = loadManifest();
+  const fixture = fixtureFor(manifest, 'AUTH-07');
+  if (!fixture.ticketId) throw new Error('BLOCKED: AUTH-07 ticketId');
+  const detail = webUrl(manifest, `/t/${fixture.tenantSlug}/tickets/${fixture.ticketId}?tenantId=${fixture.tenantId}`);
+  const context = await browser.newContext();
+  let release!: () => void;
+  let fetched!: () => void;
+  const released = new Promise<void>((resolve) => { release = resolve; });
+  const intercepted = new Promise<void>((resolve) => { fetched = resolve; });
+  try {
+    const switchPage = await context.newPage();
+    const actor = accountFor(manifest, 'AUTH-07', 'attendee');
+    await login(switchPage, manifest, actor);
+    const before = await switchPage.request.get(webUrl(manifest, '/api/auth/identity'));
+    const firstEpoch = ((await before.json()) as { authEpoch: string }).authEpoch;
+    const stalePage = await context.newPage();
+    await stalePage.addInitScript(() => {
+      const observer = new MutationObserver(() => {
+        if (document.body?.textContent?.includes('STALE_ONLY')) {
+          (window as typeof window & { staleTicketRendered?: boolean }).staleTicketRendered = true;
+        }
+      });
+      observer.observe(document, { subtree: true, childList: true, characterData: true });
+    });
+    let held = false;
+    await context.route('**/api/bff/tickets/*', async (route) => {
+      if (held || !route.request().url().includes(fixture.ticketId!)) {
+        await route.continue();
+        return;
+      }
+      held = true;
+      const upstream = await route.fetch();
+      expect(upstream.status()).toBe(200);
+      expect(upstream.headers()['x-auth-epoch']).toBe(firstEpoch);
+      const body = (await upstream.json()) as Record<string, unknown>;
+      fetched();
+      await released;
+      await route.fulfill({ response: upstream, body: JSON.stringify({ ...body, state: 'STALE_ONLY' }) });
+    });
+    await stalePage.goto(detail);
+    await intercepted;
+    await switchPage.goto(webUrl(manifest, '/api/auth/logout'));
+    await login(switchPage, manifest, actor);
+    const after = await switchPage.request.get(webUrl(manifest, '/api/auth/identity'));
+    expect(((await after.json()) as { authEpoch: string }).authEpoch).not.toBe(firstEpoch);
+    release();
+    await expect(stalePage.getByTestId('owner-ticket-ready')).toBeVisible();
+    expect(await stalePage.evaluate(() => (window as typeof window & { staleTicketRendered?: boolean }).staleTicketRendered ?? false)).toBe(false);
+    await context.unroute('**/api/bff/tickets/*');
+  } finally {
+    release();
     await context.close();
   }
 });

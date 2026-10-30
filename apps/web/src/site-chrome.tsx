@@ -120,7 +120,7 @@ function NavLinkItem({
     );
   }
   return (
-    <Link key={item.href} href={item.href} {...common}>
+    <Link key={item.href} href={item.href} prefetch={item.href !== '/wallet'} {...common}>
         {item.label}
     </Link>
   );

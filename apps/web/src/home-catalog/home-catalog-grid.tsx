@@ -186,6 +186,7 @@ export function HomeCatalogGrid({
                         <Link
                           className={attendeeCatalogOwnedStrip}
                           href={`/wallet?event=${encodeURIComponent(event.id)}`}
+                          prefetch={false}
                           data-testid={`home-event-owned-${event.id}`}
                         >
                           <span>Bạn có {ownedCount} vé</span>
