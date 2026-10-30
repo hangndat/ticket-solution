@@ -55,7 +55,8 @@ class ResolveResponseDto implements RedemptionResolveResponse {
   @ApiProperty() eventTitle!: string;
   @ApiProperty() ticketTypeLabel!: string;
   @ApiProperty({ enum: ['AUTO', 'MANUAL'] }) approvalMode!: 'AUTO' | 'MANUAL';
-  @ApiProperty() redemptionWindow!: RedemptionResolveResponse['redemptionWindow'];
+  @ApiProperty()
+  redemptionWindow!: RedemptionResolveResponse['redemptionWindow'];
   @ApiProperty() published!: RedemptionResolveResponse['published'];
   @ApiProperty() resolveToken!: string;
   @ApiProperty() resolveExpiresAt!: string;
@@ -98,6 +99,12 @@ export class RedemptionResolveService {
       );
     }
     const verified = await this.deps.verifier.verifyBearerToken(authorization);
+    if (!verified.emailVerified) {
+      throw new IssueError(
+        ISSUE_ERROR_CODES.EMAIL_NOT_VERIFIED,
+        'Email must be verified before resolving a code',
+      );
+    }
     return this.deps.users.upsertFromVerifiedIdentity(verified);
   }
 
@@ -111,7 +118,11 @@ export class RedemptionResolveService {
         'Global code resolve is not enabled',
       );
     }
-    if (!this.deps.db || !this.deps.peppers?.length || !this.deps.resolveTokenSecret) {
+    if (
+      !this.deps.db ||
+      !this.deps.peppers?.length ||
+      !this.deps.resolveTokenSecret
+    ) {
       throw new IssueError(
         ISSUE_ERROR_CODES.CODE_HMAC_MISCONFIGURED,
         'Resolve services are not configured',

@@ -247,7 +247,7 @@ export async function seedRuntime(state, caseIds) {
         // Private, run-scoped control. The test uses ticket_runtime + tenant RLS.
         fixture.data.controlDatabaseUrl = state.databaseUrl;
       }
-      if (caseId === 'WEB-04' || caseId === 'DB-03' || caseId === 'DB-04' || caseId === 'DB-02') {
+      if (['AUTH-03', 'WEB-04', 'DB-03', 'DB-04', 'DB-02'].includes(caseId)) {
         // Private, run-scoped control for H/DB reconciliation under tenant RLS.
         fixture.data.controlDatabaseUrl = state.databaseUrl;
       }
