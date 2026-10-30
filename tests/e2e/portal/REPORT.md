@@ -1,5 +1,23 @@
 # Portal/Platform E2E — bàn giao worker
 
+## Kiểm tra đã chạy (worker task_b9427e2110b4 — James DoD F01/F02 fix 1/2 / PR #1072)
+
+| Lệnh | Kết quả |
+| --- | --- |
+| `node tests/e2e/harness/run.mjs e2e --case=PORT-02` | **PASS** run `mvuvg7n2-768c19`, browser 1/1; artifact `tests/e2e/.artifacts/mvuvg7n2-768c19/summary.json`. |
+| SHA | `4ae03e41e8ce7c253c0f50c2537764bfadc06a7d` (`evidenceExactShaEligible=true`, run `mvuvhcrh-ee2d55`) |
+
+**Thay đổi:** Portal config rollback dùng `useIntentMutation` (`config.rollback`) gửi UUID `idempotencyKey`; nút rollback hiện trên mọi phiên bản khác live published pointer. E2E [PORT-02] click UI rollback, PG snapshot sau mỗi stale 409 (save + rollback), public hero + ticket consent. **Gap:** Web ISR publish delta; PORT-01 public 404 wizard path.
+
+## Kiểm tra đã chạy (worker task_8898495f4d3f — PORT-02 B/H / Issue #1035)
+
+| Lệnh | Kết quả |
+| --- | --- |
+| `node tests/e2e/harness/run.mjs e2e --case=PORT-02` | **PASS** run `mvuv3fpp-04187d`, browser 1/1; artifact `tests/e2e/.artifacts/mvuv3fpp-04187d/summary.json`; `evidenceExactShaEligible=true`. |
+| SHA | `f8152257039a2e6a5f9866b4a774f828c67e4ded` |
+
+**Thay đổi:** mở rộng `portal-event-lifecycle.spec.ts` [PORT-02] — public API `/v1/public/tenants/{tenantSlug}/events/{eventSlug}`, draft/preview không đổi projection, publish/rollback BFF + stale 409, hai browser context stale save, PG `tickets` consent/entitlement bất biến; seed `PORT-02` + `lifecycle-db.ts`; Portal BFF `config/rollback` forward `idempotencyKey`. Run này chỉ chứng minh BFF/API/PG; James đã tìm F01/F02 và worker sửa ở run `mvuvhcrh-ee2d55` phía trên. Full PORT-02 vẫn `blocked` vì Web ISR chưa được kiểm.
+
 ## Kiểm tra đã chạy (worker task_ff809609587e — PORT-01 James F01/F02 fix 1/2 / Issue #1035)
 
 | Lệnh | Kết quả |

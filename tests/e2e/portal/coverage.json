@@ -8,10 +8,12 @@
   },
   {
     "caseId": "PORT-02",
-    "tests": ["portal-event-lifecycle.spec.ts [PORT-02]"],
+    "tests": [
+      "portal-event-lifecycle.spec.ts [PORT-02] draft preview publish rollback and stale save preserve public and ticket consent"
+    ],
     "layers": ["B", "H"],
     "status": "blocked",
-    "reason": "Draft/public and stale-version conflict BFF path written; UI save, publish/rollback and immutable ticket terms plus runtime remain."
+    "reason": "PORT-02 BFF/API/PG slice PASS clean run mvuvhcrh-ee2d55 on code SHA 4ae03e41, James F01/F02 PASS at PR #1072 HEAD a76aee90: Portal rollback UI intent key, stale 409 PG no-mutation, public projection and ticket consent. Full PORT-02 BLOCKED: Web ISR publish delta not asserted; PORT-01 wizard-created event public 404 and quota path remain separate product gaps."
   },
   {
     "caseId": "PORT-03",

@@ -504,14 +504,31 @@ export async function seedRuntime(state, caseIds) {
           fixture.data.hiddenEventId = hiddenEventId;
         }
         if (caseId === 'PORT-02') {
+          fixture.data.controlDatabaseUrl = state.databaseUrl;
           fixture.data.publicUrl = new URL(
             `/t/${slug}/events/${fixture.eventSlug}`,
             state.origins.web,
+          ).toString();
+          fixture.data.publicApiUrl = new URL(
+            `/v1/public/tenants/${slug}/events/${fixture.eventSlug}`,
+            state.origins.api,
           ).toString();
           fixture.data.configPayload = eventPayload(
             `Tenant ${caseId}`,
             `Updated ${caseId}`,
           );
+          fixture.data.updatedPublishedName = `Updated ${caseId}`;
+          const entitlement = JSON.stringify({
+            gateAccess: 'standard',
+            tier: 'port02-v1',
+            perks: ['e2e'],
+          });
+          await tx.$executeRaw`
+            UPDATE ticket_types
+            SET entitlement_snapshot = ${entitlement}::jsonb
+            WHERE tenant_id = ${tenantId}::uuid AND id = ${inventory.ticketTypeId}::uuid
+          `;
+          fixture.data.entitlementV1 = JSON.parse(entitlement);
         }
         if (['WEB-06', 'PORT-06'].includes(caseId)) {
           await tx.$executeRaw`UPDATE issuance_sources SET approval_mode='MANUAL' WHERE tenant_id=${tenantId}::uuid AND id=${fixture.sourceId}::uuid`;
@@ -1246,6 +1263,7 @@ export async function seedRuntime(state, caseIds) {
           'AUTH-06',
           'WEB-09',
           'WEB-11',
+          'PORT-02',
           'PORT-03',
           'PORT-04',
           'PORT-08',
