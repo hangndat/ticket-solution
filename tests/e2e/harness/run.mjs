@@ -51,6 +51,7 @@ const httpCases = [
   'DB-07',
   'DB-10',
   'DB-11',
+  'DB-12',
   'WEB-04',
 ];
 const match = args.find((arg) => arg.startsWith('--case='));
