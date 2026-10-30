@@ -4,22 +4,24 @@
     "tests": [
       "D:packages/backend/test/rls.test.cjs#PostgreSQL RLS through Prisma",
       "D:packages/backend/test/rls-catalog.test.cjs#every tenant table",
-      "D:packages/backend/test/me-tickets-aggregate.test.cjs#W1: owner aggregate"
+      "D:packages/backend/test/me-tickets-aggregate.test.cjs#W1: owner aggregate",
+      "D:packages/backend/test/db01-rls-worker-export-scope.test.cjs#DB-01: ticket_platform_runtime"
     ],
     "layers": ["D"],
     "status": "blocked",
-    "reason": "D hiện có RLS/pool/owner; thiếu rollback/exception và H worker/export matrix."
+    "reason": "D có RLS/pool reuse/no-context (rls.test.cjs bao gồm rollback/exception dòng 282-295), owner aggregate, và nay thêm ticket_platform_runtime (worker/export role) không có grant trên bảng PII và bị PostgreSQL permission denied khi đọc trực tiếp — chạy PASS trên PostgreSQL thật (xem Checks). Thiếu H: chưa có live API/Keycloak chứng minh endpoint worker/export thực tế (CS export, report) từ chối cross-tenant qua HTTP, không chỉ qua grant DB."
   },
   {
     "caseId": "DB-02",
     "tests": [
       "D:packages/backend/test/membership.test.cjs#membership deny-by-default",
       "D:packages/backend/test/platform.test.cjs#O02 MeEvents",
-      "U:packages/backend/test/membership-unit.test.cjs#isMembershipActive"
+      "U:packages/backend/test/membership-unit.test.cjs#isMembershipActive",
+      "D:packages/backend/test/db02-identity-issuer-subject.test.cjs#DB-02: identity keyed"
     ],
     "layers": ["D", "U"],
     "status": "blocked",
-    "reason": "D membership/revoke; thiếu H claim cũ và issuer+subject qua Keycloak thật."
+    "reason": "D membership/revoke; nay thêm D: hai issuer khác nhau cùng email không auto-link (userId khác nhau, không merge membership), owner identity không có quyền staff ngầm — PASS trên PostgreSQL thật. Thiếu H: claim cũ qua token thật (role/tenant trong JWT không còn đúng DB) và issuer+subject qua Keycloak thật (JWKS/issuer validation ở live IdP), chưa có manifest Keycloak cho case này (xem FIXTURES.md)."
   },
   {
     "caseId": "DB-03",
@@ -29,7 +31,7 @@
     ],
     "layers": ["D"],
     "status": "blocked",
-    "reason": "D quota/idempotency; thiếu H cùng request retry và audit matrix đầy đủ."
+    "reason": "D quota/idempotency đầy đủ: một mã + nhiều actor race (LAST-SEAT), một request + nhiều retry (replay cùng key, idempotency-conflict khác payload, quota-exhausted retry) đều về đúng một ticket/operation; nay thêm audit_logs assertion — đúng một hàng ticket.issued dù có race loser, replay, conflict retry và quota retry — PASS trên PostgreSQL thật. Thiếu H: chưa có live API retry cùng request qua HTTP/Keycloak thật và audit matrix cho các case khác ngoài issue (approval đã có audit riêng ở dòng 249-254/531-540)."
   },
   {
     "caseId": "DB-04",

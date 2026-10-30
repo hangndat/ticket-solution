@@ -21,11 +21,13 @@ export const catalog = {
     b('rls', 'PostgreSQL RLS through Prisma'),
     b('rls-catalog', 'every tenant table'),
     b('me-tickets-aggregate', 'W1: owner aggregate'),
+    b('db01-rls-worker-export-scope', 'DB-01: ticket_platform_runtime'),
   ],
   'DB-02': [
     b('membership', 'membership deny-by-default'),
     b('platform', 'O02 MeEvents'),
     b('membership-unit', 'isMembershipActive', 'U'),
+    b('db02-identity-issuer-subject', 'DB-02: identity keyed'),
   ],
   'DB-03': [
     b('issue', 'issue: last-seat'),
