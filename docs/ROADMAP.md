@@ -1,6 +1,6 @@
 # Roadmap — Event Ticketing Platform
 
-> **F04 30/10/2026 — user ưu tiên hoàn tất 85 nhóm E2E local:** [PR #1028](https://github.com/hangndat/ticket-solution/pull/1028) đã merge tại `a3022024163bf8cf5ed4d4b426e312bf465f4518`, bàn giao harness và coverage hiện có. Full functional AC vẫn **0 PASS, 85 BLOCKED, 1 OUT** theo [`tests/e2e/PLAN.md`](../tests/e2e/PLAN.md); #1029–#1037 theo dõi chín suite. Ưu tiên này mở **roadmap review và các task test/evidence theo AC đã chốt**. Product gap cần quyết định contract/ADR riêng trước khi sửa runtime; F04 không thay gate D5/pilot. Thứ tự và điều kiện nghiệm thu ở §1.3.
+> **F04 30/10/2026 — user ưu tiên hoàn tất 85 nhóm E2E local:** [PR #1028](https://github.com/hangndat/ticket-solution/pull/1028) đã merge tại `a3022024163bf8cf5ed4d4b426e312bf465f4518`, bàn giao harness và coverage hiện có. Baseline lúc tách scope là **0 PASS, 85 BLOCKED, 1 OUT**; checkpoint tích hợp mới nhất ở §1.3. #1029–#1037 theo dõi chín suite. Ưu tiên này mở **roadmap review và các task test/evidence theo AC đã chốt**. Product gap cần quyết định contract/ADR riêng trước khi sửa runtime; F04 không thay gate D5/pilot. Thứ tự và điều kiện nghiệm thu ở §1.3.
 
 > **O33 28/10/2026:** iOS/web a11y (VoiceOver, Dynamic Type, WCAG UAT) **OUT** MVP/pilot — không known gap, không chặn #879/#889/#874/#1008/#914.
 
@@ -91,6 +91,8 @@ Cột **Board** = Status parent Issue trên Project #3 tại thời điểm đ�
 ### 1.3 F04 — hoàn tất full AC E2E local
 
 **Đơn vị hoàn thành:** từng ID trong 85 nhóm chỉ chuyển `PASS` khi đủ lớp B/H/D/R mà [`PLAN.md`](../tests/e2e/PLAN.md) yêu cầu, có assertion business state và nhánh từ chối không tạo mutation ngoài ý muốn, trên commit sạch với run ID. `coverage.json: implemented`, selector xanh hoặc run trên working tree dirty là bằng chứng một phần. `JOB-08` giữ `OUT`; không hạ AC để tăng số PASS.
+
+**Checkpoint main 30/10/2026:** **5 PASS, 80 BLOCKED, 1 OUT** sau PR [#1041](https://github.com/hangndat/ticket-solution/pull/1041) (`AUTH-01/02`, main `04fa24b8`, CI `40996941396` SUCCESS) và PR [#1040](https://github.com/hangndat/ticket-solution/pull/1040) (`DB-01/02/03`, main `7382a4bd`, CI `40998352474` SUCCESS). Reviewer độc lập James chốt exact SHA trên từng PR; run H sạch `mvueewq9-6443b7` và `mvuesfb3-a7f229`. Issue #1029/#1030 vẫn Đang làm vì các ID còn lại chưa đạt full AC. `tests/e2e/PLAN.md` giữ baseline 0/85 lịch sử và ghi checkpoint riêng.
 
 | Đợt | Phạm vi ưu tiên | Điều kiện bắt đầu / ranh giới |
 | --- | --- | --- |
