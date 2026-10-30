@@ -604,7 +604,9 @@ export async function seedRuntime(state, caseIds) {
             'wrongEmail',
             'unverified',
             'secondClaim',
+            'idempotencyReplay',
             'expired',
+            'revoked',
           ]) {
             const slotEventId = randomUUID();
             const slotSlug = `auto-${slot.replace(/([A-Z])/g, '-$1').toLowerCase()}`;
