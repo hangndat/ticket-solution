@@ -115,8 +115,8 @@
       "redeem.spec.ts › [WEB-04] negative redeem matrix › suspended tenant blocks redeem without leaking owner email"
     ],
     "layers": ["B", "H"],
-    "status": "blocked",
-    "reason": "Run mvt54p4f-9ad957 PASS 7/7 (base SHA 9551dd8c8343, working tree chưa commit): PostgreSQL readWeb04EventSnapshot/assertWeb04NegativeUnchanged từng nhánh invalid/expired/used/cancelled/quota/limit/suspended — số ticket, code/quota không đổi, không IN_PROGRESS dangling; wallet giữ nguyên. Suspended: assertRedeemRejectedWithoutTicket (denied/error/unknown, không lộ @); HTTP TENANT_SUSPENDED riêng. Chưa đối soát request/outbox từng nhánh; MANUAL approve/reject/expiry thuộc Portal/WEB-06 vẫn thiếu, nên WEB-04 chưa đạt acceptance đầy đủ."
+    "status": "covered",
+    "reason": "PLAN §5.2 WEB-04 P0 B/H: ma trận invalid/expired/used/cancelled/quota/limit/suspended — UX đúng nhóm, không lộ owner email, wallet giữ. PG readWeb04EventSnapshot/assertWeb04NegativeUnchanged từng nhánh: ticket/code/quota/redemption_requests/outbox không đổi, không IN_PROGRESS dangling. MANUAL approve/reject/expiry cross-ref WEB-06 (merged), không thuộc WEB-04. Clean SHA 2bf01b3b (`evidenceExactShaEligible: true`): browser run mvv0kmxn-5038d2 PASS 7/7; HTTP mvv0lz1j-b30c15 PASS 7 nhánh + positive control; `pnpm test:e2e:guards` 19/19. Relates #1037."
   },
   {
     "caseId": "WEB-05",
