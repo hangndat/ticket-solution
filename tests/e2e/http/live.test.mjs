@@ -5,6 +5,8 @@ import http from 'node:http';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { chromium } from 'playwright';
+import { web05ConfigV2Payload } from '../harness/web05-published-config.mjs';
+import { loadWeb05ExpectedHashes } from '../harness/web05-hashes.mjs';
 
 const CASE_IDS = [
   'SEC-01',
@@ -876,15 +878,24 @@ async function auth03Snapshot(f) {
 
 async function db04Snapshot(f) {
   const tables = {
-    codes: 'SELECT id, status, active_request_id FROM redemption_codes WHERE tenant_id = $1::uuid AND event_id = $2::uuid ORDER BY id',
-    quotas: 'SELECT id, capacity, allocated FROM quota_buckets WHERE tenant_id = $1::uuid AND event_id = $2::uuid ORDER BY id',
-    requests: 'SELECT id, status FROM redemption_requests WHERE tenant_id = $1::uuid AND event_id = $2::uuid ORDER BY id',
-    tickets: 'SELECT id, owner_user_id FROM tickets WHERE tenant_id = $1::uuid AND event_id = $2::uuid ORDER BY id',
-    operations: 'SELECT id, client_key, status, response_json FROM operations WHERE tenant_id = $1::uuid AND event_id = $2::uuid ORDER BY id',
-    audits: 'SELECT id, action FROM audit_logs WHERE tenant_id = $1::uuid AND event_id = $2::uuid ORDER BY id',
-    outbox: 'SELECT id, type FROM outbox WHERE tenant_id = $1::uuid AND event_id = $2::uuid ORDER BY id',
-    attendees: 'SELECT id, user_id, canonical_email FROM event_attendees WHERE tenant_id = $1::uuid AND event_id = $2::uuid ORDER BY id',
-    counters: 'SELECT attendee_id, issued_count, max_tickets FROM attendee_counters WHERE tenant_id = $1::uuid AND event_id = $2::uuid ORDER BY attendee_id',
+    codes:
+      'SELECT id, status, active_request_id FROM redemption_codes WHERE tenant_id = $1::uuid AND event_id = $2::uuid ORDER BY id',
+    quotas:
+      'SELECT id, capacity, allocated FROM quota_buckets WHERE tenant_id = $1::uuid AND event_id = $2::uuid ORDER BY id',
+    requests:
+      'SELECT id, status FROM redemption_requests WHERE tenant_id = $1::uuid AND event_id = $2::uuid ORDER BY id',
+    tickets:
+      'SELECT id, owner_user_id FROM tickets WHERE tenant_id = $1::uuid AND event_id = $2::uuid ORDER BY id',
+    operations:
+      'SELECT id, client_key, status, response_json FROM operations WHERE tenant_id = $1::uuid AND event_id = $2::uuid ORDER BY id',
+    audits:
+      'SELECT id, action FROM audit_logs WHERE tenant_id = $1::uuid AND event_id = $2::uuid ORDER BY id',
+    outbox:
+      'SELECT id, type FROM outbox WHERE tenant_id = $1::uuid AND event_id = $2::uuid ORDER BY id',
+    attendees:
+      'SELECT id, user_id, canonical_email FROM event_attendees WHERE tenant_id = $1::uuid AND event_id = $2::uuid ORDER BY id',
+    counters:
+      'SELECT attendee_id, issued_count, max_tickets FROM attendee_counters WHERE tenant_id = $1::uuid AND event_id = $2::uuid ORDER BY attendee_id',
   };
   const state = {};
   for (const [name, sql] of Object.entries(tables))
@@ -893,27 +904,54 @@ async function db04Snapshot(f) {
 }
 
 async function db07State(f, requestId) {
-  const [requestRow] = await db03Query(f, `SELECT id, status, expires_at, created_at, decision_reason,
+  const [requestRow] = await db03Query(
+    f,
+    `SELECT id, status, expires_at, created_at, decision_reason,
       redemption_code_id FROM redemption_requests
-      WHERE tenant_id=$1::uuid AND id=$2::uuid`, [f.tenantId, requestId]);
-  assert.ok(requestRow, 'DB-07 request must exist');
-  const [code] = await db03Query(f, `SELECT status, active_request_id FROM redemption_codes
       WHERE tenant_id=$1::uuid AND id=$2::uuid`,
-  [f.tenantId, requestRow.redemption_code_id]);
+    [f.tenantId, requestId],
+  );
+  assert.ok(requestRow, 'DB-07 request must exist');
+  const [code] = await db03Query(
+    f,
+    `SELECT status, active_request_id FROM redemption_codes
+      WHERE tenant_id=$1::uuid AND id=$2::uuid`,
+    [f.tenantId, requestRow.redemption_code_id],
+  );
   return {
-    request: requestRow, code,
-    quota: await db03Query(f, `SELECT scope, capacity, allocated FROM quota_buckets
-      WHERE tenant_id=$1::uuid AND event_id=$2::uuid ORDER BY scope`, [f.tenantId, f.eventId]),
-    tickets: await db03Query(f, `SELECT id, request_id FROM tickets
-      WHERE tenant_id=$1::uuid AND request_id=$2::uuid`, [f.tenantId, requestId]),
-    audit: await db03Query(f, `SELECT action FROM audit_logs
-      WHERE tenant_id=$1::uuid AND resource_id=$2::uuid`, [f.tenantId, requestId]),
-    outbox: await db03Query(f, `SELECT type FROM outbox
+    request: requestRow,
+    code,
+    quota: await db03Query(
+      f,
+      `SELECT scope, capacity, allocated FROM quota_buckets
+      WHERE tenant_id=$1::uuid AND event_id=$2::uuid ORDER BY scope`,
+      [f.tenantId, f.eventId],
+    ),
+    tickets: await db03Query(
+      f,
+      `SELECT id, request_id FROM tickets
+      WHERE tenant_id=$1::uuid AND request_id=$2::uuid`,
+      [f.tenantId, requestId],
+    ),
+    audit: await db03Query(
+      f,
+      `SELECT action FROM audit_logs
+      WHERE tenant_id=$1::uuid AND resource_id=$2::uuid`,
+      [f.tenantId, requestId],
+    ),
+    outbox: await db03Query(
+      f,
+      `SELECT type FROM outbox
       WHERE tenant_id=$1::uuid AND event_id=$2::uuid AND payload->>'requestId'=$3`,
-    [f.tenantId, f.eventId, requestId]),
-    operations: await db03Query(f, `SELECT command, status, response_json FROM operations
+      [f.tenantId, f.eventId, requestId],
+    ),
+    operations: await db03Query(
+      f,
+      `SELECT command, status, response_json FROM operations
       WHERE tenant_id=$1::uuid AND event_id=$2::uuid
-        AND response_json->>'requestId'=$3`, [f.tenantId, f.eventId, requestId]),
+        AND response_json->>'requestId'=$3`,
+      [f.tenantId, f.eventId, requestId],
+    ),
   };
 }
 
@@ -932,19 +970,24 @@ async function db07DecisionBarrier(ctx, requestId, calls) {
   try {
     await locker.query('BEGIN');
     await locker.query('SET LOCAL ROLE ticket_runtime');
-    await locker.query("SELECT set_config('app.tenant_id', $1, true)", [f.tenantId]);
-    const locked = await locker.query(`SELECT c.id, pg_backend_pid() AS pid
+    await locker.query("SELECT set_config('app.tenant_id', $1, true)", [
+      f.tenantId,
+    ]);
+    const locked = await locker.query(
+      `SELECT c.id, pg_backend_pid() AS pid
       FROM redemption_codes c JOIN redemption_requests r
         ON r.tenant_id=c.tenant_id AND r.redemption_code_id=c.id
       WHERE r.tenant_id=$1::uuid AND r.id=$2::uuid FOR UPDATE OF c`,
-    [f.tenantId, requestId]);
+      [f.tenantId, requestId],
+    );
     assert.equal(locked.rows.length, 1);
     const blockerPid = locked.rows[0].pid;
     requests = calls.map((call) => call());
     const deadline = Date.now() + 1500;
     let waiters = [];
     while (Date.now() < deadline) {
-      const { rows } = await observer.query(`SELECT pid, pg_blocking_pids(pid) AS blockers
+      const { rows } =
+        await observer.query(`SELECT pid, pg_blocking_pids(pid) AS blockers
         FROM pg_stat_activity WHERE pid <> pg_backend_pid() AND wait_event_type='Lock'`);
       const waiting = new Map(rows.map((row) => [row.pid, row]));
       const reachesLocker = (pid, seen = new Set()) => {
@@ -959,8 +1002,10 @@ async function db07DecisionBarrier(ctx, requestId, calls) {
       if (waiters.length >= calls.length) break;
       await new Promise((resolve) => setTimeout(resolve, 20));
     }
-    assert.ok(waiters.length >= calls.length,
-      `DB-07 expected ${calls.length} HTTP contenders blocked on PostgreSQL code row; observed ${waiters.length}`);
+    assert.ok(
+      waiters.length >= calls.length,
+      `DB-07 expected ${calls.length} HTTP contenders blocked on PostgreSQL code row; observed ${waiters.length}`,
+    );
   } catch (error) {
     requests.forEach((pending) => pending.catch(() => undefined));
     throw error;
@@ -979,20 +1024,38 @@ async function db04ControlledRequests(ctx, path, token, body, codes) {
   );
   const { Client } = requireBackend('pg');
   const locker = new Client({
-    connectionString: required(f.data?.controlDatabaseUrl, 'DB-04 controlDatabaseUrl'),
+    connectionString: required(
+      f.data?.controlDatabaseUrl,
+      'DB-04 controlDatabaseUrl',
+    ),
   });
   const observer = new Client({
-    connectionString: required(f.data?.controlDatabaseUrl, 'DB-04 controlDatabaseUrl'),
+    connectionString: required(
+      f.data?.controlDatabaseUrl,
+      'DB-04 controlDatabaseUrl',
+    ),
   });
   const attendeeId = randomUUID();
-  await db03Query(f, `INSERT INTO event_attendees
+  await db03Query(
+    f,
+    `INSERT INTO event_attendees
     (tenant_id, event_id, id, user_id, canonical_email, created_at, updated_at)
     VALUES ($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5, now(), now())`,
-  [f.tenantId, f.eventId, attendeeId, f.accounts.attendee.userId, f.accounts.attendee.username]);
-  await db03Query(f, `INSERT INTO attendee_counters
+    [
+      f.tenantId,
+      f.eventId,
+      attendeeId,
+      f.accounts.attendee.userId,
+      f.accounts.attendee.username,
+    ],
+  );
+  await db03Query(
+    f,
+    `INSERT INTO attendee_counters
     (tenant_id, event_id, attendee_id, issued_count, max_tickets, updated_at)
     VALUES ($1::uuid, $2::uuid, $3::uuid, 0, 1, now())`,
-  [f.tenantId, f.eventId, attendeeId]);
+    [f.tenantId, f.eventId, attendeeId],
+  );
   await locker.connect();
   await observer.connect();
   let requests = [];
@@ -1000,17 +1063,29 @@ async function db04ControlledRequests(ctx, path, token, body, codes) {
   try {
     await locker.query('BEGIN');
     await locker.query('SET LOCAL ROLE ticket_runtime');
-    await locker.query("SELECT set_config('app.tenant_id', $1, true)", [f.tenantId]);
-    const locked = await locker.query(`SELECT pg_backend_pid() AS pid FROM attendee_counters
+    await locker.query("SELECT set_config('app.tenant_id', $1, true)", [
+      f.tenantId,
+    ]);
+    const locked = await locker.query(
+      `SELECT pg_backend_pid() AS pid FROM attendee_counters
       WHERE tenant_id = $1::uuid AND attendee_id = $2::uuid FOR UPDATE`,
-    [f.tenantId, attendeeId]);
+      [f.tenantId, attendeeId],
+    );
     assert.equal(locked.rows.length, 1);
     const blockerPid = locked.rows[0].pid;
-    requests = codes.map((code) => request(ctx, 'POST', path, token, { ...body, code },
-      { 'idempotency-key': randomUUID() }).then((result) => {
-      observed.push({ status: result.status, code: result.body.code });
-      return result;
-    }));
+    requests = codes.map((code) =>
+      request(
+        ctx,
+        'POST',
+        path,
+        token,
+        { ...body, code },
+        { 'idempotency-key': randomUUID() },
+      ).then((result) => {
+        observed.push({ status: result.status, code: result.body.code });
+        return result;
+      }),
+    );
     const deadline = Date.now() + 3000;
     let blocked = [];
     while (Date.now() < deadline) {
@@ -1018,8 +1093,11 @@ async function db04ControlledRequests(ctx, path, token, body, codes) {
         pg_blocking_pids(pid) AS blockers, left(query, 160) AS query
         FROM pg_stat_activity WHERE pid <> pg_backend_pid()
           AND wait_event_type = 'Lock'`);
-      const waiters = new Map(rows.filter((row) =>
-        row.query.includes('FROM attendee_counters')).map((row) => [row.pid, row]));
+      const waiters = new Map(
+        rows
+          .filter((row) => row.query.includes('FROM attendee_counters'))
+          .map((row) => [row.pid, row]),
+      );
       const reachesLocker = (pid, seen = new Set()) => {
         if (pid === blockerPid) return true;
         if (seen.has(pid)) return false;
@@ -1032,8 +1110,11 @@ async function db04ControlledRequests(ctx, path, token, body, codes) {
       if (blocked.length === codes.length) break;
       await new Promise((resolve) => setTimeout(resolve, 30));
     }
-    assert.equal(blocked.length, codes.length,
-      `all HTTP requests must wait on the owner counter before release; outcomes=${JSON.stringify(observed)}`);
+    assert.equal(
+      blocked.length,
+      codes.length,
+      `all HTTP requests must wait on the owner counter before release; outcomes=${JSON.stringify(observed)}`,
+    );
   } catch (error) {
     requests.forEach((pending) => pending.catch(() => undefined));
     throw error;
@@ -1045,27 +1126,20 @@ async function db04ControlledRequests(ctx, path, token, body, codes) {
   return Promise.all(requests);
 }
 
-async function web04AssertRejected(ctx, {
-  label,
-  tenantId,
-  eventId,
-  code,
-  errorStatus,
-  errorCode,
-  redeemBody,
-}) {
+async function web04AssertRejected(
+  ctx,
+  { label, tenantId, eventId, code, errorStatus, errorCode, redeemBody },
+) {
   const f = ctx.fixture;
   const attendee = await bearer(ctx, 'attendee');
   const path = `/tenants/${tenantId}/events/${eventId}/redemptions`;
-  const body =
-    redeemBody ??
-    {
-      code,
-      formVersion: required(f.data?.formVersion, `${label} formVersion`),
-      termsVersion: required(f.data?.termsVersion, `${label} termsVersion`),
-      answers: required(f.data?.answers, `${label} answers`),
-      termsAccepted: true,
-    };
+  const body = redeemBody ?? {
+    code,
+    formVersion: required(f.data?.formVersion, `${label} formVersion`),
+    termsVersion: required(f.data?.termsVersion, `${label} termsVersion`),
+    answers: required(f.data?.answers, `${label} answers`),
+    termsAccepted: true,
+  };
   const beforeCodeRows = await web04Query(
     f,
     tenantId,
@@ -1077,6 +1151,20 @@ async function web04AssertRejected(ctx, {
     f,
     tenantId,
     `SELECT count(*)::int AS n FROM tickets WHERE tenant_id = $1::uuid AND event_id = $2::uuid`,
+    [tenantId, eventId],
+  );
+  const beforeRequestCount = await web04Query(
+    f,
+    tenantId,
+    `SELECT count(*)::int AS n FROM redemption_requests
+     WHERE tenant_id = $1::uuid AND event_id = $2::uuid`,
+    [tenantId, eventId],
+  );
+  const beforeQuota = await web04Query(
+    f,
+    tenantId,
+    `SELECT capacity, allocated FROM quota_buckets
+     WHERE tenant_id = $1::uuid AND event_id = $2::uuid AND scope = 'EVENT'`,
     [tenantId, eventId],
   );
   const result = await request(ctx, 'POST', path, attendee, body, {
@@ -1107,6 +1195,26 @@ async function web04AssertRejected(ctx, {
     beforeCodeRows.map((r) => r.status).sort(),
     `${label}: code status must not change`,
   );
+  const afterRequestCount = await web04Query(
+    f,
+    tenantId,
+    `SELECT count(*)::int AS n FROM redemption_requests
+     WHERE tenant_id = $1::uuid AND event_id = $2::uuid`,
+    [tenantId, eventId],
+  );
+  assert.equal(
+    afterRequestCount[0].n,
+    beforeRequestCount[0].n,
+    `${label}: must not create redemption_requests`,
+  );
+  const afterQuota = await web04Query(
+    f,
+    tenantId,
+    `SELECT capacity, allocated FROM quota_buckets
+     WHERE tenant_id = $1::uuid AND event_id = $2::uuid AND scope = 'EVENT'`,
+    [tenantId, eventId],
+  );
+  assert.deepEqual(afterQuota, beforeQuota, `${label}: quota must not change`);
   const opRows = await web04Query(
     f,
     tenantId,
@@ -2618,9 +2726,17 @@ for (const caseId of CASE_IDS) {
       const assertDeniedBff = async (response, status, label, errorCode) => {
         expectStatus(response, status, errorCode);
         for (const field of [
-          'tenantId', 'eventId', 'ticketTypeId', 'sourceId', 'resolveToken',
+          'tenantId',
+          'eventId',
+          'ticketTypeId',
+          'sourceId',
+          'resolveToken',
         ]) {
-          assert.equal(response.body[field], undefined, `${label} leaked ${field}`);
+          assert.equal(
+            response.body[field],
+            undefined,
+            `${label} leaked ${field}`,
+          );
         }
         const responseJson = JSON.stringify(response.body);
         assert.equal(
@@ -2703,18 +2819,22 @@ for (const caseId of CASE_IDS) {
           headers: guestHeaders,
           body: JSON.stringify(resolveBody),
         }),
-        401, 'guest BFF resolve',
+        401,
+        'guest BFF resolve',
       );
       await assertDeniedBff(
         await bffJson(bffIssueUrl, {
           method: 'POST',
           headers: guestHeaders,
           body: JSON.stringify({
-            tenantId: f.tenantId, eventId: f.eventId, ...body,
+            tenantId: f.tenantId,
+            eventId: f.eventId,
+            ...body,
             idempotencyKey: randomUUID(),
           }),
         }),
-        401, 'guest BFF issue',
+        401,
+        'guest BFF issue',
       );
       const browser = await chromium.launch({
         headless: true,
@@ -2749,18 +2869,24 @@ for (const caseId of CASE_IDS) {
             headers: unverifiedHeaders,
             body: JSON.stringify(resolveBody),
           }),
-          403, 'unverified BFF resolve', 'EMAIL_NOT_VERIFIED',
+          403,
+          'unverified BFF resolve',
+          'EMAIL_NOT_VERIFIED',
         );
         await assertDeniedBff(
           await bffJson(bffIssueUrl, {
             method: 'POST',
             headers: unverifiedHeaders,
             body: JSON.stringify({
-              tenantId: f.tenantId, eventId: f.eventId, ...body,
+              tenantId: f.tenantId,
+              eventId: f.eventId,
+              ...body,
               idempotencyKey: randomUUID(),
             }),
           }),
-          403, 'unverified BFF issue', 'EMAIL_NOT_VERIFIED',
+          403,
+          'unverified BFF issue',
+          'EMAIL_NOT_VERIFIED',
         );
       } finally {
         await browser.close();
@@ -2823,35 +2949,73 @@ for (const caseId of CASE_IDS) {
         'idempotency-key': randomUUID(),
       });
       expectStatus(anonymous, 401);
-      assert.deepEqual(await db04Snapshot(f), before, 'guest must not hold code, quota or pending state');
+      assert.deepEqual(
+        await db04Snapshot(f),
+        before,
+        'guest must not hold code, quota or pending state',
+      );
       const unverified = await bearer(ctx, 'unverified');
       const denied = await request(ctx, 'POST', path, unverified, body, {
         'idempotency-key': randomUUID(),
       });
       expectStatus(denied, 403, 'EMAIL_NOT_VERIFIED');
-      assert.deepEqual(await db04Snapshot(f), before, 'unverified must not leave operation, hold or pending state');
+      assert.deepEqual(
+        await db04Snapshot(f),
+        before,
+        'unverified must not leave operation, hold or pending state',
+      );
       const attendee = await bearer(ctx, 'attendee');
-      const codes = [f.code, f.secondCode, required(f.data?.raceCode, 'DB-04 thirdCode')];
-      const outcomes = await db04ControlledRequests(ctx, path, attendee, body, codes);
+      const codes = [
+        f.code,
+        f.secondCode,
+        required(f.data?.raceCode, 'DB-04 thirdCode'),
+      ];
+      const outcomes = await db04ControlledRequests(
+        ctx,
+        path,
+        attendee,
+        body,
+        codes,
+      );
       assert.equal(outcomes.filter((x) => x.status === 201).length, 1);
-      assert.equal(outcomes.filter((x) => x.status === 409 && x.body.code === 'ATTENDEE_LIMIT').length, 2);
+      assert.equal(
+        outcomes.filter(
+          (x) => x.status === 409 && x.body.code === 'ATTENDEE_LIMIT',
+        ).length,
+        2,
+      );
       const after = await db04Snapshot(f);
       assert.equal(after.attendees.length, 1);
-      assert.equal(after.attendees[0].canonical_email, f.accounts.attendee.username);
+      assert.equal(
+        after.attendees[0].canonical_email,
+        f.accounts.attendee.username,
+      );
       assert.ok(after.attendees[0].canonical_email.includes('.last+label.'));
       assert.equal(after.counters.length, 1);
       assert.equal(after.counters[0].issued_count, 1);
       assert.equal(after.counters[0].max_tickets, 1);
       assert.equal(after.tickets.length, 1);
       assert.equal(after.requests.length, 1);
-      assert.equal(after.codes.filter((x) => x.status === 'CONSUMED').length, 1);
-      assert.equal(after.codes.filter((x) => x.status === 'AVAILABLE').length, 2);
+      assert.equal(
+        after.codes.filter((x) => x.status === 'CONSUMED').length,
+        1,
+      );
+      assert.equal(
+        after.codes.filter((x) => x.status === 'AVAILABLE').length,
+        2,
+      );
       assert.ok(after.codes.every((x) => x.status !== 'HELD'));
       assert.ok(after.quotas.every((x) => x.allocated === 1));
       assert.equal(after.operations.length, 3);
       assert.ok(after.operations.every((x) => x.status === 'COMPLETED'));
-      assert.equal(after.audits.filter((x) => x.action === 'ticket.issued').length, 1);
-      assert.equal(after.outbox.filter((x) => x.type === 'TicketIssued').length, 1);
+      assert.equal(
+        after.audits.filter((x) => x.action === 'ticket.issued').length,
+        1,
+      );
+      assert.equal(
+        after.outbox.filter((x) => x.type === 'TicketIssued').length,
+        1,
+      );
       return;
     }
     if (caseId === 'DB-07') {
@@ -2863,15 +3027,17 @@ for (const caseId of CASE_IDS) {
       const hold = async (code, allocated = 0) => {
         const key = randomUUID();
         const pendingBody = { ...body, code };
-        const first = await request(ctx, 'POST', path, attendee, pendingBody,
-          { 'idempotency-key': key });
+        const first = await request(ctx, 'POST', path, attendee, pendingBody, {
+          'idempotency-key': key,
+        });
         expectStatus(first, 201);
         assert.equal(first.body.status, 'PENDING_REVIEW');
         assert.equal(first.body.code, 'APPROVAL_PENDING');
         assert.equal(first.body.replayed, false);
         assert.equal(first.body.ticketId, undefined);
-        const replay = await request(ctx, 'POST', path, attendee, pendingBody,
-          { 'idempotency-key': key });
+        const replay = await request(ctx, 'POST', path, attendee, pendingBody, {
+          'idempotency-key': key,
+        });
         expectStatus(replay, 201);
         assert.equal(replay.body.replayed, true);
         assert.equal(replay.body.requestId, first.body.requestId);
@@ -2880,21 +3046,39 @@ for (const caseId of CASE_IDS) {
         assert.equal(s.code.status, 'HELD');
         assert.equal(s.code.active_request_id, first.body.requestId);
         assert.equal(s.tickets.length, 0);
-        assert.ok(s.quota.every((q) => q.allocated === allocated), 'pending must not allocate quota');
-        assert.equal(s.audit.filter((a) => a.action === 'redemption.pending').length, 1);
+        assert.ok(
+          s.quota.every((q) => q.allocated === allocated),
+          'pending must not allocate quota',
+        );
+        assert.equal(
+          s.audit.filter((a) => a.action === 'redemption.pending').length,
+          1,
+        );
         assert.equal(s.outbox.length, 0);
-        assert.ok(Math.abs(new Date(s.request.expires_at).getTime() -
-          new Date(s.request.created_at).getTime() -
-          required(f.data?.pendingTtlHours, 'DB-07 pendingTtlHours') * 3_600_000) < 5000,
-        'pending TTL must come from issuance source config');
-        assert.equal(first.body.expiresAt, new Date(s.request.expires_at).toISOString());
+        assert.ok(
+          Math.abs(
+            new Date(s.request.expires_at).getTime() -
+              new Date(s.request.created_at).getTime() -
+              required(f.data?.pendingTtlHours, 'DB-07 pendingTtlHours') *
+                3_600_000,
+          ) < 5000,
+          'pending TTL must come from issuance source config',
+        );
+        assert.equal(
+          first.body.expiresAt,
+          new Date(s.request.expires_at).toISOString(),
+        );
         return first.body.requestId;
       };
-      const decision = (requestId, action, token, key, reason) => request(
-        ctx, 'POST', `${path}/${requestId}/${action}`, token,
-        action === 'deny' ? { reason } : undefined,
-        { 'idempotency-key': key },
-      );
+      const decision = (requestId, action, token, key, reason) =>
+        request(
+          ctx,
+          'POST',
+          `${path}/${requestId}/${action}`,
+          token,
+          action === 'deny' ? { reason } : undefined,
+          { 'idempotency-key': key },
+        );
 
       const approveRequestId = await hold(f.code);
       const firstKey = randomUUID();
@@ -2907,7 +3091,8 @@ for (const caseId of CASE_IDS) {
       const approved = approvals.find((result) => result.status === 201);
       assert.equal(approved.body.status, 'ISSUED');
       for (const result of approvals) {
-        if (result.status === 201) assert.equal(result.body.ticketId, approved.body.ticketId);
+        if (result.status === 201)
+          assert.equal(result.body.ticketId, approved.body.ticketId);
         else expectStatus(result, 409, 'DECISION_CONFLICT');
       }
       const approvedState = await db07State(f, approveRequestId);
@@ -2916,11 +3101,24 @@ for (const caseId of CASE_IDS) {
       assert.equal(approvedState.tickets.length, 1);
       assert.equal(approvedState.tickets[0].id, approved.body.ticketId);
       assert.ok(approvedState.quota.every((q) => q.allocated === 1));
-      assert.equal(approvedState.audit.filter((a) => a.action === 'redemption.approved').length, 1);
-      assert.equal(approvedState.outbox.filter((o) => o.type === 'TicketIssued').length, 1);
+      assert.equal(
+        approvedState.audit.filter((a) => a.action === 'redemption.approved')
+          .length,
+        1,
+      );
+      assert.equal(
+        approvedState.outbox.filter((o) => o.type === 'TicketIssued').length,
+        1,
+      );
       const replayKey = approvals[0].status === 201 ? firstKey : secondKey;
-      const replayActor = approvals[0].status === 201 ? manager : secondApprover;
-      const approvalReplay = await decision(approveRequestId, 'approve', replayActor, replayKey);
+      const replayActor =
+        approvals[0].status === 201 ? manager : secondApprover;
+      const approvalReplay = await decision(
+        approveRequestId,
+        'approve',
+        replayActor,
+        replayKey,
+      );
       expectStatus(approvalReplay, 201);
       assert.equal(approvalReplay.body.replayed, true);
       assert.equal(approvalReplay.body.ticketId, approved.body.ticketId);
@@ -2928,63 +3126,128 @@ for (const caseId of CASE_IDS) {
 
       const denyRequestId = await hold(f.secondCode, 1);
       const denyKey = randomUUID();
-      const denied = await decision(denyRequestId, 'deny', manager, denyKey, 'DB-07 synthetic denial');
+      const denied = await decision(
+        denyRequestId,
+        'deny',
+        manager,
+        denyKey,
+        'DB-07 synthetic denial',
+      );
       expectStatus(denied, 201);
       assert.equal(denied.body.status, 'REJECTED');
-      const denyReplay = await decision(denyRequestId, 'deny', manager, denyKey, 'DB-07 synthetic denial');
+      const denyReplay = await decision(
+        denyRequestId,
+        'deny',
+        manager,
+        denyKey,
+        'DB-07 synthetic denial',
+      );
       expectStatus(denyReplay, 201);
       assert.equal(denyReplay.body.replayed, true);
       assert.equal(denyReplay.body.operationId, denied.body.operationId);
-      expectStatus(await decision(denyRequestId, 'approve', secondApprover, randomUUID()),
-        409, 'DECISION_CONFLICT');
+      expectStatus(
+        await decision(denyRequestId, 'approve', secondApprover, randomUUID()),
+        409,
+        'DECISION_CONFLICT',
+      );
       const deniedState = await db07State(f, denyRequestId);
       assert.equal(deniedState.request.status, 'REJECTED');
-      assert.equal(deniedState.request.decision_reason, 'DB-07 synthetic denial');
+      assert.equal(
+        deniedState.request.decision_reason,
+        'DB-07 synthetic denial',
+      );
       assert.equal(deniedState.code.status, 'AVAILABLE');
       assert.equal(deniedState.code.active_request_id, null);
       assert.equal(deniedState.tickets.length, 0);
       assert.ok(deniedState.quota.every((q) => q.allocated === 1));
-      assert.equal(deniedState.audit.filter((a) => a.action === 'redemption.denied').length, 1);
+      assert.equal(
+        deniedState.audit.filter((a) => a.action === 'redemption.denied')
+          .length,
+        1,
+      );
       assert.equal(deniedState.outbox.length, 0);
 
-      const expiryRequestId = await hold(required(f.data?.thirdCode, 'DB-07 thirdCode'), 1);
-      await db03Query(f, `UPDATE redemption_requests
+      const expiryRequestId = await hold(
+        required(f.data?.thirdCode, 'DB-07 thirdCode'),
+        1,
+      );
+      await db03Query(
+        f,
+        `UPDATE redemption_requests
         SET expires_at=clock_timestamp() - interval '1 second'
-        WHERE tenant_id=$1::uuid AND id=$2::uuid`, [f.tenantId, expiryRequestId]);
+        WHERE tenant_id=$1::uuid AND id=$2::uuid`,
+        [f.tenantId, expiryRequestId],
+      );
       const expiryKey = randomUUID();
-      expectStatus(await decision(expiryRequestId, 'approve', manager, expiryKey),
-        409, 'PENDING_EXPIRED');
-      expectStatus(await decision(expiryRequestId, 'approve', manager, expiryKey),
-        409, 'PENDING_EXPIRED');
+      expectStatus(
+        await decision(expiryRequestId, 'approve', manager, expiryKey),
+        409,
+        'PENDING_EXPIRED',
+      );
+      expectStatus(
+        await decision(expiryRequestId, 'approve', manager, expiryKey),
+        409,
+        'PENDING_EXPIRED',
+      );
       const expiredState = await db07State(f, expiryRequestId);
       assert.equal(expiredState.request.status, 'EXPIRED');
       assert.equal(expiredState.code.status, 'AVAILABLE');
       assert.equal(expiredState.code.active_request_id, null);
       assert.equal(expiredState.tickets.length, 0);
       assert.ok(expiredState.quota.every((q) => q.allocated === 1));
-      assert.equal(expiredState.audit.filter((a) => a.action === 'redemption.expired').length, 1);
+      assert.equal(
+        expiredState.audit.filter((a) => a.action === 'redemption.expired')
+          .length,
+        1,
+      );
       assert.equal(expiredState.outbox.length, 0);
 
-      const quotaRequestId = await hold(required(f.data?.fourthCode, 'DB-07 fourthCode'), 1);
-      await db03Query(f, `UPDATE quota_buckets SET capacity=allocated
-        WHERE tenant_id=$1::uuid AND event_id=$2::uuid`, [f.tenantId, f.eventId]);
+      const quotaRequestId = await hold(
+        required(f.data?.fourthCode, 'DB-07 fourthCode'),
+        1,
+      );
+      await db03Query(
+        f,
+        `UPDATE quota_buckets SET capacity=allocated
+        WHERE tenant_id=$1::uuid AND event_id=$2::uuid`,
+        [f.tenantId, f.eventId],
+      );
       const quotaKey = randomUUID();
-      expectStatus(await decision(quotaRequestId, 'approve', manager, quotaKey),
-        409, 'QUOTA_EXHAUSTED');
-      expectStatus(await decision(quotaRequestId, 'approve', manager, quotaKey),
-        409, 'QUOTA_EXHAUSTED');
+      expectStatus(
+        await decision(quotaRequestId, 'approve', manager, quotaKey),
+        409,
+        'QUOTA_EXHAUSTED',
+      );
+      expectStatus(
+        await decision(quotaRequestId, 'approve', manager, quotaKey),
+        409,
+        'QUOTA_EXHAUSTED',
+      );
       const quotaState = await db07State(f, quotaRequestId);
       assert.equal(quotaState.request.status, 'PENDING_REVIEW');
       assert.equal(quotaState.code.status, 'HELD');
       assert.equal(quotaState.tickets.length, 0);
       assert.ok(quotaState.quota.every((q) => q.allocated === 1));
-      assert.equal(quotaState.audit.filter((a) => a.action === 'redemption.approved').length, 0);
+      assert.equal(
+        quotaState.audit.filter((a) => a.action === 'redemption.approved')
+          .length,
+        0,
+      );
       assert.equal(quotaState.outbox.length, 0);
-      const operations = await db03Query(f, `SELECT status FROM operations
-        WHERE tenant_id=$1::uuid AND event_id=$2::uuid`, [f.tenantId, f.eventId]);
-      assert.ok(operations.length >= 8, 'DB-07 must persist redeem and decision outcomes');
-      assert.ok(operations.every((op) => op.status === 'COMPLETED'),
-        'DB-07 must leave no IN_PROGRESS operation after races/replay');
+      const operations = await db03Query(
+        f,
+        `SELECT status FROM operations
+        WHERE tenant_id=$1::uuid AND event_id=$2::uuid`,
+        [f.tenantId, f.eventId],
+      );
+      assert.ok(
+        operations.length >= 8,
+        'DB-07 must persist redeem and decision outcomes',
+      );
+      assert.ok(
+        operations.every((op) => op.status === 'COMPLETED'),
+        'DB-07 must leave no IN_PROGRESS operation after races/replay',
+      );
       return;
     }
     if (caseId === 'AUTH-06') {
@@ -3343,10 +3606,20 @@ for (const caseId of CASE_IDS) {
       const attendee = await bearer(ctx, 'attendee');
       const base = `/tenants/${f.tenantId}/events/${f.eventId}/imports`;
       const codes = `code\nDB10-${ctx.fixture.tenantSlug}\n${f.code}\n`;
-      const used = await request(ctx, 'POST', redemptionPath(f), attendee,
-        redemptionBody(f, caseId), { 'idempotency-key': randomUUID() });
+      const used = await request(
+        ctx,
+        'POST',
+        redemptionPath(f),
+        attendee,
+        redemptionBody(f, caseId),
+        { 'idempotency-key': randomUUID() },
+      );
       expectStatus(used, 201);
-      const snapshot = async () => (await db03Query(f, `
+      const snapshot = async () =>
+        (
+          await db03Query(
+            f,
+            `
         SELECT
           (SELECT count(*)::int FROM redemption_codes WHERE tenant_id=$1::uuid AND event_id=$2::uuid) AS codes,
           (SELECT count(*)::int FROM tickets WHERE tenant_id=$1::uuid AND event_id=$2::uuid) AS tickets,
@@ -3356,26 +3629,41 @@ for (const caseId of CASE_IDS) {
           (SELECT count(*)::int FROM operations WHERE tenant_id=$1::uuid AND event_id=$2::uuid AND command='import.commit') AS commit_ops,
           (SELECT allocated FROM quota_buckets WHERE tenant_id=$1::uuid AND event_id=$2::uuid AND scope='EVENT') AS allocated,
           (SELECT count(*)::int FROM users) AS users
-      `, [f.tenantId, f.eventId]))[0];
-      const usedBefore = (await db03Query(f, `
+      `,
+            [f.tenantId, f.eventId],
+          )
+        )[0];
+      const usedBefore = (
+        await db03Query(
+          f,
+          `
         SELECT id, status, source_id, ticket_type_id FROM redemption_codes
         WHERE tenant_id=$1::uuid AND event_id=$2::uuid AND id=$3::uuid
-      `, [f.tenantId, f.eventId, required(f.data?.usedCodeId, 'usedCodeId')]))[0];
+      `,
+          [f.tenantId, f.eventId, required(f.data?.usedCodeId, 'usedCodeId')],
+        )
+      )[0];
       assert.equal(usedBefore.status, 'CONSUMED');
       const upload = async (kind, csv, token) => {
         const form = new FormData();
         form.set('kind', kind);
         form.set('file', new Blob([csv], { type: 'text/csv' }), `${kind}.csv`);
         const response = await fetch(new URL(`/v1${base}/files`, ctx.api), {
-          method: 'POST', headers: { authorization: `Bearer ${token}` }, body: form,
+          method: 'POST',
+          headers: { authorization: `Bearer ${token}` },
+          body: form,
         });
         const body = await response.json();
         expectStatus({ status: response.status, body }, 201);
         return body;
       };
       const file = await upload('CODES', codes, owner);
-      const createBody = { kind: 'CODES', sourceId: f.sourceId,
-        ticketTypeId: f.ticketTypeId, fileId: file.fileId };
+      const createBody = {
+        kind: 'CODES',
+        sourceId: f.sourceId,
+        ticketTypeId: f.ticketTypeId,
+        fileId: file.fileId,
+      };
       const create = (token, body, key, path = base) =>
         request(ctx, 'POST', path, token, body, { 'idempotency-key': key });
       const keys = [randomUUID(), randomUUID()];
@@ -3390,67 +3678,138 @@ for (const caseId of CASE_IDS) {
       expectStatus(createReplay, 201);
       assert.equal(createReplay.body.importId, jobs[0].importId);
       assert.equal(createReplay.body.replayed, true);
-      expectStatus(await create(owner, { ...createBody, mappingRevision: 2 }, keys[0]),
-        409, 'IDEMPOTENCY_CONFLICT');
-      const provenance = await db03Query(f, `SELECT f.created_by AS uploader,
+      expectStatus(
+        await create(owner, { ...createBody, mappingRevision: 2 }, keys[0]),
+        409,
+        'IDEMPOTENCY_CONFLICT',
+      );
+      const provenance = await db03Query(
+        f,
+        `SELECT f.created_by AS uploader,
         j.created_by AS job_actor, j.event_id, j.file_id FROM import_jobs j
         JOIN import_files f ON f.tenant_id=j.tenant_id AND f.id=j.file_id
         WHERE j.tenant_id=$1::uuid AND j.event_id=$2::uuid AND j.id=ANY($3::uuid[])
-        ORDER BY j.created_by`, [f.tenantId, f.eventId, jobs.map((j) => j.importId)]);
+        ORDER BY j.created_by`,
+        [f.tenantId, f.eventId, jobs.map((j) => j.importId)],
+      );
       assert.equal(provenance.length, 2);
-      assert.deepEqual(provenance.map((row) => row.job_actor).sort(),
-        [f.accounts.owner.userId, f.accounts.manager.userId].sort());
+      assert.deepEqual(
+        provenance.map((row) => row.job_actor).sort(),
+        [f.accounts.owner.userId, f.accounts.manager.userId].sort(),
+      );
       provenance.forEach((row) => {
         assert.equal(row.uploader, f.accounts.owner.userId);
         assert.equal(row.event_id, f.eventId);
         assert.equal(row.file_id, file.fileId);
       });
-      const managerReadsOwnerJob = await request(ctx, 'GET', `${base}/${jobs[0].importId}`, manager);
+      const managerReadsOwnerJob = await request(
+        ctx,
+        'GET',
+        `${base}/${jobs[0].importId}`,
+        manager,
+      );
       expectStatus(managerReadsOwnerJob, 200);
       assert.equal(managerReadsOwnerJob.body.importId, jobs[0].importId);
       const beforePermissionDeny = await snapshot();
       deny(await request(ctx, 'GET', `${base}/${jobs[0].importId}`, attendee));
-      deny(await request(ctx, 'POST', `${base}/${jobs[0].importId}/preview`, attendee, {}));
-      assert.deepEqual(await snapshot(), beforePermissionDeny,
-        'actor without inventory.import must not read or preview another actor job');
+      deny(
+        await request(
+          ctx,
+          'POST',
+          `${base}/${jobs[0].importId}/preview`,
+          attendee,
+          {},
+        ),
+      );
+      assert.deepEqual(
+        await snapshot(),
+        beforePermissionDeny,
+        'actor without inventory.import must not read or preview another actor job',
+      );
       const beforeWrongScope = await snapshot();
       const otherEvent = `/tenants/${f.tenantId}/events/${f.data.otherEventId}/imports`;
       const foreign = `/tenants/${f.data.foreignTenantId}/events/${f.data.foreignEventId}/imports`;
-      deny(await create(owner, { ...createBody,
-        sourceId: f.data.otherSourceId, ticketTypeId: f.data.otherTicketTypeId },
-        randomUUID(), otherEvent));
-      deny(await create(owner, { ...createBody,
-        sourceId: f.data.foreignSourceId, ticketTypeId: f.data.foreignTicketTypeId },
-        randomUUID(), foreign));
-      deny(await request(ctx, 'GET', `${otherEvent}/${jobs[0].importId}`, owner));
+      deny(
+        await create(
+          owner,
+          {
+            ...createBody,
+            sourceId: f.data.otherSourceId,
+            ticketTypeId: f.data.otherTicketTypeId,
+          },
+          randomUUID(),
+          otherEvent,
+        ),
+      );
+      deny(
+        await create(
+          owner,
+          {
+            ...createBody,
+            sourceId: f.data.foreignSourceId,
+            ticketTypeId: f.data.foreignTicketTypeId,
+          },
+          randomUUID(),
+          foreign,
+        ),
+      );
+      deny(
+        await request(ctx, 'GET', `${otherEvent}/${jobs[0].importId}`, owner),
+      );
       deny(await request(ctx, 'GET', `${foreign}/${jobs[0].importId}`, owner));
-      assert.deepEqual(await snapshot(), beforeWrongScope,
-        'wrong tenant/event file and job access must not mutate owner event');
-      const foreignJobs = await web04Query(f, f.data.foreignTenantId,
+      assert.deepEqual(
+        await snapshot(),
+        beforeWrongScope,
+        'wrong tenant/event file and job access must not mutate owner event',
+      );
+      const foreignJobs = await web04Query(
+        f,
+        f.data.foreignTenantId,
         `SELECT count(*)::int AS n FROM import_jobs WHERE tenant_id=$1::uuid AND event_id=$2::uuid`,
-        [f.data.foreignTenantId, f.data.foreignEventId]);
+        [f.data.foreignTenantId, f.data.foreignEventId],
+      );
       assert.equal(foreignJobs[0].n, 0);
       const beforePreview = await snapshot();
       const previews = [];
       for (let i = 0; i < 2; i++) {
-        const preview = await request(ctx, 'POST', `${base}/${jobs[i].importId}/preview`,
-          i === 0 ? manager : owner, {});
+        const preview = await request(
+          ctx,
+          'POST',
+          `${base}/${jobs[i].importId}/preview`,
+          i === 0 ? manager : owner,
+          {},
+        );
         expectStatus(preview, 201);
         assert.equal(preview.body.validRowCount, 2);
         assert.equal(preview.body.estimatedQuota, 2);
         previews.push(preview.body);
       }
-      assert.deepEqual(await snapshot(), beforePreview, 'preview must not reserve quota or mutate business rows');
+      assert.deepEqual(
+        await snapshot(),
+        beforePreview,
+        'preview must not reserve quota or mutate business rows',
+      );
       const commit = (i, token, key, body = previews[i]) =>
-        request(ctx, 'POST', `${base}/${jobs[i].importId}/commit`, token, {
-          previewRevision: body.previewRevision,
-          mappingRevision: body.mappingRevision,
-          fileHash: body.fileHash,
-        }, { 'idempotency-key': key });
-      const requireBackend = createRequire(new URL('../../../packages/backend/package.json', import.meta.url));
+        request(
+          ctx,
+          'POST',
+          `${base}/${jobs[i].importId}/commit`,
+          token,
+          {
+            previewRevision: body.previewRevision,
+            mappingRevision: body.mappingRevision,
+            fileHash: body.fileHash,
+          },
+          { 'idempotency-key': key },
+        );
+      const requireBackend = createRequire(
+        new URL('../../../packages/backend/package.json', import.meta.url),
+      );
       const { Client } = requireBackend('pg');
       const lock = new Client({ connectionString: f.data.controlDatabaseUrl });
-      const observer = new Client({ connectionString: f.data.controlDatabaseUrl });
+      const observer = new Client({
+        connectionString: f.data.controlDatabaseUrl,
+      });
       await lock.connect();
       await observer.connect();
       let pending;
@@ -3458,20 +3817,31 @@ for (const caseId of CASE_IDS) {
       try {
         await lock.query('BEGIN');
         await lock.query('SET LOCAL ROLE ticket_runtime');
-        await lock.query("SELECT set_config('app.tenant_id', $1, true)", [f.tenantId]);
-        await lock.query('SELECT id FROM events WHERE tenant_id=$1::uuid AND id=$2::uuid FOR UPDATE',
-          [f.tenantId, f.eventId]);
-        pending = [commit(0, manager, commitKeys[0]), commit(1, owner, commitKeys[1])];
+        await lock.query("SELECT set_config('app.tenant_id', $1, true)", [
+          f.tenantId,
+        ]);
+        await lock.query(
+          'SELECT id FROM events WHERE tenant_id=$1::uuid AND id=$2::uuid FOR UPDATE',
+          [f.tenantId, f.eventId],
+        );
+        pending = [
+          commit(0, manager, commitKeys[0]),
+          commit(1, owner, commitKeys[1]),
+        ];
         let waiting = 0;
         for (let i = 0; i < 100; i++) {
-          const result = await observer.query(`SELECT count(*)::int AS n FROM pg_stat_activity
+          const result =
+            await observer.query(`SELECT count(*)::int AS n FROM pg_stat_activity
             WHERE wait_event_type='Lock' AND query LIKE '%SELECT id, status FROM events%'
               AND pid <> pg_backend_pid()`);
           waiting = result.rows[0].n;
           if (waiting >= 2) break;
           await new Promise((resolve) => setTimeout(resolve, 30));
         }
-        assert.ok(waiting >= 2, 'both HTTP commits must overlap at PostgreSQL event lock');
+        assert.ok(
+          waiting >= 2,
+          'both HTTP commits must overlap at PostgreSQL event lock',
+        );
       } finally {
         await lock.query('ROLLBACK');
         await lock.end();
@@ -3479,87 +3849,167 @@ for (const caseId of CASE_IDS) {
       }
       const outcomes = await Promise.all(pending);
       outcomes.forEach((result) => expectStatus(result, 201));
-      assert.deepEqual(outcomes.map((r) => r.body.committedRowCount).sort(), [0, 1]);
-      assert.deepEqual(outcomes.map((r) => r.body.skippedRowCount).sort(), [1, 2]);
+      assert.deepEqual(
+        outcomes.map((r) => r.body.committedRowCount).sort(),
+        [0, 1],
+      );
+      assert.deepEqual(
+        outcomes.map((r) => r.body.skippedRowCount).sort(),
+        [1, 2],
+      );
       for (let i = 0; i < 2; i++) {
         const token = i === 0 ? manager : owner;
         const replay = await commit(i, token, commitKeys[i]);
         expectStatus(replay, 201);
         assert.equal(replay.body.replayed, true);
-        assert.equal(replay.body.committedRowCount, outcomes[i].body.committedRowCount);
-        expectStatus(await commit(i, token, commitKeys[i], {
-          ...previews[i], previewRevision: previews[i].previewRevision + 1,
-        }), 409, 'IDEMPOTENCY_CONFLICT');
+        assert.equal(
+          replay.body.committedRowCount,
+          outcomes[i].body.committedRowCount,
+        );
+        expectStatus(
+          await commit(i, token, commitKeys[i], {
+            ...previews[i],
+            previewRevision: previews[i].previewRevision + 1,
+          }),
+          409,
+          'IDEMPOTENCY_CONFLICT',
+        );
       }
       const afterCommit = await snapshot();
       assert.equal(afterCommit.codes, beforePreview.codes + 1);
       assert.equal(afterCommit.commit_ops, beforePreview.commit_ops + 2);
-      for (const field of ['tickets', 'invitations', 'outbox', 'audit', 'allocated', 'users'])
+      for (const field of [
+        'tickets',
+        'invitations',
+        'outbox',
+        'audit',
+        'allocated',
+        'users',
+      ])
         assert.equal(afterCommit[field], beforePreview[field], field);
-      assert.deepEqual((await db03Query(f, `SELECT id, status, source_id, ticket_type_id
+      assert.deepEqual(
+        (
+          await db03Query(
+            f,
+            `SELECT id, status, source_id, ticket_type_id
         FROM redemption_codes WHERE tenant_id=$1::uuid AND event_id=$2::uuid AND id=$3::uuid`,
-        [f.tenantId, f.eventId, f.data.usedCodeId]))[0], usedBefore);
-      const jobRows = await db03Query(f, `SELECT status, commit_response IS NOT NULL AS has_response
+            [f.tenantId, f.eventId, f.data.usedCodeId],
+          )
+        )[0],
+        usedBefore,
+      );
+      const jobRows = await db03Query(
+        f,
+        `SELECT status, commit_response IS NOT NULL AS has_response
         FROM import_jobs WHERE tenant_id=$1::uuid AND event_id=$2::uuid
-          AND id=ANY($3::uuid[])`, [f.tenantId, f.eventId, jobs.map((j) => j.importId)]);
+          AND id=ANY($3::uuid[])`,
+        [f.tenantId, f.eventId, jobs.map((j) => j.importId)],
+      );
       assert.equal(jobRows.length, 2);
-      jobRows.forEach((row) => assert.deepEqual(row, { status: 'COMPLETED', has_response: true }));
-      const consumed = await db03Query(f, `SELECT consumed_at IS NOT NULL AS consumed
+      jobRows.forEach((row) =>
+        assert.deepEqual(row, { status: 'COMPLETED', has_response: true }),
+      );
+      const consumed = await db03Query(
+        f,
+        `SELECT consumed_at IS NOT NULL AS consumed
         FROM import_files WHERE tenant_id=$1::uuid AND id=$2::uuid`,
-        [f.tenantId, file.fileId]);
+        [f.tenantId, file.fileId],
+      );
       assert.deepEqual(consumed, [{ consumed: true }]);
-      const ops = await db03Query(f, `SELECT actor_user_id, status,
+      const ops = await db03Query(
+        f,
+        `SELECT actor_user_id, status,
         response_json->>'importId' AS import_id FROM operations
         WHERE tenant_id=$1::uuid AND event_id=$2::uuid AND command='import.commit'
-          AND client_key=ANY($3::text[])`, [f.tenantId, f.eventId, commitKeys]);
+          AND client_key=ANY($3::text[])`,
+        [f.tenantId, f.eventId, commitKeys],
+      );
       assert.equal(ops.length, 2);
-      assert.deepEqual(ops.map((row) => row.actor_user_id).sort(),
-        [f.accounts.owner.userId, f.accounts.manager.userId].sort());
+      assert.deepEqual(
+        ops.map((row) => row.actor_user_id).sort(),
+        [f.accounts.owner.userId, f.accounts.manager.userId].sort(),
+      );
       ops.forEach((row) => {
         assert.equal(row.status, 'COMPLETED');
         assert.ok(jobs.some((job) => job.importId === row.import_id));
       });
-      assert.deepEqual(ops.find((row) => row.import_id === jobs[0].importId)?.actor_user_id,
-        f.accounts.manager.userId, 'manager commits the job created by owner');
+      assert.deepEqual(
+        ops.find((row) => row.import_id === jobs[0].importId)?.actor_user_id,
+        f.accounts.manager.userId,
+        'manager commits the job created by owner',
+      );
 
       // F01: both HTTP requests for one importId/key/body reach the DB lock
       // before either can finish. The second is a replay of the in-flight first.
-      const retryFile = await upload('CODES', `code\nDB10-RETRY-${ctx.fixture.tenantSlug}\n${f.code}\n`, owner);
-      const retryCreated = await create(owner, { ...createBody, fileId: retryFile.fileId }, randomUUID());
+      const retryFile = await upload(
+        'CODES',
+        `code\nDB10-RETRY-${ctx.fixture.tenantSlug}\n${f.code}\n`,
+        owner,
+      );
+      const retryCreated = await create(
+        owner,
+        { ...createBody, fileId: retryFile.fileId },
+        randomUUID(),
+      );
       expectStatus(retryCreated, 201);
       const retryId = retryCreated.body.importId;
-      const retryPreviewResult = await request(ctx, 'POST', `${base}/${retryId}/preview`, manager, {});
+      const retryPreviewResult = await request(
+        ctx,
+        'POST',
+        `${base}/${retryId}/preview`,
+        manager,
+        {},
+      );
       expectStatus(retryPreviewResult, 201);
       const retryBody = retryPreviewResult.body;
       const retryKey = randomUUID();
-      const retryCommit = () => request(ctx, 'POST', `${base}/${retryId}/commit`, manager, {
-        previewRevision: retryBody.previewRevision,
-        mappingRevision: retryBody.mappingRevision,
-        fileHash: retryBody.fileHash,
-      }, { 'idempotency-key': retryKey });
+      const retryCommit = () =>
+        request(
+          ctx,
+          'POST',
+          `${base}/${retryId}/commit`,
+          manager,
+          {
+            previewRevision: retryBody.previewRevision,
+            mappingRevision: retryBody.mappingRevision,
+            fileHash: retryBody.fileHash,
+          },
+          { 'idempotency-key': retryKey },
+        );
       const beforeRetry = await snapshot();
-      const retryLock = new Client({ connectionString: f.data.controlDatabaseUrl });
-      const retryObserver = new Client({ connectionString: f.data.controlDatabaseUrl });
+      const retryLock = new Client({
+        connectionString: f.data.controlDatabaseUrl,
+      });
+      const retryObserver = new Client({
+        connectionString: f.data.controlDatabaseUrl,
+      });
       await retryLock.connect();
       await retryObserver.connect();
       let firstRetry;
       let secondRetry;
       const waitForRetryWaiters = async (minimum) => {
         for (let attempt = 0; attempt < 100; attempt++) {
-          const observed = await retryObserver.query(`SELECT count(*)::int AS n FROM pg_stat_activity
+          const observed =
+            await retryObserver.query(`SELECT count(*)::int AS n FROM pg_stat_activity
             WHERE wait_event_type='Lock' AND query LIKE '%SELECT id, status FROM events%'
               AND pid <> pg_backend_pid()`);
           if (observed.rows[0].n >= minimum) return;
           await new Promise((resolve) => setTimeout(resolve, 30));
         }
-        assert.fail(`${minimum} same-key HTTP commits must reach the event lock`);
+        assert.fail(
+          `${minimum} same-key HTTP commits must reach the event lock`,
+        );
       };
       try {
         await retryLock.query('BEGIN');
         await retryLock.query('SET LOCAL ROLE ticket_runtime');
-        await retryLock.query("SELECT set_config('app.tenant_id', $1, true)", [f.tenantId]);
-        await retryLock.query('SELECT id FROM events WHERE tenant_id=$1::uuid AND id=$2::uuid FOR UPDATE',
-          [f.tenantId, f.eventId]);
+        await retryLock.query("SELECT set_config('app.tenant_id', $1, true)", [
+          f.tenantId,
+        ]);
+        await retryLock.query(
+          'SELECT id FROM events WHERE tenant_id=$1::uuid AND id=$2::uuid FOR UPDATE',
+          [f.tenantId, f.eventId],
+        );
         firstRetry = retryCommit();
         await waitForRetryWaiters(1);
         secondRetry = retryCommit();
@@ -3571,7 +4021,10 @@ for (const caseId of CASE_IDS) {
       }
       const retryResults = await Promise.all([firstRetry, secondRetry]);
       retryResults.forEach((result) => expectStatus(result, 201));
-      assert.deepEqual(retryResults.map((result) => result.body.replayed).sort(), [false, true]);
+      assert.deepEqual(
+        retryResults.map((result) => result.body.replayed).sort(),
+        [false, true],
+      );
       retryResults.forEach((result) => {
         assert.equal(result.body.importId, retryId);
         assert.equal(result.body.committedRowCount, 1);
@@ -3580,37 +4033,99 @@ for (const caseId of CASE_IDS) {
       const afterRetry = await snapshot();
       assert.equal(afterRetry.codes, beforeRetry.codes + 1);
       assert.equal(afterRetry.commit_ops, beforeRetry.commit_ops + 1);
-      for (const field of ['tickets', 'invitations', 'outbox', 'audit', 'allocated', 'users'])
+      for (const field of [
+        'tickets',
+        'invitations',
+        'outbox',
+        'audit',
+        'allocated',
+        'users',
+      ])
         assert.equal(afterRetry[field], beforeRetry[field], field);
-      const sameKeyOps = await db03Query(f, `SELECT actor_user_id, status, response_json->>'importId' AS import_id
+      const sameKeyOps = await db03Query(
+        f,
+        `SELECT actor_user_id, status, response_json->>'importId' AS import_id
         FROM operations WHERE tenant_id=$1::uuid AND event_id=$2::uuid
-          AND command='import.commit' AND client_key=$3`, [f.tenantId, f.eventId, retryKey]);
-      assert.deepEqual(sameKeyOps, [{ actor_user_id: f.accounts.manager.userId,
-        status: 'COMPLETED', import_id: retryId }]);
-      assert.deepEqual((await db03Query(f, `SELECT id, status, source_id, ticket_type_id
+          AND command='import.commit' AND client_key=$3`,
+        [f.tenantId, f.eventId, retryKey],
+      );
+      assert.deepEqual(sameKeyOps, [
+        {
+          actor_user_id: f.accounts.manager.userId,
+          status: 'COMPLETED',
+          import_id: retryId,
+        },
+      ]);
+      assert.deepEqual(
+        (
+          await db03Query(
+            f,
+            `SELECT id, status, source_id, ticket_type_id
         FROM redemption_codes WHERE tenant_id=$1::uuid AND event_id=$2::uuid AND id=$3::uuid`,
-        [f.tenantId, f.eventId, f.data.usedCodeId]))[0], usedBefore);
+            [f.tenantId, f.eventId, f.data.usedCodeId],
+          )
+        )[0],
+        usedBefore,
+      );
       const beforeCommitDeny = await snapshot();
-      deny(await request(ctx, 'POST', `${base}/${retryId}/commit`, attendee, {
-        previewRevision: retryBody.previewRevision,
-        mappingRevision: retryBody.mappingRevision,
-        fileHash: retryBody.fileHash,
-      }, { 'idempotency-key': randomUUID() }));
-      assert.deepEqual(await snapshot(), beforeCommitDeny,
-        'actor without inventory.import must not commit another actor job');
+      deny(
+        await request(
+          ctx,
+          'POST',
+          `${base}/${retryId}/commit`,
+          attendee,
+          {
+            previewRevision: retryBody.previewRevision,
+            mappingRevision: retryBody.mappingRevision,
+            fileHash: retryBody.fileHash,
+          },
+          { 'idempotency-key': randomUUID() },
+        ),
+      );
+      assert.deepEqual(
+        await snapshot(),
+        beforeCommitDeny,
+        'actor without inventory.import must not commit another actor job',
+      );
 
-      const guests = await upload('GUESTS', `email\nnew-${f.tenantSlug}@example.test\n`, owner);
-      const guestJob = await create(owner, { kind: 'GUESTS', sourceId: f.sourceId,
-        ticketTypeId: f.ticketTypeId, fileId: guests.fileId }, randomUUID());
+      const guests = await upload(
+        'GUESTS',
+        `email\nnew-${f.tenantSlug}@example.test\n`,
+        owner,
+      );
+      const guestJob = await create(
+        owner,
+        {
+          kind: 'GUESTS',
+          sourceId: f.sourceId,
+          ticketTypeId: f.ticketTypeId,
+          fileId: guests.fileId,
+        },
+        randomUUID(),
+      );
       expectStatus(guestJob, 201);
-      const guestPreview = await request(ctx, 'POST', `${base}/${guestJob.body.importId}/preview`, owner, {});
+      const guestPreview = await request(
+        ctx,
+        'POST',
+        `${base}/${guestJob.body.importId}/preview`,
+        owner,
+        {},
+      );
       expectStatus(guestPreview, 201);
       assert.equal(guestPreview.body.invitationCount, 1);
       const beforeGuest = await snapshot();
-      const guestCommit = await request(ctx, 'POST', `${base}/${guestJob.body.importId}/commit`,
-        owner, { previewRevision: guestPreview.body.previewRevision,
-          mappingRevision: guestPreview.body.mappingRevision, fileHash: guestPreview.body.fileHash },
-        { 'idempotency-key': randomUUID() });
+      const guestCommit = await request(
+        ctx,
+        'POST',
+        `${base}/${guestJob.body.importId}/commit`,
+        owner,
+        {
+          previewRevision: guestPreview.body.previewRevision,
+          mappingRevision: guestPreview.body.mappingRevision,
+          fileHash: guestPreview.body.fileHash,
+        },
+        { 'idempotency-key': randomUUID() },
+      );
       expectStatus(guestCommit, 201);
       assert.equal(guestCommit.body.invitationCount, 1);
       const afterGuest = await snapshot();
@@ -3618,31 +4133,80 @@ for (const caseId of CASE_IDS) {
       assert.equal(afterGuest.outbox, beforeGuest.outbox + 1);
       for (const field of ['tickets', 'users', 'allocated', 'codes', 'audit'])
         assert.equal(afterGuest[field], beforeGuest[field], field);
-      const invitation = await db03Query(f, `SELECT state, import_job_id FROM guest_invitations
+      const invitation = await db03Query(
+        f,
+        `SELECT state, import_job_id FROM guest_invitations
         WHERE tenant_id=$1::uuid AND event_id=$2::uuid AND import_job_id=$3::uuid`,
-        [f.tenantId, f.eventId, guestJob.body.importId]);
-      assert.deepEqual(invitation, [{ state: 'PENDING', import_job_id: guestJob.body.importId }]);
-      const minted = await db03Query(f, `SELECT type, aggregate_id FROM outbox
+        [f.tenantId, f.eventId, guestJob.body.importId],
+      );
+      assert.deepEqual(invitation, [
+        { state: 'PENDING', import_job_id: guestJob.body.importId },
+      ]);
+      const minted = await db03Query(
+        f,
+        `SELECT type, aggregate_id FROM outbox
         WHERE tenant_id=$1::uuid AND event_id=$2::uuid AND type='InvitationTokenMinted'`,
-        [f.tenantId, f.eventId]);
+        [f.tenantId, f.eventId],
+      );
       assert.equal(minted.length, 1);
-      const expired = await db03Query(f, `UPDATE import_jobs
+      const expired = await db03Query(
+        f,
+        `UPDATE import_jobs
         SET error_report_expires_at=now()-interval '1 second'
         WHERE tenant_id=$1::uuid AND event_id=$2::uuid AND id=$3::uuid RETURNING id`,
-        [f.tenantId, f.eventId, guestJob.body.importId]);
+        [f.tenantId, f.eventId, guestJob.body.importId],
+      );
       assert.equal(expired.length, 1);
-      expectStatus(await request(ctx, 'GET', `${base}/${guestJob.body.importId}/errors`, owner), 410);
-      deny(await request(ctx, 'GET', `${foreign}/${guestJob.body.importId}/errors`, owner));
+      expectStatus(
+        await request(
+          ctx,
+          'GET',
+          `${base}/${guestJob.body.importId}/errors`,
+          owner,
+        ),
+        410,
+      );
+      deny(
+        await request(
+          ctx,
+          'GET',
+          `${foreign}/${guestJob.body.importId}/errors`,
+          owner,
+        ),
+      );
       const beforeDeny = await snapshot();
-      await auth06Revoke(f, `UPDATE event_assignments SET revoked_at=now()
+      await auth06Revoke(
+        f,
+        `UPDATE event_assignments SET revoked_at=now()
         WHERE tenant_id=$1::uuid AND event_id=$2::uuid AND membership_id=(
           SELECT id FROM memberships WHERE tenant_id=$1::uuid AND user_id=$3::uuid)
-          AND revoked_at IS NULL`, [f.tenantId, f.eventId, f.accounts.manager.userId]);
+          AND revoked_at IS NULL`,
+        [f.tenantId, f.eventId, f.accounts.manager.userId],
+      );
       deny(await request(ctx, 'GET', `${base}/${jobs[0].importId}`, manager));
       deny(await request(ctx, 'GET', `${base}/${jobs[1].importId}`, manager));
-      deny(await request(ctx, 'GET', `${base}/${jobs[1].importId}/errors`, manager));
-      deny(await request(ctx, 'POST', `${base}/${jobs[1].importId}/preview`, manager, {}));
-      assert.deepEqual(await snapshot(), beforeDeny, 'revoked actor denial must have no mutation');
+      deny(
+        await request(
+          ctx,
+          'GET',
+          `${base}/${jobs[1].importId}/errors`,
+          manager,
+        ),
+      );
+      deny(
+        await request(
+          ctx,
+          'POST',
+          `${base}/${jobs[1].importId}/preview`,
+          manager,
+          {},
+        ),
+      );
+      assert.deepEqual(
+        await snapshot(),
+        beforeDeny,
+        'revoked actor denial must have no mutation',
+      );
       return;
     }
     if (caseId === 'DB-11') {
@@ -3749,9 +4313,15 @@ for (const caseId of CASE_IDS) {
       expectStatus(accept1, 201);
       assert.equal(accept1.body.tenantId, f.tenantId);
       assert.equal(await membershipCount(attendeeEmail), 1);
-      const acceptReplaySame = await request(ctx, 'POST', acceptPath, attendee, {
-        token: token1,
-      });
+      const acceptReplaySame = await request(
+        ctx,
+        'POST',
+        acceptPath,
+        attendee,
+        {
+          token: token1,
+        },
+      );
       expectStatus(acceptReplaySame, 201);
       assert.equal(
         await membershipCount(attendeeEmail),
@@ -3773,9 +4343,15 @@ for (const caseId of CASE_IDS) {
         [f.tenantId, invite2.body.inviteId],
       );
       const token2 = await rawInviteToken(invite2.body.inviteId);
-      const acceptExpired = await request(ctx, 'POST', acceptPath, otherAttendee, {
-        token: token2,
-      });
+      const acceptExpired = await request(
+        ctx,
+        'POST',
+        acceptPath,
+        otherAttendee,
+        {
+          token: token2,
+        },
+      );
       expectStatus(acceptExpired, 422, 'INVITE_INVALID_OR_EXPIRED');
       assert.equal(await membershipCount(otherEmail), 0);
 
@@ -3786,9 +4362,15 @@ for (const caseId of CASE_IDS) {
       });
       expectStatus(invite3, 201);
       const token3 = await rawInviteToken(invite3.body.inviteId);
-      const acceptMismatch = await request(ctx, 'POST', acceptPath, otherAttendee, {
-        token: token3,
-      });
+      const acceptMismatch = await request(
+        ctx,
+        'POST',
+        acceptPath,
+        otherAttendee,
+        {
+          token: token3,
+        },
+      );
       expectStatus(acceptMismatch, 422, 'INVITE_INVALID_OR_EXPIRED');
       assert.equal(
         await membershipCount(attendeeEmail),
@@ -3812,11 +4394,14 @@ for (const caseId of CASE_IDS) {
         const form = new FormData();
         form.set('kind', 'GUESTS');
         form.set('file', new Blob([csv], { type: 'text/csv' }), 'guests.csv');
-        const response = await fetch(new URL(`/v1${importsBase}/files`, ctx.api), {
-          method: 'POST',
-          headers: { authorization: `Bearer ${owner}` },
-          body: form,
-        });
+        const response = await fetch(
+          new URL(`/v1${importsBase}/files`, ctx.api),
+          {
+            method: 'POST',
+            headers: { authorization: `Bearer ${owner}` },
+            body: form,
+          },
+        );
         const body = await response.json();
         expectStatus({ status: response.status, body }, 201);
         return body;
@@ -3830,12 +4415,21 @@ for (const caseId of CASE_IDS) {
           'POST',
           importsBase,
           owner,
-          { kind: 'GUESTS', sourceId: f.sourceId, ticketTypeId: f.ticketTypeId, fileId: file.fileId },
+          {
+            kind: 'GUESTS',
+            sourceId: f.sourceId,
+            ticketTypeId: f.ticketTypeId,
+            fileId: file.fileId,
+          },
           { 'idempotency-key': randomUUID() },
         );
         expectStatus(created, 201);
         const preview = await request(
-          ctx, 'POST', `${importsBase}/${created.body.importId}/preview`, owner, {},
+          ctx,
+          'POST',
+          `${importsBase}/${created.body.importId}/preview`,
+          owner,
+          {},
         );
         expectStatus(preview, 201);
         assert.equal(preview.body.invitationCount, 1);
@@ -3854,7 +4448,8 @@ for (const caseId of CASE_IDS) {
         expectStatus(commit, 201);
         assert.equal(commit.body.invitationCount, 1);
         const rows = await web04Query(
-          f, f.tenantId,
+          f,
+          f.tenantId,
           `SELECT id FROM guest_invitations
            WHERE tenant_id=$1::uuid AND event_id=$2::uuid AND invited_email=$3`,
           [f.tenantId, f.eventId, email],
@@ -3863,7 +4458,10 @@ for (const caseId of CASE_IDS) {
       };
       const dispatchInvitation = async (invitationId) => {
         const preview = await request(
-          ctx, 'POST', `${invitationsBase}/dispatch-preview`, owner,
+          ctx,
+          'POST',
+          `${invitationsBase}/dispatch-preview`,
+          owner,
           { invitationIds: [invitationId] },
         );
         expectStatus(preview, 201);
@@ -3872,7 +4470,10 @@ for (const caseId of CASE_IDS) {
           'POST',
           `${invitationsBase}/dispatch`,
           owner,
-          { invitationIds: [invitationId], previewRevision: preview.body.previewRevision },
+          {
+            invitationIds: [invitationId],
+            previewRevision: preview.body.previewRevision,
+          },
           { 'idempotency-key': randomUUID() },
         );
         expectStatus(dispatch, 201);
@@ -3887,7 +4488,10 @@ for (const caseId of CASE_IDS) {
       // wrong-owner: a different real actor with a different verified email
       // cannot claim someone else's invitation.
       const wrongOwner = await request(
-        ctx, 'POST', claimPath, otherAttendee,
+        ctx,
+        'POST',
+        claimPath,
+        otherAttendee,
         { token: await rawClaimToken(invitationA) },
         { 'idempotency-key': randomUUID() },
       );
@@ -3897,13 +4501,17 @@ for (const caseId of CASE_IDS) {
       // expired: real TTL expiry via control DB, no ticket/quota mutation.
       const quotaBeforeExpiry = await allocatedQuota();
       await web04Query(
-        f, f.tenantId,
+        f,
+        f.tenantId,
         `UPDATE guest_invitations SET expires_at = now() - interval '1 minute'
          WHERE tenant_id=$1::uuid AND id=$2::uuid`,
         [f.tenantId, invitationB],
       );
       const expiredClaim = await request(
-        ctx, 'POST', claimPath, otherAttendee,
+        ctx,
+        'POST',
+        claimPath,
+        otherAttendee,
         { token: await rawClaimToken(invitationB) },
         { 'idempotency-key': randomUUID() },
       );
@@ -3923,7 +4531,11 @@ for (const caseId of CASE_IDS) {
         termsAccepted: true,
       };
       const claimed = await request(
-        ctx, 'POST', claimPath, attendee, claimBody,
+        ctx,
+        'POST',
+        claimPath,
+        attendee,
+        claimBody,
         { 'idempotency-key': claimKey },
       );
       expectStatus(claimed, 201);
@@ -3931,7 +4543,11 @@ for (const caseId of CASE_IDS) {
       assert.equal(await allocatedQuota(), quotaBeforeClaim + 1);
 
       const claimedReplaySameKey = await request(
-        ctx, 'POST', claimPath, attendee, claimBody,
+        ctx,
+        'POST',
+        claimPath,
+        attendee,
+        claimBody,
         { 'idempotency-key': claimKey },
       );
       expectStatus(claimedReplaySameKey, 201);
@@ -3940,13 +4556,17 @@ for (const caseId of CASE_IDS) {
       assert.equal(await allocatedQuota(), quotaBeforeClaim + 1);
 
       const claimedReplayNewKey = await request(
-        ctx, 'POST', claimPath, attendee,
+        ctx,
+        'POST',
+        claimPath,
+        attendee,
         { token: await rawClaimToken(invitationA) },
         { 'idempotency-key': randomUUID() },
       );
       expectStatus(claimedReplayNewKey, 410, 'INVITATION_TOKEN_INVALID');
       assert.equal(
-        await ticketCountForInvitation(invitationA), 1,
+        await ticketCountForInvitation(invitationA),
+        1,
         'a new Idempotency-Key against a CLAIMED invitation must not mint a second ticket',
       );
       assert.equal(await allocatedQuota(), quotaBeforeClaim + 1);
@@ -4395,20 +5015,77 @@ for (const caseId of CASE_IDS) {
     if (caseId === 'WEB-05') {
       const answers = required(f.data?.answers, 'WEB-05 answers');
       const secondCode = required(f.secondCode, 'WEB-05 secondCode');
+      const formVersion = required(f.data?.formVersion, 'WEB-05 formVersion');
+      const termsVersion = required(
+        f.data?.termsVersion,
+        'WEB-05 termsVersion',
+      );
+      const expectedHashes = loadWeb05ExpectedHashes();
+      assert.notEqual(expectedHashes.v2.form, expectedHashes.v1.form);
+      assert.notEqual(expectedHashes.v2.terms, expectedHashes.v1.terms);
+
+      const rejectBody = (code, answerOverrides = {}, extra = {}) => ({
+        code,
+        formVersion,
+        termsVersion,
+        answers: { ...answers, ...answerOverrides },
+        termsAccepted: true,
+        ...extra,
+      });
+
       await web04AssertRejected(ctx, {
-        label: 'WEB-05 invalid email',
+        label: 'WEB-05 required full_name empty',
         tenantId: f.tenantId,
         eventId: f.eventId,
         code: f.code,
         errorStatus: 422,
         errorCode: 'FORM_INVALID',
-        redeemBody: {
-          code: f.code,
-          formVersion: required(f.data?.formVersion, 'WEB-05 formVersion'),
-          termsVersion: required(f.data?.termsVersion, 'WEB-05 termsVersion'),
-          answers: { ...answers, email: 'not-an-email' },
-          termsAccepted: true,
-        },
+        redeemBody: rejectBody(f.code, { full_name: '' }),
+      });
+      await web04AssertRejected(ctx, {
+        label: 'WEB-05 invalid email type',
+        tenantId: f.tenantId,
+        eventId: f.eventId,
+        code: f.code,
+        errorStatus: 422,
+        errorCode: 'FORM_INVALID',
+        redeemBody: rejectBody(f.code, { email: 'not-an-email' }),
+      });
+      await web04AssertRejected(ctx, {
+        label: 'WEB-05 invalid phone type',
+        tenantId: f.tenantId,
+        eventId: f.eventId,
+        code: f.code,
+        errorStatus: 422,
+        errorCode: 'FORM_INVALID',
+        redeemBody: rejectBody(f.code, { phone: '!!' }),
+      });
+      await web04AssertRejected(ctx, {
+        label: 'WEB-05 select option not in allowlist',
+        tenantId: f.tenantId,
+        eventId: f.eventId,
+        code: f.code,
+        errorStatus: 422,
+        errorCode: 'FORM_INVALID',
+        redeemBody: rejectBody(f.code, { shirt: 'xl' }),
+      });
+      await web04AssertRejected(ctx, {
+        label: 'WEB-05 forged client schema key',
+        tenantId: f.tenantId,
+        eventId: f.eventId,
+        code: f.code,
+        errorStatus: 422,
+        errorCode: 'FORM_INVALID',
+        redeemBody: rejectBody(f.code, { surprise: 'x' }),
+      });
+      await web04AssertRejected(ctx, {
+        label: 'WEB-05 termsAccepted false',
+        tenantId: f.tenantId,
+        eventId: f.eventId,
+        code: f.code,
+        errorStatus: 422,
+        errorCode: 'TERMS_REQUIRED',
+        redeemBody: rejectBody(f.code, {}, { termsAccepted: false }),
       });
       await web04AssertRejected(ctx, {
         label: 'WEB-05 stale form version',
@@ -4420,7 +5097,7 @@ for (const caseId of CASE_IDS) {
         redeemBody: {
           code: f.code,
           formVersion: 'form-v-stale',
-          termsVersion: required(f.data?.termsVersion, 'WEB-05 termsVersion'),
+          termsVersion,
           answers,
           termsAccepted: true,
         },
@@ -4434,7 +5111,7 @@ for (const caseId of CASE_IDS) {
         errorCode: 'TERMS_VERSION_STALE',
         redeemBody: {
           code: f.code,
-          formVersion: required(f.data?.formVersion, 'WEB-05 formVersion'),
+          formVersion,
           termsVersion: 'terms-v-stale',
           answers,
           termsAccepted: true,
@@ -4443,119 +5120,85 @@ for (const caseId of CASE_IDS) {
 
       const owner = await bearer(ctx, 'owner');
       const attendee = await bearer(ctx, 'attendee');
+      const path = redemptionPath(f);
+
+      const v1Issued = await request(
+        ctx,
+        'POST',
+        path,
+        attendee,
+        rejectBody(secondCode),
+        { 'idempotency-key': randomUUID() },
+      );
+      expectStatus(v1Issued, 201);
+      const [v1Consent] = await web04Query(
+        f,
+        f.tenantId,
+        `SELECT form_version, terms_version, form_definition_hash, terms_content_hash
+         FROM redemption_requests
+         WHERE tenant_id = $1::uuid AND id = $2::uuid`,
+        [f.tenantId, v1Issued.body.requestId],
+      );
+      assert.equal(v1Consent.form_version, formVersion);
+      assert.equal(v1Consent.terms_version, termsVersion);
+      assert.equal(v1Consent.form_definition_hash, expectedHashes.v1.form);
+      assert.equal(v1Consent.terms_content_hash, expectedHashes.v1.terms);
+
       const configBase = `/tenants/${f.tenantId}/events/${f.eventId}`;
-      const listed = await request(ctx, 'GET', `${configBase}/config-versions`, owner);
+      const listed = await request(
+        ctx,
+        'GET',
+        `${configBase}/config-versions`,
+        owner,
+      );
       expectStatus(listed, 200);
       const headVersion = Math.max(
         ...(listed.body.items ?? []).map((row) => row.version),
       );
-      assert.ok(Number.isFinite(headVersion), 'WEB-05 config version list required');
-      const publishV2 = await request(ctx, 'POST', `${configBase}/config-versions`, owner, {
-        payload: {
-          schemaVersion: 1,
-          brand: {
-            primaryColor: '#164E63',
-            organizationName: `Tenant WEB-05 v2`,
-          },
-          sections: [
-            {
-              kind: 'hero',
-              id: 'hero',
-              visible: true,
-              order: 0,
-              body: { title: `E2E WEB-05 v2`, text: 'Synthetic' },
-            },
-            {
-              kind: 'info',
-              id: 'info',
-              visible: true,
-              order: 1,
-              body: { title: 'Info', text: 'v2' },
-            },
-            {
-              kind: 'redeem',
-              id: 'redeem',
-              visible: true,
-              order: 2,
-              body: { title: 'Redeem', text: '' },
-            },
-            {
-              kind: 'guide',
-              id: 'guide',
-              visible: false,
-              order: 3,
-              body: { title: 'Guide', text: '' },
-            },
-            {
-              kind: 'faq',
-              id: 'faq',
-              visible: true,
-              order: 4,
-              body: { title: 'FAQ', items: [{ question: 'Q', answer: 'A' }] },
-            },
-            {
-              kind: 'terms',
-              id: 'terms',
-              visible: true,
-              order: 5,
-              body: {
-                title: 'Terms',
-                termsVersion: 'terms-v2',
-                text: 'Synthetic v2',
-              },
-            },
-          ],
-          formDefinitionId: 'form-v2',
-          termsVersion: 'terms-v2',
-          form: {
-            formVersion: 'form-v2',
-            fields: [
-              { id: 'full_name', label: 'Name', type: 'text', required: true },
-              { id: 'email', label: 'Email', type: 'email', required: true },
-              { id: 'phone', label: 'Phone', type: 'phone', required: true },
-              {
-                id: 'shirt',
-                label: 'Shirt',
-                type: 'select',
-                required: true,
-                options: [{ id: 'm', label: 'M' }],
-              },
-              { id: 'agree', label: 'Agree', type: 'checkbox', required: true },
-            ],
-          },
+      assert.ok(
+        Number.isFinite(headVersion),
+        'WEB-05 config version list required',
+      );
+      const publishV2 = await request(
+        ctx,
+        'POST',
+        `${configBase}/config-versions`,
+        owner,
+        {
+          payload: web05ConfigV2Payload(),
+          expectedVersion: headVersion,
         },
-        expectedVersion: headVersion,
-      });
+      );
       expectStatus(publishV2, 201);
-      const publishedV2 = await request(ctx, 'POST', `${configBase}/publish`, owner, {
-        expectedVersion: publishV2.body.version,
-      });
+      const publishedV2 = await request(
+        ctx,
+        'POST',
+        `${configBase}/publish`,
+        owner,
+        {
+          expectedVersion: publishV2.body.version,
+        },
+      );
       expectStatus(publishedV2, 201);
 
       await web04AssertRejected(ctx, {
-        label: 'WEB-05 client cannot self-accept stale v1 after publish v2',
+        label: 'WEB-05 stale v1 form/terms after publish v2',
         tenantId: f.tenantId,
         eventId: f.eventId,
-        code: secondCode,
+        code: f.code,
         errorStatus: 409,
         errorCode: 'FORM_VERSION_STALE',
-        redeemBody: {
-          code: secondCode,
-          formVersion: required(f.data?.formVersion, 'WEB-05 formVersion'),
-          termsVersion: required(f.data?.termsVersion, 'WEB-05 termsVersion'),
-          answers,
-          termsAccepted: true,
-        },
+        redeemBody: rejectBody(f.code),
       });
 
       const v2Answers = { ...answers, agree: true };
       const issued = await request(
         ctx,
         'POST',
-        redemptionPath(f),
+        path,
         attendee,
         {
-          code: secondCode,
+          code: f.code,
           formVersion: 'form-v2',
           termsVersion: 'terms-v2',
           answers: v2Answers,
@@ -4574,8 +5217,8 @@ for (const caseId of CASE_IDS) {
       );
       assert.equal(consentRow.form_version, 'form-v2');
       assert.equal(consentRow.terms_version, 'terms-v2');
-      assert.match(String(consentRow.form_definition_hash), /^[a-f0-9]{64}$/i);
-      assert.match(String(consentRow.terms_content_hash), /^[a-f0-9]{64}$/i);
+      assert.equal(consentRow.form_definition_hash, expectedHashes.v2.form);
+      assert.equal(consentRow.terms_content_hash, expectedHashes.v2.terms);
     }
     if (caseId === 'DB-12') {
       // PLAN §6.1 DB-12 H: publish/rollback optimistic concurrency and
@@ -4650,7 +5293,10 @@ for (const caseId of CASE_IDS) {
       );
       expectStatus(baselinePublic, 200);
       assert.equal(baselinePublic.body.publishedConfigVersion, 1);
-      assert.equal(baselinePublic.body.brand.organizationName, `Tenant ${caseId}`);
+      assert.equal(
+        baselinePublic.body.brand.organizationName,
+        `Tenant ${caseId}`,
+      );
       const stateBeforeAny = await businessState();
 
       // --- Draft (saved, never published) must not leak on the public path ---
@@ -4675,22 +5321,67 @@ for (const caseId of CASE_IDS) {
       );
 
       // --- Save + publish v2 through the real HTTP config-publish path ---
-      const savedV2 = await request(ctx, 'POST', `${configBase}/config-versions`, owner, {
-        payload: {
-          schemaVersion: 1,
-          brand: { primaryColor: '#245B47', organizationName: 'DB-12 Org v2' },
-          sections: [
-            { kind: 'hero', id: 'hero', visible: true, order: 0, body: { title: 'E2E DB-12 v2', text: 'v2' } },
-            { kind: 'info', id: 'info', visible: true, order: 1, body: { title: 'Info', text: 'v2' } },
-            { kind: 'redeem', id: 'redeem', visible: true, order: 2, body: { title: 'Redeem', text: '' } },
-            { kind: 'guide', id: 'guide', visible: false, order: 3, body: { title: 'Guide', text: '' } },
-            { kind: 'faq', id: 'faq', visible: true, order: 4, body: { title: 'FAQ', items: [{ question: 'Q', answer: 'A' }] } },
-            { kind: 'terms', id: 'terms', visible: true, order: 5, body: { title: 'Terms', termsVersion: 'terms-v1', text: 'v2' } },
-          ],
-          termsVersion: 'terms-v1',
+      const savedV2 = await request(
+        ctx,
+        'POST',
+        `${configBase}/config-versions`,
+        owner,
+        {
+          payload: {
+            schemaVersion: 1,
+            brand: {
+              primaryColor: '#245B47',
+              organizationName: 'DB-12 Org v2',
+            },
+            sections: [
+              {
+                kind: 'hero',
+                id: 'hero',
+                visible: true,
+                order: 0,
+                body: { title: 'E2E DB-12 v2', text: 'v2' },
+              },
+              {
+                kind: 'info',
+                id: 'info',
+                visible: true,
+                order: 1,
+                body: { title: 'Info', text: 'v2' },
+              },
+              {
+                kind: 'redeem',
+                id: 'redeem',
+                visible: true,
+                order: 2,
+                body: { title: 'Redeem', text: '' },
+              },
+              {
+                kind: 'guide',
+                id: 'guide',
+                visible: false,
+                order: 3,
+                body: { title: 'Guide', text: '' },
+              },
+              {
+                kind: 'faq',
+                id: 'faq',
+                visible: true,
+                order: 4,
+                body: { title: 'FAQ', items: [{ question: 'Q', answer: 'A' }] },
+              },
+              {
+                kind: 'terms',
+                id: 'terms',
+                visible: true,
+                order: 5,
+                body: { title: 'Terms', termsVersion: 'terms-v1', text: 'v2' },
+              },
+            ],
+            termsVersion: 'terms-v1',
+          },
+          expectedVersion: 1,
         },
-        expectedVersion: 1,
-      });
+      );
       expectStatus(savedV2, 201);
       assert.equal(savedV2.body.version, 2);
       const publishV2AuditBefore = await web04Query(
@@ -4707,9 +5398,15 @@ for (const caseId of CASE_IDS) {
         0,
         'DB-12: no publish-v2 audit row must exist before HTTP publish of v2',
       );
-      const published2 = await request(ctx, 'POST', `${configBase}/publish`, owner, {
-        expectedVersion: 2,
-      });
+      const published2 = await request(
+        ctx,
+        'POST',
+        `${configBase}/publish`,
+        owner,
+        {
+          expectedVersion: 2,
+        },
+      );
       expectStatus(published2, 201);
       assert.equal(published2.body.publishedConfigVersion, 2);
       const publishV2AuditAfter = await web04Query(
@@ -4739,7 +5436,10 @@ for (const caseId of CASE_IDS) {
       );
       expectStatus(publicAfterPublish, 200);
       assert.equal(publicAfterPublish.body.publishedConfigVersion, 2);
-      assert.equal(publicAfterPublish.body.brand.organizationName, 'DB-12 Org v2');
+      assert.equal(
+        publicAfterPublish.body.brand.organizationName,
+        'DB-12 Org v2',
+      );
 
       // --- Stale rollback: one wrong token per request; assert exact error
       // code and no mutation to pointer/revision/config counts/audit/tickets ---
@@ -4769,7 +5469,8 @@ for (const caseId of CASE_IDS) {
         'DB-12: stale expectedRevision rollback must not mutate quota/codes',
       );
 
-      const concurrencyBeforeStalePublished = await publishConcurrencySnapshot();
+      const concurrencyBeforeStalePublished =
+        await publishConcurrencySnapshot();
       const stalePublishedRollback = await request(
         ctx,
         'POST',
@@ -4876,14 +5577,23 @@ for (const caseId of CASE_IDS) {
         owner,
       );
       expectStatus(previewAuthed, 200);
-      assert.equal(previewAuthed.body.payload.brand.organizationName, `Tenant ${caseId}`);
+      assert.equal(
+        previewAuthed.body.payload.brand.organizationName,
+        `Tenant ${caseId}`,
+      );
 
       // --- Publish the previously-draft event, then confirm it (and only
       // it, not the rollback above) appears live on the public catalog ---
       const draftBase = `/tenants/${f.tenantId}/events/${draftEventId}`;
-      const draftPublished = await request(ctx, 'POST', `${draftBase}/publish`, owner, {
-        expectedVersion: 1,
-      });
+      const draftPublished = await request(
+        ctx,
+        'POST',
+        `${draftBase}/publish`,
+        owner,
+        {
+          expectedVersion: 1,
+        },
+      );
       expectStatus(draftPublished, 201);
       const draftNowPublic = await request(
         ctx,
@@ -4911,7 +5621,8 @@ for (const caseId of CASE_IDS) {
       const requireBackend = createRequire(
         new URL('../../../packages/backend/package.json', import.meta.url),
       );
-      const { hashFormDefinition, hashTermsContent } = requireBackend('./dist/index.js');
+      const { hashFormDefinition, hashTermsContent } =
+        requireBackend('./dist/index.js');
       const owner = await bearer(ctx, 'owner');
       const attendee = await bearer(ctx, 'attendee');
       const configBase = `/tenants/${f.tenantId}/events/${f.eventId}`;
@@ -5017,88 +5728,106 @@ for (const caseId of CASE_IDS) {
         ...(listedVersions.body.items ?? []).map((row) => row.version),
       );
 
-      const unsafeSave = await request(ctx, 'POST', `${configBase}/config-versions`, owner, {
-        payload: {
-          schemaVersion: 1,
-          brand: {
-            primaryColor: '#164E63',
-            organizationName: 'DB-14 Unsafe',
-          },
-          sections: [
-            {
-              kind: 'hero',
-              id: 'hero',
-              visible: true,
-              order: 0,
-              body: {
-                title: 'DB-14',
-                text: '<style>body{display:none}</style>',
-              },
+      const unsafeSave = await request(
+        ctx,
+        'POST',
+        `${configBase}/config-versions`,
+        owner,
+        {
+          payload: {
+            schemaVersion: 1,
+            brand: {
+              primaryColor: '#164E63',
+              organizationName: 'DB-14 Unsafe',
             },
-            {
-              kind: 'info',
-              id: 'info',
-              visible: true,
-              order: 1,
-              body: { title: 'Info', text: 'x' },
-            },
-            {
-              kind: 'redeem',
-              id: 'redeem',
-              visible: true,
-              order: 2,
-              body: { title: 'Redeem', text: '' },
-            },
-            {
-              kind: 'guide',
-              id: 'guide',
-              visible: false,
-              order: 3,
-              body: { title: 'Guide', text: '' },
-            },
-            {
-              kind: 'faq',
-              id: 'faq',
-              visible: true,
-              order: 4,
-              body: { title: 'FAQ', items: [{ question: 'Q', answer: 'A' }] },
-            },
-            {
-              kind: 'terms',
-              id: 'terms',
-              visible: true,
-              order: 5,
-              body: {
-                title: 'Terms',
-                termsVersion: 'terms-v1',
-                text: 'Synthetic',
-              },
-            },
-          ],
-          formDefinitionId: 'form-v1',
-          termsVersion: 'terms-v1',
-          form: {
-            formVersion: 'form-v1',
-            fields: [
-              { id: 'full_name', label: 'Name', type: 'text', required: true },
-              { id: 'email', label: 'Email', type: 'email', required: true },
-              { id: 'phone', label: 'Phone', type: 'phone', required: true },
+            sections: [
               {
-                id: 'shirt',
-                label: 'Shirt',
-                type: 'select',
-                required: true,
-                options: [{ id: 'm', label: 'M' }],
+                kind: 'hero',
+                id: 'hero',
+                visible: true,
+                order: 0,
+                body: {
+                  title: 'DB-14',
+                  text: '<style>body{display:none}</style>',
+                },
               },
-              { id: 'agree', label: 'Agree', type: 'checkbox', required: true },
+              {
+                kind: 'info',
+                id: 'info',
+                visible: true,
+                order: 1,
+                body: { title: 'Info', text: 'x' },
+              },
+              {
+                kind: 'redeem',
+                id: 'redeem',
+                visible: true,
+                order: 2,
+                body: { title: 'Redeem', text: '' },
+              },
+              {
+                kind: 'guide',
+                id: 'guide',
+                visible: false,
+                order: 3,
+                body: { title: 'Guide', text: '' },
+              },
+              {
+                kind: 'faq',
+                id: 'faq',
+                visible: true,
+                order: 4,
+                body: { title: 'FAQ', items: [{ question: 'Q', answer: 'A' }] },
+              },
+              {
+                kind: 'terms',
+                id: 'terms',
+                visible: true,
+                order: 5,
+                body: {
+                  title: 'Terms',
+                  termsVersion: 'terms-v1',
+                  text: 'Synthetic',
+                },
+              },
             ],
+            formDefinitionId: 'form-v1',
+            termsVersion: 'terms-v1',
+            form: {
+              formVersion: 'form-v1',
+              fields: [
+                {
+                  id: 'full_name',
+                  label: 'Name',
+                  type: 'text',
+                  required: true,
+                },
+                { id: 'email', label: 'Email', type: 'email', required: true },
+                { id: 'phone', label: 'Phone', type: 'phone', required: true },
+                {
+                  id: 'shirt',
+                  label: 'Shirt',
+                  type: 'select',
+                  required: true,
+                  options: [{ id: 'm', label: 'M' }],
+                },
+                {
+                  id: 'agree',
+                  label: 'Agree',
+                  type: 'checkbox',
+                  required: true,
+                },
+              ],
+            },
           },
+          expectedVersion: headVersion,
         },
-        expectedVersion: headVersion,
-      });
+      );
       assert.equal(unsafeSave.status, 422);
       assert.ok(
-        ['CONFIG_UNSAFE_MARKUP', 'CONFIG_INCOMPATIBLE'].includes(unsafeSave.body.code),
+        ['CONFIG_UNSAFE_MARKUP', 'CONFIG_INCOMPATIBLE'].includes(
+          unsafeSave.body.code,
+        ),
         `unsafe config must fail closed (${unsafeSave.body.code})`,
       );
 
@@ -5171,7 +5900,12 @@ for (const caseId of CASE_IDS) {
             form: {
               formVersion: 'form-v2',
               fields: [
-                { id: 'full_name', label: 'Name', type: 'text', required: true },
+                {
+                  id: 'full_name',
+                  label: 'Name',
+                  type: 'text',
+                  required: true,
+                },
                 { id: 'email', label: 'Email', type: 'email', required: true },
                 { id: 'phone', label: 'Phone', type: 'phone', required: true },
                 {
@@ -5181,7 +5915,12 @@ for (const caseId of CASE_IDS) {
                   required: true,
                   options: [{ id: 'm', label: 'M' }],
                 },
-                { id: 'agree', label: 'Agree', type: 'checkbox', required: true },
+                {
+                  id: 'agree',
+                  label: 'Agree',
+                  type: 'checkbox',
+                  required: true,
+                },
               ],
             },
           },
@@ -5256,7 +5995,12 @@ for (const caseId of CASE_IDS) {
             form: {
               formVersion: 'form-v2',
               fields: [
-                { id: 'full_name', label: 'Name', type: 'text', required: true },
+                {
+                  id: 'full_name',
+                  label: 'Name',
+                  type: 'text',
+                  required: true,
+                },
                 { id: 'email', label: 'Email', type: 'email', required: true },
                 { id: 'phone', label: 'Phone', type: 'phone', required: true },
                 {
@@ -5266,7 +6010,12 @@ for (const caseId of CASE_IDS) {
                   required: true,
                   options: [{ id: 'm', label: 'M' }],
                 },
-                { id: 'agree', label: 'Agree', type: 'checkbox', required: true },
+                {
+                  id: 'agree',
+                  label: 'Agree',
+                  type: 'checkbox',
+                  required: true,
+                },
               ],
             },
           },
@@ -5275,12 +6024,22 @@ for (const caseId of CASE_IDS) {
       );
       expectStatus(savedV2, 201);
 
-      const publishedV2 = await request(ctx, 'POST', `${configBase}/publish`, owner, {
-        expectedVersion: savedV2.body.version,
-      });
+      const publishedV2 = await request(
+        ctx,
+        'POST',
+        `${configBase}/publish`,
+        owner,
+        {
+          expectedVersion: savedV2.body.version,
+        },
+      );
       expectStatus(publishedV2, 201);
 
-      const publicAfter = await fetchPublicEventDetail(ctx, f.tenantSlug, f.eventSlug);
+      const publicAfter = await fetchPublicEventDetail(
+        ctx,
+        f.tenantSlug,
+        f.eventSlug,
+      );
       expectStatus(publicAfter, 200);
       assert.equal(publicAfter.body.brand.organizationName, 'DB-14 Org v2');
       assert.equal(publicAfter.body.terms?.version, 'terms-v2');
@@ -5325,7 +6084,9 @@ for (const caseId of CASE_IDS) {
         { 'idempotency-key': randomUUID() },
       );
       expectStatus(issue2, 201);
-      const snap3 = await ticketRow(required(issue2.body.ticketId, 'DB-14 ticket2'));
+      const snap3 = await ticketRow(
+        required(issue2.body.ticketId, 'DB-14 ticket2'),
+      );
       assert.deepEqual(snap3.entitlement, entitlementV1);
       assert.equal(snap3.formVersion, 'form-v2');
       assert.equal(snap3.termsVersion, 'terms-v2');

@@ -1,5 +1,11 @@
 # Báo cáo Web E2E — 28/10/2026
 
+## WEB-05 form/terms validation B+H — 30/10/2026 (James F01/F02 lượt 1/2)
+
+- F01: Tách ma trận B/H — mỗi nhánh invalid (required/type/select allowlist/termsAccepted=false/forged schema, stale form/terms) assert status+code riêng; PG `assertWeb05BusinessUnchanged` (browser) và `web04AssertRejected` + `redemption_requests`/quota (HTTP) không đổi request/ticket/code/quota.
+- F02: `web05-published-config.mjs` + `web05-hashes.mjs` — consent hash trên PG khớp nguồn published v1/v2 (`hashFormDefinition`/`hashTermsContent` body), `assert.notEqual` v2↔v1; HTTP redeem v1 trên `secondCode` trước publish v2, redeem v2 trên `primary` sau publish.
+- Run thăm dò dirty trên HEAD cũ: browser `mvuv8zmi-a02db4` PASS 7/7; HTTP `mvuv9phi-457559` PASS; `pnpm test:e2e:guards` 16/16. Evidence exact SHA ghi sau commit sạch. `coverage.json` giữ **blocked** chờ James revalidate.
+
 ## WEB-05 form/terms validation B+H — 30/10/2026
 
 - Mở rộng `redeem.spec.ts › [WEB-05]`: client gate terms/required/type (email/phone/checkbox) không POST; BFF `postRedeemDirect` từ chối `FORM_INVALID`, `FORM_VERSION_STALE`, `TERMS_VERSION_STALE` với `assertRedemptionStateUnchanged`; redeem thành công trên `secondCode` đối soát `form_version`/`terms_version` + hash trên `redemption_requests`.
