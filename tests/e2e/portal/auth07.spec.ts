@@ -123,6 +123,7 @@ test('[AUTH-07] late real Keycloak refresh cannot replace a same-sub callback to
   const context = await browser.newContext();
   const page = await context.newPage();
   let release!: () => void;
+  let releaseLogout: (() => void) | undefined;
   let fetched!: () => void;
   const released = new Promise<void>((resolve) => { release = resolve; });
   const ready = new Promise<void>((resolve) => { fetched = resolve; });
@@ -176,8 +177,43 @@ test('[AUTH-07] late real Keycloak refresh cannot replace a same-sub callback to
     expect(afterRelease.find((cookie) => cookie.name === newerAccessName)?.value).toBe(newerToken);
     expect(afterRelease.find((cookie) => cookie.name === 'portal_staff_epoch')?.value).toBe(actorB.authEpoch);
     expect((await bffGet(switchPage, manifest, '/api/auth/identity?surface=staff')).status).toBe(200);
+
+    await context.addCookies([{ name: newerAccessName, value: 'expired', url: manifest.origins.portal,
+      httpOnly: true, secure: true, sameSite: 'Lax' }]);
+    let fetchedLogout!: () => void;
+    const logoutReleased = new Promise<void>((resolve) => { releaseLogout = resolve; });
+    const logoutReady = new Promise<void>((resolve) => { fetchedLogout = resolve; });
+    let heldLogout = false;
+    await context.route('**/api/auth/identity?surface=staff', async (route) => {
+      if (heldLogout) { await route.continue(); return; }
+      heldLogout = true;
+      const upstream = await route.fetch();
+      expect(upstream.status()).toBe(200);
+      noStore(upstream.headers()['cache-control']);
+      expect(upstream.headers()['set-cookie']).toContain(`${newerAccessName}=`);
+      fetchedLogout();
+      await logoutReleased;
+      await route.fulfill({ response: upstream });
+    });
+    const lateLogout = page.evaluate(async () =>
+      (await fetch('/api/auth/identity?surface=staff', { cache: 'no-store' })).status);
+    await logoutReady;
+    await switchPage.goto(portalUrl(manifest, '/api/auth/logout'));
+    await switchPage.goto(portalUrl(manifest, '/auth'));
+    const loggedOut = await context.cookies(manifest.origins.portal);
+    const logoutEpoch = loggedOut.find((cookie) => cookie.name === 'portal_staff_epoch')?.value;
+    expect(logoutEpoch).toBeTruthy();
+    expect(logoutEpoch).not.toBe(actorB.authEpoch);
+    expect(loggedOut.some((cookie) => cookie.name === 'portal_staff_subject')).toBe(false);
+    releaseLogout();
+    expect(await lateLogout).toBe(200);
+    const afterLateLogout = await context.cookies(manifest.origins.portal);
+    expect(afterLateLogout.find((cookie) => cookie.name === 'portal_staff_epoch')?.value).toBe(logoutEpoch);
+    expect(afterLateLogout.some((cookie) => cookie.name === 'portal_staff_subject')).toBe(false);
+    expect((await bffGet(switchPage, manifest, '/api/auth/identity?surface=staff')).status).toBe(401);
   } finally {
     release();
+    releaseLogout?.();
     await context.close();
   }
 });
