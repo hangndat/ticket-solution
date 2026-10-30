@@ -20,6 +20,7 @@ const CASE_IDS = [
   'DB-01',
   'DB-02',
   'DB-03',
+  'DB-04',
   'WEB-04',
 ];
 const EVIL_HOST = 'evil.example';
@@ -833,10 +834,105 @@ async function auth03Snapshot(f) {
   return { ...state, rateCounters: rate.counters };
 }
 
-async function web04AssertRejected(
-  ctx,
-  { label, tenantId, eventId, code, errorStatus, errorCode },
-) {
+async function db04Snapshot(f) {
+  const tables = {
+    codes: 'SELECT id, status, active_request_id FROM redemption_codes WHERE tenant_id = $1::uuid AND event_id = $2::uuid ORDER BY id',
+    quotas: 'SELECT id, capacity, allocated FROM quota_buckets WHERE tenant_id = $1::uuid AND event_id = $2::uuid ORDER BY id',
+    requests: 'SELECT id, status FROM redemption_requests WHERE tenant_id = $1::uuid AND event_id = $2::uuid ORDER BY id',
+    tickets: 'SELECT id, owner_user_id FROM tickets WHERE tenant_id = $1::uuid AND event_id = $2::uuid ORDER BY id',
+    operations: 'SELECT id, client_key, status, response_json FROM operations WHERE tenant_id = $1::uuid AND event_id = $2::uuid ORDER BY id',
+    audits: 'SELECT id, action FROM audit_logs WHERE tenant_id = $1::uuid AND event_id = $2::uuid ORDER BY id',
+    outbox: 'SELECT id, type FROM outbox WHERE tenant_id = $1::uuid AND event_id = $2::uuid ORDER BY id',
+    attendees: 'SELECT id, user_id, canonical_email FROM event_attendees WHERE tenant_id = $1::uuid AND event_id = $2::uuid ORDER BY id',
+    counters: 'SELECT attendee_id, issued_count, max_tickets FROM attendee_counters WHERE tenant_id = $1::uuid AND event_id = $2::uuid ORDER BY attendee_id',
+  };
+  const state = {};
+  for (const [name, sql] of Object.entries(tables))
+    state[name] = await db03Query(f, sql, [f.tenantId, f.eventId]);
+  return state;
+}
+
+async function db04ControlledRequests(ctx, path, token, body, codes) {
+  const f = ctx.fixture;
+  const requireBackend = createRequire(
+    new URL('../../../packages/backend/package.json', import.meta.url),
+  );
+  const { Client } = requireBackend('pg');
+  const locker = new Client({
+    connectionString: required(f.data?.controlDatabaseUrl, 'DB-04 controlDatabaseUrl'),
+  });
+  const observer = new Client({
+    connectionString: required(f.data?.controlDatabaseUrl, 'DB-04 controlDatabaseUrl'),
+  });
+  const attendeeId = randomUUID();
+  await db03Query(f, `INSERT INTO event_attendees
+    (tenant_id, event_id, id, user_id, canonical_email, created_at, updated_at)
+    VALUES ($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5, now(), now())`,
+  [f.tenantId, f.eventId, attendeeId, f.accounts.attendee.userId, f.accounts.attendee.username]);
+  await db03Query(f, `INSERT INTO attendee_counters
+    (tenant_id, event_id, attendee_id, issued_count, max_tickets, updated_at)
+    VALUES ($1::uuid, $2::uuid, $3::uuid, 0, 1, now())`,
+  [f.tenantId, f.eventId, attendeeId]);
+  await locker.connect();
+  await observer.connect();
+  let requests = [];
+  const observed = [];
+  try {
+    await locker.query('BEGIN');
+    await locker.query('SET LOCAL ROLE ticket_runtime');
+    await locker.query("SELECT set_config('app.tenant_id', $1, true)", [f.tenantId]);
+    const locked = await locker.query(`SELECT pg_backend_pid() AS pid FROM attendee_counters
+      WHERE tenant_id = $1::uuid AND attendee_id = $2::uuid FOR UPDATE`,
+    [f.tenantId, attendeeId]);
+    assert.equal(locked.rows.length, 1);
+    const blockerPid = locked.rows[0].pid;
+    requests = codes.map((code) => request(ctx, 'POST', path, token, { ...body, code },
+      { 'idempotency-key': randomUUID() }).then((result) => {
+      observed.push({ status: result.status, code: result.body.code });
+      return result;
+    }));
+    const deadline = Date.now() + 3000;
+    let blocked = [];
+    while (Date.now() < deadline) {
+      const { rows } = await observer.query(`SELECT pid, wait_event_type,
+        pg_blocking_pids(pid) AS blockers, left(query, 160) AS query
+        FROM pg_stat_activity WHERE pid <> pg_backend_pid()
+          AND wait_event_type = 'Lock'`);
+      const waiters = new Map(rows.filter((row) =>
+        row.query.includes('FROM attendee_counters')).map((row) => [row.pid, row]));
+      const reachesLocker = (pid, seen = new Set()) => {
+        if (pid === blockerPid) return true;
+        if (seen.has(pid)) return false;
+        const waiter = waiters.get(pid);
+        if (!waiter) return false;
+        seen.add(pid);
+        return waiter.blockers.some((blocker) => reachesLocker(blocker, seen));
+      };
+      blocked = [...waiters.values()].filter((row) => reachesLocker(row.pid));
+      if (blocked.length === codes.length) break;
+      await new Promise((resolve) => setTimeout(resolve, 30));
+    }
+    assert.equal(blocked.length, codes.length,
+      `all HTTP requests must wait on the owner counter before release; outcomes=${JSON.stringify(observed)}`);
+  } catch (error) {
+    requests.forEach((pending) => pending.catch(() => undefined));
+    throw error;
+  } finally {
+    await locker.query('ROLLBACK');
+    await locker.end();
+    await observer.end();
+  }
+  return Promise.all(requests);
+}
+
+async function web04AssertRejected(ctx, {
+  label,
+  tenantId,
+  eventId,
+  code,
+  errorStatus,
+  errorCode,
+}) {
   const f = ctx.fixture;
   const attendee = await bearer(ctx, 'attendee');
   const path = `/tenants/${tenantId}/events/${eventId}/redemptions`;
@@ -2539,6 +2635,45 @@ for (const caseId of CASE_IDS) {
       const after = await request(ctx, 'GET', reportPath(f), owner);
       expectStatus(after, 200);
       assert.equal(after.body.quota.allocated, before.body.quota.allocated + 1);
+      return;
+    }
+    if (caseId === 'DB-04') {
+      const path = redemptionPath(f);
+      const body = redemptionBody(f, caseId);
+      const before = await db04Snapshot(f);
+      const anonymous = await request(ctx, 'POST', path, null, body, {
+        'idempotency-key': randomUUID(),
+      });
+      expectStatus(anonymous, 401);
+      assert.deepEqual(await db04Snapshot(f), before, 'guest must not hold code, quota or pending state');
+      const unverified = await bearer(ctx, 'unverified');
+      const denied = await request(ctx, 'POST', path, unverified, body, {
+        'idempotency-key': randomUUID(),
+      });
+      expectStatus(denied, 403, 'EMAIL_NOT_VERIFIED');
+      assert.deepEqual(await db04Snapshot(f), before, 'unverified must not leave operation, hold or pending state');
+      const attendee = await bearer(ctx, 'attendee');
+      const codes = [f.code, f.secondCode, required(f.data?.raceCode, 'DB-04 thirdCode')];
+      const outcomes = await db04ControlledRequests(ctx, path, attendee, body, codes);
+      assert.equal(outcomes.filter((x) => x.status === 201).length, 1);
+      assert.equal(outcomes.filter((x) => x.status === 409 && x.body.code === 'ATTENDEE_LIMIT').length, 2);
+      const after = await db04Snapshot(f);
+      assert.equal(after.attendees.length, 1);
+      assert.equal(after.attendees[0].canonical_email, f.accounts.attendee.username);
+      assert.ok(after.attendees[0].canonical_email.includes('.last+label.'));
+      assert.equal(after.counters.length, 1);
+      assert.equal(after.counters[0].issued_count, 1);
+      assert.equal(after.counters[0].max_tickets, 1);
+      assert.equal(after.tickets.length, 1);
+      assert.equal(after.requests.length, 1);
+      assert.equal(after.codes.filter((x) => x.status === 'CONSUMED').length, 1);
+      assert.equal(after.codes.filter((x) => x.status === 'AVAILABLE').length, 2);
+      assert.ok(after.codes.every((x) => x.status !== 'HELD'));
+      assert.ok(after.quotas.every((x) => x.allocated === 1));
+      assert.equal(after.operations.length, 3);
+      assert.ok(after.operations.every((x) => x.status === 'COMPLETED'));
+      assert.equal(after.audits.filter((x) => x.action === 'ticket.issued').length, 1);
+      assert.equal(after.outbox.filter((x) => x.type === 'TicketIssued').length, 1);
       return;
     }
     if (caseId === 'AUTH-06') {
