@@ -10,6 +10,7 @@ import {
   readPortalOidcConfig,
 } from '../../../../src/oidc/config';
 import { PORTAL_AUTH_COOKIES, staffTokenCookieName } from '../../../../src/oidc/local-cookies';
+import { clearStaffTokenCookies } from '../../../../src/oidc/cookies';
 import { rotateActorEpoch } from '../../../../src/oidc/actor-epoch';
 import { requirePublicOrigin } from '../../../../src/oidc/public-origin';
 import type { TokenGrantResponse } from '../../../../src/oidc/refresh';
@@ -114,6 +115,7 @@ export async function GET(request: NextRequest) {
   }
 
   const maxAge = grant.expiresIn;
+  await clearStaffTokenCookies();
   const epoch = await rotateActorEpoch('staff', grant.subject);
   jar.set(
     staffTokenCookieName(SESSION_COOKIES.access, epoch),
@@ -139,10 +141,6 @@ export async function GET(request: NextRequest) {
     grant.subject,
     sessionCookieOptions(60 * 60 * 24 * 30),
   );
-  // Remove legacy fixed-name cookies; late refreshes only write their old epoch names.
-  jar.delete(SESSION_COOKIES.access);
-  jar.delete(SESSION_COOKIES.refresh);
-  jar.delete(SESSION_COOKIES.idToken);
   jar.delete(SESSION_COOKIES.pkce);
   jar.delete(SESSION_COOKIES.state);
   jar.delete(PORTAL_AUTH_COOKIES.nonce);

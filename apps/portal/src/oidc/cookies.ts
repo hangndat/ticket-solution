@@ -43,7 +43,8 @@ export async function readStaffSubject(): Promise<string | null> {
   return value.length > 0 ? value : null;
 }
 
-export async function clearStaffSessionCookies(): Promise<void> {
+/** Remove current and legacy token names when a new callback or logout replaces a session. */
+export async function clearStaffTokenCookies(): Promise<void> {
   const jar = await cookies();
   for (const cookie of jar.getAll()) {
     if ([SESSION_COOKIES.access, SESSION_COOKIES.refresh, SESSION_COOKIES.idToken]
@@ -52,6 +53,11 @@ export async function clearStaffSessionCookies(): Promise<void> {
   jar.delete(SESSION_COOKIES.access);
   jar.delete(SESSION_COOKIES.refresh);
   jar.delete(SESSION_COOKIES.idToken);
+}
+
+export async function clearStaffSessionCookies(): Promise<void> {
+  await clearStaffTokenCookies();
+  const jar = await cookies();
   jar.delete(SESSION_COOKIES.pkce);
   jar.delete(SESSION_COOKIES.state);
   jar.delete(SESSION_COOKIES.returnPath);
