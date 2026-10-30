@@ -23,6 +23,7 @@ async function startStalledSmtp() {
 
 /** Minimal ESMTP that rejects RCPT (transport failure, no delivery). */
 async function startRejectingSmtp() {
+  let recipientAttempts = 0;
   const server = createNetServer((socket) => {
     socket.write('220 job03-reject ESMTP\r\n');
     let buffer = '';
@@ -34,7 +35,10 @@ async function startRejectingSmtp() {
         buffer = buffer.slice(end + 2);
         if (/^EHLO/i.test(line)) socket.write('250 job03-reject\r\n');
         else if (/^MAIL FROM/i.test(line)) socket.write('250 ok\r\n');
-        else if (/^RCPT TO/i.test(line)) socket.write('550 mailbox unavailable\r\n');
+        else if (/^RCPT TO/i.test(line)) {
+          recipientAttempts += 1;
+          socket.write('550 mailbox unavailable\r\n');
+        }
         else if (/^RSET/i.test(line)) socket.write('250 reset\r\n');
         else if (/^QUIT/i.test(line)) {
           socket.write('221 bye\r\n');
@@ -48,6 +52,7 @@ async function startRejectingSmtp() {
   const port = server.address().port;
   return {
     smtpUrl: `smtp+plain://127.0.0.1:${port}`,
+    get recipientAttempts() { return recipientAttempts; },
     close() {
       server.closeAllConnections?.();
       server.close();

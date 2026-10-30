@@ -220,6 +220,57 @@ async function accelerateRetry(db, tenantId, ticketId) {
 }
 
 test(
+  '[JOB-03] R rejecting SMTP exhausts three worker attempts without a fourth delivery',
+  { timeout: 300000 },
+  async () => {
+    let pg;
+    let redis;
+    let reject;
+    let db;
+    let worker;
+    try {
+      pg = await startPostgres();
+      redis = await startRedis();
+      reject = await startRejectingSmtp();
+      db = createDatabase(pg.url, 4);
+      const { tenantId, ticketId, ownerUserId } = await seedTicket(db);
+      worker = spawnWorker(pg.url, reject, redis.url);
+      let terminal;
+      for (let i = 0; i < 120; i++) {
+        assert.equal(worker.exitCode, null, 'real worker must remain alive through retry cap');
+        const state = await readRelayState(db, tenantId, ticketId);
+        if (state.notification?.state === 'DEAD' && state.outbox?.status === 'DEAD') {
+          terminal = state;
+          break;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 250));
+      }
+      assert.ok(terminal, 'worker must persist terminal PG state within 30 seconds');
+      assert.equal(terminal.notification.attempts, 3);
+      assert.equal(terminal.notification.next_attempt_at, null);
+      assert.equal(terminal.ticketState, 'ACTIVE');
+      assert.equal(reject.recipientAttempts, 3, 'one RCPT rejection per provider attempt');
+      await new Promise((resolve) => setTimeout(resolve, 2500));
+      assert.equal(reject.recipientAttempts, 3, 'live worker must not call provider after cap');
+      const afterQuiet = await readRelayState(db, tenantId, ticketId);
+      assert.equal(afterQuiet.notification.state, 'DEAD');
+      assert.equal(afterQuiet.notification.attempts, 3);
+      assert.equal(afterQuiet.outbox.status, 'DEAD');
+      const visible = await withTenant(db, tenantId, (tx) =>
+        getTicketForOwner(tx, tenantId, ownerUserId, ticketId),
+      );
+      assert.equal(visible.state, 'ACTIVE');
+    } finally {
+      if (worker) await stopWorker(worker);
+      if (reject) reject.close();
+      if (db) await db.$disconnect();
+      if (redis) redis.stop();
+      if (pg) pg.stop();
+    }
+  },
+);
+
+test(
   '[JOB-03] R SMTP failure and timeout: bounded retry, truthful PG state, ticket stays committed',
   { timeout: 300000 },
   async () => {
@@ -323,6 +374,9 @@ test(
       db = createDatabase(pg.url, 4);
       const { tenantId, ticketId, ownerUserId } = await seedTicket(db);
 
+      // The relay subprocess exits after provider acceptance and before its
+      // PG ack. This proves that recovery window for the backend relay path;
+      // it does not prove SIGKILL timing inside the long-running worker main.
       const child = require.resolve(
         '../../../packages/backend/test/fixtures/exit-after-smtp.cjs',
       );
