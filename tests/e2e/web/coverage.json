@@ -64,10 +64,13 @@
   },
   {
     "caseId": "AUTH-07",
-    "tests": ["auth.spec.ts › [AUTH-07]"],
+    "tests": [
+      "B/H:auth.spec.ts › [AUTH-07] another attendee cannot see prior actor ticket after login switch",
+      "B:auth.spec.ts › [AUTH-07] an old ticket document response cannot render after an actor switch (expected failure)"
+    ],
     "layers": ["B", "H"],
     "status": "blocked",
-    "reason": "Có đổi account, reload detail, HTTP owner 200 rồi 403/404, no-store; thiếu in-flight request/back-cache và admin data."
+    "reason": "Có đổi account cùng browser context, back/reload/mở lại detail, wallet và HTTP owner list/detail 200 trước switch rồi list rỗng/detail 403/404 sau switch; response HTML và BFF private có no-store. In-flight document test có observable barrier: đã fetch HTML vé của A trước khi B hoàn tất Keycloak login và BFF của B trả 403/404, rồi thả response cũ; Web vẫn render owner-ticket-ready của A. Test giữ expected failure để CI chạy reproducer, AUTH-07 BLOCKED. Admin data thuộc Portal ngoài slice; cần contract/ADR riêng trước runtime fix."
   },
   {
     "caseId": "AUTH-08",

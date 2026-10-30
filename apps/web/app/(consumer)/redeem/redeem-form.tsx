@@ -1247,7 +1247,7 @@ export function RedeemForm({
       </form>
       {productChrome && singleCodeFlow && globalPhase === 'enter-code' ? (
         <p className="m-0 text-[0.9rem]">
-          <Link href="/wallet">{copy.myTickets}</Link>
+                    <Link href="/wallet" prefetch={false}>{copy.myTickets}</Link>
         </p>
       ) : null}
 
@@ -1296,7 +1296,7 @@ export function RedeemForm({
                 {copy.tryOtherCode}
               </Button>
               <Button asChild variant="primary">
-                <Link href="/wallet">{copy.myTickets}</Link>
+                    <Link href="/wallet" prefetch={false}>{copy.myTickets}</Link>
               </Button>
             </div>
           ) : null}
@@ -1328,7 +1328,7 @@ export function RedeemForm({
           {ux.kind === 'success' ? (
             <p className={authButtonsRow}>
               <Button asChild variant="brand">
-                <Link href="/wallet">{copy.viewWallet}</Link>
+                    <Link href="/wallet" prefetch={false}>{copy.viewWallet}</Link>
               </Button>
             </p>
           ) : null}

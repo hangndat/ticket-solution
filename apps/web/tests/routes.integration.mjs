@@ -103,29 +103,33 @@ test('production routes isolate tenant content and reject unknown pairs', async 
 
     const wallet = await fetch(base + '/wallet');
     assert.equal(wallet.status, 200);
+    assert.match(wallet.headers.get('cache-control') ?? '', /private.*no-store/i);
     const walletHtml = await wallet.text();
     assert.ok(
-      walletHtml.includes('data-testid="wallet-need-login"') ||
-        walletHtml.includes('Cần đăng nhập'),
-      'anonymous /wallet should prompt login',
+      walletHtml.includes('data-testid="wallet-loading-state"'),
+      'anonymous /wallet should serve an identity-checking shell',
     );
     assert.ok(!walletHtml.includes('data-testid="wallet-ready"'));
+    assert.ok(!walletHtml.includes('data-testid="wallet-ticket-grid"'));
+    const identity = await fetch(base + '/api/auth/identity');
+    assert.equal(identity.status, 401);
+    assert.match(identity.headers.get('cache-control') ?? '', /private.*no-store/i);
 
     // BFF list proxy exists; Nest down → 502 UPSTREAM_UNAVAILABLE.
     const listBff = await fetch(base + '/api/bff/public/tenants/mfest-demo/events');
     assert.equal(listBff.status, 502);
     assert.equal((await listBff.json()).code, 'UPSTREAM_UNAVAILABLE');
-    // D13 / UX-UI revamp: anonymous owner-ticket shows login CTA on-page
-    // (AC-S2 → /api/auth/login?return=…), not public event 404.
+    // Private detail is an identity-checking shell; client auth state supplies
+    // the login CTA after hydration (covered by the browser AUTH-07 test).
     const ticketPath =
       '/t/uat-device/tickets/97f77680-4d65-4b6d-baf3-b3f699a006a6';
     const ticketFollow = await fetch(base + ticketPath);
     assert.equal(ticketFollow.status, 200);
+    assert.match(ticketFollow.headers.get('cache-control') ?? '', /private.*no-store/i);
     const ticketHtml = await ticketFollow.text();
     assert.ok(
-      ticketHtml.includes('data-testid="owner-ticket-need-login"') ||
-        ticketHtml.includes('Cần đăng nhập'),
-      'owner ticket anonymous should show need-login surface',
+      ticketHtml.includes('data-testid="owner-ticket-loading-state"'),
+      'owner ticket anonymous should serve an identity-checking shell',
     );
     assert.ok(
       ticketHtml.includes('/api/auth/login?return=') ||
@@ -283,9 +287,9 @@ test('production routes isolate tenant content and reject unknown pairs', async 
         code: 'DEMO',
       }),
     });
-    assert.equal(redeemBff.status, 503);
+    assert.equal(redeemBff.status, 401);
     const redeemErr = await redeemBff.json();
-    assert.equal(redeemErr.code, 'OIDC_MISCONFIGURED');
+    assert.equal(redeemErr.code, 'UNAUTHENTICATED');
 
     // D-7: legacy staff BFF on apps/web → 410 Gone (proxy).
     const legacyGone = await fetch(base + '/api/bff/admin/publish', {

@@ -16,6 +16,7 @@ import {
   sessionCookieOptions,
 } from '../../../../src/oidc/cookies';
 import { WEB_AUTH_COOKIES } from '../../../../src/oidc/local-cookies';
+import { rotateWebActorEpoch } from '../../../../src/oidc/actor-epoch';
 import { requireSessionRedirectOrigin } from '../../../../src/oidc/public-origin';
 import {
   POST_LOGIN_COOKIE,
@@ -146,6 +147,7 @@ export async function GET(request: NextRequest) {
     grant.subject,
     sessionCookieOptions(60 * 60 * 24 * 30),
   );
+  await rotateWebActorEpoch();
   const postLogin = sanitizePostLoginPath(jar.get(POST_LOGIN_COOKIE)?.value);
   await clearPendingLoginCookies();
 
