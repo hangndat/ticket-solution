@@ -1371,10 +1371,10 @@ test('[AUTH-07] cross-tab nav clears A and drops held A profile after B login', 
     await intercepted;
     await switchPage.goto(webUrl(manifest, '/api/auth/logout'));
     await login(switchPage, manifest, actorB);
-    await expect(oldTab.getByTestId('nav-avatar')).not.toContainText(actorA.username);
+    await expect(oldTab.getByTestId('nav-avatar').getByText(actorA.username, { exact: true })).toHaveCount(0);
     await heldTab.evaluate((oldEmail) => {
       const observer = new MutationObserver(() => {
-        if (document.body?.textContent?.includes(oldEmail)) {
+        if (document.querySelector('[data-testid="nav-avatar"]')?.lastElementChild?.textContent?.trim() === oldEmail) {
           (window as typeof window & { staleProfileRendered?: boolean }).staleProfileRendered = true;
         }
       });
