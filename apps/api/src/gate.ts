@@ -629,6 +629,12 @@ export class GateController {
     if (body.sortOrder !== undefined && !Number.isInteger(body.sortOrder)) {
       throw scopeError('sortOrder must be an integer');
     }
+    if (
+      body.sortOrder !== undefined &&
+      (body.sortOrder < 0 || body.sortOrder > 9999)
+    ) {
+      throw scopeError('sortOrder must be between 0 and 9999');
+    }
     return this.run(() => this.gate.createGate(authorization, event, body));
   }
 
