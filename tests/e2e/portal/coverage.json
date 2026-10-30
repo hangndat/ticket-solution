@@ -75,7 +75,7 @@
     "tests": ["portal-ops.spec.ts [PORT-09]"],
     "layers": ["B", "H"],
     "status": "blocked",
-    "reason": "Fix 2/2 clean exact-SHA f2d3a34a run mvv336sk-a389d0 FAIL at provider status matrix. Primary real-worker ACCEPTED, PG attempt/provider_ref and Mailpit correlation passed; UNKNOWN detail/browser and cooldown/limit PG no-mutation assertions were not reached. Historical PASS does not apply. PR #1084 Draft; coordinator diagnosis required before any bounded exception."
+    "reason": "Ngoại lệ 1/1 sau fix 2/2 đã dừng: clean exact-SHA 8728423981ba5e0b73b021eda1859e1bc314806a, run mvv3h42r-633cc2 FAIL tại portal-ops.spec.ts:735 vì không tìm thấy hàng UNKNOWN trong browser #cs. F01 worker thật ACCEPTED, PG attempt/provider_ref, Mailpit correlation và ma trận năm trạng thái/BFF detail UNKNOWN đã qua; F02 browser UNKNOWN chưa đạt, F03 cooldown/limit PG no-mutation phía sau chưa chạy. sourceProvenance evidenceExactShaEligible=true, commitStable=true. PR #1084 Draft; không retry hoặc reset bộ đếm; PASS lịch sử không thay thế kết quả này."
   },
   {
     "caseId": "PORT-10",

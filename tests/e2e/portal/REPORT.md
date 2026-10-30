@@ -2,7 +2,9 @@
 
 ## PORT-09 — checkpoint hiện tại 30/10/2026
 
-**BLOCKED**, PR #1084 Draft. Fix 2/2 tại `f2d3a34afd006012a86ebe7eb8f5b26a420a2359`, clean run `mvv336sk-a389d0` thất bại ở ma trận provider status (`portal-ops.spec.ts:620`); log chưa cho biết giá trị nào thiếu. Primary đã đạt ACCEPTED bằng worker thật, PG notification attempt/provider reference và Mailpit correlation; các assertion F02/F03 phía sau chưa chạy. Typecheck, discovery và 19 guards PASS; cleanup đã gỡ stack cô lập. Các PASS lịch sử bên dưới không thay thế kết quả này. Đã dừng 2/2; owner chẩn đoán: Minh, tối đa 10 phút, chưa dùng ngoại lệ.
+**BLOCKED**, PR #1084 Draft. Ngoại lệ 1/1 sau fix 2/2 đã dùng và dừng: thay fixture UNKNOWN bằng cập nhật notification hiện có, thêm assertion từng vé có expected/actual trước ma trận tổng. Runtime duy nhất `pnpm test:e2e --case=PORT-09`, run `mvv3h42r-633cc2`, **FAIL** trên exact SHA `8728423981ba5e0b73b021eda1859e1bc314806a` tại `portal-ops.spec.ts:735`: không tìm thấy hàng vé UNKNOWN trong browser `#cs` (timeout 15 giây). F01 real worker ACCEPTED + PG attempt/provider_ref + Mailpit correlation và ma trận năm trạng thái/BFF detail UNKNOWN đã qua; F02 browser UNKNOWN chưa đạt, các assertion F03 phía sau chưa chạy. Typecheck portal spec, discovery 1/1, Prettier và 19/19 guards PASS. Không sửa/retry runtime sau FAIL; không reset bộ đếm, chờ coordinator quyết định.
+
+Evidence: `tests/e2e/.artifacts/mvv3h42r-633cc2/summary.json`, `browser-tests.log`. `sourceProvenance`: workingTreeDirty=false, evidenceEligible=true, evidenceExactShaEligible=true, commitStable=true; fingerprint đầu/cuối `4b0e3b2d7b671ab42cd76e10bbe6aee3b4a3544d7915d9980b080a2fc1b37c84`. Các PASS lịch sử bên dưới không thay thế kết quả này.
 
 ## Kiểm tra đã chạy (worker task_b9427e2110b4 — James DoD F01/F02 fix 1/2 / PR #1072)
 
