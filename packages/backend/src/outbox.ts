@@ -1296,6 +1296,7 @@ async function markOutboxDeadFenced(
     UPDATE outbox
     SET status = 'DEAD',
         payload = payload || ${JSON.stringify({ deadReason: reason })}::jsonb,
+        next_attempt_at = NULL,
         lease_owner = NULL,
         lease_token = NULL,
         lease_expires_at = NULL,

@@ -248,14 +248,19 @@ test(
       assert.ok(terminal, 'worker must persist terminal PG state within 30 seconds');
       assert.equal(terminal.notification.attempts, 3);
       assert.equal(terminal.notification.next_attempt_at, null);
+   assert.equal(terminal.outbox.next_attempt_at, null);
       assert.equal(terminal.ticketState, 'ACTIVE');
       assert.equal(reject.recipientAttempts, 3, 'one RCPT rejection per provider attempt');
       await new Promise((resolve) => setTimeout(resolve, 2500));
+   assert.equal(worker.exitCode, null, 'real worker must remain alive after retry cap');
       assert.equal(reject.recipientAttempts, 3, 'live worker must not call provider after cap');
       const afterQuiet = await readRelayState(db, tenantId, ticketId);
       assert.equal(afterQuiet.notification.state, 'DEAD');
       assert.equal(afterQuiet.notification.attempts, 3);
+   assert.equal(afterQuiet.notification.next_attempt_at, null);
       assert.equal(afterQuiet.outbox.status, 'DEAD');
+   assert.equal(afterQuiet.outbox.next_attempt_at, null);
+   assert.equal(afterQuiet.ticketState, 'ACTIVE');
       const visible = await withTenant(db, tenantId, (tx) =>
         getTicketForOwner(tx, tenantId, ownerUserId, ticketId),
       );
