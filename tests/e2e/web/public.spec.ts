@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import {
   test,
   expect,
@@ -109,6 +110,14 @@ test('[WEB-09] multi-tenant owner wallet and private detail/QR/request/operation
     await x.goto(webUrl(manifest, '/wallet'));
     for (const id of [f.ticketId, ...Object.values(otherTickets)])
       await expect(x.getByTestId(`wallet-ticket-${id}`)).toBeVisible();
+    await x.goto(
+      webUrl(
+        manifest,
+        `/t/${f.tenantSlug}/tickets/${f.ticketId}?tenantId=${f.tenantId}`,
+      ),
+    );
+    await expect(x.getByTestId('owner-ticket-state')).toHaveText('ACTIVE');
+    await expect(x.getByTestId('owner-ticket-qr-figure')).toBeVisible();
     await y.goto(webUrl(manifest, '/wallet'));
     for (const [tenantId, tenantSlug, ticketId] of [
       [f.tenantId, f.tenantSlug, f.ticketId],
@@ -133,6 +142,44 @@ test('[WEB-09] multi-tenant owner wallet and private detail/QR/request/operation
       );
       expect([403, 404]).toContain(response.status());
     }
+    for (const ticketId of [otherTickets.REVOKED, otherTickets.CANCELLED]) {
+      const detail = `/t/${otherTenantSlug}/tickets/${ticketId}?tenantId=${otherTenantId}`;
+      await y.goto(webUrl(manifest, detail));
+      await expect(y.getByTestId('owner-ticket-qr-figure')).toHaveCount(0);
+      await expect(
+        y
+          .getByTestId('owner-ticket-forbidden-state')
+          .or(y.getByTestId('owner-ticket-missing-state')),
+      ).toBeVisible();
+      const response = await y.request.get(
+        webUrl(
+          manifest,
+          `/api/bff/tickets/${ticketId}?tenantId=${otherTenantId}`,
+        ),
+      );
+      expect([403, 404]).toContain(response.status());
+    }
+    const forgedTicketId = randomUUID();
+    expect([403, 404]).toContain(
+      (
+        await y.request.get(
+          webUrl(
+            manifest,
+            `/api/bff/tickets/${forgedTicketId}?tenantId=${f.tenantId}`,
+          ),
+        )
+      ).status(),
+    );
+    expect([403, 404]).toContain(
+      (
+        await y.request.get(
+          webUrl(
+            manifest,
+            `/api/bff/tickets/${f.ticketId}?tenantId=${otherTenantId}`,
+          ),
+        )
+      ).status(),
+    );
     for (const [path, expected] of [
       [`/api/bff/redemptions/${f.requestId}?tenantId=${f.tenantId}`, 200],
       [

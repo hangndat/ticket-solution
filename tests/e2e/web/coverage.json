@@ -166,8 +166,8 @@
       "public.spec.ts › [WEB-09] multi-tenant owner wallet and private detail/QR/request/operation"
     ],
     "layers": ["B", "H"],
-    "status": "implemented",
-    "reason": "WEB-09 targeted PASS run mvsy2fr7-514bd0. PostgreSQL runtime role + transaction-local RLS xác nhận X/Y không có staff membership ở hai tenant, bốn vé đều thuộc X, gồm ACTIVE/REVOKED/CANCELLED. Keycloak thật: ví X hiển thị vé cả hai tenant; ví/list Y rỗng, detail URL không có QR, ticket API 403/404; request và operation của X trả 200 nhưng Y bị 403/404. Detail X hiển thị nhãn và cảnh báo đúng cho vé thu hồi/hủy. Fixture đặt REVOKED/CANCELLED trực tiếp trong DB; test không chứng minh luồng chuyển trạng thái hoặc cascade. Reviewer chưa tìm thấy luồng backend tạo trạng thái CANCELLED."
+    "status": "covered",
+    "reason": "PLAN §5.2 WEB-09 P0 B/H: X sở hữu vé ở hai tenant không staff membership; PG runtime role + transaction-local RLS đối soát membership rỗng và owner/operation. Keycloak/BFF: ví X đủ bốn vé, detail ACTIVE có QR; Y list rỗng, detail/QR/request/operation 403/404 kể cả vé REVOKED/CANCELLED, ticket id giả và tenantId lệch. Nhãn/cảnh báo REVOKED/CANCELLED trên detail X. Fixture gán REVOKED/CANCELLED trực tiếp trong DB — không kiểm luồng revoke/cancel/cascade; chưa có luồng backend tạo CANCELLED. Clean checkout SHA 6c4254bc0d9063bba9a77b027ea2df8efda9090e: run mvuwgqol-9172ce PASS 1/1 browser, summary.json evidenceExactShaEligible true; guards 16/16."
   },
   {
     "caseId": "WEB-10",
