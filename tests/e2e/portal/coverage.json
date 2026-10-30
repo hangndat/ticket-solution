@@ -13,7 +13,7 @@
     ],
     "layers": ["B", "H"],
     "status": "covered",
-    "reason": "PORT-02 B/H PASS run mvuv2f70-c94658 (1/1 browser) on branch hangndat/f04-port02-publish: seeded publish exposes GET /v1/public/tenants/{tenantSlug}/events/{eventSlug} 200; draft save+preview and stale save (same tab + second browser context) leave public hero unchanged; BFF publish/rollback with optimistic tokens updates API projection and stale rollback 409; PostgreSQL ticket entitlement/form/terms hashes unchanged after publish+rollback. Portal config UI save/publish/rollback buttons not exercised (BFF parity); consumer Web ISR revalidate=60 not asserted on publish delta — API is SoT per ADR-19. Wizard-created events (PORT-01) may still 404 public until product sync."
+    "reason": "PORT-02 B/H PASS run mvuv3fpp-04187d (1/1 browser) on clean SHA f8152257039a2e6a5f9866b4a774f828c67e4ded: seeded publish exposes GET /v1/public/tenants/{tenantSlug}/events/{eventSlug} 200; draft save+preview and stale save (same tab + second browser context) leave public hero unchanged; BFF publish/rollback with optimistic tokens updates API projection and stale rollback 409; PostgreSQL ticket entitlement/form/terms hashes unchanged after publish+rollback. Portal config UI save/publish/rollback buttons not exercised (BFF parity); consumer Web ISR revalidate=60 not asserted on publish delta — API is SoT per ADR-19. Wizard-created events (PORT-01) may still 404 public until product sync."
   },
   {
     "caseId": "PORT-03",
