@@ -117,11 +117,12 @@
   {
     "caseId": "DB-11",
     "tests": [
-      "D:packages/backend/test/import-invitations.test.cjs#H-I1/H-I2/H-I3 import jobs"
+      "D:packages/backend/test/import-invitations.test.cjs#H-I1/H-I2/H-I3 import jobs",
+      "D:packages/backend/test/db11-invite-ttl-claim.test.cjs#DB-11: staff invite TTL/one-use/email + attendee claim host separation/expired/replay/wrong-owner"
     ],
     "layers": ["D"],
     "status": "blocked",
-    "reason": "D import/invite; thiếu H 48h/claim host và wrong-owner matrix."
+    "reason": "D PostgreSQL PASS trên SHA sạch: staff invite TTL 48h đúng cấu hình, hết hạn thật không tạo membership, email không khớp bị chặn, một lần dùng (actor khác token cũ bị INVITE_ALREADY_USED). Attendee claim: token staff/attendee tách biệt hoàn toàn (cross-use bị chặn, không mutate quota/membership), expired/revoked không mint code/ticket, wrong-owner (actor khác cùng email) replay invitation đã CLAIMED không tạo vé thứ hai — đúng một ticket/owner cho invitation. Thiếu H Keycloak/HTTP: cần seed fixture + live.test.mjs case mới, đề xuất Dispatch riêng để không rủi ro harness dùng chung cho các ID khác."
   },
   {
     "caseId": "DB-12",

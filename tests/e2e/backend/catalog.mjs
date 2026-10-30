@@ -71,7 +71,13 @@ export const catalog = {
     b('import-invitations', 'H-I1/H-I2/H-I3 import jobs'),
     { file: 'tests/e2e/http/live.test.mjs', name: '[DB-10] live HTTP', layer: 'H' },
   ],
-  'DB-11': [b('import-invitations', 'H-I1/H-I2/H-I3 import jobs')],
+  'DB-11': [
+    b('import-invitations', 'H-I1/H-I2/H-I3 import jobs'),
+    b(
+      'db11-invite-ttl-claim',
+      'DB-11: staff invite TTL/one-use/email + attendee claim host separation/expired/replay/wrong-owner',
+    ),
+  ],
   'DB-12': [
     b('config-publish', 'config publish is versioned'),
     b('published-events', 'public published events'),
@@ -209,7 +215,8 @@ export const notes = {
     'Thiếu fault injection trước commit và lost-response sau commit theo command scope.',
   'DB-09': 'D revoke, owner invariant, allocation policy và reissue credential/version/grant; R worker/Mailpit PNG v2 + revoke-before-relay DEAD. H partial: generic PATCH owner transfer refused trên CS/me/gate ticket paths + DB snapshot; GATE-03 vẫn thiếu QR credential validation tại Gate.',
   'DB-10': 'D PostgreSQL PASS; H Keycloak/API/MinIO PASS run mvulfv4t-605b10 trên SHA sạch 5f2234bb: hai request cùng importId/key/body chờ event lock khi commit đầu còn in-flight, một original + một replay, một operation và một mã mới; mã CONSUMED giữ nguyên. Actor inventory.import đọc/preview/commit job do actor khác tạo; actor thiếu quyền/revoked và sai tenant/event bị từ chối không mutation. Chờ DoD độc lập trên SHA cuối.',
-  'DB-11': 'D import/invite; thiếu H 48h/claim host và wrong-owner matrix.',
+  'DB-11':
+    'D PostgreSQL PASS trên SHA sạch: staff invite TTL 48h đúng cấu hình, hết hạn thật không tạo membership, email không khớp bị chặn, một lần dùng (actor khác token cũ bị INVITE_ALREADY_USED). Attendee claim: token staff/attendee tách biệt hoàn toàn (cross-use bị chặn, không mutate quota/membership), expired/revoked không mint code/ticket, wrong-owner (actor khác cùng email) replay invitation đã CLAIMED không tạo vé thứ hai — đúng một ticket/owner cho invitation. Thiếu H Keycloak/HTTP: cần seed fixture + live.test.mjs case mới, đề xuất Dispatch riêng để không rủi ro harness dùng chung cho các ID khác.',
   'DB-12':
     'D publish/projection; thiếu H cache version/locale/no-store và rollback.',
   'DB-13':
