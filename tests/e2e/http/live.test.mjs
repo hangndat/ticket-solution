@@ -828,6 +828,7 @@ async function db04ControlledRequests(ctx, path, token, body, codes) {
   await locker.connect();
   await observer.connect();
   let requests = [];
+  const observed = [];
   try {
     await locker.query('BEGIN');
     await locker.query('SET LOCAL ROLE ticket_runtime');
@@ -838,7 +839,10 @@ async function db04ControlledRequests(ctx, path, token, body, codes) {
     assert.equal(locked.rows.length, 1);
     const blockerPid = locked.rows[0].pid;
     requests = codes.map((code) => request(ctx, 'POST', path, token, { ...body, code },
-      { 'idempotency-key': randomUUID() }));
+      { 'idempotency-key': randomUUID() }).then((result) => {
+      observed.push({ status: result.status, code: result.body.code });
+      return result;
+    }));
     const deadline = Date.now() + 15000;
     let blocked = [];
     while (Date.now() < deadline) {
@@ -854,7 +858,7 @@ async function db04ControlledRequests(ctx, path, token, body, codes) {
       FROM pg_stat_activity WHERE datname = current_database() AND pid <> pg_backend_pid()
     `)).rows;
     assert.equal(blocked.length, codes.length,
-      `all HTTP requests must reach the same owner counter while it is locked; activity=${JSON.stringify(activity)}`);
+      `all HTTP requests must reach the same owner counter while it is locked; activity=${JSON.stringify(activity)} outcomes=${JSON.stringify(observed)}`);
   } catch (error) {
     requests.forEach((pending) => pending.catch(() => undefined));
     throw error;
