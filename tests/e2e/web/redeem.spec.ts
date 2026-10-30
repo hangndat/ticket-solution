@@ -1074,7 +1074,7 @@ test('[WEB-08] real worker delivers issued ticket email to run Mailpit', async (
   const eventName = caseData<string>(f, 'eventName');
   expect(await walletTicketIds(page, manifest, f.tenantId)).toContain(ticketId);
   const mail = await waitForMail(page, manifest, actor.username, eventName);
-  const url = assertTicketIssuedMail(mail, {
+  const url = await assertTicketIssuedMail(page, manifest, mail, {
     eventName,
     ticketId: ticketId!,
     webOrigin: manifest.origins.web,
@@ -1086,8 +1086,52 @@ test('[WEB-08] real worker delivers issued ticket email to run Mailpit', async (
     await expect(
       guestPage.getByTestId('owner-ticket-need-login-state'),
     ).toBeVisible();
+    await expect(guestPage.getByTestId('owner-ticket-qr-figure')).toHaveCount(0);
+    await expect(guestPage.getByTestId('owner-ticket-id')).toHaveCount(0);
   } finally {
     await guest.close();
+  }
+  const otherAttendee = accountFor(manifest, 'WEB-08', 'otherAttendee');
+  const otherCtx = await browser.newContext();
+  try {
+    const otherPage = await otherCtx.newPage();
+    await login(otherPage, manifest, otherAttendee);
+    const deniedBff = await otherPage.request.get(
+      webUrl(
+        manifest,
+        `/api/bff/tickets/${ticketId}?tenantId=${f.tenantId}`,
+      ),
+    );
+    expect([403, 404]).toContain(deniedBff.status());
+    if (deniedBff.status() === 200) {
+      const payload = (await deniedBff.json()) as { id?: string };
+      expect(payload.id).not.toBe(ticketId);
+    } else {
+      const body = await deniedBff.text();
+      expect(body).not.toContain(ticketId!);
+    }
+    await otherPage.goto(url);
+    await expect(otherPage.getByTestId('owner-ticket-loading-state')).toHaveCount(0, {
+      timeout: 30_000,
+    });
+    await expect(otherPage.getByTestId('owner-ticket-ready')).toHaveCount(0);
+    await expect(otherPage.getByTestId('owner-ticket-qr-figure')).toHaveCount(0);
+    await expect(otherPage.getByTestId('owner-ticket-id')).toHaveCount(0);
+    await expect(
+      otherPage
+        .getByTestId('owner-ticket-forbidden-state')
+        .or(otherPage.getByTestId('owner-ticket-missing-state'))
+        .or(otherPage.getByTestId('owner-ticket-tenant-unresolved-state')),
+    ).toBeVisible();
+    const deniedAfterNav = await otherPage.request.get(
+      webUrl(
+        manifest,
+        `/api/bff/tickets/${ticketId}?tenantId=${f.tenantId}`,
+      ),
+    );
+    expect([403, 404]).toContain(deniedAfterNav.status());
+  } finally {
+    await otherCtx.close();
   }
   await page.goto(url);
   await expect(page).toHaveURL(
