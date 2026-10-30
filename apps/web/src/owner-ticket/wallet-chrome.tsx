@@ -70,6 +70,11 @@ export function WalletNeedLogin({ loginHref }: { loginHref: string }) {
   );
 }
 
+export function WalletLoading() {
+  const { locale } = useAttendeeLocale();
+  return <SurfaceState kind="loading" title={walletCopy(locale).loading} testId="wallet-loading-state" />;
+}
+
 export function WalletUnreachable() {
   const { locale } = useAttendeeLocale();
   const copy = walletCopy(locale);
@@ -81,7 +86,7 @@ export function WalletUnreachable() {
       testId="wallet-unreachable-state"
       action={
         <Button asChild variant="brand">
-          <Link href="/wallet">{copy.retry}</Link>
+          <Link href="/wallet" prefetch={false}>{copy.retry}</Link>
         </Button>
       }
     />
@@ -99,7 +104,7 @@ export function WalletInvalid() {
       testId="wallet-invalid-state"
       action={
         <Button asChild variant="brand">
-          <Link href="/wallet">{copy.retry}</Link>
+          <Link href="/wallet" prefetch={false}>{copy.retry}</Link>
         </Button>
       }
     />
@@ -135,7 +140,7 @@ export function WalletFilterEmpty() {
       testId="wallet-filter-empty"
       action={
         <Button asChild variant="brand">
-          <Link href="/wallet">{copy.allTickets}</Link>
+            <Link href="/wallet" prefetch={false}>{copy.allTickets}</Link>
         </Button>
       }
     />
