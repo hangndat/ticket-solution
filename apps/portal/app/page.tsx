@@ -128,10 +128,10 @@ export default function PortalHomePage() {
       <Typography.Title level={3}>{t('shell.tenant.empty')}</Typography.Title>
       <Typography.Paragraph>{t('home.noOrgBody')}</Typography.Paragraph>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        <Link href="/onboarding">
+        <Link prefetch={false} href="/onboarding">
           <Button type="primary">{t('home.startOnboarding')}</Button>
         </Link>
-        <Link href="/account/security">
+        <Link prefetch={false} href="/account/security">
           <Button>{t('home.h_cb3p8s')}</Button>
         </Link>
       </div>

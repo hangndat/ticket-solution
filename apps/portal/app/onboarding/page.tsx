@@ -244,7 +244,7 @@ export default function OnboardingEntryPage() {
             <Button type="primary" htmlType="submit" loading={busy}>
               {t('onboarding.signup.submit')}
             </Button>
-            <Link href="/">
+            <Link prefetch={false} href="/">
               <Button>{t('onboarding.backHome')}</Button>
             </Link>
           </Space>

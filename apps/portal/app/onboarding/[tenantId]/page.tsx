@@ -366,7 +366,7 @@ export default function TenantOnboardingPage() {
               <Button onClick={() => void reload()}>
                 {t('onboarding.pending.refresh')}
               </Button>
-              <Link href="/account/security">
+              <Link prefetch={false} href="/account/security">
                 <Button type="default">{t('home.h_cb3p8s')}</Button>
               </Link>
             </Space>} />
@@ -488,7 +488,7 @@ export default function TenantOnboardingPage() {
         {current === 2 ? (
           <Space direction="vertical" style={{ width: '100%' }}>
             <Typography.Text>{t('onboarding.firstRun.eventHint')}</Typography.Text>
-            <Link href={`/t/${tenantId}/events/new`}>
+            <Link prefetch={false} href={`/t/${tenantId}/events/new`}>
               <Button type="primary">{t('onboarding.firstRun.createEvent')}</Button>
             </Link>
             <Button onClick={() => void reload()}>
@@ -510,7 +510,7 @@ export default function TenantOnboardingPage() {
               message={t('readiness.summary.allReady')}
             />
             {firstEvent ? (
-              <Link href={`/t/${tenantId}/e/${firstEvent.eventId}/setup`}>
+              <Link prefetch={false} href={`/t/${tenantId}/e/${firstEvent.eventId}/setup`}>
                 <Button>{t('onboarding.firstRun.openSetup')}</Button>
               </Link>
             ) : null}
