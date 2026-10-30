@@ -43,7 +43,10 @@ export const catalog = {
     b('approval', 'F01: mixed auto/manual'),
     b('db04-db05-acceptance', 'DB-05:'),
   ],
-  'DB-06': [b('event-lifecycle', 'C-E event lifecycle')],
+  'DB-06': [
+    b('event-lifecycle', 'C-E event lifecycle'),
+    b('db06-race', 'DB-06:'),
+  ],
   'DB-07': [
     b('approval', 'manual redeem does not allocate'),
     b('approval', 'manual approval is audited'),
@@ -195,7 +198,7 @@ export const notes = {
   'DB-05':
     'D event/type/source last-seat, các scope còn lại nullable, allocated invariant và fault sau cả ba quota mutation rollback toàn bộ. Chờ reviewer độc lập trên SHA cuối.',
   'DB-06':
-    'D event lifecycle; thiếu race config/quota/suspend và bounded transient retry.',
+    'D barrier PostgreSQL chứng minh issue vs close/config theo hai thứ tự, issue trước suspend, state ticket/code/quota/operation/outbox và lock timeout + same-key retry. SQL quota reduction chỉ là diagnostic cho CHECK/serialization, không thay AC runtime. BLOCKED: chưa có runtime quota-reduction command; contract bounded transient retry chưa chốt (hiện có lock_timeout 2s và client retry cùng key, không auto-retry).',
   'DB-07': 'D pending/approve; thiếu H expiry/reject race và TTL cấu hình.',
   'DB-08':
     'Thiếu fault injection trước commit và lost-response sau commit theo command scope.',
