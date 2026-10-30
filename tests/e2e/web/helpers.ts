@@ -87,6 +87,41 @@ export async function mintCrossClientAccessToken(
   return payload.access_token;
 }
 
+/**
+ * Mint a REAL Keycloak token from the harness's secondary, fully independent
+ * Keycloak realm (own signing keypair) — a genuinely different `iss` than
+ * the primary run realm — to assert the BFF rejects a correctly-signed,
+ * correct-audience token issued by a different realm.
+ */
+export async function mintSecondaryIssuerAccessToken(
+  issuer: string,
+  clientId: string,
+  clientSecret: string,
+  account: TestAccount,
+): Promise<string> {
+  const response = await fetch(`${issuer}/protocol/openid-connect/token`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'password',
+      client_id: clientId,
+      client_secret: clientSecret,
+      username: account.username,
+      password: account.password,
+      scope: 'openid profile email',
+    }),
+  });
+  if (response.status !== 200) {
+    throw new Error(
+      `BLOCKED: secondary issuer password grant failed (${response.status})`,
+    );
+  }
+  const payload = (await response.json()) as { access_token?: string };
+  if (!payload.access_token)
+    throw new Error('BLOCKED: no access_token in secondary-issuer grant');
+  return payload.access_token;
+}
+
 export function eventPath(f: CaseFixture): string {
   return `/t/${encodeURIComponent(f.tenantSlug)}/events/${encodeURIComponent(f.eventSlug)}`;
 }
