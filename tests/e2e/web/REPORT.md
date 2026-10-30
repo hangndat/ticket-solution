@@ -1,5 +1,11 @@
 # Báo cáo Web E2E — 28/10/2026
 
+## WEB-08 ticket email Mailpit B/H/R — 30/10/2026
+
+- Trước: run mvuruy41 chứng minh issue + Mailpit link trùng ticketId; thiếu wallet, subject/event body, guest authz selector đúng DOM, owner URL/QR sau mở link. Sau: `redeem.spec.ts › [WEB-08]` + `assertTicketIssuedMail` trong `mailpit.ts` — wallet sau redeem, Mailpit poll theo recipient + `eventName`, QR inline `cid:ticket-qr`; guest context → `owner-ticket-need-login-state`; attendee đã login → URL vé, QR figure, `owner-ticket-id` title; PG `assertIssuedExactlyOnce` giữ lớp H.
+- Checkout sạch SHA `bef4f36955604886a13ab042e227b1c566bc7c57` (`evidenceExactShaEligible: true`): `node tests/e2e/harness/run.mjs e2e --case=WEB-08 --skip-build` → run `mvuy8ksx-56d1a3` PASS 1/1 browser; artifact `tests/e2e/.artifacts/mvuy8ksx-56d1a3/summary.json`. `pnpm test:e2e:guards` 16/16. Worker + SMTP Mailpit thật của run; không mock auth/mail. Giới hạn: Mailpit API ≠ inbox internet; không assert delivery/read receipt ngoài sink run.
+- `coverage.json` WEB-08 → `covered`; Relates #1037. Không sửa `apps/web` / API / worker runtime.
+
 ## WEB-02/WEB-03 redeem B+H — 30/10/2026
 
 - Đối chiếu PLAN §5.2 P0: WEB-02 (verified AUTO, form/terms, wallet/QR/reload, PG code/request/ticket/operation/outbox/quota +1) và WEB-03 (context event + global qua login, invalid/ambiguous privacy, PG không issue thêm, cleanup collision) đã khớp `redeem.spec.ts` — không thiếu assertion bắt buộc, không sửa harness/fixture ngoài tài liệu.
@@ -142,4 +148,4 @@ Coordinator báo smoke `mvs7d4db-259457`: WEB-02/04/07/08 PASS, AUTH-01 FAIL vì
 7. WEB-01 theo PRD M03: private/unlisted không vào catalog nhưng direct link phải hiển thị event đã publish. Source `loadPublishedEventDetail` hiện chỉ nhận `PUBLIC`, nên assertion mới có thể FAIL sản phẩm; không sửa product trong slice test.
 8. WEB-13 smoke `mvs7goky-950046` AUTO timeout khi AntD `option` hidden; snapshot thấy dropdown option hiển thị ở portal. Test nay chọn `.ant-select-dropdown:visible .ant-select-item-option-content` và cleanup bằng `Promise.allSettled` để lỗi đóng context không che lỗi gốc. Run `mvt16o7f-e1c74b` AUTO fail vì `expect.poll` lồng `waitForResponse` 15s trong khi nút list `loading={busy}` hoặc tab dispatch chưa sẵn sàng — `api.log` không có `guest_invitations.list` cho event AUTO, MANUAL PASS. Sửa poll BFF `page.request` rồi một lần click UI; targeted `mvt1fsct-d7a38d` PASS 2/2.
 
-`coverage.json`: 1 nhóm `implemented` ở mức test code (WEB-08), 20 nhóm `blocked` do còn AC phụ hoặc cần control/fixture. `implemented` không đồng nghĩa runtime PASS.
+`coverage.json`: WEB-08 P0 B/H/R `covered` tại SHA `bef4f369` (run `mvuy8ksx-56d1a3`); các nhóm `blocked` còn lại do AC phụ hoặc cần control/fixture — xem từng `reason` trong file.
