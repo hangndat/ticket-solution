@@ -72,11 +72,12 @@
       "D:packages/backend/test/approval.test.cjs#manual redeem does not allocate",
       "D:packages/backend/test/approval.test.cjs#manual approval is audited",
       "D:packages/backend/test/form-consent.test.cjs#F-BE: form/consent",
-      "D:packages/backend/test/db07-manual-race.test.cjs#DB-07:"
+      "D:packages/backend/test/db07-manual-race.test.cjs#DB-07:",
+      "H:tests/e2e/http/live.test.mjs#[DB-07]"
     ],
-    "layers": ["D"],
-    "status": "blocked",
-    "reason": "D PostgreSQL barrier kiểm pending/TTL cấu hình nguồn, approve vs expiry/deny và nhiều approver, quota recheck, replay, code/request/ticket/quota/audit/outbox. H Keycloak/HTTP chưa được chứng minh; giữ BLOCKED."
+    "layers": ["D", "H"],
+    "status": "implemented",
+    "reason": "D PostgreSQL barrier: pending không chiếm quota; TTL=3h đọc từ issuance_sources; approve vs expiry/deny, hai approver, quota recheck, owner retry và lazy expiry lưu trạng thái. H Keycloak/HTTP: cùng key replay, hai approver qua barrier PG, deny, expiry, quota hết tại lúc duyệt; đối soát code/request/ticket/quota/audit/outbox/operation. Cần chạy D/H trên SHA sạch cuối và reviewer độc lập trước nghiệm thu."
   },
   {
     "caseId": "DB-08",

@@ -905,10 +905,18 @@ async function db07DecisionBarrier(ctx, requestId, calls) {
     const deadline = Date.now() + 1500;
     let waiters = [];
     while (Date.now() < deadline) {
-      const { rows } = await observer.query(`SELECT pid FROM pg_stat_activity
-        WHERE pid <> pg_backend_pid() AND wait_event_type='Lock'
-          AND $1::int = ANY(pg_blocking_pids(pid))`, [blockerPid]);
-      waiters = rows;
+      const { rows } = await observer.query(`SELECT pid, pg_blocking_pids(pid) AS blockers
+        FROM pg_stat_activity WHERE pid <> pg_backend_pid() AND wait_event_type='Lock'`);
+      const waiting = new Map(rows.map((row) => [row.pid, row]));
+      const reachesLocker = (pid, seen = new Set()) => {
+        if (pid === blockerPid) return true;
+        if (seen.has(pid)) return false;
+        const row = waiting.get(pid);
+        if (!row) return false;
+        seen.add(pid);
+        return row.blockers.some((blocker) => reachesLocker(blocker, seen));
+      };
+      waiters = rows.filter((row) => reachesLocker(row.pid));
       if (waiters.length >= calls.length) break;
       await new Promise((resolve) => setTimeout(resolve, 20));
     }
@@ -2807,7 +2815,7 @@ for (const caseId of CASE_IDS) {
     if (caseId === 'DB-07') {
       const attendee = await bearer(ctx, 'attendee');
       const manager = await bearer(ctx, 'manager');
-      const supervisor = await bearer(ctx, 'supervisor');
+      const secondApprover = await bearer(ctx, 'owner');
       const path = redemptionPath(f);
       const body = redemptionBody(f, caseId);
       const hold = async (code, allocated = 0) => {
@@ -2851,7 +2859,7 @@ for (const caseId of CASE_IDS) {
       const secondKey = randomUUID();
       const approvals = await db07DecisionBarrier(ctx, approveRequestId, [
         () => decision(approveRequestId, 'approve', manager, firstKey),
-        () => decision(approveRequestId, 'approve', supervisor, secondKey),
+        () => decision(approveRequestId, 'approve', secondApprover, secondKey),
       ]);
       assert.ok(approvals.some((result) => result.status === 201));
       const approved = approvals.find((result) => result.status === 201);
@@ -2869,11 +2877,12 @@ for (const caseId of CASE_IDS) {
       assert.equal(approvedState.audit.filter((a) => a.action === 'redemption.approved').length, 1);
       assert.equal(approvedState.outbox.filter((o) => o.type === 'TicketIssued').length, 1);
       const replayKey = approvals[0].status === 201 ? firstKey : secondKey;
-      const replayActor = approvals[0].status === 201 ? manager : supervisor;
+      const replayActor = approvals[0].status === 201 ? manager : secondApprover;
       const approvalReplay = await decision(approveRequestId, 'approve', replayActor, replayKey);
       expectStatus(approvalReplay, 201);
       assert.equal(approvalReplay.body.replayed, true);
       assert.equal(approvalReplay.body.ticketId, approved.body.ticketId);
+      assert.equal(approvalReplay.body.operationId, approved.body.operationId);
 
       const denyRequestId = await hold(f.secondCode, 1);
       const denyKey = randomUUID();
@@ -2883,7 +2892,8 @@ for (const caseId of CASE_IDS) {
       const denyReplay = await decision(denyRequestId, 'deny', manager, denyKey, 'DB-07 synthetic denial');
       expectStatus(denyReplay, 201);
       assert.equal(denyReplay.body.replayed, true);
-      expectStatus(await decision(denyRequestId, 'approve', supervisor, randomUUID()),
+      assert.equal(denyReplay.body.operationId, denied.body.operationId);
+      expectStatus(await decision(denyRequestId, 'approve', secondApprover, randomUUID()),
         409, 'DECISION_CONFLICT');
       const deniedState = await db07State(f, denyRequestId);
       assert.equal(deniedState.request.status, 'REJECTED');
@@ -2928,6 +2938,11 @@ for (const caseId of CASE_IDS) {
       assert.ok(quotaState.quota.every((q) => q.allocated === 1));
       assert.equal(quotaState.audit.filter((a) => a.action === 'redemption.approved').length, 0);
       assert.equal(quotaState.outbox.length, 0);
+      const operations = await db03Query(f, `SELECT status FROM operations
+        WHERE tenant_id=$1::uuid AND event_id=$2::uuid`, [f.tenantId, f.eventId]);
+      assert.ok(operations.length >= 8, 'DB-07 must persist redeem and decision outcomes');
+      assert.ok(operations.every((op) => op.status === 'COMPLETED'),
+        'DB-07 must leave no IN_PROGRESS operation after races/replay');
       return;
     }
     if (caseId === 'AUTH-06') {
