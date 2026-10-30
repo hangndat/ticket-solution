@@ -147,6 +147,36 @@ test('[PORT-07] gate create, duplicate and HTTP validation', async ({
   } finally {
     await scannerContext.close();
   }
+
+  const readerContext = await browser.newContext();
+  const readerPage = await readerContext.newPage();
+  try {
+    await login(readerPage, m, 'PORT-07', 'cs');
+    await readerPage.goto(portalUrl(m, eventPath(f, '/gate')));
+    const readerSection = readerPage.getByRole('region', { name: 'Cổng vào' });
+    await expect(readerSection).toBeVisible();
+    await expect(
+      readerSection.getByRole('button', { name: 'Thêm cổng' }),
+    ).toHaveCount(0);
+    await expect(
+      readerSection.getByRole('cell', { name: gateName }),
+    ).toBeVisible();
+    await expect(
+      readerSection.getByRole('cell', { name: maxName }),
+    ).toBeVisible();
+
+    const readerList = await bffGet(readerPage, m, eventBff(f, '/gates'));
+    expect(readerList.status).toBe(200);
+    expect(JSON.stringify(readerList.json)).toContain(gateName);
+    const readerDeny = await bffMutate(
+      readerPage,
+      eventBff(f, '/gates'),
+      { name: `Reader ${m.runId}` },
+    );
+    expect(readerDeny.status).toBe(403);
+  } finally {
+    await readerContext.close();
+  }
 });
 
 test('[PORT-08] event report shows seeded KPI, asOf and work links', async ({
