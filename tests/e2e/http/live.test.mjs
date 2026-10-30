@@ -25,6 +25,7 @@ const CASE_IDS = [
   'DB-09',
   'DB-10',
   'DB-11',
+  'DB-12',
   'WEB-04',
 ];
 const EVIL_HOST = 'evil.example';
@@ -4384,6 +4385,333 @@ for (const caseId of CASE_IDS) {
         afterReport.body.quota.allocated,
         beforeReport.body.quota.allocated + 1,
         'WEB-04 positive control: valid code must still allocate quota',
+      );
+    }
+    if (caseId === 'DB-12') {
+      // PLAN §6.1 DB-12 H: publish/rollback optimistic concurrency and
+      // draft/unpublished non-leak, proven end to end through the real
+      // config-publish + public published-events endpoints. Public content
+      // cache headers (host/tenant/event/published-version/locale) and the
+      // authenticated-preview no-store header are a confirmed runtime gap
+      // (apps/api/src/published-events.ts has no Cache-Control at all; the
+      // preview route in apps/api/src/config.ts reads the client's
+      // cache-control header into an unused var instead of setting the
+      // response one) — BLOCKED pending product/runtime decision, not
+      // asserted here.
+      const owner = await bearer(ctx, 'owner');
+      const configBase = `/tenants/${f.tenantId}/events/${f.eventId}`;
+      const publicDetailPath = (slug) =>
+        `/public/tenants/${f.tenantSlug}/events/${slug}`;
+      const publicListPath = `/public/tenants/${f.tenantSlug}/events`;
+      const draftEventId = required(f.data?.draftEventId, 'DB-12 draftEventId');
+
+      const businessState = async () => {
+        const quota = await web04Query(
+          f,
+          f.tenantId,
+          `SELECT capacity, allocated FROM quota_buckets
+           WHERE tenant_id = $1::uuid AND event_id = $2::uuid AND scope = 'EVENT'`,
+          [f.tenantId, f.eventId],
+        );
+        const codes = await web04Query(
+          f,
+          f.tenantId,
+          `SELECT status FROM redemption_codes
+           WHERE tenant_id = $1::uuid AND event_id = $2::uuid ORDER BY id`,
+          [f.tenantId, f.eventId],
+        );
+        return { quota, codes };
+      };
+
+      const publishConcurrencySnapshot = async () => {
+        const [row] = await web04Query(
+          f,
+          f.tenantId,
+          `SELECT
+             e.published_config_version AS published_version,
+             e.revision,
+             (SELECT count(*)::int FROM event_config_versions
+              WHERE tenant_id = $1::uuid AND event_id = $2::uuid) AS config_version_count,
+             (SELECT count(*)::int FROM audit_logs
+              WHERE tenant_id = $1::uuid AND event_id = $2::uuid) AS audit_count,
+             (SELECT count(*)::int FROM tickets
+              WHERE tenant_id = $1::uuid AND event_id = $2::uuid) AS ticket_count
+           FROM events e
+           WHERE e.tenant_id = $1::uuid AND e.id = $2::uuid`,
+          [f.tenantId, f.eventId],
+        );
+        return row;
+      };
+
+      const assertConcurrencyUnchanged = (before, after, label) => {
+        assert.deepEqual(
+          after,
+          before,
+          `${label}: published pointer/revision/config-version/audit/ticket counts must be unchanged after 409`,
+        );
+      };
+
+      // --- Baseline: seeded version 1 is live on the public projection ---
+      const baselinePublic = await request(
+        ctx,
+        'GET',
+        publicDetailPath(f.eventSlug),
+        undefined,
+      );
+      expectStatus(baselinePublic, 200);
+      assert.equal(baselinePublic.body.publishedConfigVersion, 1);
+      assert.equal(baselinePublic.body.brand.organizationName, `Tenant ${caseId}`);
+      const stateBeforeAny = await businessState();
+
+      // --- Draft (saved, never published) must not leak on the public path ---
+      const draftPublic = await request(
+        ctx,
+        'GET',
+        publicDetailPath('draft-only'),
+        undefined,
+      );
+      expectStatus(draftPublic, 404);
+      const listBeforePublish = await request(
+        ctx,
+        'GET',
+        publicListPath,
+        undefined,
+      );
+      expectStatus(listBeforePublish, 200);
+      assert.equal(
+        listBeforePublish.body.items.some((item) => item.slug === 'draft-only'),
+        false,
+        'DB-12: draft/unpublished event must not appear in the public catalog',
+      );
+
+      // --- Save + publish v2 through the real HTTP config-publish path ---
+      const savedV2 = await request(ctx, 'POST', `${configBase}/config-versions`, owner, {
+        payload: {
+          schemaVersion: 1,
+          brand: { primaryColor: '#245B47', organizationName: 'DB-12 Org v2' },
+          sections: [
+            { kind: 'hero', id: 'hero', visible: true, order: 0, body: { title: 'E2E DB-12 v2', text: 'v2' } },
+            { kind: 'info', id: 'info', visible: true, order: 1, body: { title: 'Info', text: 'v2' } },
+            { kind: 'redeem', id: 'redeem', visible: true, order: 2, body: { title: 'Redeem', text: '' } },
+            { kind: 'guide', id: 'guide', visible: false, order: 3, body: { title: 'Guide', text: '' } },
+            { kind: 'faq', id: 'faq', visible: true, order: 4, body: { title: 'FAQ', items: [{ question: 'Q', answer: 'A' }] } },
+            { kind: 'terms', id: 'terms', visible: true, order: 5, body: { title: 'Terms', termsVersion: 'terms-v1', text: 'v2' } },
+          ],
+          termsVersion: 'terms-v1',
+        },
+        expectedVersion: 1,
+      });
+      expectStatus(savedV2, 201);
+      assert.equal(savedV2.body.version, 2);
+      const publishV2AuditBefore = await web04Query(
+        f,
+        f.tenantId,
+        `SELECT id FROM audit_logs
+         WHERE tenant_id = $1::uuid AND event_id = $2::uuid
+           AND action = 'event.publish'
+           AND (sanitized_diff->>'version')::int = 2`,
+        [f.tenantId, f.eventId],
+      );
+      assert.equal(
+        publishV2AuditBefore.length,
+        0,
+        'DB-12: no publish-v2 audit row must exist before HTTP publish of v2',
+      );
+      const published2 = await request(ctx, 'POST', `${configBase}/publish`, owner, {
+        expectedVersion: 2,
+      });
+      expectStatus(published2, 201);
+      assert.equal(published2.body.publishedConfigVersion, 2);
+      const publishV2AuditAfter = await web04Query(
+        f,
+        f.tenantId,
+        `SELECT id, sanitized_diff FROM audit_logs
+         WHERE tenant_id = $1::uuid AND event_id = $2::uuid
+           AND action = 'event.publish'
+           AND (sanitized_diff->>'version')::int = 2`,
+        [f.tenantId, f.eventId],
+      );
+      assert.equal(
+        publishV2AuditAfter.length,
+        1,
+        'DB-12: HTTP publish v2 must append exactly one event.publish audit row for version 2',
+      );
+      // revision is a monotonic publish/rollback counter, not the config
+      // version number; the generic seed's own publish of v1 already bumped
+      // it from 1 to 2, so this second publish (of v2) bumps it to 3.
+      assert.equal(published2.body.revision, 3);
+
+      const publicAfterPublish = await request(
+        ctx,
+        'GET',
+        publicDetailPath(f.eventSlug),
+        undefined,
+      );
+      expectStatus(publicAfterPublish, 200);
+      assert.equal(publicAfterPublish.body.publishedConfigVersion, 2);
+      assert.equal(publicAfterPublish.body.brand.organizationName, 'DB-12 Org v2');
+
+      // --- Stale rollback: one wrong token per request; assert exact error
+      // code and no mutation to pointer/revision/config counts/audit/tickets ---
+      const concurrencyBeforeStale = await publishConcurrencySnapshot();
+      const staleRevisionRollback = await request(
+        ctx,
+        'POST',
+        `${configBase}/config/rollback`,
+        owner,
+        { targetVersion: 1, expectedPublishedVersion: 2, expectedRevision: 1 },
+        { 'idempotency-key': randomUUID() },
+      );
+      expectStatus(staleRevisionRollback, 409);
+      assert.equal(
+        staleRevisionRollback.body.code,
+        'REVISION_CONFLICT',
+        'DB-12: stale expectedRevision must surface REVISION_CONFLICT',
+      );
+      assertConcurrencyUnchanged(
+        concurrencyBeforeStale,
+        await publishConcurrencySnapshot(),
+        'DB-12 stale expectedRevision rollback',
+      );
+      assert.deepEqual(
+        await businessState(),
+        stateBeforeAny,
+        'DB-12: stale expectedRevision rollback must not mutate quota/codes',
+      );
+
+      const concurrencyBeforeStalePublished = await publishConcurrencySnapshot();
+      const stalePublishedRollback = await request(
+        ctx,
+        'POST',
+        `${configBase}/config/rollback`,
+        owner,
+        { targetVersion: 1, expectedPublishedVersion: 1, expectedRevision: 3 },
+        { 'idempotency-key': randomUUID() },
+      );
+      expectStatus(stalePublishedRollback, 409);
+      assert.equal(
+        stalePublishedRollback.body.code,
+        'CONFIG_VERSION_MISMATCH',
+        'DB-12: stale expectedPublishedVersion must surface CONFIG_VERSION_MISMATCH',
+      );
+      assertConcurrencyUnchanged(
+        concurrencyBeforeStalePublished,
+        await publishConcurrencySnapshot(),
+        'DB-12 stale expectedPublishedVersion rollback',
+      );
+      assert.deepEqual(
+        await businessState(),
+        stateBeforeAny,
+        'DB-12: stale expectedPublishedVersion rollback must not mutate quota/codes',
+      );
+
+      const publicAfterStale = await request(
+        ctx,
+        'GET',
+        publicDetailPath(f.eventSlug),
+        undefined,
+      );
+      expectStatus(publicAfterStale, 200);
+      assert.equal(
+        publicAfterStale.body.publishedConfigVersion,
+        2,
+        'DB-12: rejected rollback must not advance the published version',
+      );
+
+      // --- Correct rollback: optimistic concurrency accepted, new version
+      // minted from the target, business state untouched, audit written ---
+      const rollback = await request(
+        ctx,
+        'POST',
+        `${configBase}/config/rollback`,
+        owner,
+        { targetVersion: 1, expectedPublishedVersion: 2, expectedRevision: 3 },
+        { 'idempotency-key': randomUUID() },
+      );
+      expectStatus(rollback, 201);
+      assert.equal(rollback.body.newVersion, 3);
+      assert.equal(rollback.body.publishedVersion, 3);
+      assert.equal(rollback.body.sourceVersion, 1);
+      assert.equal(rollback.body.revision, 4);
+
+      const publicAfterRollback = await request(
+        ctx,
+        'GET',
+        publicDetailPath(f.eventSlug),
+        undefined,
+      );
+      expectStatus(publicAfterRollback, 200);
+      assert.equal(publicAfterRollback.body.publishedConfigVersion, 3);
+      assert.equal(
+        publicAfterRollback.body.brand.organizationName,
+        `Tenant ${caseId}`,
+        'DB-12: rollback must restore the target version content, not replay v2',
+      );
+      assert.deepEqual(
+        await businessState(),
+        stateBeforeAny,
+        'DB-12: successful rollback must not mutate quota/codes/tickets',
+      );
+
+      const rollbackAuditRows = await web04Query(
+        f,
+        f.tenantId,
+        `SELECT action, sanitized_diff FROM audit_logs
+         WHERE tenant_id = $1::uuid AND event_id = $2::uuid
+           AND action = 'event.config.rollback'
+         ORDER BY created_at`,
+        [f.tenantId, f.eventId],
+      );
+      assert.ok(
+        rollbackAuditRows.some(
+          (r) =>
+            r.sanitized_diff?.sourceVersion === 1 &&
+            r.sanitized_diff?.newVersion === 3,
+        ),
+        'DB-12: successful rollback must append event.config.rollback audit with sourceVersion 1 and newVersion 3',
+      );
+
+      // --- Preview is an authenticated admin surface, not public ---
+      const previewNoAuth = await request(
+        ctx,
+        'GET',
+        `${configBase}/config-versions/1/preview`,
+        undefined,
+      );
+      expectStatus(previewNoAuth, 401);
+      const previewAuthed = await request(
+        ctx,
+        'GET',
+        `${configBase}/config-versions/1/preview`,
+        owner,
+      );
+      expectStatus(previewAuthed, 200);
+      assert.equal(previewAuthed.body.payload.brand.organizationName, `Tenant ${caseId}`);
+
+      // --- Publish the previously-draft event, then confirm it (and only
+      // it, not the rollback above) appears live on the public catalog ---
+      const draftBase = `/tenants/${f.tenantId}/events/${draftEventId}`;
+      const draftPublished = await request(ctx, 'POST', `${draftBase}/publish`, owner, {
+        expectedVersion: 1,
+      });
+      expectStatus(draftPublished, 201);
+      const draftNowPublic = await request(
+        ctx,
+        'GET',
+        publicDetailPath('draft-only'),
+        undefined,
+      );
+      expectStatus(draftNowPublic, 200);
+      const listAfterPublish = await request(
+        ctx,
+        'GET',
+        publicListPath,
+        undefined,
+      );
+      expectStatus(listAfterPublish, 200);
+      assert.deepEqual(
+        listAfterPublish.body.items.map((item) => item.slug).sort(),
+        [f.eventSlug, 'draft-only'].sort(),
       );
     }
   });
