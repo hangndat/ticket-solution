@@ -1,7 +1,6 @@
-import { JourneyPage, journeyMetadata } from '../../../../src/marketing/journey/journey-page';
-
-export const metadata = journeyMetadata('en');
+import { redirect } from 'next/navigation';
+import { journeyHref } from '../../../../src/marketing/links';
 
 export default function MarketingJourneyEnPage() {
-  return <JourneyPage locale="en" />;
+  redirect(journeyHref('en'));
 }
