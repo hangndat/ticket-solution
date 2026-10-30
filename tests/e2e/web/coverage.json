@@ -157,8 +157,8 @@
     "caseId": "WEB-08",
     "tests": ["redeem.spec.ts › [WEB-08]"],
     "layers": ["B", "H", "R"],
-    "status": "implemented",
-    "reason": "Targeted run mvuruy41-cc6bd5 PASS 1/1 trên SHA sạch 53568d68: browser redeem, PostgreSQL assertIssuedExactlyOnce cho ticket/request/operation/code/quota/outbox và worker Mailpit link cùng ticketId. Selector này là bằng chứng partial; chưa đánh dấu full group PASS."
+    "status": "covered",
+    "reason": "PLAN §5.2 WEB-08 P0 B/H/R: redeem UI verified attendee + wallet một vé; PG assertIssuedExactlyOnce (TicketIssued outbox, quota +1); worker thật — Mailpit API poll recipient/subject event, assertTicketIssuedMail (text/HTML ticketId + cid:ticket-qr), không suy SMTP ACCEPTED. Guest mở link → owner-ticket-need-login-state; owner đã login → URL vé + QR + owner-ticket-id. Clean checkout SHA bef4f36955604886a13ab042e227b1c566bc7c57: run mvuy8ksx-56d1a3 PASS 1/1 browser, summary.json evidenceExactShaEligible true; pnpm test:e2e:guards 16/16. Mailpit = run sink, không chứng minh inbox internet/APNs (PLAN M09)."
   },
   {
     "caseId": "WEB-09",
