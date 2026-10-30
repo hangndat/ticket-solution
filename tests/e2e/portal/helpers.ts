@@ -98,6 +98,45 @@ export async function bffGet(page: Page, manifest: E2EManifest, path: string) {
   return { status: response.status(), json, headers: response.headers() };
 }
 
+/** Multipart CSV upload through Portal BFF (CSRF + staff cookie). */
+export async function bffUploadCsv(
+  page: Page,
+  manifest: E2EManifest,
+  bffPath: string,
+  csvBody: string,
+  filename = 'import.csv',
+  kind: 'CODES' | 'GUESTS' = 'CODES',
+) {
+  const url = portalUrl(manifest, bffPath);
+  return page.evaluate(
+    async ({ url, csvBody, filename, kind }) => {
+      const csrf =
+        document.cookie.match(/(?:^|;\s*)portal_csrf=([^;]+)/)?.[1] ?? '';
+      const form = new FormData();
+      form.set('kind', kind);
+      form.set(
+        'file',
+        new Blob([csvBody], { type: 'text/csv' }),
+        filename,
+      );
+      const response = await fetch(url, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'x-portal-csrf': decodeURIComponent(csrf) },
+        body: form,
+      });
+      let json: unknown = null;
+      try {
+        json = await response.json();
+      } catch {
+        /* preserve status */
+      }
+      return { status: response.status, json };
+    },
+    { url, csvBody, filename, kind },
+  );
+}
+
 /** Browser-origin mutation carries the CSRF cookie that the real UI uses. */
 export async function bffMutate(
   page: Page,
