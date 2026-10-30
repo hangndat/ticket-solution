@@ -103,10 +103,10 @@ export function publicMarketingPathToInternal(
     return { internal: '/marketing/en', locale: 'en' };
   }
   if (pathname === '/experience' || pathname === '/experience/') {
-    return { internal: '/marketing/journey', locale: 'vi' };
+    return { internal: '/experience', locale: 'vi' };
   }
   if (pathname === '/en/experience' || pathname === '/en/experience/') {
-    return { internal: '/marketing/en/journey', locale: 'en' };
+    return { internal: '/en/experience', locale: 'en' };
   }
   if (pathname === '/privacy' || pathname === '/privacy/') {
     return { internal: '/marketing/privacy', locale: 'vi' };
@@ -218,7 +218,7 @@ export function decideHostRouting(input: {
       return { type: 'next' };
     }
     // Already on internal tree — NextResponse.next + surface headers (no self-rewrite).
-    if (pathname === '/marketing' || pathname.startsWith('/marketing/')) {
+    if (mapped.internal === pathname) {
       return {
         type: 'next',
         surface: 'marketing',

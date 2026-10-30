@@ -10,6 +10,8 @@ import { marketingPageMetadata } from '../seo/metadata';
 import { journeyCopy } from './copy';
 import { JourneyExperience } from './journey-experience';
 import { JOURNEY_INDEXABLE } from './publication';
+import { MarketingAnalyticsClient } from '../analytics/client';
+import { MarketingJsonLd } from '../seo/json-ld';
 import './journey.css';
 
 /** Public URL, but excluded from search until release approval. */
@@ -49,9 +51,20 @@ export function JourneyPage({ locale }: { locale: MarketingLocale }) {
     <MarketingChrome locale={locale} pageKind="journey">
       {/* Layout does not re-render on client locale switch; keep <html lang> in sync per page. */}
       <MarketingHtmlAttrs locale={locale} />
-      <main id="main" data-journey="" data-analytics-surface="journey" data-testid={`journey-${locale}`}>
+      <main id="main" lang={locale} data-journey="" data-analytics-surface="journey" data-testid={`journey-${locale}`}>
         <JourneyExperience key={locale} locale={locale} copy={copy} cta={cta} />
       </main>
     </MarketingChrome>
+  );
+}
+
+/** Synchronous public route: prerender all still frames, without the async marketing loading boundary. */
+export function PublicJourneyPage({ locale }: { locale: MarketingLocale }) {
+  return (
+    <div lang={locale}>
+      <MarketingJsonLd locale={locale} />
+      <MarketingAnalyticsClient />
+      <JourneyPage locale={locale} />
+    </div>
   );
 }
