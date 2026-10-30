@@ -346,6 +346,30 @@ test(
 
       let exportId;
       await withTenant(db, tenantId, async (tx) => {
+        await tx.$executeRaw`
+          UPDATE notifications SET state = 'UNKNOWN'
+          WHERE tenant_id = ${tenantId}::uuid
+            AND business_key LIKE ${'ticket:' + ticket.ticketId + ':%'}
+        `;
+        const unknownList = await listCsTickets(tx, HMAC, {
+          tenantId,
+          eventId,
+          actorUserId: cs.userId,
+        });
+        assert.equal(unknownList.items[0].notification.providerStatus, 'UNKNOWN');
+        const unknownDetail = await getCsTicket(tx, {
+          tenantId,
+          eventId,
+          actorUserId: cs.userId,
+          ticketId: ticket.ticketId,
+        });
+        assert.equal(unknownDetail.notification.providerStatus, 'UNKNOWN');
+        assert.ok(unknownDetail.timeline.some((item) => item.summary === 'notification UNKNOWN'));
+        await tx.$executeRaw`
+          UPDATE notifications SET state = 'PENDING'
+          WHERE tenant_id = ${tenantId}::uuid
+            AND business_key LIKE ${'ticket:' + ticket.ticketId + ':%'}
+        `;
         await assert.rejects(
           () =>
             listCsTickets(tx, HMAC, {
