@@ -4,6 +4,15 @@
 - Phạm vi sửa: chỉ `tests/e2e/portal/**`. Không sửa product, harness, root package/lockfile/CI hoặc `PLAN.md`.
 - Architecture impact: Không. Spec dùng Playwright browser thật, BFF same-origin và Keycloak login/TOTP; không mock token/cookie/auth.
 
+## Kiểm tra đã chạy (worker task_563b98d49ff0 — PORT-07 fix iter 1/2 / Issue #1035)
+
+| Lệnh | Kết quả |
+| --- | --- |
+| `node tests/e2e/harness/run.mjs e2e --case=PORT-07` | **PASS** run `mvur8f0q-148a80`, browser 1/1; artifact `tests/e2e/.artifacts/mvur8f0q-148a80/summary.json`. |
+| SHA | `e577cdb49a0f8cb37131bc39b3cf0775db943995` (clean tree, evidenceExactShaEligible). |
+
+PORT-07: giữ toàn bộ assertion owner/scanner trước; seed fixture gán `cs` trên event `report.read`+`gate.confirm` (không `event.update`); browser reader thấy bảng cổng, không nút Thêm cổng, BFF GET list OK và POST 403. Gap còn lại: max sortOrder 9999 chỉ kiểm ở Portal InputNumber/BFF owner path — chưa assert upstream API reject >9999 (điều phối coordinator).
+
 ## Kiểm tra đã chạy (worker task_ac6fd382f590 — PORT-07 / Issue #1035)
 
 | Lệnh | Kết quả |
