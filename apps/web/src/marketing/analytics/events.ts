@@ -2,7 +2,11 @@
 export const MARKETING_ANALYTICS_CLIENT_EVENTS = [
   'cta_click',
   'form_start',
+  'journey_progress',
 ] as const;
+
+export const JOURNEY_MILESTONES = ['invitation', 'arrival', 'gateway', 'moment', 'complete'] as const;
+export type JourneyMilestone = (typeof JOURNEY_MILESTONES)[number];
 
 /** Includes server-emitted funnel events (lead_submitted, qualified_lead). */
 export const MARKETING_ANALYTICS_EVENTS = [

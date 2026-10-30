@@ -1,6 +1,6 @@
-import { Button } from '@ticket/ui';
 import { cn } from '../../../lib/utils';
 import { t } from '../copy';
+import { MarketingNeonPrimaryButton } from '../marketing-neon-primary-button';
 import { InterestFormIsland } from '../interest-form-island';
 import {
   marketingH2,
@@ -27,9 +27,9 @@ export function CtaSection({ locale, demo }: MarketingSectionProps) {
           </h2>
           <p className={marketingLead}>{t(locale, 'demo.lead')}</p>
           <p className="mt-4">
-            <Button asChild variant="primary" data-analytics-cta="repeat_demo">
+            <MarketingNeonPrimaryButton asChild data-analytics-cta="repeat_demo">
               <a href={demo}>{t(locale, 'demo.cta')}</a>
-            </Button>
+            </MarketingNeonPrimaryButton>
           </p>
         </div>
       </section>

@@ -32,7 +32,9 @@ describe('marketing analytics validate', () => {
       const props =
         event === 'cta_click'
           ? { cta_id: 'cta-demo', locale: 'vi' }
-          : { locale: 'vi' };
+          : event === 'journey_progress'
+            ? { milestone: 'invitation', locale: 'vi' }
+            : { locale: 'vi' };
       const r = validateMarketingAnalyticsBody({ event, props });
       assert.equal(r.ok, true);
     }

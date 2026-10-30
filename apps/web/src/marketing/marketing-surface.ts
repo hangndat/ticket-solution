@@ -4,7 +4,7 @@ import { cn } from '../../lib/utils';
 
 export function marketingSurface(neonSales = false) {
   return cn(
-    'flex flex-col min-h-dvh max-w-full overflow-x-clip antialiased',
+    'relative flex flex-col min-h-dvh max-w-full overflow-x-clip antialiased',
     neonSales
       ? 'mkt-neon-surface text-[var(--vm-text)] scheme-dark'
       : 'text-ink scheme-light',
@@ -45,7 +45,7 @@ export const marketingNavLinks = cn(
 );
 
 export const marketingLocaleGroup = cn(
-  'inline-flex w-[5.5rem] shrink-0 items-center justify-center gap-1 rounded-[10px] p-1',
+  'ml-auto inline-flex w-[5.5rem] shrink-0 items-center justify-center gap-1 rounded-[10px] p-1',
   'bg-ink/6',
   '[[data-header-on-ink]_&]:bg-paper/10',
 );
@@ -55,6 +55,7 @@ export const marketingLocaleLink = cn(
   'max-md:min-h-11',
   'aria-[current=true]:bg-paper aria-[current=true]:text-ink aria-[current=true]:shadow-sm',
   '[[data-header-on-ink]_&]:aria-[current=true]:bg-paper/15 [[data-header-on-ink]_&]:aria-[current=true]:text-paper',
+  'focus-visible:outline focus-visible:outline-3 focus-visible:outline-focus focus-visible:outline-offset-2',
 );
 
 export const marketingNavMenuToggle = cn(
@@ -74,7 +75,8 @@ export const marketingNavMobileActions =
 const sectionPad =
   'scroll-mt-24 px-[clamp(1.25rem,4vw,2rem)] py-[clamp(4rem,8vw,6.5rem)] max-md:max-w-full max-md:overflow-x-clip';
 
-export const marketingWrap = 'relative z-[1] mx-auto max-w-[1120px]';
+export const marketingWrap =
+  'relative z-[1] mx-auto w-[min(100%-40px,var(--vm-max-content,1120px))] max-w-[var(--vm-max-content,1120px)]';
 
 export function marketingSection(
   variant: 'ink' | 'paper' | 'paperAlt' | 'interest',
@@ -265,7 +267,31 @@ export const marketingInterestGrid =
   'grid items-start gap-10 lg:grid-cols-2';
 
 export const marketingForm = cn(
-  'grid gap-3.5 rounded-lg border border-line bg-paper p-6 shadow-soft',
+  'mkt-interest-form grid gap-3.5 rounded-lg border border-line bg-paper p-6 shadow-soft',
+);
+
+/** WCAG AA body/secondary copy on paper (interest modal + inline lead form). */
+export const marketingInterestBodyMuted = cn(
+  'text-[color-mix(in_srgb,var(--color-ink)_82%,var(--color-muted))]',
+);
+
+export const marketingInterestLead = cn(
+  'text-sm leading-relaxed',
+  marketingInterestBodyMuted,
+);
+
+export const marketingInterestSecondary = cn(
+  'text-sm',
+  marketingInterestBodyMuted,
+  '[&_a]:font-semibold [&_a]:text-ink [&_a]:underline [&_a]:decoration-1 [&_a]:underline-offset-[3px] hover:[&_a]:text-focus',
+);
+
+export const marketingInterestShell = cn(
+  'border-line bg-paper text-ink scheme-light',
+  '[&_[data-slot=dialog-title]]:text-ink',
+  '[&_[data-slot=dialog-description]]:text-[color-mix(in_srgb,var(--color-ink)_82%,var(--color-muted))]',
+  '[&_[data-slot=sheet-title]]:text-ink',
+  '[&_[data-slot=sheet-description]]:text-[color-mix(in_srgb,var(--color-ink)_82%,var(--color-muted))]',
 );
 
 export const marketingFormField = 'grid gap-1.5';
