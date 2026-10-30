@@ -4,7 +4,7 @@
 
 - Mở rộng `redeem.spec.ts › [WEB-05]`: client gate terms/required/type (email/phone/checkbox) không POST; BFF `postRedeemDirect` từ chối `FORM_INVALID`, `FORM_VERSION_STALE`, `TERMS_VERSION_STALE` với `assertRedemptionStateUnchanged`; redeem thành công trên `secondCode` đối soát `form_version`/`terms_version` + hash trên `redemption_requests`.
 - HTTP `live.test.mjs#[WEB-05]`: cùng ma trận lỗi qua API Keycloak bearer; owner publish config v2 trong run, client không tự chấp nhận v1; redeem v2 lưu consent PG.
-- Seed WEB-05: `formVersion`/`termsVersion`/`controlDatabaseUrl`/`codeIds.primary+secondary`. Run targeted `node tests/e2e/harness/run.mjs e2e --case=WEB-05 --skip-build` → `mvuur1i8-67d0bb` PASS 4/4; `pnpm test:e2e:http --case=WEB-05 --skip-build` → `mvuurx3f-d9f0ce` PASS; `pnpm test:e2e:guards` 16/16. Evidence exact SHA: recheck sau commit sạch.
+- Seed WEB-05: `formVersion`/`termsVersion`/`controlDatabaseUrl`/`codeIds.primary+secondary`. Checkout sạch SHA `85754809a63dc90cc6baffcca5382805f52aa07d` (`evidenceExactShaEligible: true`): `node tests/e2e/harness/run.mjs e2e --case=WEB-05 --skip-build` → `mvuuuf0j-5208aa` PASS 4/4; `pnpm test:e2e:http --case=WEB-05 --skip-build` → `mvuuv3my-d98585` PASS; `pnpm test:e2e:guards` 16/16.
 
 ## WEB-11 responsive B — 30/10/2026
 
