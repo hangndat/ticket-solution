@@ -13,10 +13,19 @@ export function supportHref(locale: MarketingLocale): string {
   return locale === 'en' ? '/en/support' : '/support';
 }
 
+/**
+ * Public cinematic journey URLs; indexing remains gated separately.
+ */
+export function journeyHref(locale: MarketingLocale): string {
+  return locale === 'en' ? '/en/experience' : '/experience';
+}
+
+export type MarketingPageKind = 'sales' | 'privacy' | 'support' | 'journey';
+
 /** Switch locale keeping path kind + optional hash. */
 export function localeSwitchHref(
   locale: MarketingLocale,
-  kind: 'sales' | 'privacy' | 'support',
+  kind: MarketingPageKind,
   hash = '',
 ): string {
   const base =
@@ -24,6 +33,8 @@ export function localeSwitchHref(
       ? privacyHref(locale)
       : kind === 'support'
         ? supportHref(locale)
-        : salesHref(locale);
+        : kind === 'journey'
+          ? journeyHref(locale)
+          : salesHref(locale);
   return hash ? `${base}${hash.startsWith('#') ? hash : `#${hash}`}` : base;
 }

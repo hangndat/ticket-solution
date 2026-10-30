@@ -102,6 +102,12 @@ export function publicMarketingPathToInternal(
   if (pathname === '/en' || pathname === '/en/') {
     return { internal: '/marketing/en', locale: 'en' };
   }
+  if (pathname === '/experience' || pathname === '/experience/') {
+    return { internal: '/marketing/journey', locale: 'vi' };
+  }
+  if (pathname === '/en/experience' || pathname === '/en/experience/') {
+    return { internal: '/marketing/en/journey', locale: 'en' };
+  }
   if (pathname === '/privacy' || pathname === '/privacy/') {
     return { internal: '/marketing/privacy', locale: 'vi' };
   }
