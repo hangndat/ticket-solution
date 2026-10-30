@@ -35,6 +35,46 @@ try {
     .createOidcVerifier(backend.readOidcEnvironment(process.env))
     .verifyBearerToken(`Bearer ${token}`);
   console.log('OIDC real grant/signature/issuer/audience PASS');
+
+  if (manifest.runtime.secondaryIssuer) {
+    const secondaryIssuer = manifest.runtime.secondaryIssuer;
+    const secondaryActor = manifest.secondaryActor;
+    const secondaryResponse = await fetch(
+      `${secondaryIssuer}/protocol/openid-connect/token`,
+      {
+        method: 'POST',
+        body: new URLSearchParams({
+          grant_type: 'password',
+          client_id: manifest.runtime.secondaryHttpClientId,
+          client_secret: manifest.runtime.secondaryHttpClientSecret,
+          username: secondaryActor.username,
+          password: secondaryActor.password,
+          scope: 'openid profile email',
+        }),
+      },
+    );
+    if (secondaryResponse.status !== 200)
+      throw new Error(
+        `BLOCKED: secondary issuer OIDC grant HTTP ${secondaryResponse.status}`,
+      );
+    const { access_token: secondaryToken } = await secondaryResponse.json();
+    const { payload: secondaryPayload } = await jose.jwtVerify(
+      secondaryToken,
+      jose.createRemoteJWKSet(new URL(manifest.runtime.secondaryJwksUrl)),
+      {
+        issuer: secondaryIssuer,
+        audience: 'ticket-api',
+        algorithms: ['RS256', 'ES256'],
+      },
+    );
+    if (secondaryPayload.iss !== secondaryIssuer)
+      throw new Error('BLOCKED: secondary token iss không khớp realm alternate');
+    if (secondaryPayload.iss === issuer)
+      throw new Error('BLOCKED: secondary issuer trùng primary issuer');
+    console.log(
+      'Secondary issuer real grant/signature/issuer PASS (alternate realm, khác primary)',
+    );
+  }
 } catch (error) {
   console.error(
     `BLOCKED: OIDC preflight ${error.code || error.name}: ${error.message}`,
