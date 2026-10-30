@@ -48,8 +48,8 @@
     "caseId": "PORT-07",
     "tests": ["portal-core.spec.ts [PORT-07]"],
     "layers": ["B", "H"],
-    "status": "blocked",
-    "reason": "UI create/duplicate/read boundary and HTTP 422 NAME_INVALID written; permission actor and other validation branches plus runtime remain."
+    "status": "covered",
+    "reason": "PORT-07 targeted B/H PASS run mvuqtkqt-c9572d (1/1 browser) on commit 865d4bef after spec extend: zero-gate VI guidance, owner UI create order 0, BFF list/create boundaries (80-char name, sort 9999, empty/81-char NAME_INVALID, non-int SORT_INVALID), UI+HTTP GATE_NAME_CONFLICT Vietnamese, no scan/confirm/undo/rename/delete/Web /gate link; scanner session POST 403 without event.update. Gap: no Portal UI actor with report.read but without event.update (fixture); API sort max 9999 enforced only in Portal InputNumber, not re-checked at upstream in this run."
   },
   {
     "caseId": "PORT-08",
