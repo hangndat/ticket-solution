@@ -14,7 +14,7 @@ const cookieNames = (surface: PortalSurface) =>
   surface === 'staff' ? PORTAL_AUTH_COOKIES : PLATFORM_AUTH_COOKIES;
 
 /** Only callback and logout write the epoch pair. Refresh/BFF never do. */
-export async function rotateActorEpoch(surface: PortalSurface, actorId?: string): Promise<void> {
+export async function rotateActorEpoch(surface: PortalSurface, actorId?: string): Promise<string> {
   const jar = await cookies();
   const names = cookieNames(surface);
   const authEpoch = randomUUID();
@@ -25,6 +25,7 @@ export async function rotateActorEpoch(surface: PortalSurface, actorId?: string)
   } else {
     jar.delete(names.epochSnapshot);
   }
+  return authEpoch;
 }
 
 /** Check both cookie faces, the subject anchor and a verified bearer token. */

@@ -10,7 +10,8 @@ import type { ProColumns } from '@ant-design/pro-components';
 import { Alert, Button, Flex, Form, Modal, Result, Select, Space, Spin, Tabs, Tag, Typography } from 'antd';
 import { PortalPage } from '../../../../src/components/portal-page';
 import { useParams } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
+import { useActorState as useState } from '../../../../src/client/use-actor-state';
 import type {
   MembershipRole,
   PortalInviteSummary,

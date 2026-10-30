@@ -4,7 +4,8 @@ import { ProCard, ProTable } from '@ant-design/pro-components';
 import type { ProColumns } from '@ant-design/pro-components';
 import { Alert, Button, Card, Descriptions, Flex, Input, Result, Space, Spin, Typography } from 'antd';
 import { PortalPage } from '../../src/components/portal-page';
-import { useCallback, useEffect, useState, Suspense } from 'react';
+import { useCallback, useEffect, Suspense } from 'react';
+import { useActorState as useState } from '../../src/client/use-actor-state';
 import { useSearchParams } from 'next/navigation';
 import type {
   PortalPlatformAuditEntry,
