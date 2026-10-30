@@ -59,10 +59,7 @@ import {
 } from '@ticket/backend';
 import { identityErrorHttpStatus } from './identity-http-status';
 import { platformRouteFail } from './platform/platform-errors';
-import {
-  API_RATE_BUCKETS,
-  API_RATE_LIMITS,
-} from './http-limits';
+import { API_RATE_BUCKETS, API_RATE_LIMITS } from './http-limits';
 import { consumeUserRateLimit } from './http-rate-limit';
 import { requireUuidParam, validationError } from './http-validation';
 
@@ -129,7 +126,10 @@ function tenantIdQueryError(): HttpException {
   );
 }
 
-export function issueHttpException(error: IssueError, operationId?: string): HttpException {
+export function issueHttpException(
+  error: IssueError,
+  operationId?: string,
+): HttpException {
   const requestId = randomUUID();
   const body: ApiError & { fields?: IssueError['fields'] } = {
     code: error.code,
@@ -196,7 +196,10 @@ export type TicketServices = {
 export class TicketIssueService {
   constructor(private readonly deps: TicketServices) {}
 
-  private async requireUser(authorization: string | undefined) {
+  private async requireUser(
+    authorization: string | undefined,
+    requireVerifiedEmail = false,
+  ) {
     if (this.deps.bootError) throw this.deps.bootError;
     if (!this.deps.verifier || !this.deps.users) {
       throw new IdentityError(
@@ -205,6 +208,12 @@ export class TicketIssueService {
       );
     }
     const verified = await this.deps.verifier.verifyBearerToken(authorization);
+    if (requireVerifiedEmail && !verified.emailVerified) {
+      throw new IssueError(
+        ISSUE_ERROR_CODES.EMAIL_NOT_VERIFIED,
+        'Email must be verified before issuing a ticket',
+      );
+    }
     return this.deps.users.upsertFromVerifiedIdentity(verified);
   }
 
@@ -222,7 +231,7 @@ export class TicketIssueService {
         'Issue services are not configured',
       );
     }
-    const user = await this.requireUser(authorization);
+    const user = await this.requireUser(authorization, true);
     await consumeUserRateLimit(
       this.deps.db,
       user.userId,
@@ -235,22 +244,27 @@ export class TicketIssueService {
     try {
       outcome = await withTenant(this.deps.db, tenantId, async (tx) => {
         await configureIssuanceLockTimeout(tx);
-        return redeemAndIssueTicket(tx, this.deps.hmac!, this.deps.credentialKey!, {
-          tenantId,
-          eventId,
-          actorUserId: user.userId,
-          actorEmail: user.email,
-          emailVerified: user.emailVerified,
-          rawCode: body.code,
-          idempotencyKey: idempotencyKey ?? '',
-          formVersion: body.formVersion,
-          termsVersion: body.termsVersion,
-          answers: body.answers,
-          termsAccepted: body.termsAccepted,
-          resolveToken: resolveTokenHeader?.trim() || undefined,
-          resolveTokenSecret: this.deps.resolveTokenSecret ?? undefined,
-          routingPeppers: this.deps.routingPeppers ?? undefined,
-        });
+        return redeemAndIssueTicket(
+          tx,
+          this.deps.hmac!,
+          this.deps.credentialKey!,
+          {
+            tenantId,
+            eventId,
+            actorUserId: user.userId,
+            actorEmail: user.email,
+            emailVerified: user.emailVerified,
+            rawCode: body.code,
+            idempotencyKey: idempotencyKey ?? '',
+            formVersion: body.formVersion,
+            termsVersion: body.termsVersion,
+            answers: body.answers,
+            termsAccepted: body.termsAccepted,
+            resolveToken: resolveTokenHeader?.trim() || undefined,
+            resolveTokenSecret: this.deps.resolveTokenSecret ?? undefined,
+            routingPeppers: this.deps.routingPeppers ?? undefined,
+          },
+        );
       });
     } catch (error) {
       // This also sees errors before the business savepoint and at COMMIT.
@@ -305,19 +319,17 @@ export class TicketIssueService {
       listTicketsForOwner(tx, tenantId, user.userId),
     );
     return {
-      tickets: tickets.map(
-        (t): TicketSummary => ({
-          ticketId: t.ticketId,
-          tenantId,
-          eventId: t.eventId,
-          ticketTypeId: t.ticketTypeId,
-          sourceId: t.sourceId,
-          state: t.state,
-          credentialVersion: t.credentialVersion,
-          createdAt: t.createdAt.toISOString(),
-          ...(t.eventName != null ? { eventName: t.eventName } : {}),
-        }),
-      ),
+      tickets: tickets.map((t): TicketSummary => ({
+        ticketId: t.ticketId,
+        tenantId,
+        eventId: t.eventId,
+        ticketTypeId: t.ticketTypeId,
+        sourceId: t.sourceId,
+        state: t.state,
+        credentialVersion: t.credentialVersion,
+        createdAt: t.createdAt.toISOString(),
+        ...(t.eventName != null ? { eventName: t.eventName } : {}),
+      })),
     };
   }
 
@@ -331,24 +343,19 @@ export class TicketIssueService {
         'Database is not configured',
       );
     }
-    const tickets = await listOwnerTicketsAggregated(
-      this.deps.db,
-      user.userId,
-    );
+    const tickets = await listOwnerTicketsAggregated(this.deps.db, user.userId);
     return {
-      tickets: tickets.map(
-        (t): TicketSummary => ({
-          ticketId: t.ticketId,
-          tenantId: t.tenantId,
-          eventId: t.eventId,
-          ticketTypeId: t.ticketTypeId,
-          sourceId: t.sourceId,
-          state: t.state,
-          credentialVersion: t.credentialVersion,
-          createdAt: t.createdAt.toISOString(),
-          ...(t.eventName != null ? { eventName: t.eventName } : {}),
-        }),
-      ),
+      tickets: tickets.map((t): TicketSummary => ({
+        ticketId: t.ticketId,
+        tenantId: t.tenantId,
+        eventId: t.eventId,
+        ticketTypeId: t.ticketTypeId,
+        sourceId: t.sourceId,
+        state: t.state,
+        credentialVersion: t.credentialVersion,
+        createdAt: t.createdAt.toISOString(),
+        ...(t.eventName != null ? { eventName: t.eventName } : {}),
+      })),
     };
   }
 

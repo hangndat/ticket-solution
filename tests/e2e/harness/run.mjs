@@ -271,7 +271,7 @@ if (mode === 'list' || args.includes('--list')) {
     );
     const httpNeedsFrontend =
       mode === 'http' &&
-      caseIds.some((id) => ['SEC-02', 'SEC-03', 'SEC-05'].includes(id));
+      caseIds.some((id) => ['AUTH-03', 'SEC-02', 'SEC-03', 'SEC-05'].includes(id));
     if (mode !== 'http' || httpNeedsFrontend) {
       if (!skipBuild) {
         console.log('E2E: build Web/Portal production');
