@@ -8,7 +8,6 @@ import {
 } from '../../../src/redeem/global-entry';
 import {
   redeemAuthNotice,
-  redeemFormCard,
   redeemGateCard,
   redeemNarrow,
   redeemPageMain,
@@ -16,7 +15,7 @@ import {
 import { ATTENDEE_COPY } from '../../../src/attendee-copy';
 import { cn } from '../../../lib/utils';
 import { RedeemAuthGate } from './redeem-auth-gate';
-import { RedeemForm } from './redeem-form';
+import { RedeemVerifiedBoundary } from './redeem-verified-boundary';
 import {
   RedeemAuthNoticePanel,
   RedeemOidcDown,
@@ -88,18 +87,17 @@ export default async function RedeemPage({ searchParams }: Props) {
         ) : !signedIn ? (
           <RedeemAuthGate loginHref={redeemLogin} />
         ) : (
-          <div className={redeemFormCard}>
-            <RedeemForm
-              key={`${globalEntry ? 'global' : ''}:${params.tenantId ?? ''}:${params.eventId ?? ''}:${params.tenantSlug ?? ''}:${params.eventSlug ?? ''}`}
-              productChrome
-              globalEntry={globalEntry}
-              tenantBound={tenantBound}
-              initialTenantId={params.tenantId?.trim() ?? ''}
-              initialEventId={params.eventId?.trim() ?? ''}
-              initialTenantSlug={params.tenantSlug?.trim() ?? ''}
-              initialEventSlug={params.eventSlug?.trim() ?? ''}
-            />
-          </div>
+          <RedeemVerifiedBoundary
+            loginHref={redeemLogin}
+            key={`${globalEntry ? 'global' : ''}:${params.tenantId ?? ''}:${params.eventId ?? ''}:${params.tenantSlug ?? ''}:${params.eventSlug ?? ''}`}
+            productChrome
+            globalEntry={globalEntry}
+            tenantBound={tenantBound}
+            initialTenantId={params.tenantId?.trim() ?? ''}
+            initialEventId={params.eventId?.trim() ?? ''}
+            initialTenantSlug={params.tenantSlug?.trim() ?? ''}
+            initialEventSlug={params.eventSlug?.trim() ?? ''}
+          />
         )}
       </div>
     </ConsumerPageShell>
