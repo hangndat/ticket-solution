@@ -1,5 +1,10 @@
 # Báo cáo Web E2E — 28/10/2026
 
+## WEB-07 idempotent redemption B+H — 30/10/2026
+
+- `redeem.spec.ts › [WEB-07]`: double-click một vé; mất response sau commit BFF thật rồi UI poll tới success; reload/resubmit cùng mã → panel `used`, wallet không tăng; cùng `idempotencyKey` đổi `answers` → BFF `409` `IDEMPOTENCY_CONFLICT`; hai POST BFF đồng thời cùng mã, key khác → `201`/`409` `CODE_CONSUMED`. Mỗi nhánh đối soát PostgreSQL qua `assertIssuedExactlyOnce` (một request ISSUED, ticket ACTIVE, một operation COMPLETED, một TicketIssued outbox, quota +1/bucket); race không có barrier lock — giới hạn ghi trong `coverage.json`.
+- Checkout sạch SHA `7e8cce2dee502cb12163d2b384012952bfd6ac45` (`evidenceExactShaEligible: true`): `node tests/e2e/harness/run.mjs e2e --case=WEB-07` (build production) → run `mvuw3xnz-3dad02` PASS 5/5 browser; artifact `tests/e2e/.artifacts/mvuw3xnz-3dad02/summary.json`. `pnpm test:e2e:guards` 16/16 trên cùng SHA. Không sửa `apps/web` runtime trong dispatch này.
+
 ## WEB-05 tích hợp — 30/10/2026
 
 - Rebase lên `main`, giữ đủ worklog append-only. Checkout sạch SHA `42a29788b252d4f17937c0401187512b1e7b47ea`: browser `mvuvgow7-f39e4e` PASS 7/7, HTTP `mvuvhn2t-f1e3ab` PASS; cả hai `evidenceExactShaEligible: true`. CI PR #1071 run `41046526455` SUCCESS, mergeable.
