@@ -202,23 +202,34 @@ if (mode === 'list' || args.includes('--list')) {
       JSON.parse(readFileSync(resolve(state.dir, 'seed-result.json'), 'utf8')),
     );
     const rawManifest = JSON.parse(readFileSync(state.manifestPath, 'utf8'));
-    if (rawManifest.cases['WEB-10']) {
-      const fixture = rawManifest.cases['WEB-10'];
-      const catalogListPaths = [
-        ...new Set(
-          Object.values(rawManifest.cases)
-            .map((entry) => entry.tenantSlug)
-            .filter(Boolean)
-            .map((slug) => `/v1/public/tenants/${slug}/events`),
-        ),
-      ];
+    if (rawManifest.cases['WEB-10'] || rawManifest.cases['PORT-08']) {
+      const web10 = rawManifest.cases['WEB-10'];
+      const catalogListPaths = web10
+        ? [
+            ...new Set(
+              Object.values(rawManifest.cases)
+                .map((entry) => entry.tenantSlug)
+                .filter(Boolean)
+                .map((slug) => `/v1/public/tenants/${slug}/events`),
+            ),
+          ]
+        : [];
       state.faultControlPath = resolve(state.dir, 'fault-control.json');
       state.faultPaths = [
-        `/v1/public/tenants/${fixture.tenantSlug}/events/${fixture.eventSlug}`,
-        ...catalogListPaths,
-        '/v1/me/tenants',
-        '/v1/me/tickets',
-        `/v1/tenants/${fixture.tenantId}/events/${fixture.eventId}/redemptions`,
+        ...(web10
+          ? [
+              `/v1/public/tenants/${web10.tenantSlug}/events/${web10.eventSlug}`,
+              ...catalogListPaths,
+              '/v1/me/tenants',
+              '/v1/me/tickets',
+              `/v1/tenants/${web10.tenantId}/events/${web10.eventId}/redemptions`,
+            ]
+          : []),
+        ...(rawManifest.cases['PORT-08']
+          ? [
+              `/v1/tenants/${rawManifest.cases['PORT-08'].tenantId}/events/${rawManifest.cases['PORT-08'].eventId}/report`,
+            ]
+          : []),
       ];
       privateJson(state.faultControlPath, {
         ownerRunId: state.id,
