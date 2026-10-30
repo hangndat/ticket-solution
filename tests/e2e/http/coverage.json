@@ -86,8 +86,8 @@
     "caseId": "DB-02",
     "tests": ["H:tests/e2e/http/live.test.mjs#[DB-02]"],
     "layers": ["H"],
-    "status": "blocked",
-    "reason": "Run mvud30a6-64e1fe PASS, exact SHA c5aecdba3a61401f018b362f666bed861a55574c (clean tree, evidenceExactShaEligible=true), lệnh `pnpm test:e2e:http -- --case=DB-02`: manager tạo gate (assignment còn active) 201; revoke event_assignments qua ticket_runtime + tenant RLS (auth06Revoke, rowCount=1); cùng access token Keycloak thật (chưa refetch, vẫn hợp lệ) gọi lại tạo gate → deny 403/404, chứng minh DB là nguồn sự thật dù JWT chưa hết hạn; owner report vẫn 200 (không bị ảnh hưởng theo assignment của actor khác); revoke memberships tương tự → deny. Vẫn BLOCKED cho nhánh identity issuer+subject (hai issuer khác nhau cùng email không auto-link) qua Keycloak thật: harness (tests/e2e/harness/runtime.mjs seedKeycloak) chỉ provision một realm/issuer mỗi run, không có issuer thứ hai để mint token thật — D đã PASS (db02-identity-issuer-subject.test.cjs) nhưng H cần thêm một realm Keycloak thứ hai trong runtime.mjs để mở, đây là thay đổi harness ngoài scope task này (không tạo JWT giả để né)."
+    "status": "pass",
+    "reason": "PASS D/H: D PostgreSQL thật chứng minh hai identity cùng email khác issuer+subject không auto-link, owner không có staff quyền ngầm, membership/assignment revoke fail-closed. H run mvuec1b3-f93191 PASS trên SHA f61f193c sạch (sau PR #1043 harness): secondary Keycloak token thật, chữ ký/JWKS, issuer, audience, subject xác thực; email trùng DB-02 attendee; API trả 401 cho me/tickets, tạo staff session và gate; số identity cùng email, session, gate, ticket không đổi. Cùng primary token sau revoke assignment/membership bị deny, owner report vẫn 200. Giới hạn: realm alternate có signing key khác, nên 401 không cô lập kiểm tra issuer claim khỏi kiểm tra chữ ký."
   },
   {
     "caseId": "DB-03",
