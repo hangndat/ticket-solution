@@ -4,22 +4,24 @@
     "tests": [
       "D:packages/backend/test/rls.test.cjs#PostgreSQL RLS through Prisma",
       "D:packages/backend/test/rls-catalog.test.cjs#every tenant table",
-      "D:packages/backend/test/me-tickets-aggregate.test.cjs#W1: owner aggregate"
+      "D:packages/backend/test/me-tickets-aggregate.test.cjs#W1: owner aggregate",
+      "D:packages/backend/test/db01-rls-worker-export-scope.test.cjs#DB-01: ticket_platform_runtime"
     ],
     "layers": ["D"],
-    "status": "blocked",
-    "reason": "D hiện có RLS/pool/owner; thiếu rollback/exception và H worker/export matrix."
+    "status": "implemented",
+    "reason": "PASS D/H: D selectors DB-01 PASS PostgreSQL thật trên SHA a19f1488: A/B xen kẽ, pool reuse, rollback/exception, thiếu tenant context, FK tenant+event, owner aggregate và ticket_platform_runtime không có grant/đọc PII bị permission denied. H run mvue72wb-898dce PASS SHA a19f1488 sạch: owner report cross-tenant/cross-event deny; manager export own được worker xử lý READY và CSV download; foreign create/status/download deny. Worker/export scope được chứng minh bởi role boundary D và xử lý export thực H."
   },
   {
     "caseId": "DB-02",
     "tests": [
       "D:packages/backend/test/membership.test.cjs#membership deny-by-default",
       "D:packages/backend/test/platform.test.cjs#O02 MeEvents",
-      "U:packages/backend/test/membership-unit.test.cjs#isMembershipActive"
+      "U:packages/backend/test/membership-unit.test.cjs#isMembershipActive",
+      "D:packages/backend/test/db02-identity-issuer-subject.test.cjs#DB-02: identity keyed"
     ],
     "layers": ["D", "U"],
-    "status": "blocked",
-    "reason": "D membership/revoke; thiếu H claim cũ và issuer+subject qua Keycloak thật."
+    "status": "implemented",
+    "reason": "PASS D/H: D selectors DB-02 PASS PostgreSQL thật trên SHA a19f1488: role/assignment matrix, active membership/revoke, identity khóa issuer+subject và cùng email không auto-link. H run mvuec1b3-f93191 PASS SHA f61f193c sạch sau PR #1043: secondary Keycloak token thật cùng email, chữ ký/JWKS/issuer/audience/sub hợp lệ bị API 401; không tạo identity, staff session, gate, ticket; primary token cũ bị deny ngay sau revoke assignment/membership, owner report còn 200. Giới hạn: alternate realm có signing key khác nên rejection không cô lập issuer claim khỏi signature validation."
   },
   {
     "caseId": "DB-03",
@@ -28,8 +30,8 @@
       "D:packages/backend/test/approval.test.cjs#F01: mixed auto/manual"
     ],
     "layers": ["D"],
-    "status": "blocked",
-    "reason": "D quota/idempotency; thiếu H cùng request retry và audit matrix đầy đủ."
+    "status": "implemented",
+    "reason": "PASS D/H: D issue/approval selectors PASS PostgreSQL thật trên SHA a19f1488: race, same-key replay/changed-payload conflict, code/counter/quota/ticket/operation/audit/outbox đối soát nhất quán. H run mvue72wb-898dce PASS SHA a19f1488 sạch: sequential và concurrent same-key retry chỉ một ticket; multi-actor race một 201 một CODE_CONSUMED; quota +1; audit/outbox mỗi ticket đúng một hàng."
   },
   {
     "caseId": "DB-04",
