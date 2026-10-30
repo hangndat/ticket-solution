@@ -9,7 +9,8 @@ import {
 import { Alert, Button, Flex, Form, Modal, Result, Space, Spin, Typography } from 'antd';
 import { PortalPage } from '../../../../../../src/components/portal-page';
 import { useParams } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect } from 'react';
+import { useActorState as useState } from '../../../../../../src/client/use-actor-state';
 import type {
   ConfigPreviewResponse,
   ConfigVersionSummary,

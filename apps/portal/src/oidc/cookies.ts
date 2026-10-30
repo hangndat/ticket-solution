@@ -6,6 +6,8 @@ import {
 import {
   PLATFORM_AUTH_COOKIES,
   PORTAL_AUTH_COOKIES,
+  isStaffEpoch,
+  staffTokenCookieName,
 } from './local-cookies';
 
 export {
@@ -16,19 +18,22 @@ export {
 
 export async function readStaffAccessToken(): Promise<string | null> {
   const jar = await cookies();
-  const value = jar.get(SESSION_COOKIES.access)?.value?.trim() ?? '';
+  const epoch = jar.get(PORTAL_AUTH_COOKIES.epoch)?.value ?? '';
+  const value = isStaffEpoch(epoch) ? jar.get(staffTokenCookieName(SESSION_COOKIES.access, epoch))?.value?.trim() ?? '' : '';
   return value.length > 0 ? value : null;
 }
 
 export async function readStaffRefreshToken(): Promise<string | null> {
   const jar = await cookies();
-  const value = jar.get(SESSION_COOKIES.refresh)?.value?.trim() ?? '';
+  const epoch = jar.get(PORTAL_AUTH_COOKIES.epoch)?.value ?? '';
+  const value = isStaffEpoch(epoch) ? jar.get(staffTokenCookieName(SESSION_COOKIES.refresh, epoch))?.value?.trim() ?? '' : '';
   return value.length > 0 ? value : null;
 }
 
 export async function readStaffIdToken(): Promise<string | null> {
   const jar = await cookies();
-  const value = jar.get(SESSION_COOKIES.idToken)?.value?.trim() ?? '';
+  const epoch = jar.get(PORTAL_AUTH_COOKIES.epoch)?.value ?? '';
+  const value = isStaffEpoch(epoch) ? jar.get(staffTokenCookieName(SESSION_COOKIES.idToken, epoch))?.value?.trim() ?? '' : '';
   return value.length > 0 ? value : null;
 }
 
@@ -40,6 +45,10 @@ export async function readStaffSubject(): Promise<string | null> {
 
 export async function clearStaffSessionCookies(): Promise<void> {
   const jar = await cookies();
+  for (const cookie of jar.getAll()) {
+    if ([SESSION_COOKIES.access, SESSION_COOKIES.refresh, SESSION_COOKIES.idToken]
+      .some((base) => cookie.name.startsWith(`${base}__`))) jar.delete(cookie.name);
+  }
   jar.delete(SESSION_COOKIES.access);
   jar.delete(SESSION_COOKIES.refresh);
   jar.delete(SESSION_COOKIES.idToken);

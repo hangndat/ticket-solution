@@ -31,6 +31,12 @@ export function actorGeneration(): number {
   return generation;
 }
 
+/** Synchronous commit check for private panel state after any awaited work. */
+export function actorCommitAllowed(mountedGeneration: number): boolean {
+  checkActorMarkers();
+  return !logoutPending && mountedGeneration === generation;
+}
+
 export function subscribeActorGeneration(listener: () => void): () => void {
   listeners.add(listener);
   return () => listeners.delete(listener);

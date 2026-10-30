@@ -2,7 +2,8 @@
 
 import { Alert, Button, Card, Flex, Result, Spin, Typography } from 'antd';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
+import { useActorState as useState } from '../src/client/use-actor-state';
 import { loadShellContext } from '../src/nav/load-shell-context';
 import { usePortalLocale, type MessageKey } from '../src/i18n';
 import { SURFACE_MESSAGE_KEYS } from '../src/prep/surface-copy';

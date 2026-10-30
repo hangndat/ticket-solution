@@ -2,7 +2,8 @@
 
 import { NOTIFICATION_KINDS, type NotificationKind } from '@ticket/contracts';
 import { Alert, Button, Input, Modal, Select, Space, Typography } from 'antd';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect } from 'react';
+import { useActorState as useState } from '../../client/use-actor-state';
 import { portalGet, portalMutate } from '../../client/portal-fetch';
 import { useMutationIntent } from '../../client/use-mutation-intent';
 import { MutationIntentAlert } from '../../client/mutation-intent-alert';

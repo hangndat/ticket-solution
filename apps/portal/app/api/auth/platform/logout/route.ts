@@ -42,9 +42,9 @@ export async function GET(request: NextRequest) {
   if (!originResult.ok) return originResult.response;
   const origin = originResult.origin;
 
-  await rotateActorEpoch('platform');
   const idToken = (await readPlatformIdToken()) ?? '';
   const refresh = (await readPlatformRefreshToken()) ?? '';
+  await rotateActorEpoch('platform');
 
   if (isPlatformOidcConfigured() && refresh) {
     const config = readPlatformOidcConfig()!;

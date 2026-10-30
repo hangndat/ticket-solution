@@ -7,7 +7,7 @@ import {
   type PortalOidcConfig,
 } from './config';
 import { readStaffSubject } from './cookies';
-import { PORTAL_AUTH_COOKIES } from './local-cookies';
+import { isStaffEpoch, PORTAL_AUTH_COOKIES, staffTokenCookieName } from './local-cookies';
 import {
   clearStaffRefreshFlightCache,
   singleFlightStaffRefresh,
@@ -66,35 +66,31 @@ export async function exchangeRefresh(
   }
 }
 
-async function applyStaffGrant(
+export async function applyStaffGrant(
   grant: RefreshFlightGrant,
+  epoch: string,
 ): Promise<void> {
   const jar = await cookies();
   const maxAge = grant.expiresIn;
   jar.set(
-    SESSION_COOKIES.access,
+    staffTokenCookieName(SESSION_COOKIES.access, epoch),
     grant.accessToken,
     sessionCookieOptions(maxAge),
   );
   if (grant.refreshToken) {
     jar.set(
-      SESSION_COOKIES.refresh,
+      staffTokenCookieName(SESSION_COOKIES.refresh, epoch),
       grant.refreshToken,
       sessionCookieOptions(60 * 60 * 24 * 30),
     );
   }
   if (grant.idToken) {
     jar.set(
-      SESSION_COOKIES.idToken,
+      staffTokenCookieName(SESSION_COOKIES.idToken, epoch),
       grant.idToken,
       sessionCookieOptions(maxAge),
     );
   }
-  jar.set(
-    PORTAL_AUTH_COOKIES.subject,
-    grant.subject,
-    sessionCookieOptions(60 * 60 * 24 * 30),
-  );
 }
 
 /**
@@ -153,7 +149,10 @@ export async function refreshStaffAccessToken(): Promise<RefreshOutcome> {
   }
   const config = readPortalOidcConfig()!;
   const jar = await cookies();
-  const refresh = jar.get(SESSION_COOKIES.refresh)?.value?.trim() ?? '';
+  const epoch = jar.get(PORTAL_AUTH_COOKIES.epoch)?.value ?? '';
+  const refresh = isStaffEpoch(epoch)
+    ? jar.get(staffTokenCookieName(SESSION_COOKIES.refresh, epoch))?.value?.trim() ?? ''
+    : '';
   if (!refresh) {
     clearStaffRefreshFlightCache();
     return { ok: false, reason: 'missing_refresh' };
@@ -174,6 +173,6 @@ export async function refreshStaffAccessToken(): Promise<RefreshOutcome> {
     return shared;
   }
 
-  await applyStaffGrant(shared.grant);
+  await applyStaffGrant(shared.grant, epoch);
   return { ok: true, accessToken: shared.grant.accessToken };
 }

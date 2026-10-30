@@ -43,9 +43,9 @@ export async function GET(request: NextRequest) {
   if (!originResult.ok) return originResult.response;
   const origin = originResult.origin;
 
-  await rotateActorEpoch('staff');
   const idToken = (await readStaffIdToken()) ?? '';
   const refresh = (await readStaffRefreshToken()) ?? '';
+  await rotateActorEpoch('staff');
 
   if (isPortalOidcConfigured() && refresh) {
     const config = readPortalOidcConfig()!;

@@ -2,7 +2,8 @@
 
 import { Alert, Button, Select, Space, Table, Typography } from 'antd';
 import type { NotificationChannel, NotificationProviderStatus } from '@ticket/contracts';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect } from 'react';
+import { useActorState as useState } from '../../client/use-actor-state';
 import { portalGet, portalMutate } from '../../client/portal-fetch';
 import { bffNotifications } from '../../prep/bff-urls';
 import {
