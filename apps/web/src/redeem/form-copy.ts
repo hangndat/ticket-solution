@@ -21,6 +21,15 @@ export const REDEEM_FORM_COPY_CATALOG = {
     'Đăng nhập để tiếp tục. Bạn sẽ quay lại trang này sau đó.',
     'Sign in to continue. You will return to this page afterwards.',
   ),
+  verifyEmailTitle: dual('Xác minh email', 'Verify your email'),
+  verifyEmailDetail: dual(
+    'Xác minh email trong mục Tài khoản, sau đó quay lại trang Đổi mã.',
+    'Verify your email in Account, then return to Redeem.',
+  ),
+  guestCodeHint: dual(
+    'Mã chưa được tra cứu hoặc lưu. Sau khi đăng nhập và xác minh email, hãy nhập lại mã.',
+    'The code is not looked up or saved. Enter it again after signing in and verifying your email.',
+  ),
   oidcDownTitle: dual('Cần đăng nhập', 'Sign in required'),
   oidcDownDetail: dual(
     'Đăng nhập chưa sẵn sàng trên môi trường này — không thể đổi mã.',

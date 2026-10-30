@@ -479,12 +479,22 @@ test('[AUTH-03] guest is gated and unverified identity cannot issue a ticket', a
   const fixture = fixtureFor(manifest, 'AUTH-03');
   const codeId = codeIdFor(fixture);
   const before = await readRedemptionState(fixture, codeId);
+  const redeemRequests: string[] = [];
+  page.on('request', (request) => {
+    if (new URL(request.url()).pathname.startsWith('/api/bff/redeem')) {
+      redeemRequests.push(request.url());
+    }
+  });
   await page.goto(webUrl(manifest, '/redeem'));
   await expect(page.getByTestId('redeem-auth-gate')).toBeVisible();
   await expect(
-    page.getByRole('heading', { name: 'Đăng nhập để đổi mã' }),
+    page.getByRole('heading', { name: 'Cần đăng nhập' }),
   ).toBeVisible();
-  await expect(page.getByTestId('redeem-global-code')).toHaveCount(0);
+  await page.getByTestId('redeem-global-code').fill(fixture.code ?? 'INVALID');
+  await page.getByTestId('redeem-auth-continue').click();
+  await expect(page).toHaveURL(new RegExp(`^${manifest.origins.auth}`));
+  expect(page.url()).not.toContain(fixture.code);
+  expect(redeemRequests, 'guest must not look up or mutate code').toEqual([]);
   assertRedemptionStateUnchanged(
     before,
     await readRedemptionState(fixture, codeId),
@@ -496,19 +506,12 @@ test('[AUTH-03] guest is gated and unverified identity cannot issue a ticket', a
     accountFor(manifest, 'AUTH-03', 'unverified'),
     '/redeem',
   );
+  await expect(page.getByTestId('redeem-auth-gate')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Xác minh email' })).toBeVisible();
   await page.getByTestId('redeem-global-code').fill(fixture.code ?? 'INVALID');
-  await page.getByTestId('redeem-global-resolve').click();
-  await expect(page.getByTestId('redeem-global-context')).toBeVisible();
-  await fillPublishedForm(
-    page,
-    fixture.data?.answers as Record<string, string | boolean>,
-  );
-  await page
-    .getByRole('button', { name: 'Đổi mã lấy vé', exact: true })
-    .click();
-  await expect(page.getByTestId('redeem-ux-auth')).toContainText(
-    'xác minh email',
-  );
+  await page.getByTestId('redeem-auth-continue').click();
+  await expect(page).toHaveURL(new RegExp(`${manifest.origins.web}/account`));
+  expect(redeemRequests, 'unverified attendee must not resolve code').toEqual([]);
   await expect(page.getByTestId('redeem-ticket-card')).toHaveCount(0);
   assertRedemptionStateUnchanged(
     before,

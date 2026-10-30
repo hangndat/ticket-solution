@@ -1,4 +1,6 @@
 import { isOidcConfigured, resolveWebAuthState } from '../../../src/oidc/config';
+import type { MeResponse } from '@ticket/contracts';
+import { ssrUpstreamGet } from '../../../src/bff/upstream';
 import { readSubject } from '../../../src/oidc/cookies';
 import { redeemLoginHref } from '../../../src/redeem/login-href';
 import { ConsumerPageShell } from '../../../src/consumer-page-shell';
@@ -61,6 +63,12 @@ export default async function RedeemPage({ searchParams }: Props) {
     eventSlug: params.eventSlug,
   });
   const signedIn = authState.authenticated;
+  // /me verifies the current bearer and email claim; a subject cookie alone
+  // must never unlock code resolution for an unverified attendee.
+  const me = signedIn ? await ssrUpstreamGet('/v1/me') : null;
+  const verifiedEmail =
+    me?.status === 200 &&
+    (me.body as Partial<MeResponse> | null)?.emailVerified === true;
 
   return (
     <ConsumerPageShell mainClassName={redeemPageMain}>
@@ -87,6 +95,8 @@ export default async function RedeemPage({ searchParams }: Props) {
           </aside>
         ) : !signedIn ? (
           <RedeemAuthGate loginHref={redeemLogin} />
+        ) : !verifiedEmail ? (
+          <RedeemAuthGate loginHref={redeemLogin} unverified={me?.status === 200} />
         ) : (
           <div className={redeemFormCard}>
             <RedeemForm
