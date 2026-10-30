@@ -26,6 +26,7 @@ const CASE_IDS = [
   'DB-10',
   'DB-11',
   'DB-12',
+  'DB-14',
   'WEB-04',
 ];
 const EVIL_HOST = 'evil.example';
@@ -4713,6 +4714,375 @@ for (const caseId of CASE_IDS) {
         listAfterPublish.body.items.map((item) => item.slug).sort(),
         [f.eventSlug, 'draft-only'].sort(),
       );
+    }
+    if (caseId === 'DB-14') {
+      // PLAN §6.1 DB-14 H: form/terms version, structural allowlist on config
+      // save, entitlement snapshot on issued ticket unchanged after brand/config
+      // publish and ticket_type mutation; stale terms rejected on redeem.
+      const owner = await bearer(ctx, 'owner');
+      const attendee = await bearer(ctx, 'attendee');
+      const configBase = `/tenants/${f.tenantId}/events/${f.eventId}`;
+      const entitlementV1 = {
+        gateAccess: 'standard',
+        tier: 'db14-v1',
+        perks: ['lounge'],
+      };
+
+      const ticketRow = async (ticketId) => {
+        const [row] = await web04Query(
+          f,
+          f.tenantId,
+          `SELECT entitlement_snapshot::text AS entitlement,
+                  form_version, terms_version
+           FROM tickets t
+           INNER JOIN redemption_requests r
+             ON r.tenant_id = t.tenant_id AND r.id = t.request_id
+           WHERE t.tenant_id = $1::uuid AND t.id = $2::uuid`,
+          [f.tenantId, ticketId],
+        );
+        return {
+          entitlement: JSON.parse(row.entitlement),
+          formVersion: row.form_version,
+          termsVersion: row.terms_version,
+        };
+      };
+
+      const issue1 = await request(
+        ctx,
+        'POST',
+        redemptionPath(f),
+        attendee,
+        redemptionBody(f, caseId),
+        { 'idempotency-key': randomUUID() },
+      );
+      expectStatus(issue1, 201);
+      const ticketId = required(issue1.body.ticketId, 'DB-14 ticketId');
+      const snap1 = await ticketRow(ticketId);
+      assert.deepEqual(snap1.entitlement, entitlementV1);
+      assert.equal(snap1.formVersion, 'form-v1');
+      assert.equal(snap1.termsVersion, 'terms-v1');
+
+      const listedVersions = await request(
+        ctx,
+        'GET',
+        `${configBase}/config-versions`,
+        owner,
+      );
+      expectStatus(listedVersions, 200);
+      const headVersion = Math.max(
+        ...(listedVersions.body.items ?? []).map((row) => row.version),
+      );
+
+      const unsafeSave = await request(ctx, 'POST', `${configBase}/config-versions`, owner, {
+        payload: {
+          schemaVersion: 1,
+          brand: {
+            primaryColor: '#164E63',
+            organizationName: 'DB-14 Unsafe',
+          },
+          sections: [
+            {
+              kind: 'hero',
+              id: 'hero',
+              visible: true,
+              order: 0,
+              body: {
+                title: 'DB-14',
+                text: '<style>body{display:none}</style>',
+              },
+            },
+            {
+              kind: 'info',
+              id: 'info',
+              visible: true,
+              order: 1,
+              body: { title: 'Info', text: 'x' },
+            },
+            {
+              kind: 'redeem',
+              id: 'redeem',
+              visible: true,
+              order: 2,
+              body: { title: 'Redeem', text: '' },
+            },
+            {
+              kind: 'guide',
+              id: 'guide',
+              visible: false,
+              order: 3,
+              body: { title: 'Guide', text: '' },
+            },
+            {
+              kind: 'faq',
+              id: 'faq',
+              visible: true,
+              order: 4,
+              body: { title: 'FAQ', items: [{ question: 'Q', answer: 'A' }] },
+            },
+            {
+              kind: 'terms',
+              id: 'terms',
+              visible: true,
+              order: 5,
+              body: {
+                title: 'Terms',
+                termsVersion: 'terms-v1',
+                text: 'Synthetic',
+              },
+            },
+          ],
+          formDefinitionId: 'form-v1',
+          termsVersion: 'terms-v1',
+          form: {
+            formVersion: 'form-v1',
+            fields: [
+              { id: 'full_name', label: 'Name', type: 'text', required: true },
+              { id: 'email', label: 'Email', type: 'email', required: true },
+              { id: 'phone', label: 'Phone', type: 'phone', required: true },
+              {
+                id: 'shirt',
+                label: 'Shirt',
+                type: 'select',
+                required: true,
+                options: [{ id: 'm', label: 'M' }],
+              },
+              { id: 'agree', label: 'Agree', type: 'checkbox', required: true },
+            ],
+          },
+        },
+        expectedVersion: headVersion,
+      });
+      assert.equal(unsafeSave.status, 422);
+      assert.ok(
+        ['CONFIG_UNSAFE_MARKUP', 'CONFIG_INCOMPATIBLE'].includes(unsafeSave.body.code),
+        `unsafe config must fail closed (${unsafeSave.body.code})`,
+      );
+
+      const unknownKeySave = await request(
+        ctx,
+        'POST',
+        `${configBase}/config-versions`,
+        owner,
+        {
+          payload: {
+            schemaVersion: 1,
+            brand: {
+              primaryColor: '#164E63',
+              organizationName: 'DB-14 Org v2',
+            },
+            sections: [
+              {
+                kind: 'hero',
+                id: 'hero',
+                visible: true,
+                order: 0,
+                body: {
+                  title: 'Rebrand',
+                  text: 'Plain',
+                  inlineHtml: '<img onerror=1>',
+                },
+              },
+              {
+                kind: 'info',
+                id: 'info',
+                visible: true,
+                order: 1,
+                body: { title: 'Info', text: 'x' },
+              },
+              {
+                kind: 'redeem',
+                id: 'redeem',
+                visible: true,
+                order: 2,
+                body: { title: 'Redeem', text: '' },
+              },
+              {
+                kind: 'guide',
+                id: 'guide',
+                visible: false,
+                order: 3,
+                body: { title: 'Guide', text: '' },
+              },
+              {
+                kind: 'faq',
+                id: 'faq',
+                visible: true,
+                order: 4,
+                body: { title: 'FAQ', items: [{ question: 'Q', answer: 'A' }] },
+              },
+              {
+                kind: 'terms',
+                id: 'terms',
+                visible: true,
+                order: 5,
+                body: {
+                  title: 'Terms',
+                  termsVersion: 'terms-v2',
+                  text: 'Synthetic v2',
+                },
+              },
+            ],
+            formDefinitionId: 'form-v1',
+            termsVersion: 'terms-v2',
+            form: {
+              formVersion: 'form-v2',
+              fields: [
+                { id: 'full_name', label: 'Name', type: 'text', required: true },
+                { id: 'email', label: 'Email', type: 'email', required: true },
+                { id: 'phone', label: 'Phone', type: 'phone', required: true },
+                {
+                  id: 'shirt',
+                  label: 'Shirt',
+                  type: 'select',
+                  required: true,
+                  options: [{ id: 'm', label: 'M' }],
+                },
+                { id: 'agree', label: 'Agree', type: 'checkbox', required: true },
+              ],
+            },
+          },
+          expectedVersion: headVersion,
+        },
+      );
+      assert.equal(unknownKeySave.status, 422);
+      assert.equal(unknownKeySave.body.code, 'CONFIG_INCOMPATIBLE');
+
+      const savedV2 = await request(
+        ctx,
+        'POST',
+        `${configBase}/config-versions`,
+        owner,
+        {
+          payload: {
+            schemaVersion: 1,
+            brand: {
+              primaryColor: '#245B47',
+              organizationName: 'DB-14 Org v2',
+            },
+            sections: [
+              {
+                kind: 'hero',
+                id: 'hero',
+                visible: true,
+                order: 0,
+                body: { title: 'Rebrand', text: 'v2 copy' },
+              },
+              {
+                kind: 'info',
+                id: 'info',
+                visible: true,
+                order: 1,
+                body: { title: 'Info', text: 'x' },
+              },
+              {
+                kind: 'redeem',
+                id: 'redeem',
+                visible: true,
+                order: 2,
+                body: { title: 'Redeem', text: '' },
+              },
+              {
+                kind: 'guide',
+                id: 'guide',
+                visible: false,
+                order: 3,
+                body: { title: 'Guide', text: '' },
+              },
+              {
+                kind: 'faq',
+                id: 'faq',
+                visible: true,
+                order: 4,
+                body: { title: 'FAQ', items: [{ question: 'Q', answer: 'A' }] },
+              },
+              {
+                kind: 'terms',
+                id: 'terms',
+                visible: true,
+                order: 5,
+                body: {
+                  title: 'Terms',
+                  termsVersion: 'terms-v2',
+                  text: 'Synthetic v2',
+                },
+              },
+            ],
+            formDefinitionId: 'form-v1',
+            termsVersion: 'terms-v2',
+            form: {
+              formVersion: 'form-v2',
+              fields: [
+                { id: 'full_name', label: 'Name', type: 'text', required: true },
+                { id: 'email', label: 'Email', type: 'email', required: true },
+                { id: 'phone', label: 'Phone', type: 'phone', required: true },
+                {
+                  id: 'shirt',
+                  label: 'Shirt',
+                  type: 'select',
+                  required: true,
+                  options: [{ id: 'm', label: 'M' }],
+                },
+                { id: 'agree', label: 'Agree', type: 'checkbox', required: true },
+              ],
+            },
+          },
+          expectedVersion: headVersion,
+        },
+      );
+      expectStatus(savedV2, 201);
+
+      const publishedV2 = await request(ctx, 'POST', `${configBase}/publish`, owner, {
+        expectedVersion: savedV2.body.version,
+      });
+      expectStatus(publishedV2, 201);
+
+      const publicAfter = await fetchPublicEventDetail(ctx, f.tenantSlug, f.eventSlug);
+      expectStatus(publicAfter, 200);
+      assert.equal(publicAfter.body.brand.organizationName, 'DB-14 Org v2');
+      assert.equal(publicAfter.body.terms?.version, 'terms-v2');
+
+      const snap2 = await ticketRow(ticketId);
+      assert.deepEqual(snap2.entitlement, entitlementV1);
+      assert.equal(snap2.formVersion, 'form-v1');
+      assert.equal(snap2.termsVersion, 'terms-v1');
+
+      const staleRedeem = await request(
+        ctx,
+        'POST',
+        redemptionPath(f),
+        attendee,
+        {
+          code: required(f.secondCode, 'DB-14 secondCode'),
+          formVersion: 'form-v2',
+          termsVersion: 'terms-v1',
+          answers: required(f.data?.answers, 'DB-14 answers'),
+          termsAccepted: true,
+        },
+        { 'idempotency-key': randomUUID() },
+      );
+      assert.equal(staleRedeem.status, 409);
+      assert.equal(staleRedeem.body.code, 'TERMS_VERSION_STALE');
+
+      const answersV2 = required(f.data?.answers, 'DB-14 answers');
+      const issue2 = await request(
+        ctx,
+        'POST',
+        redemptionPath(f),
+        attendee,
+        {
+          code: required(f.secondCode, 'DB-14 secondCode'),
+          formVersion: 'form-v2',
+          termsVersion: 'terms-v2',
+          answers: answersV2,
+          termsAccepted: true,
+        },
+        { 'idempotency-key': randomUUID() },
+      );
+      expectStatus(issue2, 201);
+      const snap3 = await ticketRow(required(issue2.body.ticketId, 'DB-14 ticket2'));
+      assert.deepEqual(snap3.entitlement, entitlementV1);
+      assert.equal(snap3.formVersion, 'form-v2');
+      assert.equal(snap3.termsVersion, 'terms-v2');
     }
   });
 }
