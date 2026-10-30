@@ -149,11 +149,13 @@
     "caseId": "DB-14",
     "tests": [
       "D:packages/backend/test/form-consent.test.cjs#F-BE: form/consent",
-      "D:packages/backend/test/config-publish.test.cjs#config publish is versioned"
+      "D:packages/backend/test/config-publish.test.cjs#config publish is versioned",
+      "D:packages/backend/test/db14-form-entitlement.test.cjs#DB-14: form/terms version, allowlist rejection, immutable entitlement snapshot",
+      "H:tests/e2e/http/live.test.mjs#[DB-14] live HTTP"
     ],
-    "layers": ["D"],
-    "status": "blocked",
-    "reason": "D form snapshot; thiếu H allowlist rich content và entitlement matrix."
+    "layers": ["D", "H"],
+    "status": "pass",
+    "reason": "D PostgreSQL PASS: consent version/hashes on request (expected hashes from published form/terms source, v2≠v1, v1 ticket immutable after publish), allowlist rejects unsafe markup/unknown keys/non-allowlisted field types, ticket entitlement_snapshot immutable after config publish/rebrand and ticket_type mutation; stale terms on redeem rejected. H Keycloak/HTTP PASS: same hash contract on live redeem + config publish v2 + TERMS_VERSION_STALE. Chờ DoD độc lập revalidate F01 trên SHA cuối."
   },
   {
     "caseId": "DB-15",

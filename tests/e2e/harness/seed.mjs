@@ -248,7 +248,7 @@ export async function seedRuntime(state, caseIds) {
         // Private, run-scoped control. The test uses ticket_runtime + tenant RLS.
         fixture.data.controlDatabaseUrl = state.databaseUrl;
       }
-      if (['AUTH-03', 'WEB-04', 'DB-03', 'DB-04', 'DB-07', 'DB-02', 'DB-09', 'DB-10', 'DB-11', 'DB-12'].includes(caseId)) {
+      if (['AUTH-03', 'WEB-04', 'DB-03', 'DB-04', 'DB-07', 'DB-02', 'DB-09', 'DB-10', 'DB-11', 'DB-12', 'DB-14'].includes(caseId)) {
         // Private, run-scoped control for H/DB reconciliation under tenant RLS.
         fixture.data.controlDatabaseUrl = state.databaseUrl;
       }
@@ -264,7 +264,7 @@ export async function seedRuntime(state, caseIds) {
         fixture.data.registrationName = `New Tenant ${state.id}`;
         fixture.data.registrationSlug = `new-${slug}`;
       }
-      if (['AUTH-03', 'DB-03', 'DB-04', 'DB-07', 'DB-10', 'DB-11', 'SEC-04', 'SEC-05', 'WEB-04'].includes(caseId)) {
+      if (['AUTH-03', 'DB-03', 'DB-04', 'DB-07', 'DB-10', 'DB-11', 'DB-14', 'SEC-04', 'SEC-05', 'WEB-04'].includes(caseId)) {
         fixture.data.formVersion = 'form-v1';
         fixture.data.termsVersion = 'terms-v1';
         if (caseId === 'AUTH-03')
@@ -316,6 +316,18 @@ export async function seedRuntime(state, caseIds) {
         fixture.ticketTypeId = inventory.ticketTypeId;
         fixture.sourceId = inventory.sourceId;
         if (caseId === 'DB-10') fixture.data.usedCodeId = inventory.codeIds[0];
+        if (caseId === 'DB-14') {
+          const entitlement = JSON.stringify({
+            gateAccess: 'standard',
+            tier: 'db14-v1',
+            perks: ['lounge'],
+          });
+          await tx.$executeRaw`
+            UPDATE ticket_types
+            SET entitlement_snapshot = ${entitlement}::jsonb
+            WHERE tenant_id = ${tenantId}::uuid AND id = ${inventory.ticketTypeId}::uuid
+          `;
+        }
         if (caseId === 'DB-07') {
           await tx.$executeRaw`UPDATE issuance_sources
             SET approval_mode='MANUAL', pending_ttl_hours=3
