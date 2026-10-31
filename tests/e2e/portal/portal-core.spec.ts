@@ -573,7 +573,7 @@ test('[PORT-13] Portal filter + saved view persist for owner and are not hydrate
     .getByRole('button', { name: 'Áp dụng bộ lọc chờ duyệt' })
     .click();
   await expect(rows()).toHaveCount(1);
-  expect(await visibleIds()).toEqual([seededIds[30]]);
+  await expect.poll(visibleIds).toEqual([seededIds[30]]);
   await expect(requestFilter).toHaveValue(seededIds[30]);
 
   const toolbar = pending.getByRole('button', {
@@ -590,11 +590,11 @@ test('[PORT-13] Portal filter + saved view persist for owner and are not hydrate
   await requestFilter.fill(seededIds[31]);
   await pending.getByRole('button', { name: 'Áp dụng bộ lọc chờ duyệt' }).click();
   await expect(rows()).toHaveCount(1);
-  expect(await visibleIds()).toEqual([seededIds[31]]);
+  await expect.poll(visibleIds).toEqual([seededIds[31]]);
   await toolbar.click();
   await page.getByRole('menuitem', { name: 'PORT-13 source filter' }).click();
   await expect(rows()).toHaveCount(1);
-  expect(await visibleIds()).toEqual([seededIds[30]]);
+  await expect.poll(visibleIds).toEqual([seededIds[30]]);
 
   // Apply the saved view again after reload; persisted name alone is insufficient.
   await page.reload();
@@ -605,7 +605,7 @@ test('[PORT-13] Portal filter + saved view persist for owner and are not hydrate
     .click();
   await page.getByRole('menuitem', { name: 'PORT-13 source filter' }).click();
   await expect(rows()).toHaveCount(1);
-  expect(await visibleIds()).toEqual([seededIds[30]]);
+  await expect.poll(visibleIds).toEqual([seededIds[30]]);
   await expect(requestFilter).toHaveValue(seededIds[30]);
 
   // Switch actor in the SAME browser profile (same context -> same
