@@ -55,3 +55,60 @@ export async function createSecondOwnerTenant(opts: {
     await db.$disconnect();
   }
 }
+
+/** Isolated PORT-13 browser fixture: enough pending rows for three UI pages. */
+export async function createPendingRequests(opts: {
+  databaseUrl: string;
+  tenantId: string;
+  eventId: string;
+  sourceId: string;
+  ticketTypeId: string;
+  actorUserId: string;
+}): Promise<string[]> {
+  const db = backend.createDatabase(opts.databaseUrl, 2) as {
+    $disconnect: () => Promise<void>;
+  };
+  const ids = Array.from({ length: 55 }, () => randomUUID());
+  const codes = ids.map(() => randomUUID());
+  try {
+    await backend.withTenant(db, opts.tenantId, async (tx: {
+      issuanceSource: { update: (args: unknown) => Promise<unknown> };
+      redemptionCode: { create: (args: unknown) => Promise<unknown> };
+      redemptionRequest: { create: (args: unknown) => Promise<unknown> };
+    }) => {
+      await tx.issuanceSource.update({
+        where: { tenantId_id: { tenantId: opts.tenantId, id: opts.sourceId } },
+        data: { approvalMode: 'MANUAL', maxPendingPerUser: 60 },
+      });
+      for (const [index, id] of ids.entries()) {
+        const createdAt = new Date(Date.UTC(2026, 9, 1, 0, 0, index));
+        await tx.redemptionCode.create({
+          data: {
+            tenantId: opts.tenantId,
+            eventId: opts.eventId,
+            id: codes[index],
+            codeHmac: `port13-${codes[index]}`,
+            sourceId: opts.sourceId,
+            ticketTypeId: opts.ticketTypeId,
+            status: 'HELD',
+            activeRequestId: id,
+          },
+        });
+        await tx.redemptionRequest.create({
+          data: {
+            tenantId: opts.tenantId,
+            eventId: opts.eventId,
+            id,
+            actorUserId: opts.actorUserId,
+            redemptionCodeId: codes[index],
+            status: 'PENDING_REVIEW',
+            createdAt,
+          },
+        });
+      }
+    });
+    return ids;
+  } finally {
+    await db.$disconnect();
+  }
+}

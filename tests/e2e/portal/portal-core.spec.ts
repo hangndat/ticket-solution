@@ -14,7 +14,7 @@ import {
   login,
   portalUrl,
 } from './helpers';
-import { createSecondOwnerTenant } from './port13-db';
+import { createPendingRequests, createSecondOwnerTenant } from './port13-db';
 
 function reportUpstreamPath(f: ReturnType<typeof fixtureFor>): string {
   return `/v1/tenants/${f.tenantId}/events/${f.eventId}/report`;
@@ -536,21 +536,51 @@ test('[PORT-13] Portal filter + saved view persist for owner and are not hydrate
 }) => {
   const m = loadManifest();
   const f = fixtureFor(m, 'PORT-13');
-  if (!f.sourceId) throw new Error('BLOCKED: PORT-13 source fixture missing');
+  const owner = accountFor(m, 'PORT-13', 'owner');
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!f.sourceId || !f.ticketTypeId || !owner.userId || !databaseUrl)
+    throw new Error('BLOCKED: PORT-13 pending fixture inputs missing');
+  const seededIds = await createPendingRequests({
+    databaseUrl,
+    tenantId: f.tenantId,
+    eventId: f.eventId,
+    sourceId: f.sourceId,
+    ticketTypeId: f.ticketTypeId,
+    actorUserId: owner.userId,
+  });
   await login(page, m, 'PORT-13', 'owner');
   await page.goto(portalUrl(m, eventPath(f, '/guests#pending')));
   const pending = page.locator('#pending');
-  // Plain text filter (UUID lookup) avoids the async catalog-driven Select
-  // dropdown; f.sourceId is only used here as a well-formed UUID value.
+  const rows = () => pending.locator('.ant-table-tbody tr.ant-table-row');
+  const visibleIds = async () =>
+    rows().locator('td:first-child').allTextContents().then((values) =>
+      values.map((value) => value.trim()),
+    );
+  await expect(rows()).toHaveCount(20);
+  const firstPage = await visibleIds();
+  await pending.getByRole('button', { name: 'Trang sau' }).click();
+  await expect(rows()).toHaveCount(20);
+  const secondPage = await visibleIds();
+  await pending.getByRole('button', { name: 'Trang sau' }).click();
+  await expect(rows()).toHaveCount(15);
+  const thirdPage = await visibleIds();
+  expect([...firstPage, ...secondPage, ...thirdPage]).toEqual(seededIds);
+  expect(new Set([...firstPage, ...secondPage, ...thirdPage]).size).toBe(55);
+  await pending.getByRole('button', { name: 'Trang trước' }).click();
+  await expect(rows()).toHaveCount(20);
+  expect(await visibleIds()).toEqual(secondPage);
+
   const requestFilter = pending.getByLabel(
     'Tìm theo mã UUID của yêu cầu',
   );
   await requestFilter.waitFor({ state: 'visible' });
-  await requestFilter.fill(f.sourceId);
+  await requestFilter.fill(seededIds[30]);
   await pending
     .getByRole('button', { name: 'Áp dụng bộ lọc chờ duyệt' })
     .click();
-  await expect(requestFilter).toHaveValue(f.sourceId);
+  await expect(rows()).toHaveCount(1);
+  expect(await visibleIds()).toEqual([seededIds[30]]);
+  await expect(requestFilter).toHaveValue(seededIds[30]);
 
   const toolbar = pending.getByRole('button', {
     name: 'Chọn hoặc lưu view danh sách',
@@ -563,15 +593,26 @@ test('[PORT-13] Portal filter + saved view persist for owner and are not hydrate
   await expect(saveDialog).toHaveCount(0);
   await expect(toolbar).toContainText('PORT-13 source filter');
 
-  // Saved view (filter + name) must survive a reload for the same user+tenant.
+  await requestFilter.fill(seededIds[31]);
+  await pending.getByRole('button', { name: 'Áp dụng bộ lọc chờ duyệt' }).click();
+  await expect(rows()).toHaveCount(1);
+  expect(await visibleIds()).toEqual([seededIds[31]]);
+  await toolbar.click();
+  await page.getByRole('menuitem', { name: 'PORT-13 source filter' }).click();
+  await expect(rows()).toHaveCount(1);
+  expect(await visibleIds()).toEqual([seededIds[30]]);
+
+  // Apply the saved view again after reload; persisted name alone is insufficient.
   await page.reload();
   await page.locator('#pending').waitFor({ state: 'visible' });
   await page
     .locator('#pending')
     .getByRole('button', { name: 'Chọn hoặc lưu view danh sách' })
     .click();
-  await expect(page.getByText('PORT-13 source filter')).toBeVisible();
-  await page.keyboard.press('Escape');
+  await page.getByRole('menuitem', { name: 'PORT-13 source filter' }).click();
+  await expect(rows()).toHaveCount(1);
+  expect(await visibleIds()).toEqual([seededIds[30]]);
+  await expect(requestFilter).toHaveValue(seededIds[30]);
 
   // Switch actor in the SAME browser profile (same context -> same
   // localStorage/cookies): owner's saved view must not hydrate for a
