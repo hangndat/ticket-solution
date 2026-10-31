@@ -109,6 +109,7 @@ export function MarketingChrome({
       {children}
       <footer className={marketingFooter(onSales)} data-testid="mkt-footer">
         <div className={marketingWrap}>
+          {onSales ? <Link className="mb-4 inline-flex items-center text-xl font-bold text-paper" href={sales}><Image src="/marketing/neon/vemoki-v-mark.webp" alt="" width={34} height={30} className="mr-2" />Vemoki</Link> : null}
           <div>
             <Link href={privacyHref(locale)}>{t(locale, 'nav.privacy')}</Link>
             {' · '}

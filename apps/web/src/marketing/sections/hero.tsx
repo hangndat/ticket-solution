@@ -6,11 +6,11 @@ import type { MarketingSectionProps } from './types';
 
 export function HeroSection({ locale, demo }: MarketingSectionProps) {
   return (
-    <section id="top" data-analytics-section="hero" data-on-ink="" data-testid="marketing-neon-hero" className="overflow-hidden bg-ink px-5 py-16 text-paper md:py-24">
+    <section id="top" data-analytics-section="hero" data-on-ink="" data-testid="marketing-neon-hero" className="overflow-hidden bg-ink px-5 py-16 text-paper md:py-24 lg:py-32">
       <div className={`${marketingWrap} grid items-center gap-10 md:grid-cols-2`}>
         <div>
           <h1 id="hero-title" data-testid="hero-headline" className="m-0 text-4xl font-bold leading-tight tracking-tight md:text-6xl">
-            {t(locale, 'neon.hero.headline.lead')}
+            {t(locale, 'neon.hero.headline.lead')}{' '}
             <span className="text-primary">{t(locale, 'neon.hero.headline.emphasis')}</span>.
           </h1>
           <p className="mt-6 text-lg leading-relaxed">{t(locale, 'hero.sub')}</p>
