@@ -110,6 +110,18 @@ body {
   gap: 4px;
 }
 
+@media (max-width: 359px) {
+  .portal-header-actions,
+  .portal-locale-switch {
+    gap: 2px;
+  }
+
+  .portal-header-actions .ant-btn {
+    padding-inline: 3px;
+    font-size: 12px;
+  }
+}
+
 .portal-brand-link {
   display: inline-block;
   max-width: 140px;
