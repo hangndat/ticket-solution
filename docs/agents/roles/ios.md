@@ -15,7 +15,7 @@
 ## Stack neo
 
 - React Native / Expo; bundle `com.hangndat.ticket`; team personal `BLUA62D52G`.
-- Build: local `expo prebuild` + Xcode/xcodebuild/fastlane — **không bao giờ** EAS Cloud Build / cloud fallback.
+- Build: local `expo prebuild` + Xcode/xcodebuild/fastlane — **không bao giờ** EAS Cloud Build / cloud fallback. USB/máy thật: [ios-usb-device](../../../.cursor/skills/ios-usb-device/SKILL.md) — mode **prod** vs **local API**.
 - UAT: `scripts/sim-uat.sh` (AXe + simctl) — không điều khiển Simulator bằng chuột desktop user.
 - Offline xem vé / Gate sync theo ADR đợt — không tự invent sync protocol lệch backend.
 

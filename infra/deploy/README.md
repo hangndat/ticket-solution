@@ -39,7 +39,9 @@ Local demo seed (không prod): `D9_MEDIA_STACK_UP=1 ./scripts/d9-seed-media.sh` 
 
 Prod từng trả `MINIO_MISCONFIGURED` vì api/worker thiếu endpoint + không có container. Sau khi merge:
 
-1. Thêm vào `/opt/vemoki/.env`: `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, buckets (`vemoki-exports` / `vemoki-assets` / `vemoki-imports`). **Không** commit giá trị thật.
+1. Thêm vào `/opt/vemoki/.env`: `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, `MINIO_EXPORTS_ACCESS_KEY`, `MINIO_EXPORTS_SECRET_KEY`, buckets (`vemoki-exports` / `vemoki-assets` / `vemoki-imports`). **Không** commit giá trị thật. App keys phải khác root: shared app key chỉ được assets/imports; export key chỉ được exports. Xác minh chính sách trên MinIO pin trước khi bật export; API và worker phải dùng cùng export key cho ký URL/PUT. Offline purge sẽ vô hiệu hóa export key sau khi dừng cả API và worker.
+   Policy mẫu cho tên bucket mặc định nằm ở `minio-policies/o06-exports-writer.json` và `minio-policies/o06-shared-assets-imports.json`. Tạo user non-root riêng, gắn policy tương ứng, kiểm tra PUT hợp lệ/bị từ chối bằng object fixture và kiểm tra policy hiệu lực (kể cả group kế thừa). Nếu tên bucket khác mặc định, thay ARN trước khi tạo policy. Bằng chứng local: `docs/architecture/O06-F01-MINIO-IDENTITY-ISOLATION.md`. **Target-host provisioning runbook (F03, gate `deploy-prod`, không in secret):** [`./MINIO-IDENTITY-PROVISION.md`](./MINIO-IDENTITY-PROVISION.md) — inventory/inherited-policy check, tạo + gắn policy, ma trận allow/deny bằng fixture, cắt API/worker sang export key riêng, disable export key trước purge, rerun idempotent. Rehearsal local (ma trận + disabled-key negative test): `.artifacts/f03-minio-identity-provision.md`.
+   Trước migration O06 offline, DBA tạo `ticket_retention_operator NOLOGIN NOBYPASSRLS` và chỉ cấp membership cho login vận hành riêng; `ticket_runtime` không được là thành viên. Migration cấp quyền thực thi đúng bốn hàm operator cho role này. CLI purge dùng `O06_OPERATOR_DATABASE_URL` của login vận hành và `SET ROLE ticket_retention_operator`.
 2. Từ `infra/deploy`: `docker compose --env-file /opt/vemoki/.env --env-file /opt/vemoki/release-pins.env up -d minio minio-init` (đợi minio-init exit 0).
 3. `docker compose --env-file /opt/vemoki/.env --env-file /opt/vemoki/release-pins.env up -d --no-deps --force-recreate api worker` sau khi pin release đã verify.
 4. Verify: tạo CSV export trên admin → job READY + download; `docker compose … logs api` không còn `MINIO_MISCONFIGURED`.
@@ -79,6 +81,10 @@ Từ `infra/deploy`, với env file ngoài git:
 Xem lệnh build, pin, verify và rollback trong [`docs/ops/IMMUTABLE-RELEASE.md`](../../docs/ops/IMMUTABLE-RELEASE.md). Không chạy lệnh install/build cũ trên live mount.
 
 `apps/mobile` không được cài vào image. File realm Keycloak phải đọc được bởi user trong container. Mode `600` của user host khác sẽ làm import thất bại và container thoát ngay.
+
+## Log container (json-file)
+
+Mọi service vemoki trong `compose.yaml` dùng `logging: *default-logging` (json-file, `max-size: 20m`, `max-file: 5`, tối đa ~100 MB/container). Chỉ có hiệu lực khi container được recreate (`up -d --no-deps --force-recreate <service>`); không cần restart Docker daemon. Container postgres đang chạy giữ log cũ không giới hạn cho tới lần recreate — chỉ `truncate -s 0` file `LogPath` sau khi không còn deploy đang chạy. Không áp dụng cho stack khác (`nginx-letencrypt`, `anphong`).
 
 ## Nginx
 

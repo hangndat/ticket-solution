@@ -1104,6 +1104,7 @@ export class InventoryController {
   @ApiQuery({ name: 'sourceId', required: false })
   @ApiQuery({ name: 'ticketTypeId', required: false })
   @ApiQuery({ name: 'q', required: false })
+  @Header('Cache-Control', 'private, no-store')
   listCodes(
     @Headers('authorization') authorization: string | undefined,
     @Param('tenantId') tenantId: string,

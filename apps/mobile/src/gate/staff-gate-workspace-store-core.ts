@@ -30,13 +30,22 @@ function parseWorkspace(raw: string | null): StaffGateWorkspace | null {
         if (typeof value === 'string') sessionsByScope[key] = value;
       }
     }
+    const sessionGateByScope: Record<string, { sessionId: string; gateId: string }> = {};
+    if (row.sessionGateByScope && typeof row.sessionGateByScope === 'object') {
+      for (const [key, value] of Object.entries(row.sessionGateByScope)) {
+        const entry = value as { sessionId?: unknown; gateId?: unknown } | null;
+        if (entry && typeof entry.sessionId === 'string' && typeof entry.gateId === 'string') {
+          sessionGateByScope[key] = { sessionId: entry.sessionId, gateId: entry.gateId };
+        }
+      }
+    }
     const opsByScope: Record<string, GateOp[]> = {};
     if (row.opsByScope && typeof row.opsByScope === 'object') {
       for (const [key, value] of Object.entries(row.opsByScope)) {
         if (Array.isArray(value)) opsByScope[key] = recoverOps(value as GateOp[]);
       }
     }
-    return { v: 2, selected: scope, sessionsByScope, opsByScope };
+    return { v: 2, selected: scope, sessionsByScope, sessionGateByScope, opsByScope };
   } catch {
     return null;
   }

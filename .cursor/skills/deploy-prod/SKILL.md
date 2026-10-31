@@ -14,8 +14,11 @@ SSH: use the local shell alias / SSH config host `conanphong` (or `VEMoki_SSH_HO
 Compose directory: `/opt/vemoki/src/infra/deploy`. For **every** Compose command pass both `--env-file /opt/vemoki/.env --env-file /opt/vemoki/release-pins.env`, because Compose interpolates all service pins. Deploy **one service** unless the user asked for the whole stack. Recreate a pinned service with `up -d --no-deps --force-recreate <service>`; `restart` does not replace its mount. Never run `up` without `--no-deps` during a one-service rollout.
 
 Authoritative app/migrate procedure: [docs/ops/IMMUTABLE-RELEASE.md](../../../docs/ops/IMMUTABLE-RELEASE.md), [infra/deploy/README.md](../../../infra/deploy/README.md), and `scripts/release-artifact.py`. Do not build the fat `Dockerfile` on this host. Do not `du /var/lib/docker` or `docker commit` the app tree.
+Build caches pnpm in `~/.cache/vemoki-release/pnpm-store-<platform>` (`--pnpm-store`/`VEMOKI_PNPM_STORE`; safe to delete, never in artifact). Run long builds as `nohup … > log 2>&1 &`; the log has per-step timings and an `EMULATED` warning. `--clean-stale` removes old `.build-*` dirs (only if no build is running).
 
 ## Shared rules
+
+- Log container: `compose.yaml` giới hạn json-file 20m x 5 qua `x-logging`; có hiệu lực khi recreate service (không restart daemon). Không `docker system prune`; truncate log postgres (`truncate -s 0 <LogPath>`) chỉ khi không có deploy đang chạy.
 
 - Do not touch `/media/anphong/nginx-letencrypt` except `data/nginx/vemoki.conf`. Leave vhosts `ancafe` and `dath` alone.
 - Do not publish 80, 443, 8080, 1883, 27017, or 9001. Network `edge` is external `nginx-letencrypt_nginx_network`.

@@ -4,6 +4,8 @@ export const WORKER_JOB_CLASSES = [
   'reconcile_pending_redemptions',
   'relay_outbox',
   'process_account_anonymizations',
+  'process_ticket_pii_anonymizations',
+  'process_export_object_retentions',
   'relay_exports',
   'cleanup_import_files',
 ] as const;

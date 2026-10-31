@@ -344,7 +344,11 @@ export async function redeemAndIssueTicket(
         true,
       );
     }
-    await tx.$executeRaw`ROLLBACK TO SAVEPOINT issue_business`;
+    // A due manual hold was expired inside the business path. Preserve that
+    // code release and audit while storing the terminal retry response.
+    if (!(error instanceof IssueError && error.code === ISSUE_ERROR_CODES.PENDING_EXPIRED)) {
+      await tx.$executeRaw`ROLLBACK TO SAVEPOINT issue_business`;
+    }
     if (error instanceof IssueError && !error.retryable) {
       // Terminal business rejection: keep operation completed with error payload
       // so retries with same key replay the rejection without re-mutating.

@@ -43,6 +43,7 @@ test('scope switch flushes session and ops per event', () => {
   assert.deepEqual(sliceWorkspaceForScope(ws, scopeB), {
     ops: [],
     sessionId: null,
+    gateId: null,
   });
 });
 

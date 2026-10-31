@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ATTENDEE_COPY } from '../attendee-copy';
+import { attendeeCopy } from '../attendee-copy';
+import { useAttendeeLocaleOptional } from '../i18n';
 import {
   attendeeTicketOfflineBanner,
   attendeeTicketQrCaption,
@@ -37,6 +38,7 @@ export function OwnerTicketQrPanel({
   qrPayload,
   qrLabel,
 }: Props) {
+  const { locale } = useAttendeeLocaleOptional();
   const [offline, setOffline] = useState(false);
 
   useEffect(() => subscribeOnline(setOffline), []);
@@ -49,7 +51,7 @@ export function OwnerTicketQrPanel({
           role="status"
           data-testid="owner-ticket-offline-label"
         >
-          {ATTENDEE_COPY.offlineQrBanner}
+          {attendeeCopy(locale).offlineQrBanner}
         </p>
       ) : null}
       <figure className={attendeeTicketQrPanel} data-testid="owner-ticket-qr-figure">

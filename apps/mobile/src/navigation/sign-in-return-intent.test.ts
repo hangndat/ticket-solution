@@ -11,8 +11,8 @@ import {
 test('park and consume allowed return paths', () => {
   clearSignInReturn();
   assert.equal(parkSignInReturn({ pathname: '/redeem' }), true);
-  assert.deepEqual(peekSignInReturn(), { pathname: '/redeem-global' });
-  assert.deepEqual(consumeSignInReturn(), { pathname: '/redeem-global' });
+  assert.deepEqual(peekSignInReturn(), { pathname: '/(tabs)/redeem' });
+  assert.deepEqual(consumeSignInReturn(), { pathname: '/(tabs)/redeem' });
   assert.equal(peekSignInReturn(), null);
 });
 
@@ -27,7 +27,7 @@ test('clearSignInReturnIfPath only drops matching path', () => {
   clearSignInReturn();
   parkSignInReturn({ pathname: '/redeem' });
   clearSignInReturnIfPath('/claim');
-  assert.deepEqual(peekSignInReturn(), { pathname: '/redeem-global' });
+  assert.deepEqual(peekSignInReturn(), { pathname: '/(tabs)/redeem' });
   clearSignInReturnIfPath('/redeem');
   assert.equal(peekSignInReturn(), null);
 });
@@ -35,7 +35,7 @@ test('clearSignInReturnIfPath only drops matching path', () => {
 test('allows global redeem return path', () => {
   clearSignInReturn();
   assert.equal(parkSignInReturn({ pathname: '/redeem-global' }), true);
-  assert.equal(consumeSignInReturn()?.pathname, '/redeem-global');
+  assert.equal(consumeSignInReturn()?.pathname, '/(tabs)/redeem');
 });
 
 test('allows ticket detail path without query', () => {

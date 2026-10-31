@@ -1,8 +1,7 @@
 import { IDENTITY_ERROR_CODES } from '@ticket/contracts';
+import { actorEpochPair, bindActorResponse, verifiedActorBinding } from '../oidc/actor-epoch';
 import { isPortalOidcConfigured } from '../oidc/config';
 import {
-  clearPlatformSessionCookies,
-  clearStaffSessionCookies,
   readPlatformAccessToken,
   readStaffAccessToken,
 } from '../oidc/cookies';
@@ -82,6 +81,9 @@ export async function forwardStaffBearer(
     );
   }
 
+  if (!await actorEpochPair('staff')) {
+    return bffApiError(IDENTITY_ERROR_CODES.UNAUTHENTICATED, 'Actor epoch missing.', 401);
+  }
   let token = await readStaffAccessToken();
   if (!token) {
     const refreshed = await refreshStaffAccessToken();
@@ -95,12 +97,23 @@ export async function forwardStaffBearer(
     token = refreshed.accessToken;
   }
 
+  let binding = await verifiedActorBinding('staff', token);
+  if (!binding) {
+    const refreshed = await refreshStaffAccessToken();
+    if (refreshed.ok) {
+      token = refreshed.accessToken;
+      binding = await verifiedActorBinding('staff', token);
+    }
+  }
+  if (!binding) {
+    return bffApiError(IDENTITY_ERROR_CODES.UNAUTHENTICATED, 'Actor session mismatch.', 401);
+  }
+
   let response = await fetchWithBearer(pathAndQuery, token, init);
-  if (response.status !== 401) return response;
+  if (response.status !== 401) return bindActorResponse(response, binding);
 
   const refreshed = await refreshStaffAccessToken();
   if (!refreshed.ok) {
-    await clearStaffSessionCookies();
     return bffApiError(
       IDENTITY_ERROR_CODES.UNAUTHENTICATED,
       'Session expired — sign in again.',
@@ -108,7 +121,7 @@ export async function forwardStaffBearer(
     );
   }
   response = await fetchWithBearer(pathAndQuery, refreshed.accessToken, init);
-  return response;
+  return bindActorResponse(response, binding);
 }
 
 /** Platform Operator Bearer — never reuses staff access cookie. */
@@ -132,6 +145,10 @@ export async function forwardPlatformBearer(
       401,
     );
   }
+  const binding = await verifiedActorBinding('platform');
+  if (!binding) {
+    return bffApiError(IDENTITY_ERROR_CODES.UNAUTHENTICATED, 'Platform actor session mismatch.', 401);
+  }
   try {
     await verifyAccessToken(token, {
       issuer: config.issuer,
@@ -144,14 +161,13 @@ export async function forwardPlatformBearer(
       },
     });
   } catch {
-    await clearPlatformSessionCookies();
     return bffApiError(
       IDENTITY_ERROR_CODES.UNAUTHENTICATED,
       'Platform token invalid — sign in again.',
       401,
     );
   }
-  return fetchWithBearer(pathAndQuery, token, init);
+  return bindActorResponse(await fetchWithBearer(pathAndQuery, token, init), binding);
 }
 
 export const PORTAL_API_PATHS = {

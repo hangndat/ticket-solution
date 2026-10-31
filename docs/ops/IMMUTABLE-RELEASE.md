@@ -1,6 +1,6 @@
 # Release bất biến cho VPS — #899
 
-**Trạng thái:** quy trình và fixture local; chưa chạy trên production/staging. Chỉ operator có ủy quyền production riêng mới chạy lệnh Compose trên VPS. Không đọc hoặc đưa `.env`, APNs `.p8`, realm secrets, signing keys vào release/log/manifest. `/opt/vemoki/state` và `/opt/vemoki/secrets` nằm ngoài release. Không chạm iOS/store/cloud.
+**Trạng thái:** cutover bất biến **đầu tiên trên production** 27/10/2026, SHA nguồn `2645999f0ad535276b63a95c6c96bace9cff025e` (5 service; evidence comment Epic #914). Quy trình dưới đây vẫn là hợp đồng pin/verify. Chỉ operator có ủy quyền production mới chạy Compose trên VPS. Không đọc hoặc đưa `.env`, APNs `.p8`, realm secrets, signing keys vào release/log/manifest. `/opt/vemoki/state` và `/opt/vemoki/secrets` nằm ngoài release. Cutover ≠ pilot ready ≠ store.
 
 ## Layout và contract
 
@@ -19,6 +19,8 @@ python3 scripts/release-artifact.py --root /opt/vemoki/releases verify <SHA-BUIL
 ```
 
 Build dùng `git archive` của SHA với allowlist chỉ gồm app, workspace dependencies, brand và root build config; loại `.env*` ngay trong staging. pnpm frozen lockfile build contracts/backend/ui/web-session và cả bốn app **trong staging**, không đọc `.env` thật. `pnpm generate` tạo Prisma client trên Linux. Image Node version và arch được kiểm trước build; native `sharp`/Prisma phải qua smoke ở đúng architecture trước deploy. Build ID là hash của tree; Next 16 sinh BUILD_ID ngẫu nhiên nên hai build cùng SHA có thể ra ID khác, nhưng mỗi release vẫn được pin/checksum riêng. Không tự nhận bit-for-bit reproducibility. Không copy `node_modules` build trên macOS sang Linux. Workspace symlink thoát tree làm verify fail.
+
+**Cache và log build.** pnpm store là cache bền trên host, bind-mount vào container tại `/pnpm-store` (mặc định `~/.cache/vemoki-release/pnpm-store-<platform>`, tách riêng amd64/arm64 vì native module như `sharp`; đổi bằng `--pnpm-store` hoặc env `VEMOKI_PNPM_STORE`). Store không nằm trong staging nên không vào artifact, manifest hay digest; vẫn `--frozen-lockfile`. Xóa thư mục store luôn an toàn (lần build sau tải lại). Build in mốc giờ + thời lượng từng bước (archive, platform check, install, từng package build, verify, manifest) ra stdout có flush, ví dụ `nohup python3 scripts/release-artifact.py ... build ... > build.log 2>&1 &` rồi `tail -f build.log`. Log in `EMULATED` nếu `--platform` khác arch Docker host (chậm nhiều). Dir `.build-*` cũ trong `--root` được cảnh báo; `--clean-stale` xóa dir cũ hơn `--stale-min-age-minutes` (mặc định 60) — chỉ dùng khi chắc không có build đang chạy.
 
 ## Expand, rollout, rollback
 

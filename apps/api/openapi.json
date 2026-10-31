@@ -1015,7 +1015,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/TenantBodyDto"
+                "$ref": "#/components/schemas/OpenSessionBodyDto"
               }
             }
           }
@@ -4949,6 +4949,185 @@
           "tenant-limits"
         ]
       }
+    },
+    "/v1/gate/events/{eventId}/gates": {
+      "get": {
+        "operationId": "GateController_listGates",
+        "parameters": [
+          {
+            "name": "eventId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GateListResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "gate"
+        ]
+      },
+      "post": {
+        "operationId": "GateController_createGate",
+        "parameters": [
+          {
+            "name": "eventId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateGateBodyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GateDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "gate"
+        ]
+      }
+    },
+    "/v1/gate/events/{eventId}/tickets/{ticketId}/reissue": {
+      "post": {
+        "operationId": "GateController_reissue",
+        "parameters": [
+          {
+            "name": "eventId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ticketId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReasonBodyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReissueResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "gate"
+        ]
+      }
     }
   },
   "info": {
@@ -5637,18 +5816,6 @@
           "redemptionFlow"
         ]
       },
-      "TenantBodyDto": {
-        "type": "object",
-        "properties": {
-          "tenantId": {
-            "type": "string",
-            "format": "uuid"
-          }
-        },
-        "required": [
-          "tenantId"
-        ]
-      },
       "SessionResponseDto": {
         "type": "object",
         "properties": {
@@ -5665,12 +5832,23 @@
             "enum": [
               "ACTIVE"
             ]
+          },
+          "gateId": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true
+          },
+          "gateName": {
+            "type": "object",
+            "nullable": true
           }
         },
         "required": [
           "sessionId",
           "eventId",
-          "status"
+          "status",
+          "gateId",
+          "gateName"
         ]
       },
       "RevokeSessionBodyDto": {
@@ -8296,6 +8474,103 @@
         "required": [
           "items",
           "nextCursor"
+        ]
+      },
+      "OpenSessionBodyDto": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "gateId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "O31 optional gate"
+          }
+        },
+        "required": [
+          "tenantId"
+        ]
+      },
+      "GateDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "eventId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "sortOrder": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "eventId",
+          "name",
+          "sortOrder"
+        ]
+      },
+      "GateListResponseDto": {
+        "type": "object",
+        "properties": {
+          "gates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GateDto"
+            }
+          }
+        },
+        "required": [
+          "gates"
+        ]
+      },
+      "CreateGateBodyDto": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "sortOrder": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "tenantId",
+          "name"
+        ]
+      },
+      "ReissueResponseDto": {
+        "type": "object",
+        "properties": {
+          "ticketId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "credentialVersion": {
+            "type": "number"
+          },
+          "replayed": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ticketId",
+          "credentialVersion",
+          "replayed"
         ]
       }
     }

@@ -5,7 +5,7 @@ import {
   pathWithNotice,
   authNoticeFromParam,
 } from '../../src/oidc/auth-notice';
-import { clearSessionCookies } from '../../src/oidc/cookies';
+import { clearEstablishedSessionCookies } from '../../src/oidc/cookies';
 import { sanitizePostLoginPath } from '../../src/oidc/post-login';
 import { clearSsrRefreshAttempt } from '../../src/oidc/session-refresh';
 
@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
 
   if (oauthError) {
     if (oauthError === 'session_rejected') {
-      await clearSessionCookies();
+      await clearEstablishedSessionCookies();
       await clearSsrRefreshAttempt();
     }
     return NextResponse.redirect(

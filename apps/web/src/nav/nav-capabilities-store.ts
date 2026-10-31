@@ -23,7 +23,6 @@ export type NavCapabilitiesLoader = () => Promise<{
 
 const GUEST_CAPS: NavCapabilities = {
   authenticated: false,
-  showPortalStaff: false,
   showAccount: false,
 };
 
@@ -31,7 +30,7 @@ type Listener = () => void;
 
 /**
  * Ephemeral in-memory SiteNav capabilities (O02 + SEC-CACHE).
- * Never persist staff chrome — revoke must not leave sticky Admin/Cổng links.
+ * Never persist privileged chrome — revoke must not leave sticky authenticated links.
  */
 export class NavCapabilitiesStore {
   private snapshot: NavCapabilitiesSnapshot = {
@@ -84,7 +83,7 @@ export class NavCapabilitiesStore {
 
   /**
    * Revalidate MeEvents / MeTenants / PlatformMe.
-   * Fail-closed while probing — never keep prior staff links sticky.
+   * Fail-closed while probing — never keep prior authenticated links sticky.
    */
   async refresh(): Promise<NavCapabilitiesSnapshot> {
     const requestId = ++this.requestId;

@@ -22,6 +22,7 @@ export async function POST(request: Request, { params }: Props) {
     targetVersion?: number;
     expectedPublishedVersion?: number;
     expectedRevision?: number;
+    idempotencyKey?: string;
   };
   try {
     body = (await request.json()) as typeof body;
@@ -42,9 +43,20 @@ export async function POST(request: Request, { params }: Props) {
       );
     }
   }
+  const idempotencyKey = body.idempotencyKey?.trim() ?? '';
+  if (!isUuid(idempotencyKey)) {
+    return bffApiError(
+      'IDEMPOTENCY_KEY_REQUIRED',
+      'idempotencyKey must be a UUID.',
+      422,
+    );
+  }
   return forwardStaffBearer(PORTAL_UPSTREAM.configRollback(tenantId, eventId), {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Idempotency-Key': idempotencyKey,
+    },
     body: JSON.stringify({
       targetVersion: body.targetVersion,
       expectedPublishedVersion: body.expectedPublishedVersion,

@@ -14,7 +14,8 @@ import {
   Upload,
 } from 'antd';
 import type { ImportJobSummary, ImportKind } from '@ticket/contracts';
-import { useCallback, useEffect, useRef, useState, type Key } from 'react';
+import { useCallback, useEffect, useRef, type Key } from 'react';
+import { useActorState as useState } from '../../client/use-actor-state';
 import {
   portalDownload,
   portalGet,

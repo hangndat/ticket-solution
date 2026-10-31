@@ -276,7 +276,69 @@ test('server discovery matrix: direct routes, menu, actions and entry', () => {
     );
     assert.equal(canAccessPortalPath('/t/other/e/e1/gate', context), false);
     assert.equal(canAccessPortalPath('/t/t1/e/other/gate', context), false);
+    assert.equal(
+      canAccessPortalPath('/t/t1/reports', context),
+      canAccessPortalPath('/t/t1/analytics', context),
+      `${row.role}: /reports grant matches /analytics`,
+    );
+    assert.equal(
+      canAccessPortalPath('/t/t1/e/e1/reports', context),
+      canAccessPortalPath('/t/t1/e/e1/gate', context),
+      `${row.role}: event /reports grant matches /gate`,
+    );
+    assert.equal(
+      orgMenu.some(
+        (item) => item.key === 'reports' || item.href.endsWith('/reports'),
+      ),
+      false,
+      `${row.role}: org menu has no second reports product`,
+    );
   }
+});
+
+test('legacy /reports is analytics (or event gate), not a forbidden dead URL', () => {
+  const reportOnly = {
+    tenantId: 't1',
+    tenantPermissions: [] as string[],
+    eventId: 'e1',
+    eventPermissions: ['report.read'],
+    tenantEventPermissions: [['report.read']],
+  };
+  const scanner = {
+    ...reportOnly,
+    eventPermissions: ['gate.confirm'],
+    tenantEventPermissions: [['gate.confirm']],
+  };
+  assert.equal(canAccessPortalPath('/t/t1/analytics', reportOnly), true);
+  assert.equal(canAccessPortalPath('/t/t1/reports', reportOnly), true);
+  assert.equal(canAccessPortalPath('/t/t1/e/e1/gate', reportOnly), true);
+  assert.equal(canAccessPortalPath('/t/t1/e/e1/reports', reportOnly), true);
+  assert.equal(canAccessPortalPath('/t/t1/reports', scanner), false);
+  assert.equal(canAccessPortalPath('/t/t1/analytics', scanner), false);
+  assert.equal(canAccessPortalPath('/t/t1/e/e1/reports', scanner), false);
+  assert.deepEqual(
+    buildOrgMenuItems(
+      't1',
+      {
+        tenantId: 't1',
+        slug: 'demo',
+        name: 'Demo',
+        status: 'ACTIVE',
+        role: 'Owner',
+        tenantPermissions: [],
+      },
+      [
+        {
+          tenantId: 't1',
+          eventId: 'e1',
+          name: 'Event',
+          permissions: ['report.read'],
+        },
+      ],
+      translate,
+    ).map((item) => item.key),
+    ['overview', 'analytics'],
+  );
 });
 
 test('role label grants nothing and revoked discovery denies routes and actions', () => {

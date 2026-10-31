@@ -143,6 +143,10 @@ async function seedTenantEvent(db, tenantId, eventId, slug) {
     await tx.tenant.create({
       data: { id: tenantId, slug: 'tenant-' + slug, name: 'T ' + slug },
     });
+    await tx.$executeRaw`
+      INSERT INTO tenant_limits (tenant_id, email_per_day)
+      VALUES (${tenantId}::uuid, 100)
+    `;
     await tx.event.create({
       data: {
         tenantId,
@@ -481,6 +485,28 @@ test(
       });
       assert.equal(quotaOps.ops, 1);
       assert.equal(quotaOps.tickets, 1);
+
+      // DB-03 audit matrix: race loser, replay, idempotency-conflict retry, and
+      // quota-exhausted retry must not add or duplicate audit rows — only the
+      // single actual issuance is recorded.
+      const auditRows = await withTenant(db, A, (tx) =>
+        tx.$queryRaw`
+          SELECT action, resource_id::text AS resource_id,
+                 operation_id::text AS operation_id, actor_user_id::text AS actor_user_id
+          FROM audit_logs
+          WHERE tenant_id = ${A}::uuid AND event_id = ${eventA}::uuid
+          ORDER BY created_at
+        `,
+      );
+      assert.equal(
+        auditRows.length,
+        1,
+        'exactly one ticket.issued audit row despite race loser, replay, ' +
+          'idempotency-conflict retry, and quota-exhausted retry',
+      );
+      assert.equal(auditRows[0].action, 'ticket.issued');
+      assert.equal(auditRows[0].resource_id, winner.ticketId);
+      assert.equal(auditRows[0].actor_user_id, winActor.userId);
 
       await withTenant(db, A, async (tx) => {
         await tx.event.create({

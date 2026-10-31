@@ -99,6 +99,28 @@ Local: [`PORTAL-LOCAL-CUTOVER-PREP.md`](./PORTAL-LOCAL-CUTOVER-PREP.md). Prod cu
 
 Cookie staff/platform trên portal: **host-only** (omit `Domain`). Kiểm tra realm JSON: `./scripts/portal-local-dual-run-check.sh`.
 
+## 7. Global redeem resolve (SCR)
+
+| Biến | Prod seed / TF attendee | Ý nghĩa |
+| --- | --- | --- |
+| `SINGLE_CODE_RESOLVE_GLOBAL` | `1` khi `code_routing` backfill xong và `AMBIGUOUS=0` | Bật `POST /v1/redemptions/resolve`. Compose **phải** truyền vào service `api` (không chỉ ghi `.env`). Tắt → 503 `RESOLVE_DISABLED`. Fallback secret: `CODE_HMAC_PEPPER` / `TICKET_CREDENTIAL_KEY`. |
+
+Mã seed prod (`VEM-HOIAN-*` trong `docs/demo/PROD-SEED-DATASET.md`) cần flag này + hàng `code_routing_*` (script `packages/backend/scripts/backfill-code-routing.cjs` hoặc SQL tương đương). Không invent lookup mới.
+
+## 8. Platform security (API — `readPlatformSecurityConfig`)
+
+Compose `api` pins these (see `infra/deploy/compose.yaml`). Production missing any → fail closed `PLATFORM_MISCONFIGURED`.
+
+| Biến | Default (compose) | Ý nghĩa |
+| --- | --- | --- |
+| `PLATFORM_INVITE_TTL_SECONDS` | `172800` (48h) | TTL lời mời |
+| `PLATFORM_SUPPORT_TTL_MAX_SECONDS` | `3600` | Max support-session TTL |
+| `PLATFORM_MFA_AUTH_TIME_MAX_SECONDS` | `900` (15m) | Max `auth_time` age MFA step-up |
+| `PLATFORM_MFA_ACR_VALUES` | `2` | CSV ACR chấp nhận |
+| `PLATFORM_OIDC_AUDIENCE` | `ticket-platform-api` | Audience platform (fallback `OIDC_AUDIENCE`) |
+
+UAT J03 maps checklist names onto these exact keys. Recreate `api` after compose sync; never print `.env` secrets.
+
 ## Cấm
 
 - Commit `.env` thật, `.p8`, MinIO root production, SMTP password.

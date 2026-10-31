@@ -3,6 +3,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { D9_DEMO, D9_LEGACY_TENANT_SLUGS } = require('../dist/demo-seed');
+const { samePermissionSet, eventPermissionsForRole } = require('../dist');
 
 test('D9_DEMO dataset has ≥2 tenants, events, codes, and demo markers', () => {
   assert.equal(D9_DEMO.tenants.mfest.slug, 'mfest-demo');
@@ -35,4 +36,11 @@ test('D9_DEMO dataset has ≥2 tenants, events, codes, and demo markers', () => 
   assert.equal(D9_LEGACY_TENANT_SLUGS[D9_DEMO.tenants.studio.id], undefined);
   assert.equal(D9_DEMO.termsVersion, 'terms-v1');
   assert.equal(D9_DEMO.attendeeDemoCode, 'DEMO-MFEST-001');
+});
+
+test('Owner event permissions include report.read and samePermissionSet is order-insensitive', () => {
+  const owner = eventPermissionsForRole('Owner');
+  assert.ok(owner.includes('report.read'));
+  assert.equal(samePermissionSet(owner, [...owner].reverse()), true);
+  assert.equal(samePermissionSet(owner, ['gate.confirm']), false);
 });

@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
-  ADMIN_TENANT_PERMISSIONS,
   buildNavLinks,
   deriveNavCapabilities,
   parseMeEventsResponse,
@@ -43,7 +42,7 @@ test('parseMeEventsResponse requires staffEligible + tenantId items', () => {
   assert.equal(ok.items.length, 1);
 });
 
-test('guest / unauthenticated never gets portal staff chrome', () => {
+test('guest / unauthenticated never gets staff chrome', () => {
   const caps = deriveNavCapabilities({
     authenticated: false,
     meEvents: null,
@@ -52,7 +51,6 @@ test('guest / unauthenticated never gets portal staff chrome', () => {
   });
   assert.deepEqual(caps, {
     authenticated: false,
-    showPortalStaff: false,
     showAccount: false,
   });
   const hrefs = buildNavLinks(caps).map((l) => l.href);
@@ -66,24 +64,58 @@ test('guest / unauthenticated never gets portal staff chrome', () => {
   assert.ok(!hrefs.includes('/auth'), 'guest login goes to PKCE, not /auth UI');
 });
 
-test('attendee-only: staffEligible false → no staff chrome', () => {
+test('attendee-only: staffEligible false → attendee chrome, no staff nav', () => {
   const caps = deriveNavCapabilities({
     authenticated: true,
     meEvents: { staffEligible: false, items: [] },
     meTenants: { items: [] },
     platformMe: null,
   });
-  assert.equal(caps.showPortalStaff, false);
   assert.equal(caps.showAccount, true);
   const links = buildNavLinks(caps);
   const hrefs = links.map((l) => l.href);
   assert.ok(hrefs.includes('/account'));
   assert.ok(hrefs.includes('/wallet'));
+  assert.ok(!hrefs.includes('/admin'));
+  assert.ok(!hrefs.includes('/gate'));
   assert.ok(!hrefs.includes('/claim'), 'email invitation is link-only');
   assert.ok(!hrefs.includes('/auth'), 'logged-in nav uses Tài khoản, not Đăng nhập');
 });
 
-test('Scanner with gate.confirm has no web gate nav (D-6), not portal staff without tenant perms', () => {
+test('staffEligible Owner still has no web staff nav (ADR-20 portal home)', () => {
+  const caps = deriveNavCapabilities({
+    authenticated: true,
+    meEvents: { staffEligible: true, items: [] },
+    meTenants: {
+      items: [
+        {
+          tenantId: TENANT,
+          slug: 'demo',
+          name: 'Demo',
+          status: 'ACTIVE',
+          role: 'Owner',
+          tenantPermissions: [
+            'event.create',
+            'event.list',
+            'members.manage',
+            'tenant.profile',
+          ],
+        },
+      ],
+    },
+    platformMe: null,
+  });
+  const hrefs = buildNavLinks(caps).map((l) => l.href);
+  assert.ok(!hrefs.includes('/admin'));
+  assert.ok(!hrefs.includes('/gate'));
+  assert.ok(!hrefs.includes('/platform'));
+  assert.equal(
+    buildNavLinks(caps).some((l) => l.testId === 'nav-portal-staff'),
+    false,
+  );
+});
+
+test('Scanner with gate.confirm has no web gate nav (O23 / D-6)', () => {
   const caps = deriveNavCapabilities({
     authenticated: true,
     meEvents: {
@@ -111,69 +143,9 @@ test('Scanner with gate.confirm has no web gate nav (D-6), not portal staff with
     },
     platformMe: null,
   });
-  assert.equal(caps.showPortalStaff, false);
   const hrefs = buildNavLinks(caps).map((l) => l.href);
   assert.ok(!hrefs.includes('/gate'));
   assert.ok(!hrefs.includes('/admin'));
-});
-
-test('portal staff nav link (D-7)', () => {
-  const caps = deriveNavCapabilities({
-    authenticated: true,
-    meEvents: { staffEligible: true, items: [] },
-    meTenants: {
-      items: [
-        {
-          tenantId: TENANT,
-          slug: 'demo',
-          name: 'Demo',
-          status: 'ACTIVE',
-          role: 'Owner',
-          tenantPermissions: [...ADMIN_TENANT_PERMISSIONS],
-        },
-      ],
-    },
-    platformMe: null,
-  });
-  const staff = buildNavLinks(caps).find((l) => l.testId === 'nav-portal-staff');
-  assert.ok(staff);
-  assert.equal(staff.label, 'Quản trị tổ chức');
-  assert.equal(staff.href, '/admin');
-});
-
-test('Owner membership with admin tenant perms shows portal staff CTA', () => {
-  const caps = deriveNavCapabilities({
-    authenticated: true,
-    meEvents: { staffEligible: true, items: [] },
-    meTenants: {
-      items: [
-        {
-          tenantId: TENANT,
-          slug: 'demo',
-          name: 'Demo',
-          status: 'ACTIVE',
-          role: 'Owner',
-          tenantPermissions: [...ADMIN_TENANT_PERMISSIONS],
-        },
-      ],
-    },
-    platformMe: null,
-  });
-  assert.equal(caps.showPortalStaff, true);
-});
-
-test('platform operator unlocks portal staff CTA', () => {
-  const caps = deriveNavCapabilities({
-    authenticated: true,
-    meEvents: { staffEligible: false, items: [] },
-    meTenants: { items: [] },
-    platformMe: {
-      operator: true,
-      permittedCommands: ['tenant.create'],
-      assurance: 'mfa',
-    },
-  });
-  assert.equal(caps.showPortalStaff, true);
 });
 
 test('invalid MeTenants / PlatformMe parse fail-closed', () => {

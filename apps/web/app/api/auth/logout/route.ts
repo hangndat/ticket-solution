@@ -8,6 +8,7 @@ import {
 import { ID_TOKEN_COOKIE, clearSessionCookies } from '../../../../src/oidc/cookies';
 import { clearWebRefreshFlightCache } from '../../../../src/oidc/refresh-flight';
 import { requirePublicOrigin } from '../../../../src/oidc/public-origin';
+import { rotateWebActorEpoch } from '../../../../src/oidc/actor-epoch';
 
 /** Clear BFF cookies and redirect to Keycloak end-session when configured. */
 export async function GET(request: NextRequest) {
@@ -18,6 +19,7 @@ export async function GET(request: NextRequest) {
   const jar = await cookies();
   const idToken = jar.get(ID_TOKEN_COOKIE)?.value?.trim() ?? '';
   clearWebRefreshFlightCache();
+  await rotateWebActorEpoch();
   await clearSessionCookies();
 
   if (!isOidcConfigured()) {

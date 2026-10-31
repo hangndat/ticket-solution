@@ -16,12 +16,13 @@ export function hasWalletAccess(
   return offline.status === 'bound';
 }
 
-/** Attendee tab bar: show Vé của tôi only when wallet access policy allows. */
+/** Attendee tab bar: Vé only for verified attendees (guest has no NativeTabs). */
 export function showMyTicketsTab(
   identity: IdentitySnap,
   eligibility: StaffEligibilitySnapshot,
   offline: OfflineSnap,
 ): boolean {
+  if (identity.status !== 'verified') return false;
   if (!showAttendeeTabs(identity, eligibility)) return false;
   return hasWalletAccess(identity, offline);
 }

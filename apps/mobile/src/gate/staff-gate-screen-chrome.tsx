@@ -2,6 +2,7 @@ import { Stack, router } from 'expo-router';
 import { sameStaffGateScope } from '@/gate/staff-gate-events';
 import { staffGateNavTitle } from '@/gate/staff-gate-nav-title';
 import { useStaffGateWorkspace } from '@/gate/staff-gate-workspace-context';
+import { ATTENDEE_PROFILE_ICON_SIGNED_IN } from '@/navigation/attendee-profile-header';
 import { STAFF_ACCOUNT_HREF } from '@/navigation/staff-account-route';
 import { TabStackTitle } from '@/navigation/tab-stack-title';
 
@@ -12,7 +13,7 @@ type StaffGateScreenChromeProps = {
 };
 
 /**
- * Shared native header: nav title = event; toolbar = event menu (if >1) + account actions.
+ * Shared native header: large title + event switch (if >1) + filled profile.
  * Place after scroll root (Expo Router composition).
  */
 export function StaffGateScreenChrome({
@@ -34,14 +35,17 @@ export function StaffGateScreenChrome({
       />
       <Stack.Toolbar placement="right">
         <Stack.Toolbar.Button
-          icon="person.circle"
+          icon={ATTENDEE_PROFILE_ICON_SIGNED_IN}
           accessibilityLabel="Tài khoản"
           onPress={() => {
             router.push(STAFF_ACCOUNT_HREF);
           }}
         />
         {canSwitch ? (
-          <Stack.Toolbar.Menu>
+          <Stack.Toolbar.Menu
+            icon="arrow.triangle.2.circlepath"
+            accessibilityLabel="Đổi sự kiện"
+          >
             <Stack.Toolbar.Menu inline title="Sự kiện">
               {gate.gateEventChoices.map((choice) => {
                 const active =
@@ -60,14 +64,6 @@ export function StaffGateScreenChrome({
             </Stack.Toolbar.Menu>
           </Stack.Toolbar.Menu>
         ) : null}
-        <Stack.Toolbar.Menu icon="ellipsis.circle">
-          <Stack.Toolbar.MenuAction
-            icon="arrow.clockwise"
-            onPress={() => void gate.refreshGateEvents()}
-          >
-            Làm mới sự kiện
-          </Stack.Toolbar.MenuAction>
-        </Stack.Toolbar.Menu>
       </Stack.Toolbar>
     </>
   );

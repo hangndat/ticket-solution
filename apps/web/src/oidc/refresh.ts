@@ -10,10 +10,9 @@ import {
   ACCESS_COOKIE,
   ID_TOKEN_COOKIE,
   REFRESH_COOKIE,
-  clearSessionCookies,
+  clearEstablishedSessionCookies,
   readSubject,
 } from './cookies';
-import { WEB_AUTH_COOKIES } from './local-cookies';
 import {
   clearWebRefreshFlightCache,
   singleFlightWebRefresh,
@@ -88,11 +87,8 @@ async function applyWebGrant(grant: RefreshFlightGrant): Promise<void> {
   if (grant.idToken) {
     jar.set(ID_TOKEN_COOKIE, grant.idToken, sessionCookieOptions(maxAge));
   }
-  jar.set(
-    WEB_AUTH_COOKIES.subject,
-    grant.subject,
-    sessionCookieOptions(60 * 60 * 24 * 30),
-  );
+  // The callback alone creates the subject anchor. A refresh finishing after
+  // logout may set tokens, but cannot recreate an authenticated session.
 }
 
 function shouldClearSessionOnRefreshFailure(
@@ -159,7 +155,7 @@ export async function refreshWebAccessToken(
   trace?.mark('refresh_web_access_start');
   if (!isOidcConfigured()) {
     clearWebRefreshFlightCache();
-    await clearSessionCookies();
+    await clearEstablishedSessionCookies();
     return { ok: false, reason: 'misconfigured' };
   }
   const config = readOidcWebConfig()!;
@@ -167,12 +163,17 @@ export async function refreshWebAccessToken(
   const refresh = jar.get(REFRESH_COOKIE)?.value?.trim() ?? '';
   if (!refresh) {
     clearWebRefreshFlightCache();
-    await clearSessionCookies();
+    await clearEstablishedSessionCookies();
     trace?.mark('refresh_web_access_missing_refresh');
     return { ok: false, reason: 'missing_refresh' };
   }
 
   const expectedSubject = await readSubject();
+  if (!expectedSubject) {
+    clearWebRefreshFlightCache();
+    await clearEstablishedSessionCookies();
+    return { ok: false, reason: 'missing_refresh' };
+  }
   const key = webRefreshFlightKey(refresh, config.issuer, config.clientId);
   const shared = await singleFlightWebRefresh(key, () =>
     performWebRefreshFlight({
@@ -185,7 +186,7 @@ export async function refreshWebAccessToken(
   if (!shared.ok) {
     clearWebRefreshFlightCache();
     if (shouldClearSessionOnRefreshFailure(shared.reason)) {
-      await clearSessionCookies();
+      await clearEstablishedSessionCookies();
     }
     trace?.mark(`refresh_web_access_fail_${shared.reason}`);
     return shared;

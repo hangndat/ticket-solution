@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Button } from '@ticket/ui';
 import {
   Sheet,
@@ -26,14 +26,19 @@ import {
 } from './attendee-surface';
 import { BrandMark } from './brand-mark';
 import { useBranding } from './branding';
+import { useAttendeeLocale } from './i18n/locale-context';
+import { AttendeeLocaleSwitch } from './i18n/locale-switch';
+import { navLabelForTestId } from './i18n/nav-labels';
 import type { NavLink } from './nav/capabilities';
 import { bindNavCapabilitiesAuthzObserver } from './nav/bind-fetch-authz-observer';
 import { navCapabilitiesStore } from './nav/nav-capabilities-store';
+import { fetchBoundJson, useWebActorData, type PrivateView, type WebActorIdentity } from './oidc/client-actor-gate';
 
 /** Platform / tenant wordmark — defaults to Vemoki lockup from ThemeProvider. */
 export function Wordmark({ href = '/' }: { href?: string }) {
   const branding = useBranding();
-  const label = `${branding.displayName} — trang chủ`;
+  const { t } = useAttendeeLocale();
+  const label = `${branding.displayName} — ${t('nav.brandHome')}`;
   return (
     <Link
       href={href}
@@ -63,31 +68,26 @@ function isNavLinkActive(pathname: string, href: string): boolean {
   return pathname === path || pathname.startsWith(`${path}/`);
 }
 
-function initialsFromSession(body: string): string | null {
-  try {
-    const parsed = JSON.parse(body) as Record<string, unknown>;
-    const raw =
-      typeof parsed.email === 'string'
-        ? parsed.email
-        : typeof parsed.sub === 'string'
-          ? parsed.sub
-          : typeof parsed.subject === 'string'
-            ? parsed.subject
-            : null;
-    if (!raw?.trim()) return null;
-    const s = raw.trim();
-    if (s.includes('@')) {
-      const local = s.split('@')[0] ?? s;
-      const parts = local.split(/[._-]+/).filter(Boolean);
-      if (parts.length >= 2) {
-        return `${parts[0]![0] ?? ''}${parts[1]![0] ?? ''}`.toUpperCase();
-      }
-      return local.slice(0, 2).toUpperCase();
+function initialsFromSession(parsed: Record<string, unknown>): string | null {
+  const raw =
+    typeof parsed.email === 'string'
+      ? parsed.email
+      : typeof parsed.sub === 'string'
+        ? parsed.sub
+        : typeof parsed.subject === 'string'
+          ? parsed.subject
+          : null;
+  if (!raw?.trim()) return null;
+  const s = raw.trim();
+  if (s.includes('@')) {
+    const local = s.split('@')[0] ?? s;
+    const parts = local.split(/[._-]+/).filter(Boolean);
+    if (parts.length >= 2) {
+      return `${parts[0]![0] ?? ''}${parts[1]![0] ?? ''}`.toUpperCase();
     }
-    return s.slice(0, 2).toUpperCase();
-  } catch {
-    return null;
+    return local.slice(0, 2).toUpperCase();
   }
+  return s.slice(0, 2).toUpperCase();
 }
 
 function NavLinkItem({
@@ -116,8 +116,8 @@ function NavLinkItem({
     );
   }
   return (
-    <Link key={item.href} href={item.href} {...common}>
-      {item.label}
+    <Link key={item.href} href={item.href} prefetch={item.href !== '/wallet'} {...common}>
+        {item.label}
     </Link>
   );
 }
@@ -125,9 +125,10 @@ function NavLinkItem({
 /**
  * SiteNav — links from server capabilities (MeEvents / MeTenants / PlatformMe).
  * Starts deny-by-default (guest); never hardcodes Admin/Cổng/Platform by route.
- * SEC-CACHE: clears staff links on MEMBERSHIP_* 401/403; refetches on focus/visibility.
+ * SEC-CACHE: clears authenticated links on MEMBERSHIP_* 401/403; refetches on focus/visibility.
  */
 export function SiteNav({ trailing }: { trailing?: ReactNode }) {
+  const { locale, t } = useAttendeeLocale();
   const pathname = usePathname() ?? '/';
   const [links, setLinks] = useState<NavLink[]>(
     () => navCapabilitiesStore.getSnapshot().links,
@@ -137,8 +138,29 @@ export function SiteNav({ trailing }: { trailing?: ReactNode }) {
   );
   const [mobileMenu, setMobileMenu] = useState({ path: '', open: false });
   const mobileOpen = mobileMenu.open && mobileMenu.path === pathname;
-  const [avatarInitials, setAvatarInitials] = useState<string | null>(null);
-  const [displayHint, setDisplayHint] = useState<string | null>(null);
+  const loadProfile = useCallback(async (
+    identity: WebActorIdentity,
+    signal: AbortSignal,
+    isCurrent: () => boolean,
+  ): Promise<PrivateView<{ initials: string | null; email: string | null }>> => {
+    const response = await fetchBoundJson('/api/bff/me', identity, signal, isCurrent);
+    if (response.status === 401) return { status: 'unauthenticated' };
+    if (response.status >= 500) return { status: 'unreachable' };
+    if (response.status !== 200 || !response.body || typeof response.body !== 'object' || Array.isArray(response.body)) {
+      return { status: 'invalid' };
+    }
+    const body = response.body as Record<string, unknown>;
+    return {
+      status: 'ready',
+      value: {
+        initials: initialsFromSession(body),
+        email: typeof body.email === 'string' ? body.email.trim() || null : null,
+      },
+    };
+  }, []);
+  const profile = useWebActorData(loadProfile);
+  const avatarInitials = profile.status === 'ready' ? profile.value.initials : null;
+  const displayHint = profile.status === 'ready' ? profile.value.email : null;
 
   useEffect(() => {
     bindNavCapabilitiesAuthzObserver();
@@ -169,38 +191,14 @@ export function SiteNav({ trailing }: { trailing?: ReactNode }) {
     };
   }, []);
 
-  useEffect(() => {
-    if (!authenticated) return;
-    let cancelled = false;
-    void (async () => {
-      try {
-        const response = await fetch('/api/bff/me', {
-          method: 'GET',
-          credentials: 'same-origin',
-          cache: 'no-store',
-        });
-        const body = await response.text();
-        if (cancelled || response.status < 200 || response.status >= 300) {
-          return;
-        }
-        const initials = initialsFromSession(body);
-        if (!cancelled) setAvatarInitials(initials);
-        try {
-          const parsed = JSON.parse(body) as Record<string, unknown>;
-          const email =
-            typeof parsed.email === 'string' ? parsed.email.trim() : null;
-          if (!cancelled && email) setDisplayHint(email);
-        } catch {
-          /* ignore */
-        }
-      } catch {
-        /* fail-closed — nav still works without avatar */
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [authenticated]);
+  const labeledLinks = useMemo(
+    () =>
+      links.map((item) => ({
+        ...item,
+        label: navLabelForTestId(item.testId, locale, item.label),
+      })),
+    [links, locale],
+  );
 
   const closeMobile = useCallback(() => {
     setMobileMenu({ path: pathname, open: false });
@@ -217,12 +215,12 @@ export function SiteNav({ trailing }: { trailing?: ReactNode }) {
     <header className={attendeeSiteHeader} data-testid="site-header">
       <nav
         className={attendeeTopNav}
-        aria-label="Điều hướng chính"
+        aria-label={t('nav.primary')}
         data-testid="site-nav"
       >
         <Wordmark />
         <span className={attendeeNavLinksDesktop}>
-          {links.map((item) => (
+          {labeledLinks.map((item) => (
             <NavLinkItem
               key={item.href}
               item={item}
@@ -231,12 +229,13 @@ export function SiteNav({ trailing }: { trailing?: ReactNode }) {
           ))}
           {trailing}
         </span>
+        <AttendeeLocaleSwitch />
         {authenticated ? (
           <Link
             href="/account"
             className={attendeeNavAvatar}
             data-testid="nav-avatar"
-            aria-label={displayHint ? undefined : 'Tài khoản'}
+            aria-label={displayHint ? undefined : t('nav.account')}
           >
             <span className={attendeeNavAvatarBadge} aria-hidden="true">
               {avatarInitials ?? '…'}
@@ -258,7 +257,7 @@ export function SiteNav({ trailing }: { trailing?: ReactNode }) {
               data-testid="nav-menu-toggle"
             >
               <span className="text-xs max-[360px]:sr-only">
-                {mobileOpen ? 'Đóng' : 'Menu'}
+                {mobileOpen ? t('nav.menuClose') : t('nav.menu')}
               </span>
               <span className="text-lg leading-none" aria-hidden="true">
                 {mobileOpen ? '×' : '☰'}
@@ -281,8 +280,8 @@ export function SiteNav({ trailing }: { trailing?: ReactNode }) {
                 ?.focus();
             }}
           >
-            <SheetTitle className="sr-only">Menu điều hướng</SheetTitle>
-            {links.map((item) => (
+            <SheetTitle className="sr-only">{t('nav.menuTitle')}</SheetTitle>
+            {labeledLinks.map((item) => (
               <NavLinkItem
                 key={`mobile-${item.href}`}
                 item={item}

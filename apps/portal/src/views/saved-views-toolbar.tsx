@@ -13,7 +13,8 @@ import {
   Typography,
 } from 'antd';
 import type { MenuProps } from 'antd';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
+import { useActorState as useState } from '../client/use-actor-state';
 import { usePortalLocale } from '../i18n';
 import type { SavedViewRecord, SavedViewScope, SavedViewSort } from './types';
 import { useSavedViews, type ActiveFilters } from './use-saved-views';

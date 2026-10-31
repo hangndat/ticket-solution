@@ -2,7 +2,7 @@
  * Map DB notification.state to honest providerStatus.
  * SMTP/APNs accept ≠ end-user delivered. SENT means provider accepted.
  */
-export type ProviderStatus = 'PENDING' | 'ACCEPTED' | 'FAILED' | 'DEAD';
+export type ProviderStatus = 'PENDING' | 'ACCEPTED' | 'FAILED' | 'DEAD' | 'UNKNOWN';
 
 export function providerStatusFromDbState(state: string): ProviderStatus {
   switch (state) {
@@ -14,6 +14,8 @@ export function providerStatusFromDbState(state: string): ProviderStatus {
       return 'FAILED';
     case 'DEAD':
       return 'DEAD';
+    case 'UNKNOWN':
+      return 'UNKNOWN';
     case 'PENDING':
     default:
       return 'PENDING';

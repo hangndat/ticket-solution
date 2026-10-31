@@ -23,11 +23,18 @@ test('PROD_SEED dataset: 4 tenants, 6 events, no · Demo marker', () => {
     assert.ok(!/· Demo/.test(e.name));
     assert.ok(e.rawCodes[0].startsWith('VEM-'));
     assert.equal(e.rawCodes.length, 10);
+    assert.ok([1, 2, 3].includes(e.gateCount), e.slug);
   }
   assert.equal(PROD_SEED.tenants.mekong.slug, 'mekong-makers');
   assert.equal(events.filter((e) => e.orgKey === 'lucbao').length, 1);
   assert.equal(events.filter((e) => e.orgKey === 'saigon').length, 2);
   assert.equal(events.filter((e) => e.orgKey === 'hoian').length, 3);
+  assert.ok(events.some((e) => e.gateCount === 1));
+  assert.ok(events.some((e) => e.gateCount === 2));
+  assert.ok(events.some((e) => e.gateCount === 3));
+  assert.equal(PROD_SEED.events.demAmIndie.gateCount, 1);
+  assert.equal(PROD_SEED.events.pulseAfterhours.gateCount, 2);
+  assert.equal(PROD_SEED.events.pulseRooftop.gateCount, 3);
 });
 
 test('assertProdSeedMutateAllowed requires confirm unless dry-run', () => {

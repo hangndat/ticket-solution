@@ -18,6 +18,8 @@ type Props = {
   testID?: string;
   /** When remote fails / missing, collapse to zero height (no broken chrome). */
   collapseOnFail?: boolean;
+  /** Parent can swap to a brand fallback instead of an empty paper slot. */
+  onError?: () => void;
 };
 
 function isUsableSource(
@@ -44,7 +46,8 @@ export function SafeEventImage({
   imageStyle,
   resizeMode = 'cover',
   testID,
-  collapseOnFail = true
+  collapseOnFail = true,
+  onError,
 }: Props) {
   const [failed, setFailed] = useState(false);
 
@@ -64,7 +67,10 @@ export function SafeEventImage({
         source={source}
         style={[{ width: '100%', height: '100%' }, imageStyle]}
         resizeMode={resizeMode}
-        onError={() => setFailed(true)}
+        onError={() => {
+          setFailed(true);
+          onError?.();
+        }}
         accessible={false}
       />
     </View>

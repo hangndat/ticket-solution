@@ -207,6 +207,10 @@ test(
           data: { id: tenantId, slug: 'fence-tenant', name: 'Fence Tenant' },
         });
         await tx.$executeRaw`
+          INSERT INTO tenant_limits (tenant_id, email_per_day)
+          VALUES (${tenantId}::uuid, NULL)
+        `;
+        await tx.$executeRaw`
           INSERT INTO outbox (
             tenant_id, event_id, id, type, aggregate_id, payload_version,
             payload, status, attempts, lease_owner, lease_token,
@@ -313,7 +317,18 @@ test(
         const visible = await runtime.query(
           'SELECT * FROM public.worker_due_job_snapshot()',
         );
-        assert.equal(visible.rows.length, 5);
+        assert.deepEqual(
+          visible.rows.map((row) => row.job_class).sort(),
+          [
+            'cleanup_import_files',
+            'process_account_anonymizations',
+            'process_export_object_retentions',
+            'process_ticket_pii_anonymizations',
+            'reconcile_pending_redemptions',
+            'relay_exports',
+            'relay_outbox',
+          ],
+        );
         assert.deepEqual(
           Object.keys(visible.rows[0]).sort(),
           [
@@ -409,6 +424,10 @@ test(
         await tx.tenant.create({
           data: { id: tenantId, slug: 'fence-t2', name: 'Fence T2' },
         });
+        await tx.$executeRaw`
+          INSERT INTO tenant_limits (tenant_id, email_per_day)
+          VALUES (${tenantId}::uuid, NULL)
+        `;
         await tx.event.create({
           data: {
             tenantId,

@@ -58,6 +58,8 @@ const DEFINER_OWNER_TABLES = new Set([
   // Worker aggregate counters are writable/readable only by definer owner.
   'worker_job_reclaim_counters',
   'redemption_requests',
+  // JOB04 ledger is FORCE RLS; migration owner needs its explicit policy.
+  'tenant_email_budget_attempts',
 ]);
 /** Platform metadata pool — USING(true) cross-tenant (NOBYPASSRLS). */
 const PLATFORM_OPEN_TABLES = new Set([
@@ -256,6 +258,7 @@ test(
         'operations',
         'audit_logs',
         'staff_sessions',
+        'gates',
         'checkin_reservations',
         'checkins',
         'offline_sync_events',
@@ -278,6 +281,7 @@ test(
         'support_grants',
         'account_deletion_requests',
         'tenant_email_usage',
+        'tenant_email_budget_attempts',
       ]) {
         assert.ok(names.has(required), 'missing table ' + required);
       }
@@ -306,10 +310,17 @@ test(
             'unexpected owner policy on ' + policy.relname,
           );
           if (policy.relname === 'redemption_requests') {
-            assert.equal(policy.polcmd, 'r');
-            assert.match(policy.using_expr, /PENDING_REVIEW/);
-            assert.match(policy.using_expr, /expires_at/);
-            assert.equal(policy.check_expr, null);
+            if (policy.polname === 'pending_expiry_definer_due') {
+              assert.equal(policy.polcmd, 'r');
+              assert.match(policy.using_expr, /PENDING_REVIEW/);
+              assert.match(policy.using_expr, /expires_at/);
+              assert.equal(policy.check_expr, null);
+            } else {
+              assert.equal(policy.polname, 'redemption_requests_retention_owner');
+              assert.equal(policy.polcmd, '*');
+              assert.equal(policy.using_expr, 'true');
+              assert.equal(policy.check_expr, 'true');
+            }
           } else {
             assert.equal(policy.using_expr, 'true');
           }

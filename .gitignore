@@ -48,3 +48,7 @@ docs/reviews/**/*.webp
 
 # Local LeanCTX cache and machine overlays
 .lean-ctx/
+
+# Isolated E2E runtime: fixture credentials, TLS keys, browser traces and reports
+tests/e2e/.artifacts/
+.artifacts/

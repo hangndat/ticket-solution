@@ -40,6 +40,12 @@ test('required select/checkbox/missing and forged option fail', () => {
     email: 'ada@example.com',
   });
   assert.equal(missing.ok, false);
+  if (!missing.ok) {
+    const size = missing.issues.find((i) => i.fieldId === 'size');
+    assert.equal(size?.message, 'Size là bắt buộc.');
+    const newsletter = missing.issues.find((i) => i.fieldId === 'newsletter');
+    assert.equal(newsletter?.message, 'Newsletter là bắt buộc.');
+  }
 
   const forged = validateFormAnswers(form, {
     name: 'Ada',
@@ -59,6 +65,33 @@ test('required select/checkbox/missing and forged option fail', () => {
     newsletter: false,
   });
   assert.equal(unchecked.ok, false);
+  if (!unchecked.ok) {
+    assert.equal(
+      unchecked.issues.find((i) => i.fieldId === 'newsletter')?.message,
+      'Newsletter cần được chọn.',
+    );
+  }
+});
+
+test('invalid email and phone use Vietnamese messages', () => {
+  const result = validateFormAnswers(form, {
+    name: 'Ada',
+    email: 'not-an-email',
+    phone: 'ab',
+    size: 's',
+    newsletter: true,
+  });
+  assert.equal(result.ok, false);
+  if (!result.ok) {
+    assert.equal(
+      result.issues.find((i) => i.fieldId === 'email')?.message,
+      'Email không phải email hợp lệ.',
+    );
+    assert.equal(
+      result.issues.find((i) => i.fieldId === 'phone')?.message,
+      'Phone không phải số điện thoại hợp lệ.',
+    );
+  }
 });
 
 test('unknown field keys are rejected', () => {
@@ -70,10 +103,20 @@ test('unknown field keys are rejected', () => {
     hacker: 'x',
   });
   assert.equal(result.ok, false);
+  if (!result.ok) {
+    assert.equal(
+      result.issues.find((i) => i.fieldId === 'hacker')?.message,
+      'Trường biểu mẫu không hợp lệ.',
+    );
+  }
 });
 
 test('terms consent required when version present', () => {
-  assert.ok(requireTermsConsent({ termsVersion: 't-1', termsAccepted: false }));
+  const missing = requireTermsConsent({
+    termsVersion: 't-1',
+    termsAccepted: false,
+  });
+  assert.equal(missing?.code, 'TERMS_REQUIRED');
   assert.equal(
     requireTermsConsent({ termsVersion: 't-1', termsAccepted: true }),
     null,

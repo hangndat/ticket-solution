@@ -1,5 +1,9 @@
 import type { TicketSummary } from '@ticket/contracts';
-import { findDemoEventById } from '../data/demo-events.ts';
+import { ticketStateLabelVi } from '../attendee/attendee-outcome-copy.ts';
+import { eventDate, findDemoEventById } from '../data/demo-events.ts';
+
+/** Re-export shared brand helpers so My Tickets keeps a stable import path. */
+export { eventIdentityColor, eventInitial } from '../brand/event-identity.ts';
 
 /** Display name for wallet grouping and section headers (API name first). */
 export function ticketEventDisplayName(ticket: TicketSummary): string {
@@ -10,11 +14,42 @@ export function ticketEventDisplayName(ticket: TicketSummary): string {
   return 'Sự kiện';
 }
 
+function isInactive(t: TicketSummary): boolean {
+  return ['USED', 'EXPIRED', 'REVOKED'].includes(t.state.trim().toUpperCase());
+}
+
 export type EventTicketGroup = {
   eventId: string;
   eventName: string;
   tickets: TicketSummary[];
+  /** Tickets still valid for entry (not used / expired / revoked). */
+  usableCount: number;
+  /** Tickets already used (gate-consumed). */
+  usedCount: number;
+  /** Event's own brand color when known (demo catalog), else undefined. */
+  brandColor?: string;
+  /** «date · venue» line when the catalog knows it; null otherwise. */
+  metaLine: string | null;
 };
+
+function isUsed(t: TicketSummary): boolean {
+  return t.state.trim().toUpperCase() === 'USED';
+}
+
+function finishGroup(g: EventTicketGroup): EventTicketGroup {
+  const demo = findDemoEventById(g.eventId);
+  const parts = demo
+    ? [eventDate(demo), demo.location?.trim() || null].filter(Boolean)
+    : [];
+  return {
+    ...g,
+    tickets: sortTicketsActiveFirst(g.tickets),
+    usableCount: g.tickets.filter((t) => !isInactive(t)).length,
+    usedCount: g.tickets.filter(isUsed).length,
+    brandColor: demo?.brand.primaryColor,
+    metaLine: parts.length ? parts.join(' · ') : null,
+  };
+}
 
 export function groupTicketsByEvent(tickets: TicketSummary[]): EventTicketGroup[] {
   const map = new Map<string, EventTicketGroup>();
@@ -29,11 +64,19 @@ export function groupTicketsByEvent(tickets: TicketSummary[]): EventTicketGroup[
         eventId: ticket.eventId,
         eventName: ticketEventDisplayName(ticket),
         tickets: [ticket],
+        usableCount: 0,
+        usedCount: 0,
+        metaLine: null,
       });
     }
   }
-  return [...map.values()].sort((a, b) =>
-    a.eventName.localeCompare(b.eventName, 'vi'),
+  const groups = [...map.values()].map(finishGroup);
+  const allDone = (g: EventTicketGroup) =>
+    g.tickets.every(isInactive);
+  return groups.sort(
+    (a, b) =>
+      Number(allDone(a)) - Number(allDone(b)) ||
+      a.eventName.localeCompare(b.eventName, 'vi'),
   );
 }
 
@@ -77,4 +120,66 @@ export function resolveWalletFilterEventName(
 ): string {
   const match = tickets.find((row) => row.eventId === eventId);
   return match ? ticketEventDisplayName(match) : 'Sự kiện';
+}
+
+/** Valid tickets first; used / expired / revoked sink (stable within each band). */
+export function sortTicketsActiveFirst(tickets: TicketSummary[]): TicketSummary[] {
+  const rank = (t: TicketSummary) => (isInactive(t) ? 1 : 0);
+  return tickets
+    .map((t, i) => ({ t, i }))
+    .sort((a, b) => rank(a.t) - rank(b.t) || a.i - b.i)
+    .map(({ t }) => t);
+}
+
+/** Card title under an event section header: short ticket code, not the event again. */
+export function walletTicketCardTitle(ticket: TicketSummary): string {
+  return `Vé · ${ticket.ticketId.slice(0, 8).toUpperCase()}`;
+}
+
+export type WalletTicketTone = 'usable' | 'used' | 'inactive' | 'sync' | 'pending';
+
+export type WalletTicketStatus = { tone: WalletTicketTone; label: string };
+
+/** List-row status chip: green usable, grey used/inactive, amber when shown offline. */
+export function walletTicketStatus(
+  ticket: TicketSummary,
+  opts: { offline?: boolean } = {},
+): WalletTicketStatus {
+  const state = ticket.state.trim().toUpperCase();
+  if (state === 'ACTIVE') {
+    return opts.offline
+      ? { tone: 'sync', label: 'Hợp lệ · offline' }
+      : { tone: 'usable', label: 'Hợp lệ' };
+  }
+  if (state === 'USED') return { tone: 'used', label: 'Đã sử dụng' };
+  if (state === 'EXPIRED') return { tone: 'inactive', label: 'Hết hạn' };
+  if (state === 'REVOKED') return { tone: 'inactive', label: 'Đã thu hồi' };
+  return { tone: 'pending', label: ticketStateLabelVi(ticket.state) };
+}
+
+/** Count chip text, e.g. «2 vé». */
+export function walletGroupCountChip(count: number): string {
+  return `${count} vé`;
+}
+
+/** Only when it adds info: some (not all, not none) tickets are usable. */
+export function walletGroupSummary(g: EventTicketGroup): string | null {
+  if (g.tickets.length < 2 || g.usableCount === g.tickets.length) return null;
+  if (g.usableCount === 0) return 'Tất cả vé đã dùng hoặc hết hiệu lực';
+  return `${g.usableCount} vé còn dùng được`;
+}
+
+export function walletGroupA11yLabel(g: EventTicketGroup): string {
+  const summary = walletGroupSummary(g);
+  return [g.eventName, g.metaLine, walletGroupCountChip(g.tickets.length), summary]
+    .filter(Boolean)
+    .join(', ');
+}
+
+export function walletTicketA11yLabel(
+  eventName: string,
+  ticket: TicketSummary,
+  status: WalletTicketStatus,
+): string {
+  return `${eventName}, ${walletTicketCardTitle(ticket)}, ${status.label}, mở vé`;
 }

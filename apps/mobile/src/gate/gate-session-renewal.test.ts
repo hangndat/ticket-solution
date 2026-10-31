@@ -39,7 +39,7 @@ test('replacement accepts server-issued UUID only while lifecycle is current', a
     ...input, shouldContinue: () => true,
     fetchImpl: async () => new Response(JSON.stringify({ sessionId }), { status: 201 }),
   });
-  assert.deepEqual(fresh, { kind: 'ok', sessionId });
+  assert.deepEqual(fresh, { kind: 'ok', sessionId, gateId: null, gateName: null });
 });
 
 for (const status of [401, 403] as const) {
@@ -51,3 +51,19 @@ for (const status of [401, 403] as const) {
     assert.equal(result.kind, 'auth');
   });
 }
+
+test('replacement sends gateId only when chosen and returns gate fields', async () => {
+  const sessionId = '11111111-1111-4111-8111-111111111111';
+  const gateId = '22222222-2222-4222-8222-222222222222';
+  const bodies: string[] = [];
+  const fetchImpl = (async (_url: string, init?: { body?: string }) => {
+    bodies.push(String(init?.body));
+    return new Response(JSON.stringify({ sessionId, gateId, gateName: 'Cổng A' }), { status: 200 });
+  }) as unknown as typeof fetch;
+  const base = { bearer: 'b', apiBase: 'https://x.test', tenantId: '33333333-3333-4333-8333-333333333333', eventId: '44444444-4444-4444-8444-444444444444', shouldContinue: () => true, fetchImpl };
+  const withGate = await openReplacementGateSession({ ...base, gateId });
+  assert.deepEqual(withGate, { kind: 'ok', sessionId, gateId, gateName: 'Cổng A' });
+  await openReplacementGateSession(base);
+  assert.deepEqual(JSON.parse(bodies[0]!), { tenantId: base.tenantId, gateId });
+  assert.deepEqual(JSON.parse(bodies[1]!), { tenantId: base.tenantId });
+});

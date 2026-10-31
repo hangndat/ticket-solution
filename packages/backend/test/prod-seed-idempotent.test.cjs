@@ -141,11 +141,16 @@ test(
       assert.equal(first.events.length, 6);
       assert.ok(first.codesInserted > 0);
       assert.equal(first.staffEmailsMissing.length, 0);
+      // 1+2+3+1+2+3 = 12 demo gates
+      assert.equal(first.gatesInserted, 12);
+      assert.equal(first.gatesSkipped, 0);
 
       const second = await seedProdDataset(db, hmac, opts);
       assert.equal(second.codesInserted, 0);
       assert.ok(second.codesSkipped >= first.codesInserted);
       assert.ok(second.configsSkipped >= 1);
+      assert.equal(second.gatesInserted, 0);
+      assert.equal(second.gatesSkipped, 12);
 
       const tenantCount = await db.tenant.count({
         where: {

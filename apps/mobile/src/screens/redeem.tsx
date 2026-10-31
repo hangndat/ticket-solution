@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { Animated, View } from 'react-native';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   redeemActionAnnouncement,
   redeemDecisionAnnouncement,
@@ -28,6 +28,10 @@ import {
   type RedeemAttempt
 } from '@/redeem/attempt-key';
 import { requireTermsConsent, validateFormAnswers } from '@/redeem/form-validate';
+import { resolveTermsForDisplay } from '@/redeem/terms-display';
+import { randomId } from '@/lib/random-id';
+import { refreshWalletAfterIssue } from '@/tickets/refresh-wallet-after-issue';
+import { ticketDetailHref } from '@/tickets/ticket-detail-href';
 import { fetchOwnerRedemptionStatus } from '@/redeem/owner-status';
 import {
   redeemCode,
@@ -52,6 +56,7 @@ function firstParam(value: string | string[] | undefined): string {
 }
 
 export function RedeemScreen() {
+  const router = useRouter();
   const routeParams = useLocalSearchParams<{
     tenantSlug?: string | string[];
     eventSlug?: string | string[];
@@ -154,8 +159,9 @@ export function RedeemScreen() {
       const result = await fetchPublishedEventDetail(t, e);
       if (result.status === 'ok') {
         setForm(result.event.form ?? null);
-        setTermsVersion(result.event.terms?.version ?? null);
-        setTermsBody(result.event.terms?.bodyMarkdown ?? null);
+        const terms = resolveTermsForDisplay(result.event.terms, result.event.terms);
+        setTermsVersion(terms.version);
+        setTermsBody(terms.body);
         if (result.event.id) setEventId(result.event.id);
         setSchemaNotice(
           `Đã tải biểu mẫu cho «${result.event.name}» · ${result.event.brand.organizationName}.`,
@@ -253,7 +259,7 @@ export function RedeemScreen() {
     };
     const fingerprint = redeemPayloadFingerprint(payload);
     const { key } = resolveIdempotencyKey(attempt, fingerprint, () =>
-      crypto.randomUUID(),
+      randomId(),
     );
     setAttempt({ key, fingerprint, unclear: true });
     setBusy(true);
@@ -275,6 +281,11 @@ export function RedeemScreen() {
       });
       if (!session.isEpochCurrent(epoch)) return;
       setDecision(next);
+      if (next.kind === 'issued') {
+        await refreshWalletAfterIssue();
+        if (!session.isEpochCurrent(epoch)) return;
+        router.push(ticketDetailHref(next.ticketId));
+      }
       if (next.kind === 'unknown') {
         setAttempt({ key, fingerprint, unclear: true });
       } else if (next.kind === 'pending') {
@@ -343,7 +354,9 @@ export function RedeemScreen() {
             requestId: body.requestId,
             replayed: true
           });
-          setStatusNote('Vé đã sẵn sàng — mở tab Vé của tôi.');
+          await refreshWalletAfterIssue();
+          if (!session.isEpochCurrent(epoch)) return;
+          router.push(ticketDetailHref(body.ticketId));
         } else if (body.status === 'PENDING_REVIEW') {
           setStatusNote(
             `Vẫn chờ duyệt${body.expiresAt ? ` · hết hạn ${body.expiresAt}` : ''}. Chưa phải vé.`,
@@ -387,7 +400,7 @@ export function RedeemScreen() {
 
   return (
     <Page>
-      <Notice title="Đổi mã lấy vé">
+      <Notice title={redeemCopy.screenTitle}>
         Nhập mã, trả lời biểu mẫu và đồng ý điều khoản. Chờ duyệt chưa phải vé.
         Mất phản hồi thì giữ «chưa rõ» đến khi kiểm tra lại cùng lần thử.
       </Notice>

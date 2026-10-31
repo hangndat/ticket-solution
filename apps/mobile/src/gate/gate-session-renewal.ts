@@ -6,9 +6,11 @@ export async function openReplacementGateSession(input: {
   apiBase: string;
   tenantId: string;
   eventId: string;
+  /** O31: optional gate chosen by staff; omitted keeps the legacy gateless session. */
+  gateId?: string | null;
   shouldContinue: () => boolean;
   fetchImpl?: typeof fetch;
-}): Promise<{ kind: 'ok'; sessionId: string } | { kind: 'auth' } | { kind: 'stale' } | { kind: 'error' }> {
+}): Promise<{ kind: 'ok'; sessionId: string; gateId: string | null; gateName: string | null } | { kind: 'auth' } | { kind: 'stale' } | { kind: 'error' }> {
   if (!input.shouldContinue()) return { kind: 'stale' };
   try {
     const response = await (input.fetchImpl ?? fetch)(
@@ -20,7 +22,11 @@ export async function openReplacementGateSession(input: {
           Authorization: `Bearer ${input.bearer}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ tenantId: input.tenantId }),
+        body: JSON.stringify(
+          input.gateId
+            ? { tenantId: input.tenantId, gateId: input.gateId }
+            : { tenantId: input.tenantId },
+        ),
       },
     );
     if (!input.shouldContinue()) return { kind: 'stale' };
@@ -31,7 +37,13 @@ export async function openReplacementGateSession(input: {
     if (!body || typeof body !== 'object') return { kind: 'error' };
     const sessionId = (body as Record<string, unknown>).sessionId;
     if (typeof sessionId !== 'string' || !UUID.test(sessionId)) return { kind: 'error' };
-    return { kind: 'ok', sessionId: sessionId.toLowerCase() };
+    const record = body as Record<string, unknown>;
+    return {
+      kind: 'ok',
+      sessionId: sessionId.toLowerCase(),
+      gateId: typeof record.gateId === 'string' ? record.gateId : null,
+      gateName: typeof record.gateName === 'string' ? record.gateName : null,
+    };
   } catch {
     return input.shouldContinue() ? { kind: 'error' } : { kind: 'stale' };
   }

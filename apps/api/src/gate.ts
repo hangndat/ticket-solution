@@ -3,6 +3,7 @@ import {
   Body,
   Controller,
   Get,
+  Header,
   Headers,
   HttpCode,
   HttpException,
@@ -30,6 +31,8 @@ import {
 } from '@ticket/contracts';
 import {
   AuthzError,
+  EventError,
+  EVENT_ERROR_CODES,
   GateError,
   GATE_ERROR_CODES,
   IdentityError,
@@ -38,12 +41,16 @@ import {
   applyOfflineSyncBatch,
   lookupOfflineSyncReceipt,
   openStaffSession,
+  listEventGates,
+  createEventGate,
   reserveCheckin,
+  reissueTicketCredential,
   revokeStaffSession,
   revokeTicket,
   undoCheckin,
   unwrapConfirmOutcome,
   unwrapReserveOutcome,
+  unwrapReissueOutcome,
   withTenant,
   type IdentityUserRepository,
   type OidcVerifier,
@@ -88,10 +95,33 @@ class RevokeSessionBodyDto extends TenantBodyDto {
   @ApiProperty({ format: 'uuid' }) staffSessionId!: string;
 }
 
+class OpenSessionBodyDto extends TenantBodyDto {
+  @ApiProperty({ required: false, format: 'uuid', description: 'O31 optional gate' })
+  gateId?: string;
+}
+
+class CreateGateBodyDto extends TenantBodyDto {
+  @ApiProperty({ minLength: 1, maxLength: 80 }) name!: string;
+  @ApiProperty({ required: false }) sortOrder?: number;
+}
+
+class GateDto {
+  @ApiProperty({ format: 'uuid' }) id!: string;
+  @ApiProperty({ format: 'uuid' }) eventId!: string;
+  @ApiProperty() name!: string;
+  @ApiProperty() sortOrder!: number;
+}
+
+class GateListResponseDto {
+  @ApiProperty({ type: [GateDto] }) gates!: GateDto[];
+}
+
 class SessionResponseDto {
   @ApiProperty({ format: 'uuid' }) sessionId!: string;
   @ApiProperty({ format: 'uuid' }) eventId!: string;
   @ApiProperty({ enum: ['ACTIVE'] }) status!: 'ACTIVE';
+  @ApiProperty({ format: 'uuid', nullable: true }) gateId!: string | null;
+  @ApiProperty({ nullable: true }) gateName!: string | null;
 }
 
 class ReserveResponseDto {
@@ -106,6 +136,12 @@ class ConfirmResponseDto {
   @ApiProperty({ format: 'uuid' }) ticketId!: string;
   @ApiProperty({ format: 'uuid' }) reservationId!: string;
   @ApiProperty({ enum: ['USED'] }) state!: 'USED';
+}
+
+class ReissueResponseDto {
+  @ApiProperty({ format: 'uuid' }) ticketId!: string;
+  @ApiProperty() credentialVersion!: number;
+  @ApiProperty() replayed!: boolean;
 }
 
 class OfflineSyncEventDto {
@@ -185,6 +221,7 @@ type GateDeps = {
   verifier: OidcVerifier | null;
   users: IdentityUserRepository | null;
   bootError: IdentityError | null;
+  credentialKey?: string | null;
 };
 
 function scopeError(message: string): HttpException {
@@ -232,6 +269,7 @@ function gateHttpException(error: GateError): HttpException {
   }
   const status =
     error.code === GATE_ERROR_CODES.TICKET_NOT_FOUND ||
+    error.code === GATE_ERROR_CODES.GATE_NOT_FOUND ||
     error.code === GATE_ERROR_CODES.RESERVATION_NOT_FOUND ||
     error.code === GATE_ERROR_CODES.CHECKIN_NOT_FOUND
       ? 404
@@ -283,10 +321,40 @@ export class GateService {
     authorization: string | undefined,
     eventId: string,
     tenantId: string,
+    gateId?: string,
   ) {
     const user = await this.actor(authorization);
     return withTenant(this.deps.db!, tenantId, (tx) =>
-      openStaffSession(tx, { tenantId, eventId, userId: user.userId }),
+      openStaffSession(tx, { tenantId, eventId, userId: user.userId, gateId }),
+    );
+  }
+
+  async listGates(
+    authorization: string | undefined,
+    eventId: string,
+    tenantId: string,
+  ) {
+    const user = await this.actor(authorization);
+    const gates = await withTenant(this.deps.db!, tenantId, (tx) =>
+      listEventGates(tx, { tenantId, eventId, userId: user.userId }),
+    );
+    return { gates };
+  }
+
+  async createGate(
+    authorization: string | undefined,
+    eventId: string,
+    body: CreateGateBodyDto,
+  ) {
+    const user = await this.actor(authorization);
+    return withTenant(this.deps.db!, body.tenantId, (tx) =>
+      createEventGate(tx, {
+        tenantId: body.tenantId,
+        eventId,
+        userId: user.userId,
+        name: body.name,
+        sortOrder: body.sortOrder,
+      }),
     );
   }
 
@@ -397,6 +465,34 @@ export class GateService {
     );
   }
 
+  async reissue(
+    authorization: string | undefined,
+    eventId: string,
+    ticketId: string,
+    body: ReasonBodyDto,
+    idempotencyKey: string,
+  ) {
+    const user = await this.actor(authorization);
+    if (!this.deps.credentialKey) {
+      throw new IdentityError(
+        IDENTITY_ERROR_CODES.OIDC_MISCONFIGURED,
+        'Credential services are not configured',
+      );
+    }
+    return unwrapReissueOutcome(
+      await withTenant(this.deps.db!, body.tenantId, (tx) =>
+        reissueTicketCredential(tx, this.deps.credentialKey!, {
+          tenantId: body.tenantId,
+          eventId,
+          ticketId,
+          actorUserId: user.userId,
+          reason: body.reason,
+          idempotencyKey,
+        }),
+      ),
+    );
+  }
+
   /**
    * D7 offline queue replay (#106/#107): auth + validate + durable idempotent apply.
    */
@@ -462,6 +558,20 @@ export class GateController {
       if (error instanceof IdentityError) throw identityHttpException(error);
       if (error instanceof AuthzError) throw authzHttpException(error);
       if (error instanceof GateError) throw gateHttpException(error);
+      if (error instanceof EventError) {
+        throw new HttpException(
+          {
+            code: error.code,
+            message: error.message,
+            requestId: randomUUID(),
+            retryable: error.retryable,
+          } satisfies ApiError,
+          error.code === EVENT_ERROR_CODES.IDEMPOTENCY_CONFLICT ||
+          error.code === EVENT_ERROR_CODES.RETRYABLE_CONFLICT
+            ? 409
+            : 422,
+        );
+      }
       throw error;
     }
   }
@@ -471,18 +581,66 @@ export class GateController {
   @ApiBearerAuth()
   @ApiOkResponse({ type: SessionResponseDto })
   @ApiUnauthorizedResponse({ type: ApiErrorDto })
+  @Header('Cache-Control', 'private, no-store')
   openSession(
     @Headers('authorization') authorization: string | undefined,
     @Param('eventId') eventId: string,
-    @Body() body: TenantBodyDto,
+    @Body() body: OpenSessionBodyDto,
   ) {
     const event = requireUuid(eventId, 'eventId');
     const tenantId = requireUuid(body?.tenantId, 'tenantId');
-    return this.run(() => this.gate.openSession(authorization, event, tenantId));
+    const gateId =
+      body?.gateId === undefined || body.gateId === null
+        ? undefined
+        : requireUuid(body.gateId, 'gateId');
+    return this.run(() =>
+      this.gate.openSession(authorization, event, tenantId, gateId),
+    );
+  }
+
+  @Get('gate/events/:eventId/gates')
+  @ApiBearerAuth()
+  @ApiOkResponse({ type: GateListResponseDto })
+  @ApiUnauthorizedResponse({ type: ApiErrorDto })
+  listGates(
+    @Headers('authorization') authorization: string | undefined,
+    @Param('eventId') eventId: string,
+    @Query('tenantId') tenantIdRaw: string,
+  ) {
+    const event = requireUuid(eventId, 'eventId');
+    const tenantId = requireUuid(tenantIdRaw, 'tenantId');
+    return this.run(() => this.gate.listGates(authorization, event, tenantId));
+  }
+
+  @Post('gate/events/:eventId/gates')
+  @ApiBearerAuth()
+  @ApiOkResponse({ type: GateDto })
+  @ApiUnauthorizedResponse({ type: ApiErrorDto })
+  createGate(
+    @Headers('authorization') authorization: string | undefined,
+    @Param('eventId') eventId: string,
+    @Body() body: CreateGateBodyDto,
+  ) {
+    const event = requireUuid(eventId, 'eventId');
+    requireUuid(body?.tenantId, 'tenantId');
+    if (typeof body?.name !== 'string' || !body.name.trim()) {
+      throw scopeError('name is required');
+    }
+    if (body.sortOrder !== undefined && !Number.isInteger(body.sortOrder)) {
+      throw scopeError('sortOrder must be an integer');
+    }
+    if (
+      body.sortOrder !== undefined &&
+      (body.sortOrder < 0 || body.sortOrder > 9999)
+    ) {
+      throw scopeError('sortOrder must be between 0 and 9999');
+    }
+    return this.run(() => this.gate.createGate(authorization, event, body));
   }
 
   @Post('gate/events/:eventId/sessions/revoke')
   @ApiBearerAuth()
+  @Header('Cache-Control', 'private, no-store')
   revokeSession(
     @Headers('authorization') authorization: string | undefined,
     @Param('eventId') eventId: string,
@@ -564,6 +722,32 @@ export class GateController {
       await this.gate.revoke(authorization, event, ticket, body);
       return { status: 'REVOKED' as const, ticketId: ticket };
     });
+  }
+
+  @Post('gate/events/:eventId/tickets/:ticketId/reissue')
+  @HttpCode(200)
+  @ApiBearerAuth()
+  @ApiOkResponse({ type: ReissueResponseDto })
+  @ApiResponse({ status: 409, type: ApiErrorDto })
+  @ApiResponse({ status: 422, type: ApiErrorDto })
+  @Header('Cache-Control', 'private, no-store')
+  reissue(
+    @Headers('authorization') authorization: string | undefined,
+    @Headers('idempotency-key') idempotencyKey: string | undefined,
+    @Param('eventId') eventId: string,
+    @Param('ticketId') ticketId: string,
+    @Body() body: ReasonBodyDto,
+  ) {
+    const event = requireUuid(eventId, 'eventId');
+    const ticket = requireUuid(ticketId, 'ticketId');
+    requireUuid(body?.tenantId, 'tenantId');
+    if (typeof body?.reason !== 'string' || !body.reason.trim()) {
+      throw scopeError('reason is required');
+    }
+    const key = requireUuid(idempotencyKey, 'Idempotency-Key');
+    return this.run(() =>
+      this.gate.reissue(authorization, event, ticket, body, key),
+    );
   }
 
   @Get('gate/events/:eventId/offline-sync/receipts/:clientEventId')

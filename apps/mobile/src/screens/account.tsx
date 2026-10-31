@@ -1,7 +1,8 @@
 import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { Spinner } from '@/components/ui/spinner';
-import { router, useFocusEffect, useSegments } from 'expo-router';
+import { router, useFocusEffect, useSegments, type Href } from 'expo-router';
+import { privacyPolicyHref } from '@/navigation/privacy-policy-navigation';
 import type { MeResponse } from '@ticket/contracts';
 import { AttendeeCta } from '@/components/attendee-cta';
 import {
@@ -10,7 +11,6 @@ import {
   AccountGroupedSection
 } from '@/components/account-grouped-section';
 import { Notice, Page } from '@/components/page';
-import { ScreenAtmosphere } from '@/components/screen-atmosphere';
 import { accountCopy } from '@/components/screen-state-copy';
 import { brand, colors } from '@/theme/colors';
 import { typography } from '@/theme/typography';
@@ -37,7 +37,7 @@ import {
 } from '@/navigation/post-logout-navigation';
 import { returnToStaffGateScanTab } from '@/navigation/staff-scan-tab-navigation';
 import { useStaffWorkspace } from '@/navigation/use-staff-workspace';
-import { TabStackTitle } from '@/navigation/tab-stack-title';
+import { ATTENDEE_ACCOUNT_HREF } from '@/navigation/attendee-account-route';
 import { useAttendeeTabBarInset } from '@/navigation/use-attendee-tab-bar-inset';
 import { PushAccountSection } from '@/push/push-account-section';
 import { space } from '@/theme/tokens';
@@ -55,9 +55,6 @@ export function AccountScreen({
     return (
       <>
         <MisconfiguredAccount presentation={presentation} />
-        {presentation === 'tab' ? (
-          <TabStackTitle title={accountCopy.screenTitle} large={true} />
-        ) : null}
       </>
     );
   }
@@ -66,7 +63,7 @@ export function AccountScreen({
 }
 
 function MisconfiguredAccount({
-  presentation
+  presentation: _presentation
 }: {
   presentation: AccountPresentation;
 }) {
@@ -75,18 +72,14 @@ function MisconfiguredAccount({
       <Notice title={accountCopy.misconfiguredTitle}>
         {accountCopy.misconfiguredBody}
       </Notice>
-      <PushAccountSection identityKind="guest" />
       <AccountGroupedSection title={accountCopy.sections.privacy}>
         <AccountGroupedRow
           label={accountCopy.privacyRow}
           showChevron
-          onPress={() => router.push('/(tabs)/account/privacy')}
+          onPress={() => router.push(privacyPolicyHref('attendee') as Href)}
           testID="account-cta-privacy"
         />
       </AccountGroupedSection>
-      {presentation === 'tab' ? null : (
-        <TabStackTitle title={accountCopy.screenTitle} large={false} />
-      )}
     </Page>
   );
 }
@@ -250,21 +243,6 @@ function ConfiguredAccount({
     }
   }, [offline, segments, verifiedUserId, staffWorkspace]);
 
-  const onClearOfflineDisplay = useCallback(async () => {
-    setBusy(true);
-    try {
-      await offlineDisplay.clear();
-    } catch (error) {
-      setMeError(
-        error instanceof Error
-          ? error.message
-          : 'Không xóa được dữ liệu xem offline.',
-      );
-    } finally {
-      setBusy(false);
-    }
-  }, []);
-
   useFocusEffect(
     useCallback(() => {
       if (isSignedIn) {
@@ -276,65 +254,57 @@ function ConfiguredAccount({
     }, [isSignedIn, onSignIn, refreshMe]),
   );
 
-  const identityKind = isSignedIn ? 'verified' : 'guest';
   const tabBarInset = useAttendeeTabBarInset(24);
   const showLogout = isSignedIn;
   const showDeleteRow = isSignedIn && !meError;
 
-  const youTitle = isSignedIn
-    ? visibleMe?.email ?? accountCopy.verified.body
-    : accountCopy.guest.title;
-  const youBody = isSignedIn
-    ? accountCopy.verified.body
-    : accountCopy.guest.body;
+  const youTitle = visibleMe?.email ?? accountCopy.verified.body;
+  const youBody = accountCopy.verified.body;
+
+  if (!isSignedIn) {
+    return (
+      <ScrollView
+        contentInsetAdjustmentBehavior="automatic"
+        style={{ flex: 1, backgroundColor: brand.paper }}
+        contentContainerStyle={{ padding: space.xl, paddingBottom: tabBarInset, gap: space.xl }}
+      >
+        <AttendeeCta
+          label={accountCopy.guest.signInCta}
+          onPress={() => void onSignIn()}
+          disabled={busy}
+          testID="account-cta-signin"
+        />
+        {meError ? (
+          <Notice title={accountCopy.meErrorTitle} tone="deny">
+            {meError}
+          </Notice>
+        ) : null}
+      </ScrollView>
+    );
+  }
 
   return (
     <>
-      <ScreenAtmosphere>
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
-        style={{ flex: 1, backgroundColor: 'transparent' }}
+        style={{ flex: 1, backgroundColor: brand.paper }}
         contentContainerStyle={{ padding: space.xl, paddingBottom: tabBarInset, gap: space.xl }}
       >
         <AccountGroupedSection title={accountCopy.sections.you}>
           <AccountGroupedRow label={youTitle} value={youBody} disabled={busy} />
-          {!isSignedIn ? (
-            <>
-              <AccountGroupedDivider />
-              <AccountGroupedRow
-                label={accountCopy.guest.signInCta}
-                onPress={() => void onSignIn()}
-                disabled={busy}
-                testID="account-cta-signin"
-              />
-            </>
-          ) : null}
-          {!isSignedIn && offline.status === 'bound' ? (
-            <>
-              <AccountGroupedDivider />
-              <AccountGroupedRow
-                label={accountCopy.offlineCache.body}
-                disabled={busy}
-              />
-              <AccountGroupedDivider />
-              <AccountGroupedRow
-                label={accountCopy.offlineCache.clearRow}
-                onPress={() => void onClearOfflineDisplay()}
-                disabled={busy}
-                destructive
-                testID="account-clear-offline"
-              />
-            </>
-          ) : null}
         </AccountGroupedSection>
 
-        <PushAccountSection identityKind={identityKind} disabled={busy} />
+        <PushAccountSection identityKind="verified" disabled={busy} />
 
         <AccountGroupedSection title={accountCopy.sections.privacy}>
           <AccountGroupedRow
             label={accountCopy.privacyRow}
             showChevron
-            onPress={() => router.push('/privacy-policy')}
+            onPress={() =>
+              router.push(
+                privacyPolicyHref(staffWorkspace ? 'staff' : 'attendee') as Href,
+              )
+            }
             disabled={busy}
             testID="account-cta-privacy"
           />
@@ -348,7 +318,7 @@ function ConfiguredAccount({
                   router.push(
                     staffWorkspace
                       ? `${STAFF_ACCOUNT_HREF}/delete`
-                      : '/(tabs)/account/delete',
+                      : `${ATTENDEE_ACCOUNT_HREF}/delete`,
                   )
                 }
                 disabled={busy}
@@ -403,10 +373,6 @@ function ConfiguredAccount({
           />
         ) : null}
       </ScrollView>
-      </ScreenAtmosphere>
-      {presentation === 'tab' ? (
-        <TabStackTitle title={accountCopy.screenTitle} large={true} />
-      ) : null}
     </>
   );
 }

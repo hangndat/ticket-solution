@@ -65,7 +65,8 @@ Studio Night dùng `DEMO-STUDIO-001` với cùng `terms-v1` trên event `studio-
 
 - Upsert tenant/event theo **stable UUID + slug** (name / venue / brand snapshot luôn cập nhật trên re-seed).
 - Inventory: insert-or-skip theo fixed type/source/quota IDs; `issuance_sources.name` **UPDATE** trên conflict; codes insert-or-skip theo HMAC.
-- Membership / assignment: skip nếu đã active cho `(tenant, user)` / `(tenant, event, membership)`.
+- Membership / assignment: skip nếu đã active **và** bộ quyền khớp `role-map` Owner. Re-seed **sửa** assignment cũ thiếu `report.read` (và các grant Owner-event khác). Cùng email `staff@example.com` còn được reconcile trên mọi tenant Owner/Manager ngoài D9 (UAT catalog Aurora Night Org) — Issue #880.
+- Prod migrate: `202610280002_demo_staff_report_read` cùng phạm vi email (không SQL tay theo tenant UUID). Operator `hangndat+{org}-{role}@gmail.com`: re-run `./scripts/prod-seed.sh` với `PROD_SEED_CONFIRM=1` (assignment cũ không còn skip câm).
 - **Marketing config:** lần đầu seed → save + publish. Re-seed mặc định **skip** nếu `published_config_version` đã có (tránh bump version vô ích). Nếu bản publish cũ **thiếu** section terms / `terms-v1`, seed tự **upgrade** (save + publish một lần). Sau khi đổi copy marketing seed, **phải force republish** (xem dưới).
 
 ## Commands
@@ -146,3 +147,7 @@ pnpm --filter @ticket/web-session build   # bắt buộc trước next dev (work
 State local (gitignored): `.fe-uat-stack/env.sh`.
 
 See evidence: [`docs/reviews/D9-DEMO-SEED.md`](../reviews/D9-DEMO-SEED.md).
+
+## S6 / TestFlight catalog (27/10/2026)
+
+Tên sự kiện `MFest · Demo` / `Studio Night · Demo` khớp catalog public trên TestFlight **1.0.0 (28)** (SHA nguồn `2645999f0ad535276b63a95c6c96bace9cff025e`) — launch PASS. Login OIDC trên bake 28 fail-closed; không dùng binary TF làm PASS attendee redeem. Persona local S6: [`docs/ops/UI925-LOCAL-PERSONA-FIXTURES.md`](../ops/UI925-LOCAL-PERSONA-FIXTURES.md), không seed prod (ADR-21).

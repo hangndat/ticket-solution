@@ -94,6 +94,12 @@ export const typography = {
     fontWeight: '400' as const,
     lineHeight: 18,
   },
+  /** 26pt event-group monogram */
+  avatarInitial: {
+    fontFamily: fontFamilies.display,
+    fontSize: 26,
+    fontWeight: '700' as const,
+  },
   /** 11pt pill / badge */
   badge: {
     fontFamily: fontFamilies.bodySemiBold,

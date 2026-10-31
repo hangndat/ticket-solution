@@ -23,7 +23,7 @@ User hoặc coordinator yêu cầu UAT production / pilot ready / launch. Catalo
 2. Web: Orca embedded browser (`orca tab` / `orca exec`). iOS Simulator: `orca emulator`. Không Playwright trực tiếp, không Computer Use trên Chrome/Safari/Simulator của user.
 3. Mỗi case: ID, kết quả `PASS|FAIL|BLOCKED|N/A`, bằng chứng (URL cuối, status HTTP, screenshot path, SHA image/container nếu lấy được).
 4. Case `device: physical` không được PASS bằng Simulator hoặc curl.
-5. Case `class: OUT` ghi `N/A` — không tính fail launch.
+5. Case `class: OUT` ghi `N/A` — không tính fail launch. **Web `/gate` (A04, B04, suite E) = OUT** theo [O23](../../DECISION-LOG.md#o23--gate-chỉ-trên-ios-staff-chốt-hướng-thiết-kế-vemoki-24102026) + D-6 [#788](https://github.com/hangndat/ticket-solution/issues/788) + residual [#878](https://github.com/hangndat/ticket-solution/issues/878) — **không FAIL** vì 308→`/` (leftover removal). Cổng admission = iOS Staff (suite G).
 6. Hotfix chỉ có trên VPS, chưa có trong git, **không** kế thừa PASS. Ghi `drift` nếu hành vi prod khác `main`.
 
 ## Artifact
@@ -37,7 +37,7 @@ User hoặc coordinator yêu cầu UAT production / pilot ready / launch. Catalo
 | Suites | ID đã chạy / chưa chạy |
 | Cases | Bảng ID → verdict → evidence |
 | Drift | Prod khác git |
-| Launch verdict | `GO` chỉ khi mọi P0 `PASS` và không còn P0 `BLOCKED`. Còn thiếu thiết bị → `NO-GO` kèm danh sách. |
+| Launch verdict | `GO` chỉ khi mọi P0 **không OUT / không DEFERRED** = `PASS` và không còn P0 `BLOCKED`. OUT (vd. Web Gate) không kéo. Còn thiếu thiết bị P0 không DEFERRED → `NO-GO` kèm danh sách. |
 
 ## Không làm
 

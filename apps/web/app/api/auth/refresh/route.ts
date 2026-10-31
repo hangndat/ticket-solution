@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireSessionRedirectOrigin } from '../../../../src/oidc/public-origin';
 import { sanitizePostLoginPath } from '../../../../src/oidc/post-login';
 import { refreshWebAccessToken } from '../../../../src/oidc/refresh';
-import { clearSessionCookies } from '../../../../src/oidc/cookies';
+import { clearEstablishedSessionCookies } from '../../../../src/oidc/cookies';
 import {
   clearSsrRefreshAttempt,
   markSsrRefreshAttempt,
@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
   await markSsrRefreshAttempt();
   const refreshed = await refreshWebAccessToken();
   if (!refreshed.ok) {
-    await clearSessionCookies();
+    await clearEstablishedSessionCookies();
     await clearSsrRefreshAttempt();
     return NextResponse.redirect(
       new URL(ssrTerminalAuthRejectPath(nextPath), origin),
