@@ -15,7 +15,6 @@ import {
   marketingNavMobileActions,
   marketingNavMobileLink,
 } from './marketing-surface';
-import { InterestCtaAnchor } from './interest-cta-link';
 
 const MENU_ID = 'mkt-nav-mobile-menu';
 
@@ -70,27 +69,16 @@ export function MarketingMobileNavMenu({
       >
         <SheetTitle className="sr-only">{t(locale, 'nav.menu.label')}</SheetTitle>
         <nav className="grid gap-1" aria-label={locale === 'en' ? 'Primary' : 'Chính'}>
-          {sectionLinks.map((item) =>
-            item.href.includes('#interest') ? (
-              <InterestCtaAnchor
-                key={item.href}
-                className={marketingNavMobileLink}
-                href={item.href}
-                onClick={closeMobile}
-              >
-                {item.label}
-              </InterestCtaAnchor>
-            ) : (
-              <a
-                key={item.href}
-                className={marketingNavMobileLink}
-                href={item.href}
-                onClick={closeMobile}
-              >
-                {item.label}
-              </a>
-            ),
-          )}
+          {sectionLinks.map((item) => (
+            <a
+              key={item.href}
+              className={marketingNavMobileLink}
+              href={item.href}
+              onClick={closeMobile}
+            >
+              {item.label}
+            </a>
+          ))}
         </nav>
         <div className={marketingNavMobileActions}>
           <Button asChild variant="ghostOnInk" block>

@@ -5,14 +5,12 @@ import { t } from '../copy';
 import { demoHref, marketingOriginFromEnv, productOriginFromEnv, type MarketingLocale } from '../hosts';
 import { MarketingHtmlAttrs } from '../html-attrs';
 import { journeyHref, salesHref } from '../links';
-import { MarketingNeonPrimaryButton } from '../marketing-neon-primary-button';
 import { marketingPageMetadata } from '../seo/metadata';
 import { journeyCopy } from './copy';
 import { JourneyExperience } from './journey-experience';
 import { JOURNEY_INDEXABLE } from './publication';
 import { MarketingAnalyticsClient } from '../analytics/client';
 import { MarketingJsonLd } from '../seo/json-ld';
-import './journey.css';
 
 /** Public URL, but excluded from search until release approval. */
 export function journeyMetadata(locale: MarketingLocale): Metadata {
@@ -38,9 +36,9 @@ export function JourneyPage({ locale }: { locale: MarketingLocale }) {
   const demo = demoHref(productOriginFromEnv());
   const cta = (
     <>
-      <MarketingNeonPrimaryButton asChild data-testid="cta-demo" data-analytics-cta="journey_demo">
+      <Button asChild variant="primary" data-testid="cta-demo" data-analytics-cta="journey_demo">
         <a href={demo}>{t(locale, 'demo.cta')}</a>
-      </MarketingNeonPrimaryButton>
+      </Button>
       <Button asChild variant="ghostOnInk" data-testid="cta-interest">
         <a href={`${salesHref(locale)}#interest`}>{t(locale, 'nav.interest')}</a>
       </Button>
