@@ -4,7 +4,8 @@ import { ProCard, ProTable } from '@ant-design/pro-components';
 import type { ProColumns } from '@ant-design/pro-components';
 import { Alert, Button, Card, Descriptions, Flex, Input, Result, Space, Spin, Typography } from 'antd';
 import { PortalPage } from '../../src/components/portal-page';
-import { useCallback, useEffect, useState, Suspense } from 'react';
+import { useCallback, useEffect, Suspense } from 'react';
+import { useActorState as useState } from '../../src/client/use-actor-state';
 import { useSearchParams } from 'next/navigation';
 import type {
   PortalPlatformAuditEntry,
@@ -13,6 +14,7 @@ import type {
 } from '@ticket/contracts';
 import { loadShellContext } from '../../src/nav/load-shell-context';
 import { portalGet, portalMutate } from '../../src/client/portal-fetch';
+import { beginActorLogout } from '../../src/client/actor-gate';
 import {
   bffPlatformAudit,
   bffPlatformSupportGrantRevoke,
@@ -341,7 +343,7 @@ function PlatformInner() {
     <PortalPage
       title="Platform"
       subTitle={t('platform.h_ed3cdu')}
-      extra={<Button danger href="/api/auth/platform/logout">{t('account.h_21w6fq')}</Button>}
+      extra={<Button danger href="/api/auth/platform/logout" onClick={beginActorLogout}>{t('account.h_21w6fq')}</Button>}
     >
       <Alert
         type="info"

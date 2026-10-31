@@ -1,5 +1,5 @@
 import { ensureCsrfCookie } from '../../../../../src/bff/csrf';
-import { readStaffSubject } from '../../../../../src/oidc/cookies';
+import { verifiedActorBinding } from '../../../../../src/oidc/actor-epoch';
 
 /**
  * GET /api/bff/me/subject — portal-local identity for P2a saved-view prefs.
@@ -8,16 +8,19 @@ import { readStaffSubject } from '../../../../../src/oidc/cookies';
  */
 export async function GET() {
   await ensureCsrfCookie();
-  const userId = await readStaffSubject();
+  const binding = await verifiedActorBinding('staff');
   const headers = new Headers({
     'Cache-Control': 'private, no-store',
     'Content-Type': 'application/json',
   });
-  if (!userId) {
+  if (!binding) {
     return new Response(JSON.stringify({ code: 'UNAUTHENTICATED' }), {
       status: 401,
       headers,
     });
   }
-  return new Response(JSON.stringify({ userId }), { status: 200, headers });
+  headers.set('X-Portal-Actor-Id', binding.actorId);
+  headers.set('X-Portal-Auth-Epoch', binding.authEpoch);
+  headers.set('X-Portal-Surface', binding.surface);
+  return new Response(JSON.stringify({ userId: binding.actorId }), { status: 200, headers });
 }
