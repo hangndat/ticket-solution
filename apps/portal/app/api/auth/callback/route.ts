@@ -9,7 +9,9 @@ import {
   isPortalOidcConfigured,
   readPortalOidcConfig,
 } from '../../../../src/oidc/config';
-import { PORTAL_AUTH_COOKIES } from '../../../../src/oidc/local-cookies';
+import { PORTAL_AUTH_COOKIES, staffTokenCookieName } from '../../../../src/oidc/local-cookies';
+import { clearStaffTokenCookies } from '../../../../src/oidc/cookies';
+import { rotateActorEpoch } from '../../../../src/oidc/actor-epoch';
 import { requirePublicOrigin } from '../../../../src/oidc/public-origin';
 import type { TokenGrantResponse } from '../../../../src/oidc/refresh';
 import { sanitizePortalReturnPath } from '../../../../src/oidc/return-path';
@@ -113,21 +115,23 @@ export async function GET(request: NextRequest) {
   }
 
   const maxAge = grant.expiresIn;
+  await clearStaffTokenCookies();
+  const epoch = await rotateActorEpoch('staff', grant.subject);
   jar.set(
-    SESSION_COOKIES.access,
+    staffTokenCookieName(SESSION_COOKIES.access, epoch),
     grant.accessToken,
     sessionCookieOptions(maxAge),
   );
   if (grant.refreshToken) {
     jar.set(
-      SESSION_COOKIES.refresh,
+      staffTokenCookieName(SESSION_COOKIES.refresh, epoch),
       grant.refreshToken,
       sessionCookieOptions(60 * 60 * 24 * 30),
     );
   }
   if (grant.idToken) {
     jar.set(
-      SESSION_COOKIES.idToken,
+      staffTokenCookieName(SESSION_COOKIES.idToken, epoch),
       grant.idToken,
       sessionCookieOptions(maxAge),
     );

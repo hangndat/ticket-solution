@@ -29,6 +29,7 @@ const CASE_IDS = [
   'DB-11',
   'DB-12',
   'DB-14',
+  'JOB-04',
   'WEB-04',
   'WEB-05',
 ];
@@ -1160,6 +1161,13 @@ async function web04AssertRejected(
      WHERE tenant_id = $1::uuid AND event_id = $2::uuid`,
     [tenantId, eventId],
   );
+  const beforeOutbox = await web04Query(
+    f,
+    tenantId,
+    `SELECT id, type, aggregate_id FROM outbox
+     WHERE tenant_id = $1::uuid AND event_id = $2::uuid ORDER BY id`,
+    [tenantId, eventId],
+  );
   const beforeQuota = await web04Query(
     f,
     tenantId,
@@ -1206,6 +1214,18 @@ async function web04AssertRejected(
     afterRequestCount[0].n,
     beforeRequestCount[0].n,
     `${label}: must not create redemption_requests`,
+  );
+  const afterOutbox = await web04Query(
+    f,
+    tenantId,
+    `SELECT id, type, aggregate_id FROM outbox
+     WHERE tenant_id = $1::uuid AND event_id = $2::uuid ORDER BY id`,
+    [tenantId, eventId],
+  );
+  assert.deepEqual(
+    afterOutbox,
+    beforeOutbox,
+    `${label}: outbox must not change`,
   );
   const afterQuota = await web04Query(
     f,
@@ -2100,6 +2120,198 @@ for (const caseId of CASE_IDS) {
         cooldown,
         { code: 'RESEND_COOLDOWN', retryable: false, noRetryAfter: true },
         'CS resend cooldown',
+      );
+      return;
+    }
+    if (caseId === 'JOB-04') {
+      // PLAN JOB-04: resend cooldown/dedup (CS endpoint) + staff notification
+      // retry cooldown live qua Keycloak thật, cùng emailNeedsCs phân biệt
+      // retry tạm (FAILED/UNKNOWN) khỏi terminal (DEAD, dictionary O12).
+      // Staff/recipient hourly numeric matrix is covered by the DB layer.
+      const owner = await bearer(ctx, 'owner');
+      const ticketId = required(f.ticketId, 'JOB-04 ticketId');
+      const resendPath = `/tenants/${f.tenantId}/events/${f.eventId}/tickets/${ticketId}/resend`;
+
+      const [budgetLimit] = await web04Query(f, f.tenantId,
+        `INSERT INTO tenant_limits (tenant_id, email_per_day) VALUES ($1::uuid, 0)
+         ON CONFLICT (tenant_id) DO UPDATE SET email_per_day = 0
+         RETURNING email_per_day`,
+        [f.tenantId]);
+      assert.equal(budgetLimit?.email_per_day, 0);
+
+      const firstResend = await request(ctx, 'POST', resendPath, owner, null, {
+        'idempotency-key': 'job04-resend-1',
+      });
+      assert.ok(
+        [200, 201, 202].includes(firstResend.status),
+        `JOB-04 CS resend expected success, got ${firstResend.status} (${firstResend.body.code ?? 'none'})`,
+      );
+      assert.equal(firstResend.body.providerStatus, 'PENDING');
+      assert.equal(firstResend.body.replayed, false);
+
+      const dedupReplay = await request(ctx, 'POST', resendPath, owner, null, {
+        'idempotency-key': 'job04-resend-1',
+      });
+      expectStatus(dedupReplay, firstResend.status);
+      assert.equal(
+        dedupReplay.body.operationId,
+        firstResend.body.operationId,
+        'JOB-04 dedup: same Idempotency-Key must replay the same logical resend',
+      );
+      assert.equal(dedupReplay.body.replayed, true);
+
+      const cooldownDeny = await request(ctx, 'POST', resendPath, owner, null, {
+        'idempotency-key': 'job04-resend-2',
+      });
+      assertRateLimited(
+        cooldownDeny,
+        { code: 'RESEND_COOLDOWN', retryable: false, noRetryAfter: true },
+        'JOB-04 CS resend cooldown',
+      );
+
+      // The API keeps the command pending; the real worker must defer before SMTP.
+      let deferred;
+      for (let i = 0; i < 40; i++) {
+        [deferred] = await web04Query(f, f.tenantId,
+          `SELECT o.status, o.payload->>'emailBudgetDeferred' AS reason,
+                  n.state AS notification_state, n.attempts
+           FROM outbox o JOIN notifications n
+             ON n.tenant_id = o.tenant_id
+            AND n.business_key = o.payload->>'businessKey'
+           WHERE o.tenant_id = $1::uuid AND n.id = $2::uuid`,
+          [f.tenantId, firstResend.body.notificationId]);
+        if (deferred?.reason === 'email_budget_deferred') break;
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
+      assert.equal(deferred?.status, 'PENDING');
+      assert.equal(deferred?.reason, 'email_budget_deferred');
+      assert.equal(deferred?.notification_state, 'PENDING');
+      assert.equal(deferred?.attempts, 0, 'quota defer consumes no SMTP retry');
+
+      const [beforeAdmission] = await web04Query(f, f.tenantId,
+        `SELECT COALESCE(sent_count, 0) AS sent_count FROM tenant_email_usage
+         WHERE tenant_id = $1::uuid AND usage_date = (clock_timestamp() AT TIME ZONE 'UTC')::date`,
+        [f.tenantId]);
+      await web04Query(f, f.tenantId,
+        `UPDATE tenant_limits SET email_per_day = 100 WHERE tenant_id = $1::uuid`,
+        [f.tenantId]);
+      await web04Query(f, f.tenantId,
+        `UPDATE outbox SET next_attempt_at = clock_timestamp()
+         WHERE tenant_id = $1::uuid AND payload->>'businessKey' = $2`,
+        [f.tenantId, `ticket:${ticketId}:resend:email:${firstResend.body.operationId}`]);
+      let admitted;
+      for (let i = 0; i < 40; i++) {
+        [admitted] = await web04Query(f, f.tenantId,
+          `SELECT n.state, n.attempts, u.sent_count
+           FROM notifications n JOIN tenant_email_usage u
+             ON u.tenant_id = n.tenant_id
+            AND u.usage_date = (clock_timestamp() AT TIME ZONE 'UTC')::date
+           WHERE n.tenant_id = $1::uuid AND n.id = $2::uuid`,
+          [f.tenantId, firstResend.body.notificationId]);
+        if (admitted?.state === 'ACCEPTED') break;
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
+      assert.equal(admitted?.state, 'ACCEPTED');
+      assert.equal(admitted?.attempts, 1);
+      assert.equal(admitted?.sent_count, (beforeAdmission?.sent_count ?? 0) + 1);
+
+      const [issuedNotification] = await web04Query(
+        f,
+        f.tenantId,
+        `SELECT id, state FROM notifications
+         WHERE tenant_id = $1::uuid AND business_key = $2
+         LIMIT 1`,
+        [f.tenantId, `ticket:${ticketId}:issued:email`],
+      );
+      assert.ok(
+        issuedNotification,
+        'JOB-04 TicketIssued notification must exist from issuance (JOB-01)',
+      );
+      const notificationId = issuedNotification.id;
+      const retryPath = `/tenants/${f.tenantId}/events/${f.eventId}/notifications/${notificationId}/retry`;
+
+      const retryTooSoon = await request(ctx, 'POST', retryPath, owner, {
+        reason: 'JOB-04 live retry cooldown probe',
+      });
+      assertRateLimited(
+        retryTooSoon,
+        { code: 'RESEND_COOLDOWN', retryable: true, noRetryAfter: true },
+        'JOB-04 notification retry cooldown (fresh issuance)',
+      );
+
+      await web04Query(
+        f,
+        f.tenantId,
+        `UPDATE notifications SET updated_at = clock_timestamp() - interval '2 minutes'
+         WHERE tenant_id = $1::uuid AND id = $2::uuid`,
+        [f.tenantId, notificationId],
+      );
+      const retrySuccess = await request(ctx, 'POST', retryPath, owner, {
+        reason: 'JOB-04 live retry after cooldown clears',
+      });
+      expectStatus(retrySuccess, 201);
+      assert.equal(retrySuccess.body.requeued, true);
+
+      const retryAgainTooSoon = await request(ctx, 'POST', retryPath, owner, {
+        reason: 'JOB-04 live retry cooldown probe 2',
+      });
+      assertRateLimited(
+        retryAgainTooSoon,
+        { code: 'RESEND_COOLDOWN', retryable: true, noRetryAfter: true },
+        'JOB-04 notification retry cooldown (after successful requeue)',
+      );
+
+      const [afterRequeue] = await web04Query(
+        f,
+        f.tenantId,
+        `SELECT state FROM notifications WHERE tenant_id = $1::uuid AND id = $2::uuid`,
+        [f.tenantId, notificationId],
+      );
+      assert.equal(
+        afterRequeue.state,
+        'PENDING',
+        'JOB-04 successful retry must requeue to PENDING',
+      );
+
+      const list = await request(
+        ctx,
+        'GET',
+        `/tenants/${f.tenantId}/events/${f.eventId}/notifications`,
+        owner,
+      );
+      expectStatus(list, 200);
+      const providerStates = new Set([
+        'PENDING',
+        'ACCEPTED',
+        'FAILED',
+        'DEAD',
+        'UNKNOWN',
+      ]);
+      assert.ok(list.body.items.length >= 1);
+      for (const item of list.body.items) {
+        assert.ok(
+          providerStates.has(item.providerStatus),
+          `JOB-04 providerStatus must be in the contract enum, got ${item.providerStatus}`,
+        );
+      }
+
+      const reportBeforeDead = await request(ctx, 'GET', reportPath(f), owner);
+      expectStatus(reportBeforeDead, 200);
+      const needsCsBefore = reportBeforeDead.body.emailNeedsCsCount;
+
+      await web04Query(
+        f,
+        f.tenantId,
+        `UPDATE notifications SET state = 'DEAD', last_error = 'provider rejected recipient', next_attempt_at = NULL
+         WHERE tenant_id = $1::uuid AND id = $2::uuid`,
+        [f.tenantId, notificationId],
+      );
+      const reportAfterDead = await request(ctx, 'GET', reportPath(f), owner);
+      expectStatus(reportAfterDead, 200);
+      assert.equal(
+        reportAfterDead.body.emailNeedsCsCount,
+        needsCsBefore + 1,
+        'JOB-04 terminal DEAD (not transient FAILED/UNKNOWN) must increment emailNeedsCs, not the earlier cooldown-denied transient retry',
       );
       return;
     }
