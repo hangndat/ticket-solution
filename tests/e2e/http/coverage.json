@@ -1,0 +1,127 @@
+[
+  {
+    "caseId": "SEC-01",
+    "tests": ["H:tests/e2e/http/live.test.mjs#[SEC-01]"],
+    "layers": ["H"],
+    "status": "blocked",
+    "reason": "Đã viết H report own/cross-tenant/cross-event; chờ runtime. Chưa phủ toàn bộ resource read/mutate/list/export/operation và browser B."
+  },
+  {
+    "caseId": "SEC-02",
+    "tests": [
+      "H:tests/e2e/http/live.test.mjs#[SEC-02]",
+      "B:tests/e2e/harness/security.spec.ts › [SEC-02]"
+    ],
+    "layers": ["H", "B"],
+    "status": "blocked",
+    "reason": "H live PASS run mvswmkmm-65fb5c: OAuth Set-Cookie trên web/portal staff/platform; browser OIDC thật cho attendee và staff kiểm session cookie host-only HttpOnly Secure SameSite=Lax, host kia vẫn 401, BFF Origin/token matrix 403 sau session và request hợp lệ đi tiếp tới validation 422; cùng Origin+CSRF nhưng thiếu session là 401. Platform BFF kiểm Origin thiếu/sai 403 và Origin+CSRF hợp lệ nhưng thiếu session 401; JWT staff/platform audience disjoint, cross-API deny, CORS không thay bearer, foreign tenant deny. B: security.spec.ts cookie jar. Vẫn BLOCKED cho Platform session sau MFA: Keycloak fixture OTP trả Invalid authenticator code; chưa có authenticated Platform BFF matrix hoặc phủ mọi mutation route."
+  },
+  {
+    "caseId": "SEC-03",
+    "tests": ["H:tests/e2e/http/live.test.mjs#[SEC-03]"],
+    "layers": ["H"],
+    "status": "blocked",
+    "reason": "H live PASS run mvsf7i40-c3b9ff: HTTPS + direct upstream (runtime.upstreamPorts) login/refresh/admin fail-closed, marketing host bounce→web origin, portal staff/platform OIDC→auth, legacy GET|HEAD /admin→portal, POST /admin không nav-redirect, API health không redirect. E2E TLS proxy vẫn ghi đè X-Forwarded-Host (direct path bù). Marketing 302 có thể giữ query adversarial tới app host — chưa assert Cache-Control poison; mọi BFF return/next chưa phủ."
+  },
+  {
+    "caseId": "SEC-04",
+    "tests": ["H:tests/e2e/http/live.test.mjs#[SEC-04]"],
+    "layers": ["H"],
+    "status": "blocked",
+    "reason": "H live PASS run mvsfyyd6-b4ffc3: PG-primed bounded 429 — resolve/redeem/gate.reserve/receipt RATE_LIMITED retryable (no Retry-After); import list Retry-After; receipt vs offline-sync buckets; CS RESEND_COOLDOWN; bad admission token không check-in. Gaps: tenant-limits/invitations H, gate confirm/offline-sync 429, notification hourly cap."
+  },
+  {
+    "caseId": "SEC-05",
+    "tests": [
+      "H:tests/e2e/http/live.test.mjs#[SEC-05]",
+      "B:tests/e2e/harness/security.spec.ts › [SEC-05]"
+    ],
+    "layers": ["H", "B"],
+    "status": "blocked",
+    "reason": "H: live export CSV formula guard on masked email, import upload empty/MIME/byte/row caps, config CONFIG_UNSAFE_MARKUP no public persist, notification template reject+HTML escape preview, asset MIME deny, web+portal CSP/nosniff profile. B: security.spec.ts CSP home headers. Gaps: portal BFF multipart upload matrix, full rich-text surfaces, browser XSS execution paths (out of scope — inert markers only)."
+  },
+  {
+    "caseId": "SEC-06",
+    "tests": ["H:tests/e2e/http/live.test.mjs#[SEC-06]"],
+    "layers": ["H"],
+    "status": "blocked",
+    "reason": "H live PASS run mvsik1si-bee5e5 on 97c15301: audit/codes list default+oversized limit capped at 100, forbidden keys (reason/sanitizedDiff/codeHmac/rawCode/email/token) absent, seeded secret values never echoed in list/page2/cursor-error/deny bodies; cursor opaque and rejects garbage with INVALID_CURSOR; codes `q` search resolves exactly one item without echoing raw code/HMAC. Report, me-tickets, gate-session, audit and codes responses assert Cache-Control private, no-store on success and deny/error paths. Gaps: no H coverage yet for CS lookup/export, process log output or platform audit; other sensitive endpoints are not exhaustively covered."
+  },
+  {
+    "caseId": "AUTH-03",
+    "tests": ["H:tests/e2e/http/live.test.mjs#[AUTH-03]"],
+    "layers": ["H"],
+    "status": "blocked",
+    "reason": "Đã viết H guest/unverified deny và verified issue cùng code; chờ runtime. Browser UX và các nhánh lookup/confirm còn thiếu."
+  },
+  {
+    "caseId": "AUTH-06",
+    "tests": ["H:tests/e2e/http/live.test.mjs#[AUTH-06]"],
+    "layers": ["H"],
+    "status": "blocked",
+    "reason": "Run mvsyhf8g-55a61e PASS (working tree chưa commit dựa trên d63b4eb, 2026-10-29): auth06Revoke chạy dưới SET LOCAL ROLE ticket_runtime + tenant RLS, UPDATE scoped rowCount=1 bắt buộc. Revoke memberships.revoked_at → scanner gate-session tiếp theo deny; revoke event_assignments.revoked_at → manager tạo gate deny; owner revoke staff session đang mở → supervisor confirm reservation 409 SESSION_NOT_ACTIVE, report checkInSuccessCount không đổi. Gaps: không kiểm UI-false-success (không có UI gate trong gói H); chưa phủ revoke giữa lúc request đang bay (race) hoặc actor khác cùng tenant giữ session song song."
+  },
+  {
+    "caseId": "GATE-01",
+    "tests": ["H:tests/e2e/http/live.test.mjs#[GATE-01]"],
+    "layers": ["H"],
+    "status": "blocked",
+    "reason": "Đã viết H list/create/duplicate/permission/session nullable/foreign-gate FK/cross-event; chờ runtime. Chưa phủ mở lại cùng gate và actor có assignment cả hai event."
+  },
+  {
+    "caseId": "GATE-03",
+    "tests": ["H:tests/e2e/http/live.test.mjs#[GATE-03]"],
+    "layers": ["H"],
+    "status": "blocked",
+    "reason": "Đã viết H invalid ticket UUID, missing ticket, assignment deny và reject audit; chờ runtime. API Gate nhận ticketId, không có HTTP QR parser; QR audience/kid/version/hash, revoked/cancelled còn thiếu."
+  },
+  {
+    "caseId": "DB-01",
+    "tests": ["H:tests/e2e/http/live.test.mjs#[DB-01]"],
+    "layers": ["H"],
+    "status": "implemented",
+    "reason": "PASS D/H: D PostgreSQL RLS transaction-local A/B xen kẽ, pool reuse cùng PID, rollback/exception, thiếu context, tenant+event FK, owner aggregate và role ticket_platform_runtime không có grant PII. H run mvue72wb-898dce PASS trên SHA a19f1488 sạch: owner report own 200, foreign tenant/event deny; manager tạo export own 201, worker đưa READY và CSV download có dữ liệu, foreign create/status/download đều deny. Worker/export scope có evidence D role boundary và H worker xử lý export hợp lệ; không có job cross-tenant lọt queue qua API."
+  },
+  {
+    "caseId": "DB-02",
+    "tests": ["H:tests/e2e/http/live.test.mjs#[DB-02]"],
+    "layers": ["H"],
+    "status": "implemented",
+    "reason": "PASS D/H: D PostgreSQL thật chứng minh hai identity cùng email khác issuer+subject không auto-link, owner không có staff quyền ngầm, membership/assignment revoke fail-closed. H run mvuec1b3-f93191 PASS trên SHA f61f193c sạch (sau PR #1043 harness): secondary Keycloak token thật, chữ ký/JWKS, issuer, audience, subject xác thực; email trùng DB-02 attendee; API trả 401 cho me/tickets, tạo staff session và gate; số identity cùng email, session, gate, ticket không đổi. Cùng primary token sau revoke assignment/membership bị deny, owner report vẫn 200. Giới hạn: realm alternate có signing key khác, nên 401 không cô lập kiểm tra issuer claim khỏi kiểm tra chữ ký."
+  },
+  {
+    "caseId": "DB-03",
+    "tests": ["H:tests/e2e/http/live.test.mjs#[DB-03]"],
+    "layers": ["H"],
+    "status": "implemented",
+    "reason": "PASS D/H: D issue/approval PostgreSQL thật chứng minh code CONSUMED đúng một lần, ticket/operation/quota/counter/audit/outbox nhất quán dưới race và replay, gồm outbox của nhánh hai actor tranh mã. H run mvue72wb-898dce PASS trên SHA a19f1488 sạch: cùng key replay trả ticket/operation cũ; khác payload 409; hai retry đồng thời hội tụ một ticket; hai actor tranh một code chỉ một 201/ACTIVE và một 409/CODE_CONSUMED; quota +1, audit ticket.issued đúng một row cho winner. H đối soát outbox TicketIssued ở nhánh replay tuần tự và hai retry cùng key."
+  },
+  {
+    "caseId": "DB-04",
+    "tests": ["H:tests/e2e/http/live.test.mjs#[DB-04]"],
+    "layers": ["H"],
+    "status": "implemented",
+    "reason": "Keycloak/HTTP fixture: guest 401, unverified 403 và DB snapshot không đổi; IdP email có dot/plus giữ nguyên; ba mã cùng owner tranh limit=1, chỉ một vé và code/quota/counter/request/operation/audit/outbox nhất quán. Reviewer độc lập cần nghiệm thu trên SHA cuối."
+  },
+  {
+    "caseId": "DB-09",
+    "tests": ["H:tests/e2e/http/live.test.mjs#[DB-09]"],
+    "layers": ["H"],
+    "status": "blocked",
+    "reason": "Partial H PASS run mvum30ad-4c7c2e: PATCH owner reassignment refused (404) on CS `/tenants/.../tickets/:id`, attendee `/me/tickets/:id`, gate `/gate/events/:e/tickets/:id` with authorized cs/scanner; ticket_runtime snapshot unchanged for owner/state, credential versions, code CONSUMED+allocation, audit/outbox counts. Full DB-09 vẫn BLOCKED (GATE-03 QR credential validation, broader lifecycle H)."
+  },
+  {
+    "caseId": "WEB-04",
+    "tests": ["H:tests/e2e/http/live.test.mjs#[WEB-04]"],
+    "layers": ["H"],
+    "status": "covered",
+    "reason": "WEB-04 H clean SHA 2bf01b3b (`evidenceExactShaEligible: true`): run mvv0lz1j-b30c15 PASS — invalid CODE_INVALID 422, expired REDEMPTION_WINDOW_CLOSED 409, CANCELLED EVENT_CANCELLED 409, used CODE_CONSUMED 409, quota QUOTA_EXHAUSTED 409, ATTENDEE_LIMIT 409, TENANT_SUSPENDED 503; web04AssertRejected đối soát ticket/code/quota/redemption_requests/outbox + không IN_PROGRESS. Positive control issue bình thường. MANUAL path → WEB-06. Relates #1037."
+  },
+  {
+    "caseId": "WEB-05",
+    "tests": ["H:tests/e2e/http/live.test.mjs#[WEB-05]"],
+    "layers": ["H"],
+    "status": "covered",
+    "reason": "WEB-05 H clean PASS mvuvhn2t-f1e3ab tại SHA tích hợp 42a29788; ma trận HTTP, request/quota guards và hash published v1/v2. James DoD PASS tại PR #1071, CI 41046526455 SUCCESS."
+  }
+]

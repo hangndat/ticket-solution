@@ -243,7 +243,7 @@ jobs:
         include:
           # Mỗi file tự Docker. n1 (Mailpit) tách riêng — tránh kéo critical path.
           - shard: rls
-            files: test/rls.test.cjs test/rls-catalog.test.cjs test/me-tickets-aggregate.test.cjs
+            files: test/rls.test.cjs test/rls-catalog.test.cjs test/me-tickets-aggregate.test.cjs test/db01-rls-worker-export-scope.test.cjs
           - shard: portal-members
             files: test/portal-members.test.cjs
           - shard: portal-catalog
@@ -251,9 +251,9 @@ jobs:
           - shard: portal-filters
             files: test/portal-filters.test.cjs
           - shard: membership-report
-            files: test/membership.test.cjs test/reporting.test.cjs
+            files: test/membership.test.cjs test/reporting.test.cjs test/db02-identity-issuer-subject.test.cjs
           - shard: issue-gate
-            files: test/issue.test.cjs test/gate.test.cjs
+            files: test/issue.test.cjs test/gate.test.cjs test/db04-db05-acceptance.test.cjs
           - shard: account-deletion
             files: test/platform.test.cjs test/account-session-revoke.test.cjs test/account-ack-session-revoke.test.cjs test/account-idp-erasure.test.cjs
           - shard: approval-config-lifecycle
@@ -338,6 +338,7 @@ jobs:
       - uses: ./.github/actions/setup-pnpm
         with:
           docker-images: postgres:18.1-alpine
+      - run: pnpm test:release
       - name: Build API + wait Docker prefetch
         shell: bash
         run: |

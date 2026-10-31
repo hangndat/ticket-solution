@@ -307,10 +307,17 @@ test(
             'unexpected owner policy on ' + policy.relname,
           );
           if (policy.relname === 'redemption_requests') {
-            assert.equal(policy.polcmd, 'r');
-            assert.match(policy.using_expr, /PENDING_REVIEW/);
-            assert.match(policy.using_expr, /expires_at/);
-            assert.equal(policy.check_expr, null);
+            if (policy.polname === 'pending_expiry_definer_due') {
+              assert.equal(policy.polcmd, 'r');
+              assert.match(policy.using_expr, /PENDING_REVIEW/);
+              assert.match(policy.using_expr, /expires_at/);
+              assert.equal(policy.check_expr, null);
+            } else {
+              assert.equal(policy.polname, 'redemption_requests_retention_owner');
+              assert.equal(policy.polcmd, '*');
+              assert.equal(policy.using_expr, 'true');
+              assert.equal(policy.check_expr, 'true');
+            }
           } else {
             assert.equal(policy.using_expr, 'true');
           }

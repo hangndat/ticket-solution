@@ -20,6 +20,7 @@ test('providerStatus maps SENT/ACCEPTED never delivered', () => {
   assert.equal(providerStatusFromDbState('SENT'), 'ACCEPTED');
   assert.equal(providerStatusFromDbState('ACCEPTED'), 'ACCEPTED');
   assert.equal(providerStatusFromDbState('PENDING'), 'PENDING');
+  assert.equal(providerStatusFromDbState('UNKNOWN'), 'UNKNOWN');
   assert.equal(providerStatusFromDbState('FAILED'), 'FAILED');
   assert.notEqual(providerStatusFromDbState('SENT'), 'DELIVERED');
   assert.equal(maskEmail('attendee@example.com'), 'a***@example.com');

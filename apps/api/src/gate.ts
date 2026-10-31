@@ -3,6 +3,7 @@ import {
   Body,
   Controller,
   Get,
+  Header,
   Headers,
   HttpCode,
   HttpException,
@@ -30,6 +31,8 @@ import {
 } from '@ticket/contracts';
 import {
   AuthzError,
+  EventError,
+  EVENT_ERROR_CODES,
   GateError,
   GATE_ERROR_CODES,
   IdentityError,
@@ -41,11 +44,13 @@ import {
   listEventGates,
   createEventGate,
   reserveCheckin,
+  reissueTicketCredential,
   revokeStaffSession,
   revokeTicket,
   undoCheckin,
   unwrapConfirmOutcome,
   unwrapReserveOutcome,
+  unwrapReissueOutcome,
   withTenant,
   type IdentityUserRepository,
   type OidcVerifier,
@@ -133,6 +138,12 @@ class ConfirmResponseDto {
   @ApiProperty({ enum: ['USED'] }) state!: 'USED';
 }
 
+class ReissueResponseDto {
+  @ApiProperty({ format: 'uuid' }) ticketId!: string;
+  @ApiProperty() credentialVersion!: number;
+  @ApiProperty() replayed!: boolean;
+}
+
 class OfflineSyncEventDto {
   @ApiProperty({ format: 'uuid' }) clientEventId!: string;
   @ApiProperty({ enum: OFFLINE_SYNC_EVENT_TYPES }) type!: 'CHECKIN_OFFLINE';
@@ -210,6 +221,7 @@ type GateDeps = {
   verifier: OidcVerifier | null;
   users: IdentityUserRepository | null;
   bootError: IdentityError | null;
+  credentialKey?: string | null;
 };
 
 function scopeError(message: string): HttpException {
@@ -453,6 +465,34 @@ export class GateService {
     );
   }
 
+  async reissue(
+    authorization: string | undefined,
+    eventId: string,
+    ticketId: string,
+    body: ReasonBodyDto,
+    idempotencyKey: string,
+  ) {
+    const user = await this.actor(authorization);
+    if (!this.deps.credentialKey) {
+      throw new IdentityError(
+        IDENTITY_ERROR_CODES.OIDC_MISCONFIGURED,
+        'Credential services are not configured',
+      );
+    }
+    return unwrapReissueOutcome(
+      await withTenant(this.deps.db!, body.tenantId, (tx) =>
+        reissueTicketCredential(tx, this.deps.credentialKey!, {
+          tenantId: body.tenantId,
+          eventId,
+          ticketId,
+          actorUserId: user.userId,
+          reason: body.reason,
+          idempotencyKey,
+        }),
+      ),
+    );
+  }
+
   /**
    * D7 offline queue replay (#106/#107): auth + validate + durable idempotent apply.
    */
@@ -518,6 +558,20 @@ export class GateController {
       if (error instanceof IdentityError) throw identityHttpException(error);
       if (error instanceof AuthzError) throw authzHttpException(error);
       if (error instanceof GateError) throw gateHttpException(error);
+      if (error instanceof EventError) {
+        throw new HttpException(
+          {
+            code: error.code,
+            message: error.message,
+            requestId: randomUUID(),
+            retryable: error.retryable,
+          } satisfies ApiError,
+          error.code === EVENT_ERROR_CODES.IDEMPOTENCY_CONFLICT ||
+          error.code === EVENT_ERROR_CODES.RETRYABLE_CONFLICT
+            ? 409
+            : 422,
+        );
+      }
       throw error;
     }
   }
@@ -527,6 +581,7 @@ export class GateController {
   @ApiBearerAuth()
   @ApiOkResponse({ type: SessionResponseDto })
   @ApiUnauthorizedResponse({ type: ApiErrorDto })
+  @Header('Cache-Control', 'private, no-store')
   openSession(
     @Headers('authorization') authorization: string | undefined,
     @Param('eventId') eventId: string,
@@ -574,11 +629,18 @@ export class GateController {
     if (body.sortOrder !== undefined && !Number.isInteger(body.sortOrder)) {
       throw scopeError('sortOrder must be an integer');
     }
+    if (
+      body.sortOrder !== undefined &&
+      (body.sortOrder < 0 || body.sortOrder > 9999)
+    ) {
+      throw scopeError('sortOrder must be between 0 and 9999');
+    }
     return this.run(() => this.gate.createGate(authorization, event, body));
   }
 
   @Post('gate/events/:eventId/sessions/revoke')
   @ApiBearerAuth()
+  @Header('Cache-Control', 'private, no-store')
   revokeSession(
     @Headers('authorization') authorization: string | undefined,
     @Param('eventId') eventId: string,
@@ -660,6 +722,32 @@ export class GateController {
       await this.gate.revoke(authorization, event, ticket, body);
       return { status: 'REVOKED' as const, ticketId: ticket };
     });
+  }
+
+  @Post('gate/events/:eventId/tickets/:ticketId/reissue')
+  @HttpCode(200)
+  @ApiBearerAuth()
+  @ApiOkResponse({ type: ReissueResponseDto })
+  @ApiResponse({ status: 409, type: ApiErrorDto })
+  @ApiResponse({ status: 422, type: ApiErrorDto })
+  @Header('Cache-Control', 'private, no-store')
+  reissue(
+    @Headers('authorization') authorization: string | undefined,
+    @Headers('idempotency-key') idempotencyKey: string | undefined,
+    @Param('eventId') eventId: string,
+    @Param('ticketId') ticketId: string,
+    @Body() body: ReasonBodyDto,
+  ) {
+    const event = requireUuid(eventId, 'eventId');
+    const ticket = requireUuid(ticketId, 'ticketId');
+    requireUuid(body?.tenantId, 'tenantId');
+    if (typeof body?.reason !== 'string' || !body.reason.trim()) {
+      throw scopeError('reason is required');
+    }
+    const key = requireUuid(idempotencyKey, 'Idempotency-Key');
+    return this.run(() =>
+      this.gate.reissue(authorization, event, ticket, body, key),
+    );
   }
 
   @Get('gate/events/:eventId/offline-sync/receipts/:clientEventId')

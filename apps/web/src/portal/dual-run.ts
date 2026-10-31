@@ -90,18 +90,6 @@ export function portalOriginFromEnv(
   }
 }
 
-/** Truthy: 1 | true | on | yes (case-insensitive). Default OFF when unset. */
-export function isEnvFlagOn(
-  raw: string | undefined,
-  defaultOn = false,
-): boolean {
-  if (raw === undefined || raw.trim() === '') return defaultOn;
-  const v = raw.trim().toLowerCase();
-  if (['0', 'false', 'off', 'no'].includes(v)) return false;
-  if (['1', 'true', 'on', 'yes'].includes(v)) return true;
-  return defaultOn;
-}
-
 /** Redirect when PORTAL_ORIGIN is valid (D-7: unconditional; flag ignored). */
 export function isAdminToPortalRedirectEnabled(
   env: DualRunEnv = process.env,
@@ -109,13 +97,9 @@ export function isAdminToPortalRedirectEnabled(
   return portalOriginFromEnv(env) !== null;
 }
 
-/**
- * Dual-run banner — show when PORTAL_ORIGIN is set and banner not explicitly OFF.
- * Independent of redirect flag so staff see portal CTA while legacy still serves.
- */
-export function isDualRunBannerEnabled(env: DualRunEnv = process.env): boolean {
-  if (portalOriginFromEnv(env) === null) return false;
-  return isEnvFlagOn(env.PORTAL_DUAL_RUN_BANNER, true);
+/** O23 / D-6: web admission scanner removed — `/gate` is not a staff home. */
+export function isRetiredWebGatePath(pathname: string): boolean {
+  return pathname === '/gate' || pathname.startsWith('/gate/');
 }
 
 export function isAdminToPortalPath(pathname: string): boolean {
@@ -315,7 +299,7 @@ export function decideAdminToPortalRedirect(input: {
   if (pathname.startsWith('/api/') || pathname === '/api') {
     return { type: 'next' };
   }
-  if (pathname === '/gate' || pathname.startsWith('/gate/')) {
+  if (isRetiredWebGatePath(pathname)) {
     return { type: 'next' };
   }
 

@@ -220,11 +220,12 @@ describe('portal import / invitation helpers', () => {
     assert.equal(raw.kind, 'unknown');
 
     const preview = interpretDispatchPreview(
-      200,
+      201,
       { previewRevision: 1, selectedCount: 1, estimatedQuota: 1 },
       false,
     );
     assert.equal(preview.kind, 'dispatch_preview');
+    assert.equal(interpretDispatchPreview(201, { previewRevision: 1, selectedCount: 1 }, false).kind, 'unknown');
 
     const dispatch = interpretDispatch(
       200,

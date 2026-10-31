@@ -14,7 +14,12 @@ test('consumer layout exposes footer landmark for sticky-footer regression', () 
     join(WEB_ROOT, 'app/(consumer)/layout.tsx'),
     'utf8',
   );
-  assert.match(layout, /data-testid="site-footer"/);
+  assert.match(layout, /ConsumerFooter/);
+  const footer = readFileSync(
+    join(WEB_ROOT, 'src/i18n/consumer-footer.tsx'),
+    'utf8',
+  );
+  assert.match(footer, /data-testid="site-footer"/);
   const root = readFileSync(join(WEB_ROOT, 'app/layout.tsx'), 'utf8');
   assert.match(root, /attendeeBody/);
   assert.doesNotMatch(root, /data-testid="site-footer"/);
@@ -54,6 +59,21 @@ test('marketing layout does not hide footer via runtime CSS hack', () => {
   const layout = readFileSync(join(WEB_ROOT, 'app/marketing/layout.tsx'), 'utf8');
   assert.doesNotMatch(layout, /display:\s*none/);
   assert.doesNotMatch(layout, /marketing-surface/);
+});
+
+test('attendee desktop nav stays a single row at 1024–1440', () => {
+  const surface = readFileSync(
+    join(WEB_ROOT, 'src/attendee-surface.ts'),
+    'utf8',
+  );
+  assert.match(
+    surface,
+    /attendeeNavLinksDesktop =\s*'[^']*flex-nowrap[^']*'/,
+  );
+  assert.match(
+    surface,
+    /attendeeNavAvatarLabel =\s*'[^']*xl:inline[^']*'/,
+  );
 });
 
 test('consumer page shell keeps SiteNav outside padded main', () => {

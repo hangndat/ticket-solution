@@ -6,7 +6,10 @@ import {
   marketingOriginFromEnv,
   productOriginFromEnv,
 } from './src/marketing/hosts';
-import { decideAdminToPortalRedirect } from './src/portal/dual-run';
+import {
+  decideAdminToPortalRedirect,
+  isRetiredWebGatePath,
+} from './src/portal/dual-run';
 import {
   isLegacyStaffApiPath,
   legacyStaffApiGoneResponse,
@@ -22,10 +25,9 @@ function withRuntimeCsp(response: NextResponse): NextResponse {
 /**
  * Next.js 16 proxy — O13 host-aware marketing vs product.
  * OIDC session remains HttpOnly cookies on product host only (no Domain=.vemoki.com).
- * D-6: retired web gate — /gate|/gate/* → / (308).
- * O02: anonymous soft-redirect for staff deep-link /admin → /auth
- * (product host only — after apex→app host redirects).
- * ADR-20 §8 / D-7: GET/HEAD /admin|/platform → PORTAL_ORIGIN; legacy staff API → 410.
+ * O23 / D-6: retired web gate — /gate|/gate/* → / (308). No web scanner.
+ * ADR-20 §8 / D-7: GET/HEAD /admin|/platform → PORTAL_ORIGIN (bookmark bounce).
+ * Staff home is portal only; legacy staff API → 410.
  */
 export default function proxy(request: NextRequest) {
   if (
@@ -84,7 +86,7 @@ export default function proxy(request: NextRequest) {
     });
   }
 
-  if (pathname === '/gate' || pathname.startsWith('/gate/')) {
+  if (isRetiredWebGatePath(pathname)) {
     const home = request.nextUrl.clone();
     home.pathname = '/';
     home.search = '';

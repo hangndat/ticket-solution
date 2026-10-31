@@ -15,7 +15,7 @@ const REQUEST_TIMEOUT_MS = 8_000;
 
 /**
  * Client discovery for SiteNav — deny-by-default until server capabilities resolve.
- * Does not persist staffEligible; ephemeral UI only (O02 contract §6).
+ * Does not persist staffEligible; ephemeral attendee chrome only (ADR-20).
  */
 export async function loadNavCapabilities(): Promise<{
   caps: NavCapabilities;

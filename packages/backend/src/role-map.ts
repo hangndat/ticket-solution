@@ -27,6 +27,7 @@ const SUPERVISOR_EVENT: readonly string[] = [
   'gate.confirm',
   'gate.undo',
   'ticket.revoke',
+  'ticket.reissue',
 ];
 
 const SCANNER_EVENT: readonly string[] = ['gate.confirm'];
@@ -71,6 +72,16 @@ export function tenantPermissionsForRole(role: MembershipRole): string[] {
       return [];
     }
   }
+}
+
+export function samePermissionSet(
+  a: readonly string[],
+  b: readonly string[],
+): boolean {
+  if (a.length !== b.length) return false;
+  const left = [...a].sort().join('\0');
+  const right = [...b].sort().join('\0');
+  return left === right;
 }
 
 export function eventPermissionsForRole(role: MembershipRole): string[] {

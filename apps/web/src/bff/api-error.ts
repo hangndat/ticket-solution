@@ -13,5 +13,5 @@ export function bffApiError(
     requestId: crypto.randomUUID(),
     retryable,
   };
-  return Response.json(body, { status });
+  return Response.json(body, { status, headers: { 'Cache-Control': 'private, no-store' } });
 }

@@ -139,7 +139,7 @@ export function interpretDispatchPreview(
   if (networkError || status === 0 || status >= 500) {
     return { kind: 'unknown', message: t(locale, 'ops.invitation.unknown') };
   }
-  if (status === 200) {
+  if (status === 200 || status === 201) {
     const body = asRecord(json);
     if (
       !body ||

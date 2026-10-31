@@ -32,6 +32,7 @@ docs/agents/
 | `architect`                                 | [roles/architect.md](./roles/architect.md)                 | Quyết định kiến trúc, contract, ADR, failure/recovery và kiểm tra sự phù hợp khi cần                                                                  | Docs/handoff trong scope; không sở hữu code đa slice hoặc thay reviewer độc lập        |
 | `backend`                                   | [roles/backend.md](./roles/backend.md)                     | Implement NestJS / DB / worker                                                                                                                        | `apps/api`, `apps/worker`, `packages/backend`                                          |
 | `web`                                       | [roles/web.md](./roles/web.md)                             | Implement Next.js                                                                                                                                     | `apps/web` only                                                                        |
+| `portal`                                    | [roles/portal.md](./roles/portal.md)                       | Implement Portal Next.js, staff/platform BFF và UI                                                                                                   | `apps/portal` only                                                                     |
 | `ios`                                       | [roles/ios.md](./roles/ios.md)                             | Implement Expo/RN iOS                                                                                                                                 | `apps/mobile` only; local build, không EAS Cloud; USB: [ios-usb-device](../../.cursor/skills/ios-usb-device/SKILL.md) |
 | `reviewer-dod`                              | [roles/reviewer-dod.md](./roles/reviewer-dod.md)           | DoD / acceptance trên **exact SHA**                                                                                                                   | Session **≠** implementer                                                              |
 | `reviewer-uiux`                             | [roles/reviewer-uiux.md](./roles/reviewer-uiux.md)         | Critique thiết kế hoặc review bản chạy theo mẫu, usability và a11y                                                                                    | Review only; độc lập với tác giả; ưu tiên gộp DoD khi cùng PR/SHA                      |
@@ -65,6 +66,7 @@ Cùng prefix Persona; `display-name` ngắn, `task-title` có Issue + tóm tắt
 | Role ID / vai                         | Persona pool               | Ghi chú                                                                                      |
 | ------------------------------------- | -------------------------- | -------------------------------------------------------------------------------------------- |
 | `web`                                 | Higo, Enton, Linh          | FE — pick free khi song song; Linh giữ danh tính theo yêu cầu user                            |
+| `portal`                              | Higo                      | F04 AUTH-07 và PORT theo phân công user; giữ Higo xuyên các dispatch phục hồi                 |
 | `backend`                             | Gonic, Colin, Remy, Monica | pick free khi song song                                                                      |
 | Root tooling local được giao rõ       | Noah                      | Không tự đổi auth business; scope do coordinator giao                                        |
 | Coordinator gốc                      | Minh                      | Danh tính điều phối; không thay routing model do user chỉ định                               |
@@ -87,6 +89,7 @@ Hồ sơ và văn phong cố định: [`company/employees.json`](../../company/e
 | Role ID                           | ui-label     |
 | --------------------------------- | ------------ |
 | `web`                             | `web`        |
+| `portal`                          | `portal`     |
 | `backend`                         | `be`         |
 | `ios`                             | `ios`        |
 | `architect`                       | `arch`       |

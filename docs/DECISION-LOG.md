@@ -1,10 +1,24 @@
 # Decision log — sản phẩm & kỹ thuật
 
-Ngày cập nhật: 2026-10-28
+Ngày cập nhật: 2026-10-30
 Nguồn: [PRD](./PRD.md) mục 15, [Technical Design](./TECHNICAL-DESIGN.md) mục 2 & 18, [ROADMAP](./ROADMAP.md)
 Tracking: Issues [#10](https://github.com/hangndat/ticket-solution/issues/10), [#11](https://github.com/hangndat/ticket-solution/issues/11)
 
 **Kiến trúc hiện trạng (canonical, Epic [#891](https://github.com/hangndat/ticket-solution/issues/891) / F06):** [`docs/architecture/ar891-current-architecture.md`](./architecture/ar891-current-architecture.md) — deployed / tested / proposed; không thay nội dung quyết định lịch sử bên dưới.
+
+## F04 AUTH-07 — Actor epoch cho Web và Portal (30/10/2026)
+
+Coordinator chấp nhận phương án B và cấp [ADR-23](./ops/ADR-23-AUTH-ACTOR-EPOCH.md): HTML/RSC riêng là shell không payload; dữ liệu riêng tải qua BFF sau document load và chỉ commit khi actor + `authEpoch` theo origin/surface + generation còn khớp. Web, Portal staff và Portal platform tách namespace; callback/logout xoay epoch, refresh hợp lệ giữ nguyên; API owner/authz không đổi. Triển khai theo owner và chỉ công nhận AUTH-07 PASS khi đủ evidence F04 trên exact SHA.
+
+## O33 — Waive a11y UAT cho MVP/pilot (28/10/2026)
+
+Owner hangndat (2026-10-28): «bỏ luôn phần a11y đi, đây là quyết định cuối».
+
+**iOS/web a11y (VoiceOver, Dynamic Type, WCAG UAT) được waive tường minh cho MVP/pilot.** Đây **không** phải known gap. **Không** chặn [#879](https://github.com/hangndat/ticket-solution/issues/879) / [#889](https://github.com/hangndat/ticket-solution/issues/889) / [#874](https://github.com/hangndat/ticket-solution/issues/874) / [#1008](https://github.com/hangndat/ticket-solution/issues/1008) / [#914](https://github.com/hangndat/ticket-solution/issues/914). Không chạy a11y UAT. Không giữ ticket OPEN chỉ vì a11y. **Không** ghi a11y PASS.
+
+Khớp [O28](#o28--guest-events-catalog--tab-đổi-mã-28102026) VoiceOver-ngoài-#914 và [O25](#o25--epic-914-tách-slice-portalweb-và-chốt-phạm-vi-offline-26102026) §4 / [O27](#o27--ios-attendee-ia-privacy-native-staff-event-chrome-usb-28102026) §1. **Thay** leftover a11y hold trên VD-06 (#879) và VD-08 (#889).
+
+Architecture impact: **Không**.
 
 ## O32 — Portal quản lý cổng + tên cổng lấy từ API (28/10/2026)
 
@@ -102,6 +116,8 @@ User quyết định **bỏ Web Gate**. Quét QR, nhập tay và xác nhận và
 Hướng thiết kế được chốt tại [`docs/design/vemoki-unified-v1/`](./design/vemoki-unified-v1/README.md). Đây là **design complete** cho prototype, không chứng minh code complete, acceptance complete hay pilot ready. Trước khi tắt `/gate` đang chạy: kiểm kê route/deep link/client, chọn trang giải thích hoặc redirect an toàn, cập nhật navigation, test và monitoring; giữ Gate iOS và invariant reserve/confirm, offline reconciliation, RBAC, audit. Không coi việc chốt thiết kế là đã hoàn tất migration hoặc cho phép deploy production.
 
 Architecture impact: **Có** — thay đổi kênh admission và migration Web Gate; cần contract/ADR và Task Spec theo ownership trước implementation.
+
+**Bổ sung catalog launch UAT (28/10/2026, Epic [#1008](https://github.com/hangndat/ticket-solution/issues/1008)):** A04 / B04 / suite E trong [`PROD-LAUNCH-UAT.md`](./plans/PROD-LAUNCH-UAT.md) = **OUT** — không FAIL launch vì `GET /gate` 308→`/` (leftover D-6 [#788](https://github.com/hangndat/ticket-solution/issues/788)/[#804](https://github.com/hangndat/ticket-solution/pull/804); residual [#878](https://github.com/hangndat/ticket-solution/issues/878)). Cổng P0 = iOS Staff (suite G). Không khôi phục `apps/web` Gate; không mở lại #914 vì Web Gate.
 
 ## O22 — Consumer web DS: Aceternity copy-paste + Tailwind v4 scoped (22/10/2026)
 
@@ -251,6 +267,7 @@ Gap audit [PRODUCTION-READINESS-UX §6 UX-11](./plans/PRODUCTION-READINESS-UX.md
 | 3 | Option B (OTP / magic link guest) | **Sau MVP.** Chỉ mở Task IdP/contract khi user chọn B tường minh; coordinator **không** spawn OTP từ gap này. |
 | 4 | PRD M02 | Wording OTP/magic link giữ tầm nhìn dài hạn; **MVP nghiệm thu** theo Option A + copy trên — không coi thiếu OTP guest là blocker DoD redeem. |
 | 5 | Non-goals | Không code IdP mới; không đổi contract issue ngoài pin hiện tại; không mở anonymous by design (O11). |
+| 6 | F04 làm rõ guest UI (30/10/2026) | Theo AC `AUTH-03` của `tests/e2e/PLAN.md` và PRD M07, trang `/redeem` vẫn hiển thị ô nhập mã và CTA auth trong cùng flow cho guest/chưa verified; mã nhập chỉ ở UI, không lookup/resolve/confirm/cấp vé hoặc giữ code/quota/pending trước Keycloak session có verified email. Tiếp tục dùng copy «Cần đăng nhập»/«Xác minh email» và gate backend hiện hành; không đưa mã vào URL/login redirect hay thêm OTP/anonymous redeem. Nếu không thể giữ invariant này trong Web, ghi BLOCKED và quyết định lại contract trước sửa API/DB. |
 
 **Hệ quả:** Coding/DoD redeem giữ pin fail-closed hiện tại; unit `redeem-messages` + UAT auth «Cần đăng nhập» đủ AC auth MVP. Nguồn tip: [`docs/design/D11-PRODUCTION-UX-UI.md`](./design/D11-PRODUCTION-UX-UI.md) §2.1 auth row / AC-A3.
 
@@ -340,3 +357,9 @@ User “duyệt, fix hết đi” mở phần recovery còn lại của #859. Ch
 ### Bổ sung #859 — khôi phục session sau lỗi thứ tự offline (24/10/2026)
 
 Trong batch user “duyệt, fix hết đi”, trace thật xác nhận sequence local1 nhỏ hơn server9 cho cùng device/session. Cho phép client giữ nguyên operation bị server từ chối và chỉ mở staff session thật mới qua API hiện có cho lượt quét tiếp theo; không đổi payload, sequence hay receipt của lượt cũ. Khóa bằng epoch/user/scope/session, giới hạn một recovery cho session lỗi. Không rotate session khi restart offline chưa nhận durable reject; không revoke session cũ nếu còn pending. Explicit logout xóa staff workspace cùng queue/sequence, còn restore unreachable giữ partition để M10 hồi phục. Không đổi receipt GET/read-only contract, DB schema hoặc authz. Chi tiết và trace: `.orca-metrics/fix-all/DECISION-F02-ORDER-RECOVERY.md`; cần review độc lập trên source freeze cuối trước nghiệm thu.
+
+## Bổ sung 29/10/2026 — retention O06 và ticket reissue
+
+User chốt để triển khai local: POL-02 bỏ qua event thiếu `ends_at`; event bị hủy tính mốc 365 ngày từ `cancelled_at`; QR `ticket_credentials` ngoài phạm vi POL-02; không thêm legal/dispute hold. POL-03 chỉ xóa object export, lấy `ends_at` làm mốc hết hạn nghiệp vụ; không mở rộng sang import hoặc QR object. Chi tiết kỹ thuật và test boundary: [O06 retention handoff](architecture/O06-RETENTION-HANDOFF.md).
+
+Ticket reissue chỉ dành cho Supervisor/Owner; credential cũ chuyển `REVOKED`, vẫn cho reissue khi event đã hủy, bắt buộc `reason`, chưa thêm rate limit. Chi tiết contract và giới hạn Gate hiện hành: [Ticket reissue handoff](architecture/TICKET-REISSUE-HANDOFF.md). User cũng giao tạm Higo phụ trách các task Portal còn thiếu. Các quyết định này cho phép chuẩn bị và kiểm thử local; không bao gồm push, PR hay deploy.

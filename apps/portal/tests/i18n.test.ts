@@ -1,4 +1,7 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import {
   DEFAULT_PORTAL_LOCALE,
@@ -6,6 +9,8 @@ import {
   isMessageKey,
   isPortalLocale,
   parsePortalLocale,
+  portalLocaleCookieOptions,
+  portalLocaleFromJsonBody,
   readStoredPortalLocale,
   writeStoredPortalLocale,
 } from '../src/i18n';
@@ -170,6 +175,34 @@ test('shell + nav keys required for AC-PS3 / AC-C1 exist in both locales', () =>
     assert.notEqual(t('en', key).startsWith('[VI]'), true);
   }
   assert.notEqual(t('vi', 'nav.org.overview'), t('en', 'nav.org.overview'));
+});
+
+test('PortalLocaleProvider persists locale via /api/locale then router.refresh (SSR lang)', () => {
+  const src = readFileSync(
+    join(dirname(fileURLToPath(import.meta.url)), '../src/i18n/locale-context.tsx'),
+    'utf8',
+  );
+  assert.match(src, /fetch\('\/api\/locale'/);
+  assert.match(src, /router\.refresh\(\)/);
+  assert.match(src, /setAttribute\('lang'/);
+});
+
+test('POST /api/locale body parser maps en and defaults to vi (O04)', () => {
+  assert.equal(portalLocaleFromJsonBody({ locale: 'en' }), 'en');
+  assert.equal(portalLocaleFromJsonBody({ locale: 'EN-US' }), 'en');
+  assert.equal(portalLocaleFromJsonBody({ locale: 'vi' }), 'vi');
+  assert.equal(portalLocaleFromJsonBody({}), 'vi');
+  assert.equal(portalLocaleFromJsonBody(null), 'vi');
+  assert.equal(portalLocaleFromJsonBody({ locale: 'fr' }), 'vi');
+});
+
+test('portal locale cookie is readable (not HttpOnly) so client + SSR share vemoki_portal_locale', () => {
+  const opts = portalLocaleCookieOptions(true);
+  assert.equal(opts.httpOnly, false);
+  assert.equal(opts.path, '/');
+  assert.equal(opts.sameSite, 'lax');
+  assert.equal(opts.secure, true);
+  assert.ok(opts.maxAge > 0);
 });
 
 test('locale storage round-trip (no DOM: localStorage stub, default without cookie)', () => {
