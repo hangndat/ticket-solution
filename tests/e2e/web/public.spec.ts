@@ -401,6 +401,14 @@ test('[WEB-12] marketing VI/EN, demo CTA, and public links', async ({
     'data-locale',
     'en',
   );
+  // demo label source of truth: apps/web/src/marketing/copy.ts 'hero.demo_note'
+  await expect(page.getByTestId('demo-badge')).toHaveText(
+    'Simulated demo — not a real customer.',
+  );
+  await page.goto(manifest.origins.marketing);
+  await expect(page.getByTestId('demo-badge')).toHaveText(
+    'Demo giả lập — không phải khách hàng thật.',
+  );
 });
 
 test('[WEB-12] interest form submit does not provision tenant/Owner', async ({

@@ -7,8 +7,8 @@ const requireBackend = createRequire(
 const { Client } = requireBackend('pg');
 
 /**
- * Lead/users/tenants/memberships are global tables (no RLS tenant scope) —
- * query via the admin role rather than withTenant.
+ * memberships is tenant-scoped under RLS; this query uses the admin role,
+ * which bypasses RLS, rather than withTenant — read is cross-tenant by email.
  */
 export async function readTenantProvisionSnapshot(email: string) {
   if (!process.env.DATABASE_URL || !process.env.E2E_RUN_DIR)
