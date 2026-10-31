@@ -5,7 +5,7 @@ const { randomBytes, randomUUID } = require('node:crypto');
 const { readFileSync } = require('node:fs');
 const { Client } = require('pg');
 const { migrationFiles } = require('./migration-files.cjs');
-const { createDatabase, withTenant, processClaimedOutbox } = require('../dist');
+const { createDatabase, withTenant, processClaimedOutbox, createSmtpEmailAdapter } = require('../dist');
 const {
   reserveEmailBudget,
   settleEmailBudget,
@@ -46,9 +46,11 @@ async function postgres() {
     await admin.query('GRANT USAGE ON SCHEMA public TO ticket_runtime');
     await admin.query('GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA public TO ticket_runtime');
     await admin.query('GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO ticket_runtime');
+    await admin.query("CREATE ROLE budget_runtime_login LOGIN PASSWORD '" + password + "' NOSUPERUSER NOBYPASSRLS INHERIT");
+    await admin.query('GRANT ticket_runtime TO budget_runtime_login');
     await admin.query("ALTER DATABASE email_budget_test SET app.tenant_id TO ''");
   } finally { await admin.end().catch(() => {}); }
-  return { name, url };
+  return { name, url, runtimeUrl: url.replace('postgres:', 'budget_runtime_login:') };
 }
 
 async function tenant(db, slug, limit) {
@@ -78,6 +80,24 @@ async function invite(db, tenantId, owner, token = randomUUID(), status = 'PROCE
       ${JSON.stringify({ inviteId: row.aggregate_id, email: 'fixture@example.test',
         role: 'manager', token: 'fixture-token', expiresAt: '2030-01-01' })}::jsonb,
       ${status}, 1, ${owner}, ${token}, clock_timestamp() + interval '60 seconds')
+  `);
+  return row;
+}
+
+async function guestInvite(db, tenantId, eventId, owner, token = randomUUID()) {
+  const row = {
+    outbox_id: randomUUID(), tenant_id: tenantId, event_id: eventId,
+    type: 'InvitationReady', aggregate_id: randomUUID(),
+    payload_version: 1, lease_token: token, attempts: 1,
+  };
+  await withTenant(db, tenantId, (tx) => tx.$executeRaw`
+    INSERT INTO outbox
+      (tenant_id, event_id, id, type, aggregate_id, payload, status, attempts,
+       lease_owner, lease_token, lease_expires_at)
+    VALUES (${tenantId}::uuid, ${eventId}::uuid, ${row.outbox_id}::uuid,
+      'InvitationReady', ${row.aggregate_id}::uuid,
+      ${JSON.stringify({ invitationId: row.aggregate_id, email: 'guest@example.test', token: 'claim-token' })}::jsonb,
+      'LEASED', 1, ${owner}, ${token}, clock_timestamp() + interval '60 seconds')
   `);
   return row;
 }
@@ -117,6 +137,34 @@ test('JOB04 D: concurrent admission, settlement CAS, config and replay isolation
       await settleEmailBudget(db, a, winning.attemptId, 'ACCEPTED', 'smtp:accepted');
       assert.deepEqual(await counts(db, a), { sent_count: 1, held_count: 0 });
 
+      // A hold admitted yesterday remains on yesterday's usage_date. Today's
+      // admission uses the PostgreSQL UTC date and has a fresh daily slot.
+      const d = await tenant(db, 'budget-rollover', 1);
+      const oldRow = await invite(db, d, 'worker-old');
+      const oldAttempt = randomUUID();
+      await withTenant(db, d, async (tx) => {
+        await tx.$executeRaw`
+          INSERT INTO tenant_email_usage (tenant_id, usage_date, held_count)
+          VALUES (${d}::uuid, ((clock_timestamp() AT TIME ZONE 'UTC')::date - 1), 1)
+        `;
+        await tx.$executeRaw`
+          INSERT INTO tenant_email_budget_attempts
+            (tenant_id, attempt_id, outbox_id, lease_token, usage_date, state)
+          VALUES (${d}::uuid, ${oldAttempt}::uuid, ${oldRow.outbox_id}::uuid,
+            ${oldRow.lease_token}, ((clock_timestamp() AT TIME ZONE 'UTC')::date - 1), 'UNKNOWN')
+        `;
+      });
+      const todayRow = await invite(db, d, 'worker-today');
+      const today = await reserveEmailBudget(db, claim(todayRow));
+      assert.equal(today.kind, 'reserved');
+      await settleEmailBudget(db, d, oldAttempt, 'ACCEPTED', 'smtp:yesterday');
+      const dates = await withTenant(db, d, (tx) => tx.$queryRaw`
+        SELECT usage_date::text AS day, sent_count, held_count
+        FROM tenant_email_usage WHERE tenant_id = ${d}::uuid ORDER BY usage_date
+      `);
+      assert.deepEqual(dates.map(({ sent_count, held_count }) => [sent_count, held_count]), [[1, 0], [0, 1]]);
+      await settleEmailBudget(db, d, today.attemptId, 'RELEASED');
+
       const b1 = await invite(db, b, 'worker-b');
       const unlimited = await reserveEmailBudget(db, claim(b1));
       assert.equal(unlimited.kind, 'reserved');
@@ -135,6 +183,29 @@ test('JOB04 D: concurrent admission, settlement CAS, config and replay isolation
       assert.equal(replay.kind, 'reserved');
       await settleEmailBudget(db, b, replay.attemptId, 'RELEASED');
       assert.deepEqual(await counts(db, b), { sent_count: 0, held_count: 1 });
+
+      // Read and cross-tenant write checks use an inheriting login role with
+      // NOBYPASSRLS, unlike the migration-owner setup connection.
+      const runtime = createDatabase(boot.runtimeUrl, 2, true);
+      try {
+        const own = await withTenant(runtime, a, (tx) => tx.$queryRaw`
+          SELECT tenant_id FROM tenant_email_budget_attempts
+        `);
+        assert.ok(own.length >= 1);
+        assert.ok(own.every((row) => row.tenant_id === a));
+        const other = await withTenant(runtime, b, (tx) => tx.$queryRaw`
+          SELECT tenant_id FROM tenant_email_budget_attempts
+        `);
+        assert.ok(other.length >= 1);
+        assert.ok(other.every((row) => row.tenant_id === b));
+        assert.deepEqual(await runtime.$queryRaw`SELECT tenant_id FROM tenant_email_budget_attempts`, []);
+        await assert.rejects(() => withTenant(runtime, a, (tx) => tx.$executeRaw`
+          INSERT INTO tenant_email_budget_attempts
+            (tenant_id, attempt_id, outbox_id, lease_token, usage_date, state)
+          VALUES (${b}::uuid, ${randomUUID()}::uuid, ${b1.outbox_id}::uuid,
+            'cross-tenant', (clock_timestamp() AT TIME ZONE 'UTC')::date, 'HELD')
+        `));
+      } finally { await runtime.$disconnect(); }
 
       const c1 = await invite(db, c, 'worker-c');
       assert.equal((await reserveEmailBudget(db, claim(c1))).reason, 'email_budget_config_missing');
@@ -155,6 +226,55 @@ test('JOB04 D: concurrent admission, settlement CAS, config and replay isolation
       `);
       assert.equal((await reserveEmailBudget(db, claim(first.kind === 'reserved' ? a2 : a1))).kind, 'deferred');
       assert.deepEqual(await counts(db, a), { sent_count: 1, held_count: 0 });
+    } finally {
+      if (db) await db.$disconnect();
+      if (boot) docker('rm', '-f', '-v', boot.name);
+    }
+  });
+
+test('JOB04 D: InvitationReady worker shares budget and typed preflight releases holds',
+  { timeout: 180000, skip: !dockerAvailable() }, async () => {
+    let boot, db;
+    try {
+      boot = await postgres();
+      db = createDatabase(boot.url, 4, true);
+      const tenantId = await tenant(db, 'budget-guest', 1);
+      const eventId = randomUUID();
+      await withTenant(db, tenantId, (tx) => tx.event.create({
+        data: { id: eventId, tenantId, slug: 'guest-event', name: 'Guest Event', status: 'DRAFT' },
+      }));
+      const options = (owner) => ({
+        credentialKeyMaterial: '', leaseOwner: owner,
+        publicWebBaseUrl: 'https://tickets.example.test', env: { NODE_ENV: 'test' },
+      });
+      const first = await guestInvite(db, tenantId, eventId, 'guest-worker-a');
+      await processClaimedOutbox(db, createSmtpEmailAdapter({ nodeEnv: 'production' }), [first], options('guest-worker-a'));
+      assert.deepEqual(await counts(db, tenantId), { sent_count: 0, held_count: 0 });
+      const released = await withTenant(db, tenantId, (tx) => tx.$queryRaw`
+        SELECT state FROM tenant_email_budget_attempts WHERE tenant_id = ${tenantId}::uuid
+      `);
+      assert.deepEqual(released.map((row) => row.state), ['RELEASED']);
+
+      const second = await guestInvite(db, tenantId, eventId, 'guest-worker-b');
+      await processClaimedOutbox(db, createSmtpEmailAdapter({ smtpUrl: 'bad-url' }), [second], options('guest-worker-b'));
+      assert.deepEqual(await counts(db, tenantId), { sent_count: 0, held_count: 0 });
+      const third = await guestInvite(db, tenantId, eventId, 'guest-worker-c');
+      let calls = 0;
+      const email = {
+        async sendTicketIssued() { throw new Error('unused'); },
+        async sendGuestInvitation() { calls++; return { providerRef: 'smtp:guest', providerStatus: 'ACCEPTED' }; },
+      };
+      const delivered = await processClaimedOutbox(db, email, [third], options('guest-worker-c'));
+      assert.equal(delivered.completed, 1);
+      assert.equal(calls, 1);
+      assert.deepEqual(await counts(db, tenantId), { sent_count: 1, held_count: 0 });
+      const fourth = await guestInvite(db, tenantId, eventId, 'guest-worker-d');
+      await processClaimedOutbox(db, email, [fourth], options('guest-worker-d'));
+      assert.equal(calls, 1);
+      const deferred = await withTenant(db, tenantId, (tx) => tx.$queryRaw`
+        SELECT status FROM outbox WHERE tenant_id = ${tenantId}::uuid AND id = ${fourth.outbox_id}::uuid
+      `);
+      assert.equal(deferred[0].status, 'PENDING');
     } finally {
       if (db) await db.$disconnect();
       if (boot) docker('rm', '-f', '-v', boot.name);
