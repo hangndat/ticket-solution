@@ -1,6 +1,7 @@
 import { Text, View } from 'react-native';
 import { Notice, Page } from '@/components/page';
 import { walletCopy } from '@/components/screen-state-copy';
+import { AttendeeScreenChrome } from '@/navigation/attendee-screen-chrome';
 import { brand, colors } from '@/theme/colors';
 import { typography } from '@/theme/typography';
 import { space } from '@/theme/tokens';
@@ -8,11 +9,14 @@ import { space } from '@/theme/tokens';
 /** Deep-link / push routes when wallet access is false (tab is hidden for guests). */
 export function WalletAccessNotice() {
   return (
-    <Page>
-      <Notice title={walletCopy.guestWalletBlockedTitle}>
-        {walletCopy.guestWalletBlockedBody}
-      </Notice>
-    </Page>
+    <>
+      <Page>
+        <Notice title={walletCopy.guestWalletBlockedTitle}>
+          {walletCopy.guestWalletBlockedBody}
+        </Notice>
+      </Page>
+      <AttendeeScreenChrome title="Vé của tôi" />
+    </>
   );
 }
 

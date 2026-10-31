@@ -4,10 +4,20 @@ import { GateError, GATE_ERROR_CODES } from './gate-error';
 import { assertOpenForGate } from './event-policy';
 import { requireTenantPermission } from './membership';
 import { metricsInc, metricsObserveSeconds } from './metrics-registry';
+import {
+  canonicalHash,
+  claimOperation,
+  completeOperation,
+  requireIdempotencyKey,
+} from './event-operations';
+import { sealCredentialToken } from './credential-crypto';
+import { AuthzError, AUTHZ_ERROR_CODES } from './authz-error';
 
 const PERMISSION_CONFIRM = 'gate.confirm';
 const PERMISSION_UNDO = 'gate.undo';
 const PERMISSION_REVOKE = 'ticket.revoke';
+const PERMISSION_REISSUE = 'ticket.reissue';
+const REISSUE_COMMAND = 'ticket.reissue';
 
 type TicketLock = {
   id: string;
@@ -27,6 +37,16 @@ export type StaffSessionResult = {
   sessionId: string;
   eventId: string;
   status: 'ACTIVE';
+  /** O31: null when opened without a gate (legacy / event without gates). */
+  gateId: string | null;
+  gateName: string | null;
+};
+
+export type GateRecord = {
+  id: string;
+  eventId: string;
+  name: string;
+  sortOrder: number;
 };
 
 export type ReserveResult = {
@@ -87,6 +107,25 @@ export type UndoResult = {
   ticketId: string;
   state: 'ACTIVE';
 };
+
+export type ReissueResult = {
+  ticketId: string;
+  credentialVersion: number;
+  replayed: boolean;
+};
+
+export type ReissueOutcome = ({ ok: true } & ReissueResult) | GateDenyOutcome;
+
+export function unwrapReissueOutcome(outcome: ReissueOutcome): ReissueResult {
+  if (!outcome.ok) {
+    throw new GateError(outcome.code, outcome.message);
+  }
+  return {
+    ticketId: outcome.ticketId,
+    credentialVersion: outcome.credentialVersion,
+    replayed: outcome.replayed,
+  };
+}
 
 function tokenHash(token: string): string {
   return createHash('sha256').update(token).digest('hex');
@@ -292,9 +331,132 @@ async function denyGate(
   return { ok: false, code: input.code, message: input.message };
 }
 
-export async function openStaffSession(
+const PERMISSION_EVENT_UPDATE = 'event.update';
+const GATE_SORT_ORDER_MIN = 0;
+const GATE_SORT_ORDER_MAX = 9999;
+
+function resolveGateSortOrder(sortOrder: number | undefined): number {
+  if (sortOrder === undefined) {
+    return GATE_SORT_ORDER_MIN;
+  }
+  if (!Number.isInteger(sortOrder)) {
+    throw new GateError(
+      GATE_ERROR_CODES.GATE_NOT_FOUND,
+      'sortOrder must be an integer',
+    );
+  }
+  if (sortOrder < GATE_SORT_ORDER_MIN || sortOrder > GATE_SORT_ORDER_MAX) {
+    throw new GateError(
+      GATE_ERROR_CODES.GATE_NOT_FOUND,
+      'sortOrder must be between 0 and 9999',
+    );
+  }
+  return sortOrder;
+}
+
+type GateRow = { id: string; event_id: string; name: string; sort_order: number };
+
+function toGateRecord(row: GateRow): GateRecord {
+  return {
+    id: row.id,
+    eventId: row.event_id,
+    name: row.name,
+    sortOrder: row.sort_order,
+  };
+}
+
+/** O31: gates of an event for staff pickers (requires gate.confirm on the event). */
+export async function listEventGates(
   tx: Prisma.TransactionClient,
   input: { tenantId: string; eventId: string; userId: string },
+): Promise<GateRecord[]> {
+  await requireTenantPermission(tx, {
+    tenantId: input.tenantId,
+    userId: input.userId,
+    permission: PERMISSION_CONFIRM,
+    eventId: input.eventId,
+  });
+  const rows = await tx.$queryRaw<GateRow[]>`
+    SELECT id, event_id, name, sort_order
+    FROM gates
+    WHERE tenant_id = ${input.tenantId}::uuid
+      AND event_id = ${input.eventId}::uuid
+    ORDER BY sort_order ASC, name ASC, id ASC
+  `;
+  return rows.map(toGateRecord);
+}
+
+/** O31: organizer creates a gate (requires event.update on the event). */
+export async function createEventGate(
+  tx: Prisma.TransactionClient,
+  input: {
+    tenantId: string;
+    eventId: string;
+    userId: string;
+    name: string;
+    sortOrder?: number;
+  },
+): Promise<GateRecord> {
+  await requireTenantPermission(tx, {
+    tenantId: input.tenantId,
+    userId: input.userId,
+    permission: PERMISSION_EVENT_UPDATE,
+    eventId: input.eventId,
+  });
+  const name = input.name.trim();
+  if (name.length < 1 || name.length > 80) {
+    throw new GateError(
+      GATE_ERROR_CODES.GATE_NOT_FOUND,
+      'Gate name must be 1-80 characters',
+    );
+  }
+  const events = await tx.$queryRaw<Array<{ id: string }>>`
+    SELECT id FROM events
+    WHERE tenant_id = ${input.tenantId}::uuid AND id = ${input.eventId}::uuid
+    FOR SHARE
+  `;
+  if (!events[0]) {
+    throw new GateError(GATE_ERROR_CODES.EVENT_NOT_FOUND, 'Event not found');
+  }
+  const sortOrder = resolveGateSortOrder(input.sortOrder);
+  const gateId = randomUUID();
+  const rows = await tx.$queryRaw<GateRow[]>`
+    INSERT INTO gates (tenant_id, event_id, id, name, sort_order)
+    VALUES (
+      ${input.tenantId}::uuid,
+      ${input.eventId}::uuid,
+      ${gateId}::uuid,
+      ${name},
+      ${sortOrder}::int
+    )
+    ON CONFLICT (tenant_id, event_id, name) DO NOTHING
+    RETURNING id, event_id, name, sort_order
+  `;
+  if (!rows[0]) {
+    throw new GateError(
+      GATE_ERROR_CODES.GATE_NAME_CONFLICT,
+      'A gate with this name already exists for the event',
+    );
+  }
+  await writeAudit(tx, {
+    tenantId: input.tenantId,
+    eventId: input.eventId,
+    actorUserId: input.userId,
+    action: 'gate.create',
+    resourceType: 'gate',
+    resourceId: gateId,
+  });
+  return toGateRecord(rows[0]);
+}
+
+export async function openStaffSession(
+  tx: Prisma.TransactionClient,
+  input: {
+    tenantId: string;
+    eventId: string;
+    userId: string;
+    gateId?: string | null;
+  },
 ): Promise<StaffSessionResult> {
   await requireTenantPermission(tx, {
     tenantId: input.tenantId,
@@ -317,16 +479,34 @@ export async function openStaffSession(
     }
     throw err;
   }
+  let gateId: string | null = null;
+  let gateName: string | null = null;
+  if (input.gateId) {
+    const gates = await tx.$queryRaw<Array<{ id: string; name: string }>>`
+      SELECT id, name
+      FROM gates
+      WHERE tenant_id = ${input.tenantId}::uuid
+        AND event_id = ${input.eventId}::uuid
+        AND id = ${input.gateId}::uuid
+      FOR SHARE
+    `;
+    if (!gates[0]) {
+      throw new GateError(GATE_ERROR_CODES.GATE_NOT_FOUND, 'Gate not found');
+    }
+    gateId = gates[0].id;
+    gateName = gates[0].name;
+  }
   const sessionId = randomUUID();
   try {
     await tx.$executeRaw`
-      INSERT INTO staff_sessions (tenant_id, event_id, id, user_id, status)
+      INSERT INTO staff_sessions (tenant_id, event_id, id, user_id, status, gate_id)
       VALUES (
         ${input.tenantId}::uuid,
         ${input.eventId}::uuid,
         ${sessionId}::uuid,
         ${input.userId}::uuid,
-        'ACTIVE'
+        'ACTIVE',
+        ${gateId}::uuid
       )
     `;
   } catch (err) {
@@ -347,7 +527,13 @@ export async function openStaffSession(
     resourceType: 'staff_session',
     resourceId: sessionId,
   });
-  return { sessionId, eventId: input.eventId, status: 'ACTIVE' };
+  return {
+    sessionId,
+    eventId: input.eventId,
+    status: 'ACTIVE',
+    gateId,
+    gateName,
+  };
 }
 
 export async function revokeStaffSession(
@@ -849,4 +1035,215 @@ export async function revokeTicket(
     resourceId: ticket.id,
     reason: input.reason,
   });
+}
+
+/**
+ * Ticket reissue (DB-09 handoff §4) — mint the next `ticket_credentials`
+ * version, invalidate the current one, bump `tickets.credential_version` so
+ * the next outbox email picks up the new QR. Supervisor/Owner only
+ * (`ticket.reissue`), reason mandatory, no rate limit (rare, audited action).
+ * Not blocked by a HELD reservation and not blocked by a cancelled event —
+ * same precedent as `revokeTicket`. Response never carries the raw token;
+ * the new QR reaches the owner only via the existing TicketIssued email
+ * outbox path (see TICKET-REISSUE-HANDOFF.md §8).
+ */
+export async function reissueTicketCredential(
+  tx: Prisma.TransactionClient,
+  credentialKeyMaterial: string,
+  input: {
+    tenantId: string;
+    eventId: string;
+    ticketId: string;
+    actorUserId: string;
+    reason: string;
+    idempotencyKey: string | undefined;
+  },
+): Promise<ReissueOutcome> {
+  const reason = input.reason.trim();
+  if (!reason) {
+    throw new GateError(
+      GATE_ERROR_CODES.REASON_REQUIRED,
+      'Reissue reason is required',
+    );
+  }
+
+  const { membership } = await requireTenantPermission(tx, {
+    tenantId: input.tenantId,
+    userId: input.actorUserId,
+    permission: PERMISSION_REISSUE,
+    eventId: input.eventId,
+  });
+  if (membership.role !== 'Owner' && membership.role !== 'Supervisor') {
+    throw new AuthzError(
+      AUTHZ_ERROR_CODES.PERMISSION_DENIED,
+      'Ticket reissue requires Owner or Supervisor role',
+    );
+  }
+
+  const clientKey = requireIdempotencyKey(input.idempotencyKey);
+  const requestHash = canonicalHash({
+    command: REISSUE_COMMAND,
+    tenantId: input.tenantId,
+    eventId: input.eventId,
+    ticketId: input.ticketId,
+    reason,
+  });
+  const { op, claimed } = await claimOperation(tx, {
+    tenantId: input.tenantId,
+    eventId: input.eventId,
+    actorUserId: input.actorUserId,
+    command: REISSUE_COMMAND,
+    clientKey,
+    requestHash,
+  });
+  if (!claimed) {
+    const saved = (op.response_json ?? {}) as ReissueOutcome;
+    if (saved.ok === true) {
+      return { ...saved, replayed: true };
+    }
+    return saved;
+  }
+
+  let ticket: TicketLock;
+  try {
+    ticket = await lockTicket(
+      tx,
+      input.tenantId,
+      input.eventId,
+      input.ticketId,
+    );
+  } catch (err) {
+    if (
+      err instanceof GateError &&
+      err.code === GATE_ERROR_CODES.TICKET_NOT_FOUND
+    ) {
+      const outcome = await denyGate(tx, {
+        tenantId: input.tenantId,
+        eventId: input.eventId,
+        actorUserId: input.actorUserId,
+        code: GATE_ERROR_CODES.TICKET_NOT_FOUND,
+        message: err.message,
+        resourceType: 'ticket',
+        resourceId: input.ticketId,
+      });
+      await completeOperation(tx, input.tenantId, op.id, outcome);
+      return outcome;
+    }
+    throw err;
+  }
+
+  if (ticket.state !== 'ACTIVE') {
+    const outcome = await denyGate(tx, {
+      tenantId: input.tenantId,
+      eventId: input.eventId,
+      actorUserId: input.actorUserId,
+      code: GATE_ERROR_CODES.TICKET_NOT_ACTIVE,
+      message: 'Ticket is not active',
+      resourceType: 'ticket',
+      resourceId: ticket.id,
+    });
+    await completeOperation(tx, input.tenantId, op.id, outcome);
+    return outcome;
+  }
+
+  const fromVersion = ticket.credential_version;
+  const newVersion = fromVersion + 1;
+  const rawToken = randomBytes(32).toString('base64url');
+  const sealed = sealCredentialToken(rawToken, credentialKeyMaterial);
+
+  // Invalidate the current credential before minting the next version so
+  // the partial unique index (tenant_id, ticket_id) WHERE status='ACTIVE'
+  // never sees two ACTIVE rows for this ticket, even momentarily.
+  await tx.$executeRaw`
+    UPDATE ticket_credentials
+    SET status = 'REVOKED'
+    WHERE tenant_id = ${input.tenantId}::uuid
+      AND ticket_id = ${ticket.id}::uuid
+      AND status = 'ACTIVE'
+  `;
+  await tx.$executeRaw`
+    INSERT INTO ticket_credentials (
+      tenant_id, ticket_id, version, kid, token_hash, encrypted_token,
+      status, created_at
+    ) VALUES (
+      ${input.tenantId}::uuid, ${ticket.id}::uuid, ${newVersion}::integer,
+      ${sealed.kid}, ${sealed.tokenHash}, ${sealed.encryptedToken},
+      'ACTIVE', now()
+    )
+  `;
+  await tx.$executeRaw`
+    UPDATE tickets
+    SET credential_version = ${newVersion}::integer, updated_at = clock_timestamp()
+    WHERE tenant_id = ${input.tenantId}::uuid AND id = ${ticket.id}::uuid
+  `;
+
+  const auditId = randomUUID();
+  await tx.$executeRaw`
+    INSERT INTO audit_logs (
+      tenant_id, event_id, id, actor_user_id, action, resource_type,
+      resource_id, reason, sanitized_diff, operation_id, created_at
+    ) VALUES (
+      ${input.tenantId}::uuid, ${input.eventId}::uuid, ${auditId}::uuid,
+      ${input.actorUserId}::uuid, 'ticket.credential_reissue', 'ticket',
+      ${ticket.id}::uuid, ${reason},
+      ${JSON.stringify({ fromVersion, toVersion: newVersion })}::jsonb,
+      ${op.id}::uuid, now()
+    )
+  `;
+
+  // Reuse the TicketIssued outbox/notification path (cs.ts resend pattern):
+  // the worker re-reads tickets.credential_version and renders whatever is
+  // current, so no new outbox type or notification kind is needed. Owner
+  // email must be carried in the payload — the worker's send step reads
+  // `payload.email` directly and does not look the owner up itself.
+  const owners = await tx.$queryRaw<
+    Array<{ owner_user_id: string; email: string | null }>
+  >`
+    SELECT t.owner_user_id, u.email
+    FROM tickets t
+    JOIN users u ON u.id = t.owner_user_id
+    WHERE t.tenant_id = ${input.tenantId}::uuid AND t.id = ${ticket.id}::uuid
+  `;
+  const owner = owners[0];
+  const outboxId = randomUUID();
+  const notificationId = randomUUID();
+  const businessKey = `ticket:${ticket.id}:reissue:email:${op.id}`;
+  const notifyPayload = {
+    ticketId: ticket.id,
+    requestId: op.id,
+    email: owner?.email ?? null,
+    eventId: input.eventId,
+    ownerUserId: owner?.owner_user_id,
+    businessKey,
+  };
+  await tx.$executeRaw`
+    INSERT INTO outbox (
+      tenant_id, event_id, id, type, aggregate_id, payload_version,
+      payload, status, attempts, created_at, updated_at
+    ) VALUES (
+      ${input.tenantId}::uuid, ${input.eventId}::uuid, ${outboxId}::uuid,
+      'TicketIssued', ${ticket.id}::uuid, 1,
+      ${JSON.stringify(notifyPayload)}::jsonb, 'PENDING', 0, now(), now()
+    )
+  `;
+  await tx.$executeRaw`
+    INSERT INTO notifications (
+      tenant_id, event_id, id, business_key, channel, state,
+      attempts, payload, created_at, updated_at
+    ) VALUES (
+      ${input.tenantId}::uuid, ${input.eventId}::uuid, ${notificationId}::uuid,
+      ${businessKey}, 'email', 'PENDING', 0,
+      ${JSON.stringify(notifyPayload)}::jsonb, now(), now()
+    )
+  `;
+
+  const outcome: ReissueOutcome = {
+    ok: true,
+    ticketId: ticket.id,
+    credentialVersion: newVersion,
+    replayed: false,
+  };
+  await completeOperation(tx, input.tenantId, op.id, outcome);
+  metricsInc('gate_reissue_total', { result: 'ok' });
+  return outcome;
 }

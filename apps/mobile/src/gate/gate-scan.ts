@@ -289,6 +289,8 @@ export type RunScanResult = {
   /** True when the first network hop failed — caller may enqueue offline. */
   networkUnavailable?: boolean;
   parsed?: ParsedScan;
+  /** O31: set only when this call opened the session (silent first-scan fallback). */
+  openedSessionGate?: { gateId: string | null; gateName: string | null };
   /**
    * True when a Gate hop returned MEMBERSHIP_* / PERMISSION_DENIED 401/403.
    * Caller must `staffEligibility.reset()` + refresh MeEvents (SEC-CACHE).
@@ -302,6 +304,8 @@ export async function runScan(input: {
   apiBase: string;
   ops: readonly GateOp[];
   staffSessionId: string | null;
+  /** O31: gate to attach when this call has to open the session itself. */
+  gateId?: string | null;
   fallback?: { tenantId?: string | null; eventId?: string | null };
   fetchImpl?: typeof fetch;
   createId?: () => string;
@@ -340,6 +344,7 @@ export async function runScan(input: {
   const base = input.apiBase.replace(/\/$/, '');
   let staffSessionId = input.staffSessionId;
   let membershipAuthzDenied = false;
+  let openedSessionGate: RunScanResult['openedSessionGate'];
   const stale = (): RunScanResult => ({ ops: [...input.ops], staffSessionId: input.staffSessionId, current: null });
   if (input.shouldContinue && !input.shouldContinue()) return stale();
   if (!staffSessionId) {
@@ -347,7 +352,9 @@ export async function runScan(input: {
       fetchImpl,
       `${base}/v1/gate/events/${parsed.eventId}/sessions`,
       input.bearer,
-      { tenantId: parsed.tenantId },
+      input.gateId
+        ? { tenantId: parsed.tenantId, gateId: input.gateId }
+        : { tenantId: parsed.tenantId },
     );
     if (input.shouldContinue && !input.shouldContinue()) return stale();
     const body = asRecord(opened.json);
@@ -394,6 +401,10 @@ export async function runScan(input: {
       };
     }
     staffSessionId = body.sessionId;
+    openedSessionGate = {
+      gateId: typeof body.gateId === 'string' ? body.gateId : null,
+      gateName: typeof body.gateName === 'string' ? body.gateName : null,
+    };
   }
 
   if (input.preferOfflineQueue) {
@@ -403,6 +414,7 @@ export async function runScan(input: {
       current: null,
       networkUnavailable: true,
       parsed,
+      openedSessionGate,
     };
   }
 
@@ -452,6 +464,7 @@ export async function runScan(input: {
       ops: [failed, ...input.ops],
       staffSessionId,
       current: failed,
+      openedSessionGate,
       membershipAuthzDenied: membershipAuthzDenied || undefined,
     };
   }
@@ -495,6 +508,7 @@ export async function runScan(input: {
     ops: [current, ...input.ops],
     staffSessionId,
     current,
+    openedSessionGate,
     membershipAuthzDenied: membershipAuthzDenied || undefined,
   };
 }

@@ -8,7 +8,7 @@
 | Mẫu tham chiếu | VD-06 Staff Gate [#884](https://github.com/hangndat/ticket-solution/pull/884) · evidence lịch sử `apps/mobile/VD06-ISSUE-879-EVIDENCE.md` |
 | Fixture runtime | [#925](https://github.com/hangndat/ticket-solution/issues/925) persona/API matrix **done** (merged); sim OIDC **scanner** chưa đạt — xem [runtime probe](./vcx-940-ios-staff-runtime.md) |
 | **actualSHA** (runtime follow-up) | `a70c9a3e1824f0b24b2f863adaeca3ecd8c34e76` · build/sim probe Zico 2026-10-26 — **không** thay `sourceSHA` checks gốc |
-| Thiết bị thật | **Blocker B-03** (roadmap §3) — camera/VoiceOver/offline thật |
+| Thiết bị thật | **Blocker B-03** (roadmap §3) — camera/QR/offline thật. **iOS VoiceOver ngoài phạm vi #914 / quyết định owner** |
 
 ## O25 / invariant (không đánh giá PASS ngoài scope)
 

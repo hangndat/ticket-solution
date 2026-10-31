@@ -198,13 +198,6 @@ export function GateCamera({ disabled, onScan }: Props) {
             justifyContent: 'center'
           }}
         >
-          <Text
-            style={{ ...typography.footnote, color: 'rgba(255,255,255,0.92)',
-              textAlign: 'center',
-              paddingHorizontal: space.md }}
-          >
-            Đưa QR vào khung
-          </Text>
           <Animated.View
             style={[
               {

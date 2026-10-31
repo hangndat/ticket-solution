@@ -20,12 +20,14 @@ test('Fastify liveness matches contract; redeem and gate routes documented', asy
     const doc = createOpenApi(app);
     assert.deepEqual(Object.keys(doc.paths).sort(), [
       '/v1/gate/events/{eventId}/checkins/{checkinId}/undo',
+      '/v1/gate/events/{eventId}/gates',
       '/v1/gate/events/{eventId}/offline-sync',
       '/v1/gate/events/{eventId}/offline-sync/receipts/{clientEventId}',
       '/v1/gate/events/{eventId}/reservations',
       '/v1/gate/events/{eventId}/reservations/{reservationId}/confirm',
       '/v1/gate/events/{eventId}/sessions',
       '/v1/gate/events/{eventId}/sessions/revoke',
+      '/v1/gate/events/{eventId}/tickets/{ticketId}/reissue',
       '/v1/gate/events/{eventId}/tickets/{ticketId}/revoke',
       '/v1/health',
       '/v1/me',

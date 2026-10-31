@@ -108,7 +108,7 @@ Acceptance: người tổ chức tự đi hết luồng mẫu; tác vụ giới 
 Owner: reviewer độc lập + coordinator; UAT theo role/rules hiện hữu.
 
 - T01: thực hiện cross-surface UAT trên SHA tích hợp mới với dữ liệu giả nhiều tenant/event, role matrix, pagination, timeout/retry, stale và permissions.
-- T02: kiểm UI trong browser: responsive, keyboard, focus, screen-reader labels, contrast, zoom, empty/error/unknown. Static scan không thay browser/device evidence. Không đổi màu/brand tùy ý.
+- T02: kiểm UI trong browser: responsive, keyboard, focus, screen-reader labels (DOM/ARIA), contrast, zoom, empty/error/unknown. Static scan không thay browser/device evidence. Không đổi màu/brand tùy ý. **iOS VoiceOver ngoài phạm vi #914 / quyết định owner** — không AC S6.
 - T03: đóng finding mới theo review-convergence, CI và revalidation; cập nhật roadmap/status, runbook, demo script và case-study evidence trong phạm vi mới.
 
 Acceptance: exact-SHA evidence, test/CI, reviewer khác implementer, commit/PR và integration receipts; không P0/P1 chưa xử lý thuộc scope nghiệm thu này. Các nợ đã hoãn vẫn tách biệt, không ghi đã sửa. Kết luận rõ code complete / acceptance complete trong scope / release blockers / pilot readiness chưa đủ evidence.

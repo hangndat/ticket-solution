@@ -35,4 +35,4 @@ Giới hạn giữ nguyên: mất kết nối được tạo bằng API-unavaila
 
 ## Kết luận phạm vi
 
-B-04 có evidence inbox thật; các ca camera/QR/offline queue/VoiceOver nêu trên của B-03 đã có evidence máy thật và được tái sử dụng với giới hạn rõ. Hai tài nguyên thiết bị/inbox không còn là điều kiện đang chờ user chuẩn bị. Không tự đóng #940/#941, toàn bộ acceptance Epic #914 hoặc tuyên bố pilot ready từ báo cáo này.
+B-04 có evidence inbox thật; các ca camera/QR/offline queue nêu trên của B-03 đã có evidence máy thật và được tái sử dụng với giới hạn rõ. Hàng VoiceOver trong bảng B-03 là lịch sử phiên 26/10 — **iOS VoiceOver ngoài phạm vi #914 / quyết định owner**, không còn AC/UAT/S6 và không chặn đóng Epic. Hai tài nguyên thiết bị/inbox không còn là điều kiện đang chờ user chuẩn bị. Không tự đóng #940/#941, toàn bộ acceptance Epic #914 hoặc tuyên bố pilot ready từ báo cáo này.

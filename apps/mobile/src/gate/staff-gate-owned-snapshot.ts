@@ -43,6 +43,12 @@ export function projectStaffGateOwnedSnapshot(
         await session.restore(verifyViaMe);
       }
     },
+    gates: {
+      ...value.gates,
+      selectGate: (gateId: string) => { if (live()) value.gates.selectGate(gateId); },
+      openSession: () => live() ? value.gates.openSession() : Promise.resolve(),
+      reloadGates: () => live() ? value.gates.reloadGates() : Promise.resolve(),
+    },
     logoutStaff: () => live() ? value.logoutStaff() : Promise.resolve(),
   };
   if (matches) return { ...value, ...handlers };
@@ -51,6 +57,16 @@ export function projectStaffGateOwnedSnapshot(
   return {
     ...value,
     ...handlers,
+    gates: {
+      ...handlers.gates,
+      status: 'loading' as const,
+      gates: [],
+      selectedGateId: null,
+      sessionGateName: null,
+      openUi: { explicitOpen: false, showPicker: false, scanFallback: false, canOpen: false },
+      opening: false,
+      openError: null,
+    },
     ready: false,
     busy: false,
     ops: [],

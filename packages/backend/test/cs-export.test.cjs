@@ -241,6 +241,10 @@ test(
         await tx.tenant.create({
           data: { id: tenantId, slug: 'cs-a', name: 'CS A' },
         });
+        await tx.$executeRaw`
+          INSERT INTO tenant_limits (tenant_id, email_per_day)
+          VALUES (${tenantId}::uuid, 100)
+        `;
         await grantMembership(tx, {
           tenantId,
           userId: manager.userId,
@@ -346,6 +350,30 @@ test(
 
       let exportId;
       await withTenant(db, tenantId, async (tx) => {
+        await tx.$executeRaw`
+          UPDATE notifications SET state = 'UNKNOWN'
+          WHERE tenant_id = ${tenantId}::uuid
+            AND business_key LIKE ${'ticket:' + ticket.ticketId + ':%'}
+        `;
+        const unknownList = await listCsTickets(tx, HMAC, {
+          tenantId,
+          eventId,
+          actorUserId: cs.userId,
+        });
+        assert.equal(unknownList.items[0].notification.providerStatus, 'UNKNOWN');
+        const unknownDetail = await getCsTicket(tx, {
+          tenantId,
+          eventId,
+          actorUserId: cs.userId,
+          ticketId: ticket.ticketId,
+        });
+        assert.equal(unknownDetail.notification.providerStatus, 'UNKNOWN');
+        assert.ok(unknownDetail.timeline.some((item) => item.summary === 'notification UNKNOWN'));
+        await tx.$executeRaw`
+          UPDATE notifications SET state = 'PENDING'
+          WHERE tenant_id = ${tenantId}::uuid
+            AND business_key LIKE ${'ticket:' + ticket.ticketId + ':%'}
+        `;
         await assert.rejects(
           () =>
             listCsTickets(tx, HMAC, {
@@ -467,6 +495,9 @@ test(
           MINIO_ENDPOINT: minio.cfg.endpoint,
           MINIO_ACCESS_KEY: minio.cfg.accessKey,
           MINIO_SECRET_KEY: minio.cfg.secretKey,
+          MINIO_EXPORTS_ACCESS_KEY: minio.cfg.accessKey,
+          MINIO_EXPORTS_SECRET_KEY: minio.cfg.secretKey,
+          MINIO_BUCKET_EXPORTS: minio.cfg.bucket,
           MINIO_BUCKET: minio.cfg.bucket,
           MINIO_REGION: minio.cfg.region,
           EXPORT_TTL_SECONDS: '3600',
@@ -1022,6 +1053,35 @@ test(
         `;
       });
 
+      // JOB04: two tickets race for the last staff slot. The transaction
+      // advisory lock must make exactly one request observe count 9.
+      const raceTickets = await withTenant(db, tenantId, (tx) => tx.$queryRaw`
+        SELECT id FROM tickets WHERE tenant_id = ${tenantId}::uuid
+          AND id IN (md5('cs-page-ticket-1')::uuid, md5('cs-page-ticket-2')::uuid)
+        ORDER BY id
+      `);
+      assert.equal(raceTickets.length, 2);
+      await withTenant(db, tenantId, (tx) => tx.$executeRaw`
+        UPDATE audit_logs SET created_at = now() - interval '2 hours'
+        WHERE tenant_id = ${tenantId}::uuid AND id = (
+          SELECT id FROM audit_logs WHERE tenant_id = ${tenantId}::uuid
+            AND action = 'ticket.email_resend' ORDER BY id LIMIT 1
+        )
+      `);
+      const race = await Promise.allSettled(raceTickets.map((row, i) =>
+        withTenant(db, tenantId, (tx) => resendTicketEmail(tx, {
+          tenantId, eventId, actorUserId: cs.userId,
+          ticketId: row.id, clientKey: 'resend-race-' + i,
+        }))));
+      assert.equal(race.filter((result) => result.status === 'fulfilled').length, 1);
+      assert.equal(race.filter((result) => result.status === 'rejected' && result.reason.code === 'RESEND_LIMIT').length, 1);
+      const raceAudit = await withTenant(db, tenantId, (tx) => tx.$queryRaw`
+        SELECT count(*)::int AS n FROM audit_logs
+        WHERE tenant_id = ${tenantId}::uuid AND actor_user_id = ${cs.userId}::uuid
+          AND action = 'ticket.email_resend' AND created_at > now() - interval '1 hour'
+      `);
+      assert.equal(raceAudit[0].n, 10);
+
       const seen = [];
       let cursor;
       let firstPage;
@@ -1116,6 +1176,100 @@ test(
           ),
         (error) => error instanceof AuthzError,
       );
+
+      // O06 admission reserves the TTL plus 24 hours before the day-90 deadline.
+      await withTenant(db, tenantId, (tx) => tx.$executeRaw`
+        UPDATE events SET ends_at = clock_timestamp() - interval '89 days'
+          + interval '1 hour 10 seconds'
+        WHERE tenant_id = ${tenantId}::uuid AND id = ${eventId}::uuid
+      `);
+      const pending = await withTenant(db, tenantId, (tx) => createExportJob(tx, {
+        tenantId, eventId, actorUserId: cs.userId,
+        clientKey: 'o06-before-cutoff', ttlSeconds: 3600,
+      }));
+      const readyBeforeCutoff = await withTenant(db, tenantId, (tx) => createExportJob(tx, {
+        tenantId, eventId, actorUserId: cs.userId,
+        clientKey: 'o06-ready-before-cutoff', ttlSeconds: 3600,
+      }));
+      await processExportJob(db, minio.cfg, tenantId, readyBeforeCutoff.exportId, 3600);
+      const readyExpiry = await withTenant(db, tenantId, (tx) => tx.$queryRaw`
+        SELECT x.status, x.expires_at, e.ends_at + interval '89 days' AS latest_expiry
+        FROM exports x JOIN events e ON e.tenant_id=x.tenant_id AND e.id=x.event_id
+        WHERE x.tenant_id=${tenantId}::uuid AND x.id=${readyBeforeCutoff.exportId}::uuid
+      `);
+      assert.equal(readyExpiry[0].status, 'READY');
+      assert.ok(readyExpiry[0].expires_at <= readyExpiry[0].latest_expiry,
+        'new READY download TTL must end before the day-89 purge window');
+      const preparedAtCutoff = await withTenant(db, tenantId, (tx) => createExportJob(tx, {
+        tenantId, eventId, actorUserId: cs.userId,
+        clientKey: 'o06-prepared-at-cutoff', ttlSeconds: 3600,
+      }));
+      await withTenant(db, tenantId, (tx) => tx.$executeRaw`
+        UPDATE events SET ends_at = clock_timestamp() - interval '89 days'
+          + interval '59 minutes 50 seconds'
+        WHERE tenant_id = ${tenantId}::uuid AND id = ${eventId}::uuid
+      `);
+      await assert.rejects(
+        withTenant(db, tenantId, (tx) => createExportJob(tx, {
+          tenantId, eventId, actorUserId: cs.userId,
+          clientKey: 'o06-at-cutoff', ttlSeconds: 3600,
+        })),
+        (error) => error instanceof ExportError && error.code === 'EXPORT_EXPIRED',
+      );
+      const nearCutoffRelay = await relayExportsOnce(db, {
+        MINIO_ENDPOINT: minio.cfg.endpoint, MINIO_ACCESS_KEY: minio.cfg.accessKey,
+        MINIO_SECRET_KEY: minio.cfg.secretKey, MINIO_BUCKET: minio.cfg.bucket,
+        MINIO_EXPORTS_ACCESS_KEY: minio.cfg.accessKey, MINIO_EXPORTS_SECRET_KEY: minio.cfg.secretKey,
+        MINIO_BUCKET_EXPORTS: minio.cfg.bucket,
+        EXPORT_TTL_SECONDS: '3600',
+      }, 'o06-near-cutoff-worker', 5);
+      assert.equal(nearCutoffRelay.claimed, 0, 'claim uses the same 24-hour buffer');
+      await processExportJob(db, minio.cfg, tenantId, preparedAtCutoff.exportId, 3600);
+      const cutoffJob = await withTenant(db, tenantId, (tx) => getExportJob(tx, {
+        tenantId, eventId, actorUserId: cs.userId,
+        exportId: preparedAtCutoff.exportId,
+      }));
+      assert.equal(cutoffJob.status, 'FAILED');
+      assert.equal(cutoffJob.error, 'EXPORT_EXPIRED');
+      await withTenant(db, tenantId, (tx) => tx.$executeRaw`
+        UPDATE events SET ends_at = clock_timestamp() - interval '91 days'
+        WHERE tenant_id = ${tenantId}::uuid AND id = ${eventId}::uuid
+      `);
+      const dueRelay = await relayExportsOnce(db, {
+        MINIO_ENDPOINT: minio.cfg.endpoint, MINIO_ACCESS_KEY: minio.cfg.accessKey,
+        MINIO_SECRET_KEY: minio.cfg.secretKey, MINIO_BUCKET: minio.cfg.bucket,
+        MINIO_EXPORTS_ACCESS_KEY: minio.cfg.accessKey, MINIO_EXPORTS_SECRET_KEY: minio.cfg.secretKey,
+        MINIO_BUCKET_EXPORTS: minio.cfg.bucket,
+        EXPORT_TTL_SECONDS: '3600',
+      }, 'o06-worker', 5);
+      assert.equal(dueRelay.claimed, 0, 'past-cutoff event cannot be claimed');
+      await processExportJob(db, minio.cfg, tenantId, pending.exportId, 3600);
+      const failed = await withTenant(db, tenantId, (tx) => getExportJob(tx, {
+        tenantId, eventId, actorUserId: cs.userId, exportId: pending.exportId,
+      }));
+      assert.equal(failed.status, 'FAILED');
+      assert.equal(failed.error, 'EXPORT_EXPIRED');
+      // A pre-migration READY row may have an old TTL beyond the retention limit.
+      await withTenant(db, tenantId, (tx) => tx.$executeRaw`
+        UPDATE exports SET expires_at = clock_timestamp() + interval '3 days'
+        WHERE tenant_id = ${tenantId}::uuid AND id = ${expiredId}::uuid
+      `);
+      await assert.rejects(
+        () => downloadExport(db, minio.cfg, {
+          tenantId, eventId, actorUserId: cs.userId, exportId: expiredId,
+        }),
+        (error) => error instanceof ExportError && error.code === 'EXPORT_EXPIRED',
+      );
+      await withTenant(db, tenantId, (tx) => tx.$executeRaw`
+        UPDATE events SET business_status = 'CANCELLED',
+          cancelled_at = clock_timestamp() - interval '100 days', ends_at = NULL
+        WHERE tenant_id = ${tenantId}::uuid AND id = ${eventId}::uuid
+      `);
+      const noEnd = await withTenant(db, tenantId, (tx) => createExportJob(tx, {
+        tenantId, eventId, actorUserId: cs.userId,
+        clientKey: 'o06-cancelled-null-end', ttlSeconds: 3600,
+      }));
+      assert.equal(noEnd.status, 'PENDING');
     } finally {
       if (db) await db.$disconnect().catch(() => {});
       if (minio) await minio.close();

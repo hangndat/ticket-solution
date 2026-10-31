@@ -1,6 +1,6 @@
 /**
  * ADR-19 — Public published-event projection (fail-closed).
- * Only visibility=PUBLIC + published_config_version; no admin fields.
+ * Catalog is PUBLIC-only; detail may also expose published UNLISTED events.
  */
 import {
   CURSOR_PAGE_LIMIT,
@@ -559,7 +559,7 @@ export async function listPlatformPublishedEvents(
 }
 
 /**
- * GET public detail — draft / unpublished / wrong tenant / unknown → null (404).
+ * GET public detail — PUBLIC or direct-link UNLISTED; unpublished / wrong tenant / unknown → null (404).
  */
 export async function getPublishedEventDetail(
   db: PrismaClient,
@@ -583,7 +583,7 @@ export async function getPublishedEventDetail(
        AND v.published_at IS NOT NULL
       WHERE e.tenant_id = ${tenant.id}::uuid
         AND e.slug = ${input.eventSlug}
-        AND e.visibility = 'PUBLIC'
+        AND e.visibility IN ('PUBLIC', 'UNLISTED')
         AND e.content_status = 'PUBLISHED'
         AND e.business_status = 'ACTIVE'
         AND e.published_config_version IS NOT NULL

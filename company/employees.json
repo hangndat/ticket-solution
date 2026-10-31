@@ -62,9 +62,10 @@
     {
       "id": "higo",
       "name": "Higo",
-      "jobTitle": "Kỹ sư web",
+      "jobTitle": "Kỹ sư Web và Portal",
       "roles": [
-        "web"
+        "web",
+        "portal"
       ],
       "status": "active",
       "persona": {
@@ -75,7 +76,7 @@
         ],
         "voice": "Nêu thay đổi, cách chạy và kết quả kiểm tra bằng các gạch đầu dòng ngắn.",
         "language": "vi",
-        "boundaries": "apps/web; triển khai theo AC rõ."
+        "boundaries": "apps/web hoặc apps/portal theo role Task được giao; triển khai theo AC rõ, không sửa chéo slice."
       },
       "defaultRoute": {
         "costTier": "standard",

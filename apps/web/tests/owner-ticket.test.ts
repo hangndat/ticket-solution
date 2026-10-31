@@ -9,6 +9,7 @@ import {
   loadOwnerTicket,
   loadOwnerWallet,
 } from '../src/owner-ticket';
+import { walletTicketHref } from '../src/owner-ticket/wallet-ticket-card';
 import { sanitizePostLoginPath } from '../src/oidc/post-login';
 
 const SAMPLE_ID = '97f77680-4d65-4b6d-baf3-b3f699a006a6';
@@ -341,5 +342,21 @@ describe('loadOwnerWallet', () => {
       assert.equal(result.tickets.length, 1);
     }
     assert.equal(ticketCalls, 2);
+  });
+});
+
+describe('walletTicketHref', () => {
+  it('prefers membership slug', () => {
+    assert.equal(
+      walletTicketHref(BASE_TICKET, 'uat-device'),
+      `/t/uat-device/tickets/${SAMPLE_ID}?tenantId=${TENANT_ID}`,
+    );
+  });
+
+  it('falls back to tenant UUID so attendee can open QR without membership', () => {
+    assert.equal(
+      walletTicketHref(BASE_TICKET, null),
+      `/t/${TENANT_ID}/tickets/${SAMPLE_ID}?tenantId=${TENANT_ID}`,
+    );
   });
 });

@@ -4,7 +4,7 @@ export const COST_TIER_ROUTES = {
   standard: [{ agent: "cursor", models: ["composer-2.5", "grok-4.7-low", "gemini-3.7-flash-low"], effort: null }],
   focused: [
     { agent: "claude", models: ["claude-sonnet-5"], effort: "low" },
-    { agent: "codex", models: ["gpt-6-sol"], effort: "low", quotaLimitIds: ["codex"] },
+    { agent: "codex", models: ["gpt-6-sol", "gpt-6.1-sol"], effort: "low", quotaLimitIds: ["codex"] },
   ],
   advanced: [
     { agent: "claude", models: ["claude-sonnet-5"], effort: "medium" },

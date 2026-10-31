@@ -9,7 +9,8 @@ import {
 import { Alert, Button, Flex, Form, Modal, Result, Space, Spin, Typography } from 'antd';
 import { PortalPage } from '../../../../../../src/components/portal-page';
 import { useParams } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect } from 'react';
+import { useActorState as useState } from '../../../../../../src/client/use-actor-state';
 import type {
   ConfigPreviewResponse,
   ConfigVersionSummary,
@@ -21,6 +22,8 @@ import {
   portalGet,
   portalMutate,
 } from '../../../../../../src/client/portal-fetch';
+import { useIntentMutation } from '../../../../../../src/client/use-intent-mutation';
+import { intentBlockMessageKey } from '../../../../../../src/client/intent-mutation';
 import {
   canPublishSavedVersion,
   configFieldDifferences,
@@ -70,6 +73,11 @@ export default function ConfigBrandPage() {
   const [conflict, setConflict] = useState(false);
   const [conflictDifferences, setConflictDifferences] = useState<ConfigFieldDifference[] | null>(null);
   const [form] = Form.useForm<ConfigFields>();
+  const rollbackIntent = useIntentMutation<{
+    targetVersion: number;
+    expectedPublishedVersion: number;
+    expectedRevision: number;
+  }>(tenantId, eventId, 'config.rollback');
 
   const configVersionsUrl = bffEventAction(
     tenantId,
@@ -259,7 +267,8 @@ export default function ConfigBrandPage() {
   }
 
   const canConfig = canPerformEventAction('saveConfig', access.permissions);
-  const publishedVersion = versions.find((v) => v.published)?.version ?? null;
+  const livePublishedVersion =
+    versions.find((v) => v.published)?.version ?? null;
   const publishVersionReady = canPublishSavedVersion({
     latestVersion: versions[0]?.version ?? null,
     previewVersion: selectedPreview?.version ?? null,
@@ -431,8 +440,12 @@ export default function ConfigBrandPage() {
   }
 
   function rollbackTo(targetVersion: number) {
-    if (!detail || publishedVersion == null) {
+    if (!detail || livePublishedVersion == null) {
       setNotice(t('config.h_1eg9ac0'));
+      return;
+    }
+    if (rollbackIntent.state === 'loading' || rollbackIntent.state === 'blocked') {
+      setNotice(t(intentBlockMessageKey(rollbackIntent.reason)));
       return;
     }
     Modal.confirm({
@@ -442,21 +455,40 @@ export default function ConfigBrandPage() {
       okButtonProps: { danger: true },
       cancelText: t('config.huy'),
       onOk: async () => {
-        const res = await portalMutate(
-          `${bffEventAction(tenantId, eventId, 'config')}/rollback`,
+        const outcome = await rollbackIntent.run(
           {
             targetVersion,
-            expectedPublishedVersion: publishedVersion,
+            expectedPublishedVersion: livePublishedVersion,
             expectedRevision: detail.revision,
           },
+          (body) =>
+            portalMutate(
+              `${bffEventAction(tenantId, eventId, 'config')}/rollback`,
+              body,
+            ),
+          () => true,
         );
-        if (res.networkError || res.status >= 500) {
+        if (outcome.kind === 'blocked') {
+          setNotice(t(intentBlockMessageKey(outcome.reason)));
+          return;
+        }
+        if (outcome.kind === 'unknown') {
           setNotice(t('config.h_1xteu8h'));
           return;
         }
-        if (res.status >= 200 && res.status < 300) {
+        if (outcome.kind === 'confirmed') {
           setNotice(t('config.h_145079h'));
           void load();
+          return;
+        }
+        const res = outcome.response;
+        if (
+          res.status === 409 &&
+          ['REVISION_CONFLICT', 'CONFIG_VERSION_MISMATCH'].includes(
+            apiErrorCode(res.json) ?? '',
+          )
+        ) {
+          await showVersionConflict();
           return;
         }
         setNotice(apiErrorMessage(res.json, t('config.h_14tzacc')));
@@ -730,11 +762,16 @@ export default function ConfigBrandPage() {
               {
                 title: '',
                 render: (_: unknown, row: ConfigVersionSummary) =>
-                  !row.published && publishedVersion != null ? (
+                  row.version !== livePublishedVersion &&
+                  livePublishedVersion != null ? (
                     <Button
                       size="small"
                       danger
-                      disabled={!canConfig}
+                      disabled={
+                        !canConfig ||
+                        rollbackIntent.state === 'loading' ||
+                        rollbackIntent.state === 'blocked'
+                      }
                       onClick={() => rollbackTo(row.version)}
                     >
                       {t('config.h_wotjs8')}
