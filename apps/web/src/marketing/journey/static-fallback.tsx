@@ -13,7 +13,7 @@ const FRAMES: Array<[JourneyChapterId, string]> = [
 export function JourneyStaticFallback({ locale }: { locale: MarketingLocale }) {
   const copy = journeyCopy(locale);
   return (
-    <div lang={locale} data-journey-static-fallback="" className="bg-[#03040c] text-[#faf9ff]">
+    <div lang={locale} data-journey-static-fallback="" data-journey="" className="bg-[var(--jr-void)] text-[var(--jr-paper)]">
       <header className="flex min-h-[72px] items-center justify-between gap-4 px-5">
         <a href={salesHref(locale)} className="font-display text-xl font-bold">Vemoki</a>
         <nav aria-label={t(locale, 'nav.locale.label')} className="flex gap-5">
@@ -30,20 +30,20 @@ export function JourneyStaticFallback({ locale }: { locale: MarketingLocale }) {
               <Image unoptimized src={`/marketing/journey/${plate}-1536.webp`} alt="" width={1536} height={1024}
                 loading={index === 0 ? 'eager' : 'lazy'} fetchPriority={index === 0 ? 'high' : 'auto'}
                 className="absolute inset-0 h-full w-full object-cover" />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#03040c] via-[#03040c]/30 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-[var(--jr-void)] via-[color-mix(in_srgb,var(--jr-void)_30%,transparent)] to-transparent" />
               <div className="relative w-full max-w-[36rem]">
-                <p className="text-sm text-[#ffb547]">{chapter.index} · {chapter.label}</p>
+                <p className="text-sm text-[var(--jr-amber)]">{chapter.index} · {chapter.label}</p>
                 <Heading className="mt-4 font-display text-4xl font-bold">{chapter.title}</Heading>
-                <p className="mt-4 text-lg leading-relaxed text-[#c2c6de]">{chapter.body}</p>
+                <p className="mt-4 text-lg leading-relaxed text-[var(--jr-muted)]">{chapter.body}</p>
               </div>
             </section>
           );
         })}
         <section className="px-5 py-20 text-center">
           <h2 className="font-display text-4xl font-bold">{copy.brandTitle}</h2>
-          <p className="mx-auto mt-5 max-w-[36rem] text-lg text-[#c2c6de]">{copy.brandBody}</p>
+          <p className="mx-auto mt-5 max-w-[36rem] text-lg text-[var(--jr-muted)]">{copy.brandBody}</p>
           <div className="mt-8 flex flex-wrap justify-center gap-6">
-            <a className="rounded-xl bg-[#7c4ded] px-6 py-3 font-semibold text-white" href={demoHref(productOriginFromEnv())}>{t(locale, 'demo.cta')}</a>
+            <a className="rounded-xl bg-primary px-6 py-3 font-semibold text-white" href={demoHref(productOriginFromEnv())}>{t(locale, 'demo.cta')}</a>
             <a className="px-6 py-3 underline" href={`${salesHref(locale)}#interest`}>{t(locale, 'nav.interest')}</a>
           </div>
         </section>

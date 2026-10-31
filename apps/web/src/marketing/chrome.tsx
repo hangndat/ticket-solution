@@ -2,6 +2,7 @@ import { Button } from '@ticket/ui';
 import Link from 'next/link';
 import Image from 'next/image';
 import type { ReactNode } from 'react';
+import { cn } from '../../lib/utils';
 import { t } from './copy';
 import {
   demoHref,
@@ -22,9 +23,7 @@ import {
   marketingWrap,
 } from './marketing-surface';
 import { privacyHref, salesHref, supportHref, type MarketingPageKind } from './links';
-import { MarketingNeonEdgeDecor } from './marketing-neon-edge-decor';
 import { MarketingNeonScope } from './marketing-neon-scope';
-import { MarketingNeonPrimaryButton } from './marketing-neon-primary-button';
 
 export function MarketingChrome({
   locale,
@@ -50,7 +49,6 @@ export function MarketingChrome({
       data-marketing-neon={onSales ? '' : undefined}
     >
       <MarketingNeonScope enabled={onSales} />
-      {pageKind === 'sales' ? <MarketingNeonEdgeDecor /> : null}
       <a className={marketingSkip} href="#main">
         {t(locale, 'skip')}
       </a>
@@ -60,7 +58,10 @@ export function MarketingChrome({
         data-header-on-ink={onInk ? '' : undefined}
       >
         <Link
-          className={`${marketingWordmark} mkt-neon-wordmark-link`}
+          className={cn(
+            marketingWordmark,
+            'inline-flex items-center gap-[0.15rem] no-underline text-inherit focus-visible:rounded-md focus-visible:outline focus-visible:outline-3 focus-visible:outline-focus focus-visible:outline-offset-2',
+          )}
           href={sales}
           aria-label={t(locale, 'nav.brand')}
           data-testid="mkt-wordmark"
@@ -92,9 +93,9 @@ export function MarketingChrome({
             <a href={login}>{t(locale, 'nav.login')}</a>
           </Button>
           {!onSales ? (
-            <MarketingNeonPrimaryButton asChild data-testid="mkt-chrome-demo">
+            <Button asChild variant="ghost" className="mkt-neon-btn-primary" data-testid="mkt-chrome-demo">
               <a href={demo}>{t(locale, 'nav.demo')}</a>
-            </MarketingNeonPrimaryButton>
+            </Button>
           ) : null}
         </nav>
         <LocaleSwitch locale={locale} pageKind={pageKind} onInk={onInk} />
