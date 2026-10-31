@@ -728,7 +728,28 @@ test('[PORT-09] CS lookup masks PII and resend preserves the ticket with cooldow
   await page.goto(portalUrl(m, eventPath(f, '/support')));
   const panel = page.locator('#cs');
   await panel.getByPlaceholder('Mã vé hoặc mã yêu cầu').fill(matrix.unknown);
+  const unknownSearch = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return (
+      response.request().method() === 'GET' &&
+      url.pathname === eventBff(f, '/tickets') &&
+      url.searchParams.get('q') === matrix.unknown
+    );
+  });
   await panel.getByRole('button', { name: 'Tra cứu', exact: true }).click();
+  const unknownResponse = await unknownSearch;
+  expect(unknownResponse.status()).toBe(200);
+  const unknownSearchBody = (await unknownResponse.json()) as {
+    items: Array<{
+      ticketId: string;
+      notification: { providerStatus: string };
+    }>;
+  };
+  expect(unknownSearchBody.items).toHaveLength(1);
+  expect(unknownSearchBody.items[0].ticketId).toBe(matrix.unknown);
+  expect(unknownSearchBody.items[0].notification.providerStatus).toBe(
+    'UNKNOWN',
+  );
   const unknownBrowserRow = panel
     .getByRole('row')
     .filter({ hasText: matrix.unknown });
@@ -740,6 +761,23 @@ test('[PORT-09] CS lookup masks PII and resend preserves the ticket with cooldow
   await expect(
     panel.getByText('notification UNKNOWN', { exact: true }),
   ).toBeVisible();
+  await test.info().attach('PORT-09-unknown-browser', {
+    body: await panel.screenshot(),
+    contentType: 'image/png',
+  });
+  await test.info().attach('PORT-09-unknown-browser-metadata', {
+    body: JSON.stringify({
+      route: page.url(),
+      viewport: page.viewportSize(),
+      locale: await page.locator('html').getAttribute('lang'),
+      persona: 'cs',
+      ticketId: matrix.unknown,
+      responseStatus: unknownResponse.status(),
+      providerStatus: unknownSearchBody.items[0].notification.providerStatus,
+      timeline: 'notification UNKNOWN',
+    }),
+    contentType: 'application/json',
+  });
   await panel.getByPlaceholder('Mã vé hoặc mã yêu cầu').fill(f.ticketId);
   await panel.getByRole('button', { name: 'Tra cứu', exact: true }).click();
   const row = panel.getByRole('row').filter({ hasText: f.ticketId });
