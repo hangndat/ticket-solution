@@ -5,14 +5,9 @@ import {
   type MarketingLocale,
 } from './hosts';
 import { MarketingChrome } from './chrome';
-import { AudienceSection } from './sections/audience';
-import { CtaSection } from './sections/cta';
-import { FaqSection } from './sections/faq';
 import { HeroSection } from './sections/hero';
-import { OutcomesSection } from './sections/outcomes';
-import { BentoSection } from './sections/bento';
-import { TrustSection } from './sections/trust';
-import { WorkflowSection } from './sections/workflow';
+import { NeonFinalCta, NeonShowcase } from './sections/neon-showcase';
+import { MarketingInterestDialog } from './marketing-interest-dialog';
 
 export function SalesPage({ locale }: { locale: MarketingLocale }) {
   const productOrigin = productOriginFromEnv();
@@ -23,17 +18,14 @@ export function SalesPage({ locale }: { locale: MarketingLocale }) {
   };
 
   return (
-    <MarketingChrome locale={locale} pageKind="sales">
-      <main id="main" data-testid={`sales-${locale}`}>
-        <HeroSection {...sectionProps} />
-        <TrustSection {...sectionProps} />
-        <BentoSection {...sectionProps} />
-        <WorkflowSection {...sectionProps} />
-        <AudienceSection {...sectionProps} />
-        <OutcomesSection {...sectionProps} />
-        <FaqSection {...sectionProps} />
-        <CtaSection {...sectionProps} />
-      </main>
-    </MarketingChrome>
+    <MarketingInterestDialog locale={locale} demo={sectionProps.demo}>
+      <MarketingChrome locale={locale} pageKind="sales">
+        <main id="main" data-testid={`sales-${locale}`}>
+          <HeroSection {...sectionProps} />
+          <NeonShowcase {...sectionProps} />
+          <NeonFinalCta {...sectionProps} />
+        </main>
+      </MarketingChrome>
+    </MarketingInterestDialog>
   );
 }

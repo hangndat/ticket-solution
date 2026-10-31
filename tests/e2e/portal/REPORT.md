@@ -1,5 +1,24 @@
 # Portal/Platform E2E — bàn giao worker
 
+## PORT-13 — revalidation tích hợp 31/10/2026
+
+Clean run `mvvw54qv-c11d7d` tại SHA `dab48d601d34eed68ae8a8e13aa3b2a0157c2811`: browser **PASS 3/3**, zero retry, commitStable/evidenceExactShaEligible=true. Fixture có 55 PENDING_REVIEW; đã assert hai trang 50+5 UUID đúng thứ tự, không trùng, filter đổi UUID và khôi phục saved view trước/sau reload, actor/tenant isolation. Binaries từ `607d89ab` được tái dùng vì delta chỉ bốn assertion chuyển sang `expect.poll`; không đổi runtime. James revalidation đóng F01 provenance và F03 pagination; full PORT-13 vẫn BLOCKED bởi sort contract. Lượt sửa 1/2. Bản ghi trước dưới đây là lịch sử đã được checkpoint này thay thế về provenance và pagination.
+
+## PORT-13 — locale/filter/saved-view B, sort BLOCKED (Higo, 31/10/2026)
+
+**Runtime PASS (partial, không fullgroup)** tại tested SHA `70e1531b7925c5a71037ba27c54223c2d5dec6f1`, run `mvvtnabj-4ca5f2`, `node tests/e2e/harness/run.mjs e2e --case=PORT-13`. `workingTreeDirty=false`, `commitStable=true`, `evidenceExactShaEligible=true`. 3/3 test browser PASS, exitCode 0; cleanup containers/network đã chạy theo harness. AC → assertion → evidence:
+
+- **Locale VI mặc định/EN additive, giữ sau reload**: `portal-core.spec.ts [PORT-13] Portal locale defaults VI and persists EN through reload` — `html[lang]` vi→en, EN giữ sau `page.reload()`.
+- **Filter + saved view theo user+tenant, giữ sau reload**: `portal-core.spec.ts [PORT-13] Portal filter + saved view persist for owner and are not hydrated after switching actor...` — filter UUID (`q`) trên `#pending` áp dụng, lưu view qua `SavedViewsToolbar`, mở lại menu sau `page.reload()` thấy tên view đã lưu (localStorage key `userId:tenantId`, `apps/portal/src/views/storage.ts`).
+- **Đổi actor không hydrate view cũ (cùng browser profile)**: cùng test — logout owner → `page.context().newPage()` cho `manager` cùng context (cùng cookies/localStorage) → nút "Quản lý view" disabled, tên view của owner không xuất hiện.
+- **Đổi tenant không hydrate view cũ (cùng actor, cùng browser profile)**: `portal-core.spec.ts [PORT-13] Portal saved view does not hydrate across tenants for the same owner...` — fixture gốc chỉ có 1 tenant (`FIXTURES.md` ghi cần 2 tenant ACTIVE); provision tenant thứ hai qua helper runtime-role riêng `tests/e2e/portal/port13-db.ts` (không sửa `tests/e2e/harness/seed.mjs` của Gonic), grant owner Membership Owner ở tenant mới qua `@ticket/backend` (`withTenant`/`grantMembership`, cùng cơ chế seed.mjs dùng). Lưu view ở tenant A (`/t/{A}/members`) → không thấy ở tenant B và ngược lại; lưu view riêng ở tenant B → về tenant A vẫn giữ view A, không có view B.
+
+**BLOCKED (không PASS fullgroup):**
+- **Sort**: không có UI nào trong Portal wire sort qua `SavedViewsToolbar` (`sort` luôn null) dù `SORT_ALLOWLIST` tồn tại ở `apps/portal/src/views/allowlist.ts`. Kiểm backend: `apps/api/src/approval.ts` `listPending` → `packages/backend/src/redemption-status.ts` `listStaffPendingRedemptions` hard-code `ORDER BY r.created_at ASC, r.id ASC` với keyset cursor gắn chặt thứ tự đó; quét toàn bộ `ORDER BY` ở `cs.ts/gate.ts/guest-invitations.ts/issue.ts/published-events.ts` — không surface nào có sort param. Đây là contract gap Backend/API, không tự sửa trong ownership Web; đã báo coordinator (Minh/leader) qua `ask`, quyết định: giữ BLOCKED, giao backend/architect contract riêng sau slot WEB-12.
+- **Pagination (nextCursor thực tế)**: fixture PORT-13 không có PENDING_REVIEW nào được seed (0 dòng), nên nút "Trang sau" (`view.nextCursor`) chưa từng được kích hoạt/kiểm trong lượt này; cơ chế cursor có sẵn trong code (`pending-panel.tsx`) nhưng chưa có evidence browser với dữ liệu thật.
+
+**Không cover**: a11y (O33 OUT theo scope), automation/share server (P2b, chưa có contract — khớp AC "không yêu cầu shared saved views/automation chưa chốt").
+
 ## PORT-09 — clean runtime B1 (Minh, 31/10/2026)
 
 **Runtime PASS** tại tested SHA `82089a959f24cf2ec52b110dcd47e5de325d7195`, run `mvvrilmh-ca2b2e`, `pnpm test:e2e --case=PORT-09`. `workingTreeDirty=false`, `commitStable=true`, `evidenceExactShaEligible=true`; start/end commit trùng nhau. Toàn bộ case qua F01 real worker/PG/Mailpit, F02 five-state BFF/list/detail/timeline và browser UNKNOWN, F03 cooldown/limit negative PG assertions. Witness response200/UNKNOWN, ảnh crop panel và metadata viewport1280x720/vi/cs nằm trong results.json attachments, trích nguyên bản ở `tests/e2e/.artifacts/mvvrilmh-ca2b2e/review-evidence/`. Cleanup containers/network đã hoàn tất.
