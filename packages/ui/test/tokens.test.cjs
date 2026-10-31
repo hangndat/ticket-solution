@@ -35,6 +35,11 @@ function readThemeVar(css, name) {
 }
 
 describe('@ticket/ui token generator', () => {
+  it('wordmark and signal match brand/vemoki/tokens.json', () => {
+    assert.equal(tokens.wordmark, 'Vemoki');
+    assert.equal(tokens.signal, '');
+  });
+
   it('snapshot matches brand/vemoki/tokens.json colors', () => {
     for (const key of Object.keys(tokens.colors)) {
       const expected = tokens.colors[key].toUpperCase();
@@ -68,7 +73,7 @@ describe('@ticket/ui token generator', () => {
     for (const key of Object.keys(tokens.breakpoints)) {
       assert.equal(readThemeVar(themeCss, `breakpoint-${key}`), `${tokens.breakpoints[key]}px`);
     }
-    for (const key of ['line', 'muted', 'destructive', 'admit', 'unknown']) {
+    for (const key of ['line', 'muted', 'destructive', 'admit', 'unknown', 'primary']) {
       assert.equal(
         readThemeVar(themeCss, `color-${key}`).toUpperCase(),
         tokens.colors[key].toUpperCase(),
