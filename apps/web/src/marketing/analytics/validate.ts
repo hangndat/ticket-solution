@@ -1,5 +1,6 @@
 import {
   MARKETING_ANALYTICS_CLIENT_EVENTS,
+  JOURNEY_MILESTONES,
   PII_PROP_KEYS,
   type MarketingAnalyticsEventName,
   type MarketingAnalyticsProps,
@@ -68,7 +69,8 @@ function propsForEvent(
 
   switch (event) {
     case 'cta_click': {
-      if (keys.length !== 2 || !keys.includes('cta_id') || !keys.includes('locale')) {
+      if (!keys.includes('cta_id') || !keys.includes('locale') ||
+          keys.some((key) => !['cta_id', 'locale', 'surface'].includes(key))) {
         return null;
       }
       const cta_id = stringProp(input.cta_id, CTA_IDS);
@@ -76,7 +78,18 @@ function propsForEvent(
       if (!cta_id || !locale) return null;
       out.cta_id = cta_id;
       out.locale = locale;
+      if (keys.includes('surface')) {
+        if (input.surface !== 'journey') return null;
+        out.surface = 'journey';
+      }
       return out;
+    }
+    case 'journey_progress': {
+      if (keys.length !== 2 || !keys.includes('milestone') || !keys.includes('locale')) return null;
+      const milestone = stringProp(input.milestone, new Set<string>(JOURNEY_MILESTONES));
+      const locale = stringProp(input.locale, LOCALES);
+      if (!milestone || !locale) return null;
+      return { milestone, locale };
     }
     case 'form_start': {
       if (keys.length !== 1 || !keys.includes('locale')) return null;

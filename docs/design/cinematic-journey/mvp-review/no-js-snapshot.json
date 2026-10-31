@@ -1,0 +1,55 @@
+{
+  "origin": "http://127.0.0.1:3012/experience",
+  "refs": {
+    "e1": {
+      "name": "B\u1ecf qua \u0111\u1ebfn n\u1ed9i dung",
+      "role": "link"
+    },
+    "e10": {
+      "name": "\u0110\u00eam h\u1ed9i \u0111ang ch\u1edd.",
+      "role": "heading"
+    },
+    "e11": {
+      "name": "M\u1ed9t l\u1ea7n qu\u00e9t. C\u1ed5ng m\u1edf.",
+      "role": "heading"
+    },
+    "e12": {
+      "name": "B\u1ea1n \u0111\u00e3 \u1edf \u0111\u00e2y.",
+      "role": "heading"
+    },
+    "e2": {
+      "name": "Vemoki",
+      "role": "link"
+    },
+    "e3": {
+      "name": "Ng\u00f4n ng\u1eef",
+      "role": "navigation"
+    },
+    "e4": {
+      "name": "VI",
+      "role": "link"
+    },
+    "e5": {
+      "name": "EN",
+      "role": "link"
+    },
+    "e6": {
+      "name": "T\u1eeb t\u1ea5m v\u00e9 \u0111\u1ebfn kho\u1ea3nh kh\u1eafc.",
+      "role": "heading"
+    },
+    "e7": {
+      "name": "M\u1edf demo tr\u00ean \u1ee9ng d\u1ee5ng",
+      "role": "link"
+    },
+    "e8": {
+      "name": "\u0110\u0103ng k\u00fd t\u01b0 v\u1ea5n",
+      "role": "link"
+    },
+    "e9": {
+      "name": "T\u1ea5m v\u00e9 t\u00ecm \u0111\u1ebfn b\u1ea1n.",
+      "role": "heading"
+    }
+  },
+  "snapshot": "- link \"B\u1ecf qua \u0111\u1ebfn n\u1ed9i dung\" [ref=e1]\n- banner\n  - link \"Vemoki\" [ref=e2]\n  - navigation \"Ng\u00f4n ng\u1eef\" [ref=e3]\n    - link \"VI\" [ref=e4]\n    - link \"EN\" [ref=e5]\n- main\n  - generic\n    - generic\n      - paragraph\n        - StaticText \"01 \u00b7 L\u1eddi m\u1eddi\"\n      - heading \"T\u1ea5m v\u00e9 t\u00ecm \u0111\u1ebfn b\u1ea1n.\" [level=1, ref=e9]\n      - paragraph\n        - StaticText \"Ph\u00e1t h\u00e0nh, g\u1eedi v\u00e0 l\u01b0u trong v\u00ed \u2014 m\u1ed9t t\u1ea5m v\u00e9 \u0111i\u1ec7n t\u1eed duy nh\u1ea5t, an to\u00e0n t\u1eeb gi\u00e2y \u0111\u1ea7u ti\u00ean.\"\n  - generic\n    - generic\n      - paragraph\n        - StaticText \"02 \u00b7 \u0110\u1ebfn n\u01a1i\"\n      - heading \"\u0110\u00eam h\u1ed9i \u0111ang ch\u1edd.\" [level=2, ref=e10]\n      - paragraph\n        - StaticText \"Kh\u00f4ng x\u1ebfp h\u00e0ng in v\u00e9. T\u1ea5m v\u00e9 \u0111i c\u00f9ng b\u1ea1n tr\u00ean con \u0111\u01b0\u1eddng d\u1eabn \u0111\u1ebfn \u00e1nh \u0111\u00e8n.\"\n  - generic\n    - generic\n      - paragraph\n        - StaticText \"03 \u00b7 C\u1eeda v\u00e0o\"\n      - heading \"M\u1ed9t l\u1ea7n qu\u00e9t. C\u1ed5ng m\u1edf.\" [level=2, ref=e11]\n      - paragraph\n        - StaticText \"M\u00e3 QR \u0111\u01b0\u1ee3c x\u00e1c th\u1ef1c ngay t\u1ea1i c\u1ed5ng \u2014 k\u1ec3 c\u1ea3 khi m\u1ea1ng ch\u1eadp ch\u1eddn.\"\n  - generic\n    - generic\n      - paragraph\n        - StaticText \"04 \u00b7 Kho\u1ea3nh kh\u1eafc\"\n      - heading \"B\u1ea1n \u0111\u00e3 \u1edf \u0111\u00e2y.\" [level=2, ref=e12]\n      - paragraph\n        - StaticText \"Ph\u1ea7n c\u00f2n l\u1ea1i l\u00e0 \u00e2m nh\u1ea1c.\"\n  - generic\n    - heading \"T\u1eeb t\u1ea5m v\u00e9 \u0111\u1ebfn kho\u1ea3nh kh\u1eafc.\" [level=2, ref=e6]\n    - paragraph\n      - StaticText \"Vemoki v\u1eadn h\u00e0nh v\u00e9, check-in v\u00e0 tr\u1ea3i nghi\u1ec7m kh\u00e1n gi\u1ea3 cho s\u1ef1 ki\u1ec7n c\u1ee7a b\u1ea1n.\"\n    - link \"M\u1edf demo tr\u00ean \u1ee9ng d\u1ee5ng\" [ref=e7]\n    - link \"\u0110\u0103ng k\u00fd t\u01b0 v\u1ea5n\" [ref=e8]",
+  "browserPageId": "1da19bc7-99e9-4cfe-a520-6fd180c887b2"
+}

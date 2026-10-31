@@ -1,0 +1,201 @@
+{
+  "lcp": [],
+  "shifts": [
+    {
+      "value": 0.08649075600091342,
+      "recent": false,
+      "time": 296.5
+    }
+  ],
+  "viewport": [
+    390,
+    844
+  ],
+  "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.7871.250 Safari/537.36",
+  "navigation": [
+    {
+      "type": "navigate",
+      "ttfb": 16.299999982118607,
+      "dom": 64.19999998807907
+    }
+  ],
+  "resources": [
+    {
+      "name": "http://127.0.0.1:3015/_next/static/media/BeVietnamPro_Bold-s.p.1l45fvkzgiibd.ttf",
+      "bytes": 140600,
+      "duration": 8.900000005960464
+    },
+    {
+      "name": "http://127.0.0.1:3015/marketing/journey/ticket-night-1536.webp",
+      "bytes": 41904,
+      "duration": 7
+    },
+    {
+      "name": "http://127.0.0.1:3015/_next/static/chunks/367f38_fsxvkw.css",
+      "bytes": 1646,
+      "duration": 10.599999994039536
+    },
+    {
+      "name": "http://127.0.0.1:3015/_next/static/media/BeVietnamPro_Medium-s.p.19abmr8h7y3ap.ttf",
+      "bytes": 136280,
+      "duration": 9.299999982118607
+    },
+    {
+      "name": "http://127.0.0.1:3015/_next/static/media/BeVietnamPro_Regular-s.p.10yb5zf2qqm9h.ttf",
+      "bytes": 133248,
+      "duration": 9.799999982118607
+    },
+    {
+      "name": "http://127.0.0.1:3015/_next/static/media/Sora_Variable-s.p.19jzllqzq-o4u.ttf",
+      "bytes": 111700,
+      "duration": 11.099999994039536
+    },
+    {
+      "name": "http://127.0.0.1:3015/_next/static/media/BeVietnamPro_SemiBold-s.p.1_m9lh0hxok-b.ttf",
+      "bytes": 137036,
+      "duration": 10.899999976158142
+    },
+    {
+      "name": "http://127.0.0.1:3015/_next/image?url=%2Fmarketing%2Fneon%2Fvemoki-v-mark.png&w=48&q=75",
+      "bytes": 1696,
+      "duration": 15.599999994039536
+    },
+    {
+      "name": "http://127.0.0.1:3015/_next/static/chunks/1xii76o5mx4dt.css",
+      "bytes": 1474,
+      "duration": 12.900000005960464
+    },
+    {
+      "name": "http://127.0.0.1:3015/_next/static/chunks/3lqamojnvrlei.css",
+      "bytes": 199835,
+      "duration": 17.19999998807907
+    },
+    {
+      "name": "http://127.0.0.1:3015/_next/static/chunks/2ue1o2ezsd2ss.js",
+      "bytes": 5898,
+      "duration": 16.69999998807907
+    },
+    {
+      "name": "http://127.0.0.1:3015/_next/static/chunks/1y5pf40w_1bgj.js",
+      "bytes": 34297,
+      "duration": 17.900000005960464
+    },
+    {
+      "name": "http://127.0.0.1:3015/_next/static/chunks/turbopack-3-ry682tkyiqk.js",
+      "bytes": 10330,
+      "duration": 18.80000001192093
+    },
+    {
+      "name": "http://127.0.0.1:3015/_next/static/chunks/3ieqtir-jytq_.js",
+      "bytes": 15356,
+      "duration": 19.80000001192093
+    },
+    {
+      "name": "http://127.0.0.1:3015/_next/static/chunks/2n6q8w5523voq.js",
+      "bytes": 26816,
+      "duration": 21.30000001192093
+    },
+    {
+      "name": "http://127.0.0.1:3015/_next/static/chunks/03qm12z3ygzej.js",
+      "bytes": 163973,
+      "duration": 22.400000005960464
+    },
+    {
+      "name": "http://127.0.0.1:3015/_next/static/chunks/38-1i-zxdiyqj.js",
+      "bytes": 230017,
+      "duration": 24
+    },
+    {
+      "name": "http://127.0.0.1:3015/_next/static/chunks/0x6xfcrp03fl4.js",
+      "bytes": 831315,
+      "duration": 42.099999994039536
+    },
+    {
+      "name": "http://127.0.0.1:3015/_next/static/chunks/05mbmfmpprs7d.js",
+      "bytes": 50191,
+      "duration": 23.700000017881393
+    },
+    {
+      "name": "http://127.0.0.1:3015/_next/static/chunks/40eolblp6ve0i.js",
+      "bytes": 16135,
+      "duration": 26.30000001192093
+    },
+    {
+      "name": "http://127.0.0.1:3015/_next/static/chunks/37ske0tve_58w.js",
+      "bytes": 317664,
+      "duration": 30.30000001192093
+    },
+    {
+      "name": "http://127.0.0.1:3015/marketing/journey/ticket-night-1536.avif",
+      "bytes": 36263,
+      "duration": 12.200000017881393
+    },
+    {
+      "name": "http://127.0.0.1:3015/_next/static/chunks/44hrwpk6ln2-9.js",
+      "bytes": 2314,
+      "duration": 26.5
+    },
+    {
+      "name": "http://127.0.0.1:3015/_next/static/chunks/1w3nu4o67t48_.js",
+      "bytes": 15187,
+      "duration": 29.200000017881393
+    },
+    {
+      "name": "http://127.0.0.1:3015/_next/static/chunks/1f2s4fi--1-wb.js",
+      "bytes": 59247,
+      "duration": 29.100000023841858
+    },
+    {
+      "name": "http://127.0.0.1:3015/_next/static/chunks/21wdyh-5y9kn9.js",
+      "bytes": 148095,
+      "duration": 31.200000017881393
+    },
+    {
+      "name": "http://127.0.0.1:3015/_next/image?url=%2Fmarketing%2Fneon%2Fvemoki-v-mark.png&w=48&q=75",
+      "bytes": 1696,
+      "duration": 3.2000000178813934
+    },
+    {
+      "name": "http://127.0.0.1:3015/marketing/journey/gateway-closed-1536.avif",
+      "bytes": 111955,
+      "duration": 5.199999988079071
+    },
+    {
+      "name": "http://127.0.0.1:3015/marketing/journey/stage-main-1536.avif",
+      "bytes": 111034,
+      "duration": 5.4000000059604645
+    },
+    {
+      "name": "http://127.0.0.1:3015/api/marketing/events",
+      "bytes": 300,
+      "duration": 3
+    },
+    {
+      "name": "http://127.0.0.1:3015/_next/static/media/BeVietnamPro_Bold-s.p.1l45fvkzgiibd.ttf",
+      "bytes": 140600,
+      "duration": 7.399999976158142
+    },
+    {
+      "name": "http://127.0.0.1:3015/_next/static/media/BeVietnamPro_Medium-s.p.19abmr8h7y3ap.ttf",
+      "bytes": 136280,
+      "duration": 6.699999988079071
+    },
+    {
+      "name": "http://127.0.0.1:3015/_next/static/media/BeVietnamPro_Regular-s.p.10yb5zf2qqm9h.ttf",
+      "bytes": 133248,
+      "duration": 6.9000000059604645
+    },
+    {
+      "name": "http://127.0.0.1:3015/_next/static/media/BeVietnamPro_SemiBold-s.p.1_m9lh0hxok-b.ttf",
+      "bytes": 137036,
+      "duration": 7.0999999940395355
+    },
+    {
+      "name": "http://127.0.0.1:3015/_next/static/media/Sora_Variable-s.p.19jzllqzq-o4u.ttf",
+      "bytes": 111700,
+      "duration": 8
+    }
+  ],
+  "cls": 0.08649075600091342,
+  "condition": "Production local via QA-only same-origin iframe 390x844; Chromium desktop hardware; no throttling; fresh proxy origin. QA proxy removes frame policy only, source unchanged."
+}

@@ -4,13 +4,20 @@ import {
   marketingOriginFromEnv,
   type MarketingLocale,
 } from '../hosts';
-import { privacyHref, salesHref, supportHref } from '../links';
+import {
+  journeyHref,
+  privacyHref,
+  salesHref,
+  supportHref,
+  type MarketingPageKind,
+} from '../links';
 
-export type MarketingPageKind = 'sales' | 'privacy' | 'support';
+export type { MarketingPageKind };
 
 function pagePath(locale: MarketingLocale, kind: MarketingPageKind): string {
   if (kind === 'privacy') return privacyHref(locale);
   if (kind === 'support') return supportHref(locale);
+  if (kind === 'journey') return journeyHref(locale);
   return salesHref(locale);
 }
 

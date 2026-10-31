@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useState } from 'react';
 import { Button } from '@ticket/ui';
 import {
@@ -16,6 +15,7 @@ import {
   marketingNavMobileActions,
   marketingNavMobileLink,
 } from './marketing-surface';
+import { InterestCtaAnchor } from './interest-cta-link';
 
 const MENU_ID = 'mkt-nav-mobile-menu';
 
@@ -35,18 +35,18 @@ export function MarketingMobileNavMenu({
   const closeMobile = () => setOpen(false);
 
   const sectionLinks = [
-    { href: `${sales}#features`, label: t(locale, 'nav.features') },
-    { href: `${sales}#how_it_works`, label: t(locale, 'nav.how') },
-    { href: `${sales}#solutions`, label: t(locale, 'nav.solutions') },
-    { href: `${sales}#faq`, label: t(locale, 'nav.faq') },
+    { href: `${sales}#events`, label: t(locale, 'nav.events') },
+    { href: `${sales}#product`, label: t(locale, 'nav.product') },
+    { href: `${sales}#interest`, label: t(locale, 'nav.advisory') },
     { href: demo, label: t(locale, 'nav.demo') },
   ];
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <button
+        <Button
           type="button"
+          variant="ghostOnInk"
           className={marketingNavMenuToggle}
           aria-controls={MENU_ID}
           aria-haspopup="dialog"
@@ -58,7 +58,7 @@ export function MarketingMobileNavMenu({
           <span className="text-lg leading-none" aria-hidden="true">
             {open ? '×' : '☰'}
           </span>
-        </button>
+        </Button>
       </SheetTrigger>
       <SheetContent
         id={MENU_ID}
@@ -70,31 +70,33 @@ export function MarketingMobileNavMenu({
       >
         <SheetTitle className="sr-only">{t(locale, 'nav.menu.label')}</SheetTitle>
         <nav className="grid gap-1" aria-label={locale === 'en' ? 'Primary' : 'Chính'}>
-          {sectionLinks.map((item) => (
-            <a
-              key={item.href}
-              className={marketingNavMobileLink}
-              href={item.href}
-              onClick={closeMobile}
-            >
-              {item.label}
-            </a>
-          ))}
+          {sectionLinks.map((item) =>
+            item.href.includes('#interest') ? (
+              <InterestCtaAnchor
+                key={item.href}
+                className={marketingNavMobileLink}
+                href={item.href}
+                onClick={closeMobile}
+              >
+                {item.label}
+              </InterestCtaAnchor>
+            ) : (
+              <a
+                key={item.href}
+                className={marketingNavMobileLink}
+                href={item.href}
+                onClick={closeMobile}
+              >
+                {item.label}
+              </a>
+            ),
+          )}
         </nav>
         <div className={marketingNavMobileActions}>
           <Button asChild variant="ghostOnInk" block>
             <a href={login} onClick={closeMobile}>
               {t(locale, 'nav.login')}
             </a>
-          </Button>
-          <Button asChild variant="primary" block>
-            <Link
-              href={`${sales}#interest`}
-              data-testid="cta-interest-nav-mobile"
-              onClick={closeMobile}
-            >
-              {t(locale, 'nav.interest')}
-            </Link>
           </Button>
         </div>
       </SheetContent>

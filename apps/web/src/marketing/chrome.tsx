@@ -20,8 +20,11 @@ import {
   marketingWordmark,
   marketingWrap,
 } from './marketing-surface';
-import { privacyHref, salesHref, supportHref } from './links';
+import { privacyHref, salesHref, supportHref, type MarketingPageKind } from './links';
+import { MarketingNeonEdgeDecor } from './marketing-neon-edge-decor';
 import { MarketingNeonScope } from './marketing-neon-scope';
+import { MarketingNeonLogo } from './marketing-neon-logo';
+import { MarketingNeonPrimaryButton } from './marketing-neon-primary-button';
 
 export function MarketingChrome({
   locale,
@@ -29,14 +32,14 @@ export function MarketingChrome({
   children,
 }: {
   locale: MarketingLocale;
-  pageKind: 'sales' | 'privacy' | 'support';
+  pageKind: MarketingPageKind;
   children: ReactNode;
 }) {
   const productOrigin = productOriginFromEnv();
   const demo = demoHref(productOrigin);
   const login = loginHref(productOrigin);
   const sales = salesHref(locale);
-  const onSales = pageKind === 'sales';
+  const onSales = pageKind === 'sales' || pageKind === 'journey';
   const onInk = onSales;
 
   return (
@@ -47,6 +50,7 @@ export function MarketingChrome({
       data-marketing-neon={onSales ? '' : undefined}
     >
       <MarketingNeonScope enabled={onSales} />
+      {pageKind === 'sales' ? <MarketingNeonEdgeDecor /> : null}
       <a className={marketingSkip} href="#main">
         {t(locale, 'skip')}
       </a>
@@ -56,24 +60,27 @@ export function MarketingChrome({
         data-header-on-ink={onInk ? '' : undefined}
       >
         <Link
-          className={marketingWordmark}
+          className={`${marketingWordmark} mkt-neon-wordmark-link`}
           href={sales}
           aria-label={t(locale, 'nav.brand')}
           data-testid="mkt-wordmark"
         >
-          {t(locale, 'nav.brand')}
-          <span aria-hidden="true">↗</span>
+          {onSales ? (
+            <MarketingNeonLogo />
+          ) : (
+            <span className="font-display text-[1.35rem] font-bold tracking-tight">
+              Vemoki
+            </span>
+          )}
+          <span className="sr-only">{t(locale, 'nav.brand')}</span>
         </Link>
-        <LocaleSwitch locale={locale} pageKind={pageKind} onInk={onInk} />
         <nav className={marketingNav} aria-label={locale === 'en' ? 'Primary' : 'Chính'}>
           {onSales ? (
             <>
               <span className={marketingNavLinks}>
-                <a href={`${sales}#features`}>{t(locale, 'nav.features')}</a>
-                <a href={`${sales}#how_it_works`}>{t(locale, 'nav.how')}</a>
-                <a href={`${sales}#solutions`}>{t(locale, 'nav.solutions')}</a>
-                <a href={`${sales}#faq`}>{t(locale, 'nav.faq')}</a>
-                <a href={demo}>{t(locale, 'nav.demo')}</a>
+                <a href={`${sales}#product`}>{t(locale, 'nav.product')}</a>
+                <a href={`${sales}#events`}>{t(locale, 'nav.solutions')}</a>
+                <a href={`${sales}#interest`}>{t(locale, 'nav.advisory')}</a>
               </span>
               <MarketingMobileNavMenu
                 locale={locale}
@@ -90,26 +97,28 @@ export function MarketingChrome({
           >
             <a href={login}>{t(locale, 'nav.login')}</a>
           </Button>
-          {onSales ? (
-            <Button
-              asChild
-              variant="primary"
-              className="shrink-0 whitespace-nowrap max-md:hidden"
-            >
-              <Link href={`${sales}#interest`} data-testid="cta-interest-nav">
-                {t(locale, 'nav.interest')}
-              </Link>
-            </Button>
-          ) : (
-            <Button asChild variant="primary">
+          {!onSales ? (
+            <MarketingNeonPrimaryButton asChild data-testid="mkt-chrome-demo">
               <a href={demo}>{t(locale, 'nav.demo')}</a>
-            </Button>
-          )}
+            </MarketingNeonPrimaryButton>
+          ) : null}
         </nav>
+        <LocaleSwitch locale={locale} pageKind={pageKind} onInk={onInk} />
       </header>
       {children}
       <footer className={marketingFooter(onSales)} data-testid="mkt-footer">
         <div className={marketingWrap}>
+          {onSales ? (
+            <Link
+              className={`${marketingWordmark} mkt-neon-wordmark-link mb-4 inline-flex`}
+              href={sales}
+              aria-label={t(locale, 'nav.brand')}
+              data-testid="mkt-footer-wordmark"
+            >
+              <MarketingNeonLogo />
+              <span className="sr-only">{t(locale, 'nav.brand')}</span>
+            </Link>
+          ) : null}
           <div>
             <Link href={privacyHref(locale)}>{t(locale, 'nav.privacy')}</Link>
             {' · '}
