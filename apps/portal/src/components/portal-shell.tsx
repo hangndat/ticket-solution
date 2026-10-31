@@ -61,11 +61,15 @@ import {
 } from '../nav/context-destination';
 import { isPortalDualRunBannerEnabled } from '../dual-run/allowlist';
 import { mergePortalSiderOpenKeys, readPersistedSiderOpenKeys, writePersistedSiderOpenKeys } from '../nav/portal-sider-open-keys';
+import { PortalBrandLockup } from './portal-brand-lockup';
 
 const { Header, Sider, Content } = Layout;
 
 /** Align with portal context-strip layout (`globals.css` @1024). */
 const NARROW_NAV_MEDIA = '(max-width: 1023px)';
+const subscribeSiderStorage = () => () => {};
+const getSiderStorageSnapshot = () => JSON.stringify(readPersistedSiderOpenKeys());
+const getServerSiderStorageSnapshot = () => '[]';
 
 function subscribeNarrowNav(onChange: () => void): () => void {
   const mq = window.matchMedia(NARROW_NAV_MEDIA);
@@ -144,10 +148,9 @@ function PortalShellChrome({
     () => resolvePortalMenuKeys(pathname, menuData),
     [pathname, menuData],
   );
-  const [userOpenKeys, setUserOpenKeys] = useState<string[]>([]);
-  useEffect(() => {
-    setUserOpenKeys(readPersistedSiderOpenKeys());
-  }, []);
+  const storedOpenKeys = useSyncExternalStore(subscribeSiderStorage, getSiderStorageSnapshot, getServerSiderStorageSnapshot);
+  const [changedOpenKeys, setUserOpenKeys] = useState<string[] | null>(null);
+  const userOpenKeys = useMemo(() => changedOpenKeys ?? JSON.parse(storedOpenKeys) as string[], [changedOpenKeys, storedOpenKeys]);
   const openKeys = useMemo(
     () => mergePortalSiderOpenKeys(pathOpenKeys, userOpenKeys),
     [userOpenKeys, pathOpenKeys],
@@ -311,9 +314,10 @@ function PortalShellChrome({
             prefetch={false}
             href="/"
             className="portal-brand-link"
+            aria-label="Vemoki Portal"
             data-testid="portal-brand"
           >
-            Vemoki Portal
+            <PortalBrandLockup />
           </Link>
         </div>
         <div className="portal-header-actions">
