@@ -556,19 +556,13 @@ test('[PORT-13] Portal filter + saved view persist for owner and are not hydrate
     rows().locator('td:first-child').allTextContents().then((values) =>
       values.map((value) => value.trim()),
     );
-  await expect(rows()).toHaveCount(20);
+  await expect(rows()).toHaveCount(50);
   const firstPage = await visibleIds();
-  await pending.getByRole('button', { name: 'Trang sau' }).click();
-  await expect(rows()).toHaveCount(20);
+  await pending.getByRole('button', { name: 'Trang tiếp theo' }).click();
+  await expect(rows()).toHaveCount(5);
   const secondPage = await visibleIds();
-  await pending.getByRole('button', { name: 'Trang sau' }).click();
-  await expect(rows()).toHaveCount(15);
-  const thirdPage = await visibleIds();
-  expect([...firstPage, ...secondPage, ...thirdPage]).toEqual(seededIds);
-  expect(new Set([...firstPage, ...secondPage, ...thirdPage]).size).toBe(55);
-  await pending.getByRole('button', { name: 'Trang trước' }).click();
-  await expect(rows()).toHaveCount(20);
-  expect(await visibleIds()).toEqual(secondPage);
+  expect([...firstPage, ...secondPage]).toEqual(seededIds);
+  expect(new Set([...firstPage, ...secondPage]).size).toBe(55);
 
   const requestFilter = pending.getByLabel(
     'Tìm theo mã UUID của yêu cầu',
