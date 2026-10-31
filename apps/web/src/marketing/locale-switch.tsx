@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useSyncExternalStore } from 'react';
 import { t } from './copy';
 import type { MarketingLocale } from './hosts';
-import { localeSwitchHref } from './links';
+import { localeSwitchHref, type MarketingPageKind } from './links';
 import {
   marketingLocaleGroup,
   marketingLocaleLink,
@@ -32,7 +32,7 @@ export function LocaleSwitch({
   onInk = false,
 }: {
   locale: MarketingLocale;
-  pageKind: 'sales' | 'privacy' | 'support';
+  pageKind: MarketingPageKind;
   onInk?: boolean;
 }) {
   const hash = useSyncExternalStore(
@@ -50,11 +50,13 @@ export function LocaleSwitch({
       role="group"
       aria-label={t(locale, 'nav.locale.label')}
       data-header-on-ink={onInk ? '' : undefined}
+      data-testid="mkt-locale-toggle"
     >
       <Link
         href={viHref}
         className={marketingLocaleLink}
         aria-current={locale === 'vi' ? 'true' : undefined}
+        data-testid="mkt-locale-vi"
       >
         {t(locale, 'nav.locale.vi')}
       </Link>
@@ -62,6 +64,7 @@ export function LocaleSwitch({
         href={enHref}
         className={marketingLocaleLink}
         aria-current={locale === 'en' ? 'true' : undefined}
+        data-testid="mkt-locale-en"
       >
         {t(locale, 'nav.locale.en')}
       </Link>

@@ -1,0 +1,84 @@
+[
+  {
+    "path": "/experience",
+    "status": 200,
+    "url": "http://127.0.0.1:3011/experience",
+    "canonical": [
+      "https://vemoki.com/experience"
+    ],
+    "hreflang": [
+      [
+        "vi",
+        "https://vemoki.com/experience"
+      ],
+      [
+        "en",
+        "https://vemoki.com/en/experience"
+      ],
+      [
+        "x-default",
+        "https://vemoki.com/experience"
+      ]
+    ],
+    "noindex": true
+  },
+  {
+    "path": "/en/experience",
+    "status": 200,
+    "url": "http://127.0.0.1:3011/en/experience",
+    "canonical": [
+      "https://vemoki.com/en/experience"
+    ],
+    "hreflang": [
+      [
+        "vi",
+        "https://vemoki.com/experience"
+      ],
+      [
+        "en",
+        "https://vemoki.com/en/experience"
+      ],
+      [
+        "x-default",
+        "https://vemoki.com/experience"
+      ]
+    ],
+    "noindex": true
+  },
+  {
+    "path": "/",
+    "status": 200,
+    "url": "http://127.0.0.1:3011/"
+  },
+  {
+    "path": "/en",
+    "status": 200,
+    "url": "http://127.0.0.1:3011/en"
+  },
+  {
+    "path": "/privacy",
+    "status": 200,
+    "url": "http://127.0.0.1:3011/privacy"
+  },
+  {
+    "path": "/en/privacy",
+    "status": 200,
+    "url": "http://127.0.0.1:3011/en/privacy"
+  },
+  {
+    "path": "/support",
+    "status": 200,
+    "url": "http://127.0.0.1:3011/support"
+  },
+  {
+    "path": "/en/support",
+    "status": 200,
+    "url": "http://127.0.0.1:3011/en/support"
+  },
+  {
+    "path": "/sitemap.xml",
+    "status": 200,
+    "url": "http://127.0.0.1:3011/sitemap.xml",
+    "experienceAbsent": true
+  }
+]

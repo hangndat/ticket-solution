@@ -1,0 +1,47 @@
+[
+  {
+    "href": "#main",
+    "inert": false,
+    "text": "B\u1ecf qua \u0111\u1ebfn n\u1ed9i dung"
+  },
+  {
+    "href": "#main",
+    "inert": false,
+    "text": "Skip to content"
+  },
+  {
+    "href": "/en",
+    "inert": false,
+    "testid": "mkt-wordmark",
+    "text": "Vemokivemoki"
+  },
+  {
+    "href": null,
+    "inert": false,
+    "testid": "mkt-nav-menu-toggle",
+    "text": "Menu\u2630"
+  },
+  {
+    "href": "https://app.vemoki.com/auth",
+    "inert": false,
+    "text": "Log in"
+  },
+  {
+    "href": "/experience",
+    "inert": false,
+    "testid": "mkt-locale-vi",
+    "text": "VI"
+  },
+  {
+    "href": "/en/experience",
+    "inert": false,
+    "testid": "mkt-locale-en",
+    "text": "EN"
+  },
+  {
+    "href": "/en",
+    "inert": false,
+    "testid": "mkt-footer-wordmark",
+    "text": "Vemokivemoki"
+  }
+]

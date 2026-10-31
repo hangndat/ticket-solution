@@ -1,0 +1,285 @@
+{
+  "lcp": [
+    {
+      "time": 252,
+      "size": 2016,
+      "url": "http://127.0.0.1:3011/_next/image?url=%2Fmarketing%2Fneon%2Fvemoki-v-mark.png&w=48&q=75",
+      "tag": "IMG"
+    },
+    {
+      "time": 280,
+      "size": 913195,
+      "url": "http://127.0.0.1:3011/marketing/journey/ticket-night-1536.avif",
+      "tag": "IMG"
+    }
+  ],
+  "shifts": [
+    {
+      "value": 0.07031987724268178,
+      "recent": true,
+      "time": 269.90000000596046
+    },
+    {
+      "value": 1,
+      "recent": true,
+      "time": 491.5
+    },
+    {
+      "value": 0.0004749834739939292,
+      "recent": true,
+      "time": 597.5
+    }
+  ],
+  "viewport": [
+    844,
+    390
+  ],
+  "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.7871.250 Safari/537.36",
+  "navigation": [
+    {
+      "type": "reload",
+      "ttfb": 7.800000011920929,
+      "dom": 18.5
+    }
+  ],
+  "resources": [
+    {
+      "name": "http://127.0.0.1:3011/_next/static/media/BeVietnamPro_Bold-s.p.1l45fvkzgiibd.ttf",
+      "bytes": 0,
+      "duration": 4.199999988079071
+    },
+    {
+      "name": "http://127.0.0.1:3011/_next/static/media/BeVietnamPro_Regular-s.p.10yb5zf2qqm9h.ttf",
+      "bytes": 0,
+      "duration": 5.699999988079071
+    },
+    {
+      "name": "http://127.0.0.1:3011/_next/static/media/BeVietnamPro_Medium-s.p.19abmr8h7y3ap.ttf",
+      "bytes": 0,
+      "duration": 6.299999982118607
+    },
+    {
+      "name": "http://127.0.0.1:3011/_next/static/media/Sora_Variable-s.p.19jzllqzq-o4u.ttf",
+      "bytes": 0,
+      "duration": 4.4000000059604645
+    },
+    {
+      "name": "http://127.0.0.1:3011/_next/static/media/BeVietnamPro_SemiBold-s.p.1_m9lh0hxok-b.ttf",
+      "bytes": 0,
+      "duration": 5.799999982118607
+    },
+    {
+      "name": "http://127.0.0.1:3011/_next/static/chunks/367f38_fsxvkw.css",
+      "bytes": 0,
+      "duration": 4.0999999940395355
+    },
+    {
+      "name": "http://127.0.0.1:3011/_next/image?url=%2Fmarketing%2Fneon%2Fvemoki-v-mark.png&w=48&q=75",
+      "bytes": 0,
+      "duration": 6.5999999940395355
+    },
+    {
+      "name": "http://127.0.0.1:3011/_next/static/chunks/38-x0--_rqo77.css",
+      "bytes": 0,
+      "duration": 4.5
+    },
+    {
+      "name": "http://127.0.0.1:3011/_next/static/chunks/1xii76o5mx4dt.css",
+      "bytes": 0,
+      "duration": 4.5999999940395355
+    },
+    {
+      "name": "http://127.0.0.1:3011/_next/static/chunks/2ue1o2ezsd2ss.js",
+      "bytes": 0,
+      "duration": 6.800000011920929
+    },
+    {
+      "name": "http://127.0.0.1:3011/_next/static/chunks/1188mermz9w6z.js",
+      "bytes": 0,
+      "duration": 6.9000000059604645
+    },
+    {
+      "name": "http://127.0.0.1:3011/_next/static/chunks/turbopack-3-ry682tkyiqk.js",
+      "bytes": 0,
+      "duration": 7.5
+    },
+    {
+      "name": "http://127.0.0.1:3011/_next/static/chunks/0udblxn88sp7e.js",
+      "bytes": 0,
+      "duration": 7.5999999940395355
+    },
+    {
+      "name": "http://127.0.0.1:3011/_next/static/chunks/38-1i-zxdiyqj.js",
+      "bytes": 0,
+      "duration": 8
+    },
+    {
+      "name": "http://127.0.0.1:3011/_next/static/chunks/3ieqtir-jytq_.js",
+      "bytes": 0,
+      "duration": 8
+    },
+    {
+      "name": "http://127.0.0.1:3011/_next/static/chunks/2n6q8w5523voq.js",
+      "bytes": 0,
+      "duration": 8.300000011920929
+    },
+    {
+      "name": "http://127.0.0.1:3011/_next/static/chunks/05mbmfmpprs7d.js",
+      "bytes": 0,
+      "duration": 9.599999994039536
+    },
+    {
+      "name": "http://127.0.0.1:3011/_next/static/chunks/40eolblp6ve0i.js",
+      "bytes": 0,
+      "duration": 9.599999994039536
+    },
+    {
+      "name": "http://127.0.0.1:3011/_next/static/chunks/44hrwpk6ln2-9.js",
+      "bytes": 0,
+      "duration": 9.800000011920929
+    },
+    {
+      "name": "http://127.0.0.1:3011/_next/static/chunks/37ske0tve_58w.js",
+      "bytes": 0,
+      "duration": 9.300000011920929
+    },
+    {
+      "name": "http://127.0.0.1:3011/_next/static/chunks/1f2s4fi--1-wb.js",
+      "bytes": 0,
+      "duration": 10.900000005960464
+    },
+    {
+      "name": "http://127.0.0.1:3011/_next/static/chunks/0x6xfcrp03fl4.js",
+      "bytes": 0,
+      "duration": 12.5
+    },
+    {
+      "name": "http://127.0.0.1:3011/marketing/journey/ticket-night-960.avif",
+      "bytes": 300,
+      "duration": 5.100000023841858
+    },
+    {
+      "name": "http://127.0.0.1:3011/_next/static/chunks/21wdyh-5y9kn9.js",
+      "bytes": 0,
+      "duration": 11.600000023841858
+    },
+    {
+      "name": "http://127.0.0.1:3011/marketing/journey/gateway-closed-1536.avif",
+      "bytes": 300,
+      "duration": 6.0999999940395355
+    },
+    {
+      "name": "http://127.0.0.1:3011/marketing/journey/gateway-open-1536.avif",
+      "bytes": 300,
+      "duration": 6
+    },
+    {
+      "name": "http://127.0.0.1:3011/marketing/journey/stage-main-1536.avif",
+      "bytes": 300,
+      "duration": 6.299999982118607
+    },
+    {
+      "name": "http://127.0.0.1:3011/marketing/journey/ticket-night-1536.avif",
+      "bytes": 300,
+      "duration": 3.2999999821186066
+    },
+    {
+      "name": "http://127.0.0.1:3011/marketing/journey/gateway-closed-1536.avif",
+      "bytes": 300,
+      "duration": 3.4000000059604645
+    },
+    {
+      "name": "http://127.0.0.1:3011/marketing/journey/stage-main-1536.avif",
+      "bytes": 300,
+      "duration": 3.5999999940395355
+    },
+    {
+      "name": "http://127.0.0.1:3011/en/experience?_rsc=R_v6dGu8m4Yh9oH-",
+      "bytes": 511,
+      "duration": 5.100000023841858
+    },
+    {
+      "name": "http://127.0.0.1:3011/?_rsc=R_v6dGu8m4Yh9oH-",
+      "bytes": 488,
+      "duration": 5
+    },
+    {
+      "name": "http://127.0.0.1:3011/api/marketing/events",
+      "bytes": 311,
+      "duration": 3.9000000059604645
+    },
+    {
+      "name": "http://127.0.0.1:3011/en/experience?_rsc=dA0DMRv8ZTuymKyH",
+      "bytes": 2304,
+      "duration": 4.5
+    },
+    {
+      "name": "http://127.0.0.1:3011/?_rsc=CijulFl5Ew3RC7Ih",
+      "bytes": 1654,
+      "duration": 3.899999976158142
+    },
+    {
+      "name": "http://127.0.0.1:3011/api/marketing/events",
+      "bytes": 311,
+      "duration": 2.699999988079071
+    },
+    {
+      "name": "http://127.0.0.1:3011/marketing/journey/ticket-night-960.avif",
+      "bytes": 300,
+      "duration": 2.9000000059604645
+    },
+    {
+      "name": "http://127.0.0.1:3011/marketing/journey/gateway-closed-960.avif",
+      "bytes": 54613,
+      "duration": 4.300000011920929
+    },
+    {
+      "name": "http://127.0.0.1:3011/privacy?_rsc=R_v6dGu8m4Yh9oH-",
+      "bytes": 501,
+      "duration": 4.0999999940395355
+    },
+    {
+      "name": "http://127.0.0.1:3011/support?_rsc=R_v6dGu8m4Yh9oH-",
+      "bytes": 500,
+      "duration": 4.199999988079071
+    },
+    {
+      "name": "http://127.0.0.1:3011/privacy?_rsc=CijulFl5Ew3RC7Ih",
+      "bytes": 1721,
+      "duration": 4
+    },
+    {
+      "name": "http://127.0.0.1:3011/support?_rsc=CijulFl5Ew3RC7Ih",
+      "bytes": 1633,
+      "duration": 3.7999999821186066
+    },
+    {
+      "name": "http://127.0.0.1:3011/api/marketing/events",
+      "bytes": 311,
+      "duration": 2.899999976158142
+    },
+    {
+      "name": "http://127.0.0.1:3011/marketing/journey/stage-main-960.avif",
+      "bytes": 55468,
+      "duration": 2.5999999940395355
+    },
+    {
+      "name": "http://127.0.0.1:3011/marketing/journey/gateway-open-960.avif",
+      "bytes": 63714,
+      "duration": 2.5
+    },
+    {
+      "name": "http://127.0.0.1:3011/api/marketing/events",
+      "bytes": 311,
+      "duration": 4.299999982118607
+    },
+    {
+      "name": "http://127.0.0.1:3011/api/marketing/events",
+      "bytes": 311,
+      "duration": 9
+    }
+  ],
+  "lcpMs": 280,
+  "cls": 0,
+  "limitation": "Viewport resized after navigation; load happened at native 923x1059. Not a mobile navigation performance measurement."
+}

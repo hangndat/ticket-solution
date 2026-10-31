@@ -5,7 +5,8 @@ import {
   normalizeHost,
   PRODUCT_PATH_PREFIXES,
 } from '../hosts';
-import { privacyHref, salesHref, supportHref } from '../links';
+import { journeyHref, privacyHref, salesHref, supportHref, type MarketingPageKind } from '../links';
+import { JOURNEY_INDEXABLE } from '../journey/publication';
 import type { MarketingLocale } from '../hosts';
 
 /** Paths that must never appear in marketing sitemap (not enumerated in robots.txt). */
@@ -99,10 +100,11 @@ const MARKETING_LOCALES: MarketingLocale[] = ['vi', 'en'];
 
 function publicPath(
   locale: MarketingLocale,
-  kind: 'sales' | 'privacy' | 'support',
+  kind: MarketingPageKind,
 ): string {
   if (kind === 'privacy') return privacyHref(locale);
   if (kind === 'support') return supportHref(locale);
+  if (kind === 'journey') return journeyHref(locale);
   return salesHref(locale);
 }
 
@@ -110,10 +112,11 @@ export function marketingSitemapEntries(
   marketingOrigin = marketingOriginFromEnv(),
 ): SitemapEntry[] {
   const base = marketingOrigin.replace(/\/$/, '');
-  const kinds: Array<'sales' | 'privacy' | 'support'> = [
+  const kinds: MarketingPageKind[] = [
     'sales',
     'privacy',
     'support',
+    ...(JOURNEY_INDEXABLE ? ['journey' as const] : []),
   ];
   const entries: SitemapEntry[] = [];
   for (const kind of kinds) {
