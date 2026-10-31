@@ -523,3 +523,57 @@ test('[PORT-13] Portal locale defaults VI and persists EN through reload', async
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
 });
+
+test('[PORT-13] Portal filter + saved view persist for owner and are not hydrated after switching actor in the same browser profile', async ({
+  page,
+}) => {
+  const m = loadManifest();
+  const f = fixtureFor(m, 'PORT-13');
+  if (!f.sourceId) throw new Error('BLOCKED: PORT-13 source fixture missing');
+  await login(page, m, 'PORT-13', 'owner');
+  await page.goto(portalUrl(m, eventPath(f, '/guests#pending')));
+  const pending = page.locator('#pending');
+  const sourceFilter = pending.getByLabel('Lọc theo source');
+  await sourceFilter.waitFor({ state: 'visible' });
+  await sourceFilter.click();
+  await page.getByRole('option', { name: 'E2E Auto' }).click();
+  await pending
+    .getByRole('button', { name: 'Áp dụng bộ lọc chờ duyệt' })
+    .click();
+  await expect(sourceFilter).toContainText('E2E Auto');
+
+  const toolbar = pending.getByRole('button', {
+    name: 'Chọn hoặc lưu view danh sách',
+  });
+  await expect(toolbar).toBeVisible();
+  await pending.getByRole('button', { name: 'Lưu view', exact: true }).click();
+  const saveDialog = page.getByRole('dialog', { name: 'Lưu view' });
+  await saveDialog.getByLabel('Tên').fill('PORT-13 source filter');
+  await saveDialog.getByRole('button', { name: 'Lưu', exact: true }).click();
+  await expect(saveDialog).toHaveCount(0);
+  await expect(toolbar).toContainText('PORT-13 source filter');
+
+  // Saved view (filter + name) must survive a reload for the same user+tenant.
+  await page.reload();
+  await page.locator('#pending').waitFor({ state: 'visible' });
+  await page
+    .locator('#pending')
+    .getByRole('button', { name: 'Chọn hoặc lưu view danh sách' })
+    .click();
+  await expect(page.getByText('PORT-13 source filter')).toBeVisible();
+  await page.keyboard.press('Escape');
+
+  // Switch actor in the SAME browser profile: owner's saved view must not
+  // hydrate for a different staff member on the same tenant/event.
+  await page.goto(portalUrl(m, '/api/auth/logout'));
+  await login(page, m, 'PORT-13', 'manager');
+  await page.goto(portalUrl(m, eventPath(f, '/guests#pending')));
+  const pendingAsManager = page.locator('#pending');
+  await pendingAsManager
+    .getByRole('button', { name: 'Chọn hoặc lưu view danh sách' })
+    .waitFor({ state: 'visible' });
+  await expect(
+    pendingAsManager.getByRole('button', { name: 'Quản lý view' }),
+  ).toBeDisabled();
+  await expect(page.getByText('PORT-13 source filter')).toHaveCount(0);
+});
