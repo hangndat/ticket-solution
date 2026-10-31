@@ -573,22 +573,27 @@ test('[PORT-13] Portal filter + saved view persist for owner and are not hydrate
   await expect(page.getByText('PORT-13 source filter')).toBeVisible();
   await page.keyboard.press('Escape');
 
-  // Switch actor in the SAME browser profile: owner's saved view must not
-  // hydrate for a different staff member on the same tenant/event.
+  // Switch actor in the SAME browser profile (same context -> same
+  // localStorage/cookies): owner's saved view must not hydrate for a
+  // different staff member on the same tenant/event. A fresh page in the
+  // same context avoids a state/PKCE cookie race from reusing the page
+  // that just navigated through the logout redirect chain.
   await page.goto(portalUrl(m, '/api/auth/logout'));
   await page.waitForURL((url) => url.pathname.startsWith('/auth'), {
     timeout: 20_000,
   });
-  await login(page, m, 'PORT-13', 'manager');
-  await page.goto(portalUrl(m, eventPath(f, '/guests#pending')));
-  const pendingAsManager = page.locator('#pending');
+  const managerPage = await page.context().newPage();
+  await login(managerPage, m, 'PORT-13', 'manager');
+  await managerPage.goto(portalUrl(m, eventPath(f, '/guests#pending')));
+  const pendingAsManager = managerPage.locator('#pending');
   await pendingAsManager
     .getByRole('button', { name: 'Chọn hoặc lưu view danh sách' })
     .waitFor({ state: 'visible' });
   await expect(
     pendingAsManager.getByRole('button', { name: 'Quản lý view' }),
   ).toBeDisabled();
-  await expect(page.getByText('PORT-13 source filter')).toHaveCount(0);
+  await expect(managerPage.getByText('PORT-13 source filter')).toHaveCount(0);
+  await managerPage.close();
 });
 
 test('[PORT-13] Portal saved view does not hydrate across tenants for the same owner in the same browser profile', async ({
