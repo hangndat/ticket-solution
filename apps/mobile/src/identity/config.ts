@@ -1,3 +1,5 @@
+import { VEMOKI_PROD_PUBLIC } from './vemoki-public-constants.ts';
+
 type TicketPublicExtra = {
   apiBaseUrl?: string;
   oidcIssuer?: string;
@@ -39,20 +41,51 @@ function pickPublic(
   return value.length > 0 ? value : null;
 }
 
-/** Keycloak issuer from Expo public env / baked extra. Empty → fail closed. */
-export function getOidcIssuer(): string | null {
-  const issuer = pickPublic(
-    process.env.EXPO_PUBLIC_OIDC_ISSUER,
-    readTicketPublicExtra().oidcIssuer,
-  );
-  return issuer ? issuer.replace(/\/+$/, '') : null;
+/**
+ * Keycloak issuer. Local fixture bake may use UAT/loopback from env/extra
+ * (empty → fail-closed). Retail / TestFlight pin auth.vemoki.com like K-API-02
+ * so missing Metro `EXPO_PUBLIC_OIDC_*` cannot hide Sign in.
+ */
+export function resolveOidcIssuer(
+  caps: { allowLocalFixtureApi: boolean },
+  env: { EXPO_PUBLIC_OIDC_ISSUER?: string },
+  extra: Pick<TicketPublicExtra, 'oidcIssuer'>,
+): string | null {
+  const local = pickPublic(env.EXPO_PUBLIC_OIDC_ISSUER, extra.oidcIssuer);
+  if (caps.allowLocalFixtureApi) {
+    return local ? local.replace(/\/+$/, '') : null;
+  }
+  return VEMOKI_PROD_PUBLIC.oidcIssuer;
 }
 
-/** Public OIDC client id for iOS (PKCE). */
+/** Public OIDC client id for iOS (PKCE). Retail pins `ticket-mobile`. */
+export function resolveOidcClientId(
+  caps: { allowLocalFixtureApi: boolean },
+  env: { EXPO_PUBLIC_OIDC_CLIENT_ID?: string },
+  extra: Pick<TicketPublicExtra, 'oidcClientId'>,
+): string | null {
+  const local = pickPublic(env.EXPO_PUBLIC_OIDC_CLIENT_ID, extra.oidcClientId);
+  if (caps.allowLocalFixtureApi) {
+    return local;
+  }
+  return VEMOKI_PROD_PUBLIC.oidcClientId;
+}
+
+export function getOidcIssuer(): string | null {
+  const extra = readTicketPublicExtra();
+  return resolveOidcIssuer(
+    { allowLocalFixtureApi: resolveAllowLocalFixtureApi(extra) },
+    { EXPO_PUBLIC_OIDC_ISSUER: process.env.EXPO_PUBLIC_OIDC_ISSUER },
+    extra,
+  );
+}
+
 export function getOidcClientId(): string | null {
-  return pickPublic(
-    process.env.EXPO_PUBLIC_OIDC_CLIENT_ID,
-    readTicketPublicExtra().oidcClientId,
+  const extra = readTicketPublicExtra();
+  return resolveOidcClientId(
+    { allowLocalFixtureApi: resolveAllowLocalFixtureApi(extra) },
+    { EXPO_PUBLIC_OIDC_CLIENT_ID: process.env.EXPO_PUBLIC_OIDC_CLIENT_ID },
+    extra,
   );
 }
 
