@@ -1,4 +1,4 @@
-import { motion, type MotionStyle } from 'motion/react';
+import { m, type MotionStyle } from 'motion/react';
 import { JOURNEY_PLATES, type JourneyPlateId } from './assets';
 
 /**
@@ -20,7 +20,7 @@ export function Plate({
   const base = `/marketing/journey/${plate.file}`;
   const focus = `${plate.focus.x * 100}% ${plate.focus.y * 100}%`;
   return (
-    <motion.div
+    <m.div
       className={`absolute inset-0 will-change-transform ${className}`}
       style={{ transformOrigin: focus, ...style }}
     >
@@ -48,6 +48,6 @@ export function Plate({
           style={{ objectPosition: focus }}
         />
       </picture>
-    </motion.div>
+    </m.div>
   );
 }

@@ -1,4 +1,4 @@
-import { motion, useMotionValueEvent, useTransform, type MotionValue } from 'motion/react';
+import { m, useMotionValueEvent, useTransform, type MotionValue } from 'motion/react';
 import { useState, useSyncExternalStore } from 'react';
 import { PLATE_WINDOWS, type JourneyPlateId } from './assets';
 import { Plate } from './plate';
@@ -59,11 +59,11 @@ function Gateway({ p }: { p: MotionValue<number> }) {
   const scanGlow = useTransform(p, [T.scan[0] - 0.02, T.scan[0], T.verified, T.verified + 0.01], [0, 1, 1, 0]);
   if (!mounted) return null;
   return (
-    <motion.div className="absolute inset-0" style={{ scale, opacity, transformOrigin: GATE.door }}>
+    <m.div className="absolute inset-0" style={{ scale, opacity, transformOrigin: GATE.door }}>
       <Plate id="gateway-closed" />
       <Plate id="gateway-open" style={{ clipPath }} />
       {/* scan: cyan wash on the pillars while the QR is read */}
-      <motion.div className="absolute inset-0 mix-blend-screen" style={{ opacity: scanGlow }}>
+      <m.div className="absolute inset-0 mix-blend-screen" style={{ opacity: scanGlow }}>
         {[GATE.pillarL, GATE.pillarR].map((x) => (
           <div
             key={x}
@@ -71,9 +71,9 @@ function Gateway({ p }: { p: MotionValue<number> }) {
             style={{ left: `${x}%`, top: `${GATE.top}%`, height: `${GATE.bottom - GATE.top}%` }}
           />
         ))}
-      </motion.div>
+      </m.div>
       {/* verified: pillars warm to amber */}
-      <motion.div className="absolute inset-0 mix-blend-screen" style={{ opacity: okGlow }}>
+      <m.div className="absolute inset-0 mix-blend-screen" style={{ opacity: okGlow }}>
         {[GATE.pillarL, GATE.pillarR].map((x) => (
           <div
             key={x}
@@ -82,13 +82,13 @@ function Gateway({ p }: { p: MotionValue<number> }) {
           />
         ))}
         <div className="absolute left-1/2 top-[13%] h-[9%] w-[40%] -translate-x-1/2 rounded-full bg-[radial-gradient(closest-side,rgba(255,190,90,0.8),transparent)] blur-lg" />
-      </motion.div>
+      </m.div>
       {/* doors open: light spills through the gate */}
-      <motion.div
+      <m.div
         className="absolute left-1/2 top-[52%] h-[60%] w-[34%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(closest-side,rgba(255,214,150,0.55),rgba(155,77,255,0.25)_55%,transparent)] mix-blend-screen blur-xl"
         style={{ opacity: burst }}
       />
-    </motion.div>
+    </m.div>
   );
 }
 
@@ -100,15 +100,15 @@ function Stage({ p }: { p: MotionValue<number> }) {
   const alive = useTransform(p, [0.7, 0.82], [0, 1]);
   if (!mounted) return null;
   return (
-    <motion.div className="absolute inset-0" style={{ scale, y, opacity, transformOrigin: '50% 45%' }}>
+    <m.div className="absolute inset-0" style={{ scale, y, opacity, transformOrigin: '50% 45%' }}>
       <Plate id="stage-main" />
       {/* stage "comes alive": slow light sweep + pulse over the photo */}
-      <motion.div className="absolute inset-0 mix-blend-screen" style={{ opacity: alive }}>
+      <m.div className="absolute inset-0 mix-blend-screen" style={{ opacity: alive }}>
         <div className="jr-anim jr-sweep absolute -top-[10%] left-[30%] h-[80%] w-[14%] origin-bottom bg-[linear-gradient(to_top,rgba(40,212,239,0.35),transparent)] blur-lg" />
         <div className="jr-anim jr-sweep jr-sweep-r absolute -top-[10%] left-[56%] h-[80%] w-[14%] origin-bottom bg-[linear-gradient(to_top,rgba(155,77,255,0.4),transparent)] blur-lg" />
         <div className="jr-anim jr-pulse absolute left-1/2 top-[48%] h-[40%] w-[50%] -translate-x-1/2 rounded-full bg-[radial-gradient(closest-side,rgba(255,181,71,0.3),transparent)] blur-2xl" />
-      </motion.div>
-    </motion.div>
+      </m.div>
+    </m.div>
   );
 }
 
@@ -125,7 +125,7 @@ function Bokeh({ p }: { p: MotionValue<number> }) {
   const opacity = useTransform(p, [0.16, 0.24, T.gateNear[1], T.pushThrough[0]], [0, 0.85, 0.85, 0]);
   const spread = useTransform(p, [0.16, T.pushThrough[0]], [1, 1.7]);
   return (
-    <motion.div className="absolute inset-0" style={{ opacity, scale: spread, transformOrigin: GATE.door }}>
+    <m.div className="absolute inset-0" style={{ opacity, scale: spread, transformOrigin: GATE.door }}>
       {BOKEH.map((b, i) => (
         <span
           key={i}
@@ -133,7 +133,7 @@ function Bokeh({ p }: { p: MotionValue<number> }) {
           style={{ left: `${b.x}%`, top: `${b.y}%`, width: `${b.s}vmin`, height: `${b.s}vmin` }}
         />
       ))}
-    </motion.div>
+    </m.div>
   );
 }
 
@@ -143,16 +143,16 @@ function Haze({ p }: { p: MotionValue<number> }) {
   const farX = useTransform(p, [0, 1], ['4%', '-3%']);
   const opacity = useTransform(p, [0, 0.4, 0.62, 0.8, 1], [0.35, 0.55, 0.7, 0.45, 0.3]);
   return (
-    <motion.div className="pointer-events-none absolute inset-0" style={{ opacity }}>
-      <motion.div
+    <m.div className="pointer-events-none absolute inset-0" style={{ opacity }}>
+      <m.div
         className="absolute inset-x-[-20%] bottom-[8%] h-[30%] bg-[radial-gradient(50%_50%_at_50%_50%,rgba(170,160,255,0.22),transparent)] blur-2xl"
         style={{ x: farX }}
       />
-      <motion.div
+      <m.div
         className="absolute inset-x-[-20%] bottom-[-6%] h-[26%] bg-[radial-gradient(50%_50%_at_40%_60%,rgba(200,210,255,0.18),transparent)] blur-xl"
         style={{ x: nearX }}
       />
-    </motion.div>
+    </m.div>
   );
 }
 

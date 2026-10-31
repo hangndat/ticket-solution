@@ -1,4 +1,4 @@
-import { motion, useTransform, type MotionValue } from 'motion/react';
+import { m, useTransform, type MotionValue } from 'motion/react';
 import { PALETTE as C, qrMatrix, qrPath } from './art';
 import type { JourneyCopy } from './copy';
 import { T } from './timeline';
@@ -32,11 +32,11 @@ export function JourneyTicket({ p, copy }: { p: MotionValue<number>; copy: Journ
 
   return (
     <div className="pointer-events-none absolute inset-0 flex items-center justify-center [perspective:1200px] max-md:items-start max-md:pt-[22dvh] [@media(max-height:560px)_and_(orientation:landscape)]:items-center [@media(max-height:560px)_and_(orientation:landscape)]:justify-end [@media(max-height:560px)_and_(orientation:landscape)]:pt-[72px] [@media(max-height:560px)_and_(orientation:landscape)]:pr-[9vw]">
-      <motion.div
+      <m.div
         className="relative w-[clamp(220px,23vw,320px)] max-md:w-[min(62vw,280px)] [@media(max-height:560px)_and_(orientation:landscape)]:w-[min(30dvh,150px)]"
         style={{ opacity, scale, rotateX, rotateY, y }}
       >
-        <motion.div
+        <m.div
           className="absolute -inset-[18%] rounded-[40%] bg-[radial-gradient(closest-side,rgba(155,77,255,0.55),rgba(40,212,239,0.18)_60%,transparent)] blur-2xl"
           style={{ opacity: glow }}
         />
@@ -64,12 +64,12 @@ export function JourneyTicket({ p, copy }: { p: MotionValue<number>; copy: Journ
               <svg viewBox={`0 0 ${QR_N} ${QR_N}`} className="block h-full w-full" shapeRendering="crispEdges" aria-hidden="true">
                 <path d={QR_D} fill={C.navy} />
               </svg>
-              <motion.div className="absolute inset-x-[4%] h-[3px] -translate-y-1/2 rounded-full bg-[var(--jr-cyan)] shadow-[0_0_18px_4px_rgba(40,212,239,0.75)]" style={{ top: scanTop, opacity: scanO }} />
-              <motion.div
+              <m.div className="absolute inset-x-[4%] h-[3px] -translate-y-1/2 rounded-full bg-[var(--jr-cyan)] shadow-[0_0_18px_4px_rgba(40,212,239,0.75)]" style={{ top: scanTop, opacity: scanO }} />
+              <m.div
                 className="absolute inset-0 flex items-center justify-center rounded-xl bg-[rgba(6,8,23,0.78)]"
                 style={{ opacity: ok }}
               >
-                <motion.span
+                <m.span
                   className="flex flex-col items-center gap-2 text-[0.72rem] font-semibold uppercase tracking-[0.22em] text-[var(--jr-amber)]"
                   style={{ scale: okScale }}
                 >
@@ -78,19 +78,19 @@ export function JourneyTicket({ p, copy }: { p: MotionValue<number>; copy: Journ
                     <path d="M14 25l7 7 13-15" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                   {copy.scanOk}
-                </motion.span>
-              </motion.div>
+                </m.span>
+              </m.div>
             </div>
             <p className="mt-[8%] text-center text-[0.62rem] uppercase tracking-[0.3em] text-[var(--jr-steel)] [@media(max-height:560px)_and_(orientation:landscape)]:text-[0.45rem] [@media(max-height:560px)_and_(orientation:landscape)]:tracking-[0.18em]">
               {copy.ticket.holder}
             </p>
           </div>
-          <motion.div
+          <m.div
             className="pointer-events-none absolute inset-y-0 w-1/2 -skew-x-12 bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.16),transparent)]"
             style={{ x: sheen }}
           />
         </div>
-      </motion.div>
+      </m.div>
     </div>
   );
 }
