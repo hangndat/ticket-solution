@@ -38,15 +38,26 @@ export class SmtpDefiniteRejectError extends Error {
   }
 }
 
+/** Validation failed before a socket or SMTP command could accept the mail. */
+export class SmtpPreflightError extends Error {
+  readonly definiteNoAccept = true;
+}
+
 export function isSmtpDefiniteReject(error: unknown): boolean {
-  return error instanceof SmtpDefiniteRejectError;
+  return error instanceof SmtpDefiniteRejectError ||
+    (error instanceof Error && 'definiteNoAccept' in error && error.definiteNoAccept === true);
 }
 
 function parseSmtpUrl(smtpUrl: string): {
   transport: SMTPTransport.Options;
   secureRequired: boolean;
 } {
-  const url = new URL(smtpUrl);
+  let url: URL;
+  try {
+    url = new URL(smtpUrl);
+  } catch {
+    throw new SmtpPreflightError('SMTP_URL is invalid');
+  }
   const protocol = url.protocol.replace(/:$/, '');
   if (
     protocol !== 'smtp' &&
@@ -54,7 +65,7 @@ function parseSmtpUrl(smtpUrl: string): {
     protocol !== 'smtp+tls' &&
     protocol !== 'smtp+plain'
   ) {
-    throw new Error(
+    throw new SmtpPreflightError(
       'SMTP_URL must use smtp://, smtps://, smtp+tls://, or smtp+plain://',
     );
   }
