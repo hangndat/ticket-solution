@@ -14,6 +14,7 @@ import {
 } from '@/navigation/use-staff-workspace';
 import { useMyTicketsTabChrome } from '@/navigation/use-wallet-access';
 import { useTheme } from '@/theme/ThemeProvider';
+import { brand } from '@/theme/tokens';
 
 export default function TabLayout() {
   const { theme } = useTheme();
@@ -61,7 +62,7 @@ export default function TabLayout() {
   return (
     <StaffGateWorkspaceProvider active={identity.status === 'verified'}>
       <StaffDefaultTabRedirect />
-      <NativeTabs tintColor={theme.signal}>
+      <NativeTabs tintColor={theme.source === 'default' ? brand.primary : theme.signal}>
         <NativeTabs.Trigger name="(events)" hidden={!showEventsTab}>
           <NativeTabs.Trigger.Icon sf="calendar" />
           <NativeTabs.Trigger.Label>
