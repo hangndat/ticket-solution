@@ -467,7 +467,7 @@ export async function resendTicketEmail(
 
   // Serialize the staff hourly count across different ticket row locks.
   await tx.$queryRaw`
-    SELECT pg_advisory_xact_lock(
+    SELECT true AS locked FROM pg_advisory_xact_lock(
       hashtext('cs_resend_staff'),
       hashtext(${input.tenantId} || ':' || ${input.actorUserId})
     )
