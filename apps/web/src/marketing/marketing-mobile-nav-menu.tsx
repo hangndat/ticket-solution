@@ -35,10 +35,9 @@ export function MarketingMobileNavMenu({
   const closeMobile = () => setOpen(false);
 
   const sectionLinks = [
-    { href: `${sales}#features`, label: t(locale, 'nav.features') },
-    { href: `${sales}#how_it_works`, label: t(locale, 'nav.how') },
-    { href: `${sales}#solutions`, label: t(locale, 'nav.solutions') },
-    { href: `${sales}#faq`, label: t(locale, 'nav.faq') },
+    { href: `${sales}#product`, label: t(locale, 'nav.product') },
+    { href: `${sales}#events`, label: t(locale, 'nav.solutions') },
+    { href: `${sales}#interest`, label: t(locale, 'nav.advisory') },
     { href: demo, label: t(locale, 'nav.demo') },
   ];
 
