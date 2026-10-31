@@ -1,5 +1,19 @@
 # Portal/Platform E2E — bàn giao worker
 
+## PORT-09 — B1 fix (Higo, 31/10/2026)
+
+**PASS.** Nguyên nhân: `isProviderStatus`/`CsProviderStatus` trong `apps/portal/src/ops/contract-shape.ts` + `apps/portal/src/ops/cs.ts` chỉ nhận 4 giá trị (thiếu `UNKNOWN` dù `packages/contracts` đã có từ BE PR#1085), nên `parseNotification` reject vé UNKNOWN → list/detail trả `kind:'unknown'`, bảng CS browser không có cột provider status nên không render chữ `UNKNOWN`, và dòng timeline gộp kind/time/summary vào một text node nên không có phần tử khớp đúng `notification UNKNOWN`.
+
+Sửa: mở rộng guard CS-local (không đụng `isProviderStatusFull` dùng cho notifications.ts — không tác động ngoài CS) thêm `UNKNOWN`; thêm cột provider status vào bảng `CsPanel` dùng `csNotificationStatusText`/`csProviderStatusLabel` có sẵn (nhãn VI chứa chuỗi `UNKNOWN (không rõ...)`, không claim PENDING); tách node `summary` của timeline ra `Typography.Text` riêng để giữ assertion `notification UNKNOWN` đúng, không bỏ assertion. Không đổi AC/fixture, không đổi contract PENDING resend.
+
+Runtime (đúng 1 lần theo scripts có sẵn): `node tests/e2e/harness/run.mjs e2e --case=PORT-09` → run `mvvrcxtx-538df2`, **PASS** (`browser` exitCode 0). Containers/network đã cleanup (`tests/e2e/.artifacts/mvvrcxtx-538df2/cleanup.log`). Run thực thi trên working tree đang sửa (chưa commit lúc chạy) nên `sourceProvenance.evidenceExactShaEligible=false`, `workingTreeDirty=true`; diff đã commit **không đổi** sau đó ở exact SHA `e18b7628` (nhánh `hangndat/f04-port09-cs-matrix`), nên kết quả PASS vẫn áp dụng cho SHA này — không chạy lại runtime lần 2 theo giới hạn "đúng một run, không retry".
+
+Kiểm trước runtime: `pnpm --filter portal typecheck` PASS; `pnpm --filter portal test apps/portal/tests/ops-cs-export.test.ts` (chạy cả suite portal) 305/305 PASS, gồm test mới "accepts all 5 providerStatus values incl. UNKNOWN; rejects malformed" (UNKNOWN + 4 state khác qua `interpretCsList`, và `DELIVERED` giả mạo bị reject `kind:'unknown'`).
+
+F01/F02/F03: F01 (real primary worker/PG/Mailpit ACCEPTED) và F02 (five-state list/detail/timeline + browser UNKNOWN row) nay PASS trong run này (toàn bộ `portal-ops.spec.ts` case PORT-09 xanh, không giới hạn riêng từng F). F03 (negative PG audit/notification/outbox/cooldown+limit) nằm trong cùng spec file/case và cũng PASS theo kết quả run tổng; không có log tách theo F-id trong harness này.
+
+Giới hạn: chỉ sửa `apps/portal/**` (contract-shape.ts, cs.ts, panels/cs-panel.tsx) + test unit mới, không sửa `apps/web`, API/worker/backend/contracts/lockfile, không sửa `tests/e2e/portal/portal-ops.spec.ts` (locator timeline khớp sau khi sửa DOM, không cần đổi spec). Không ảnh/screenshot lưu kèm. Bàn giao để James review độc lập; không tự coi merge-ready.
+
 ## PORT-09 — checkpoint hiện tại 30/10/2026
 
 **BLOCKED**, PR #1084 Draft. Ngoại lệ 1/1 sau fix 2/2 đã dùng và dừng: thay fixture UNKNOWN bằng cập nhật notification hiện có, thêm assertion từng vé có expected/actual trước ma trận tổng. Runtime duy nhất `pnpm test:e2e --case=PORT-09`, run `mvv3h42r-633cc2`, **FAIL** trên exact SHA `8728423981ba5e0b73b021eda1859e1bc314806a` tại `portal-ops.spec.ts:735`: không tìm thấy hàng vé UNKNOWN trong browser `#cs` (timeout 15 giây). F01 real worker ACCEPTED + PG attempt/provider_ref + Mailpit correlation và ma trận năm trạng thái/BFF detail UNKNOWN đã qua; F02 browser UNKNOWN chưa đạt, các assertion F03 phía sau chưa chạy. Typecheck portal spec, discovery 1/1, Prettier và 19/19 guards PASS. Không sửa/retry runtime sau FAIL; không reset bộ đếm, chờ coordinator quyết định.
