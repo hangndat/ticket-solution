@@ -1,5 +1,11 @@
 import { readFileSync, writeFileSync } from 'node:fs';
-import { test, expect, loadManifest, fixtureFor } from '../harness/fixtures';
+import {
+  test,
+  expect,
+  loadManifest,
+  fixtureFor,
+  accountFor,
+} from '../harness/fixtures';
 import {
   bffGet,
   bffMutate,
@@ -8,6 +14,7 @@ import {
   login,
   portalUrl,
 } from './helpers';
+import { createSecondOwnerTenant } from './port13-db';
 
 function reportUpstreamPath(f: ReturnType<typeof fixtureFor>): string {
   return `/v1/tenants/${f.tenantId}/events/${f.eventId}/report`;
@@ -576,4 +583,65 @@ test('[PORT-13] Portal filter + saved view persist for owner and are not hydrate
     pendingAsManager.getByRole('button', { name: 'Quản lý view' }),
   ).toBeDisabled();
   await expect(page.getByText('PORT-13 source filter')).toHaveCount(0);
+});
+
+test('[PORT-13] Portal saved view does not hydrate across tenants for the same owner in the same browser profile', async ({
+  page,
+}) => {
+  const m = loadManifest();
+  const f = fixtureFor(m, 'PORT-13');
+  const owner = accountFor(m, 'PORT-13', 'owner');
+  if (!owner.userId)
+    throw new Error('BLOCKED: PORT-13 owner userId fixture missing');
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl)
+    throw new Error(
+      'BLOCKED: harness DATABASE_URL missing for PORT-13 second-tenant setup',
+    );
+  // Fixture gap (tests/e2e/portal/FIXTURES.md): PORT-13 needs a second ACTIVE
+  // tenant for the same owner, which the shared seed does not provision.
+  const second = await createSecondOwnerTenant({
+    databaseUrl,
+    ownerUserId: owner.userId,
+    slugPrefix: `port13-${f.tenantSlug}`,
+  });
+
+  await login(page, m, 'PORT-13', 'owner');
+
+  await page.goto(portalUrl(m, `/t/${encodeURIComponent(f.tenantId)}/members`));
+  const toolbar = page.getByRole('button', {
+    name: 'Chọn hoặc lưu view danh sách',
+  });
+  await toolbar.waitFor({ state: 'visible' });
+  await page.getByRole('button', { name: 'Lưu view', exact: true }).click();
+  const firstDialog = page.getByRole('dialog', { name: 'Lưu view' });
+  await firstDialog.getByLabel('Tên').fill('Tenant A members view');
+  await firstDialog.getByRole('button', { name: 'Lưu', exact: true }).click();
+  await expect(firstDialog).toHaveCount(0);
+  await expect(toolbar).toContainText('Tenant A members view');
+
+  // Same owner, same browser profile, SECOND ACTIVE tenant: must not hydrate.
+  await page.goto(
+    portalUrl(m, `/t/${encodeURIComponent(second.tenantId)}/members`),
+  );
+  await toolbar.waitFor({ state: 'visible' });
+  await expect(
+    page.getByRole('button', { name: 'Quản lý view' }),
+  ).toBeDisabled();
+  await expect(page.getByText('Tenant A members view')).toHaveCount(0);
+
+  // Save a distinct view on tenant B, then confirm tenant A kept its own.
+  await page.getByRole('button', { name: 'Lưu view', exact: true }).click();
+  const secondDialog = page.getByRole('dialog', { name: 'Lưu view' });
+  await secondDialog.getByLabel('Tên').fill('Tenant B members view');
+  await secondDialog
+    .getByRole('button', { name: 'Lưu', exact: true })
+    .click();
+  await expect(secondDialog).toHaveCount(0);
+  await expect(toolbar).toContainText('Tenant B members view');
+
+  await page.goto(portalUrl(m, `/t/${encodeURIComponent(f.tenantId)}/members`));
+  await toolbar.waitFor({ state: 'visible' });
+  await expect(toolbar).toContainText('Tenant A members view');
+  await expect(page.getByText('Tenant B members view')).toHaveCount(0);
 });
