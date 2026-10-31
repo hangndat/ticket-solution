@@ -153,13 +153,15 @@
   {
     "caseId": "PORT-13",
     "tests": [
-      "portal-core.spec.ts [PORT-13]"
+      "portal-core.spec.ts [PORT-13] Portal locale defaults VI and persists EN through reload",
+      "portal-core.spec.ts [PORT-13] Portal filter + saved view persist for owner and are not hydrated after switching actor in the same browser profile",
+      "portal-core.spec.ts [PORT-13] Portal saved view does not hydrate across tenants for the same owner in the same browser profile"
     ],
     "layers": [
       "B"
     ],
     "status": "blocked",
-    "reason": "Locale default/persistence path written; filter/sort/pagination and saved view user/tenant isolation plus runtime remain."
+    "reason": "B PASS clean run mvvtnabj-4ca5f2 on code SHA 70e1531b: locale VI default/EN persists reload; pending-panel text filter + saved view save/reload roundtrip for owner; same-browser-profile isolation confirmed for actor switch (owner->manager, same tenant) and tenant switch (second ACTIVE tenant provisioned via tests/e2e/portal/port13-db.ts runtime-role helper for the same owner, members surface). Full PORT-13 BLOCKED: 'sort' has no UI wiring on any Portal panel and no backend/API support (apps/api/src/approval.ts listPending -> packages/backend/src/redemption-status.ts listStaffPendingRedemptions hardcodes ORDER BY created_at ASC, id ASC with a keyset cursor tied to that order; every other Portal list backend checked is the same) -- filed as a backend/API contract gap, not Web-fixable. Pagination's real cursor/next-page behavior is also unexercised: PORT-13's fixture has 0 seeded PENDING_REVIEW rows, never reaching nextCursor."
   },
   {
     "caseId": "PORT-14",
