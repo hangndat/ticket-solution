@@ -11,3 +11,5 @@ Canonical tokens: `tokens.json` (**Live Pulse v2** — ink `#0B1220` · paper `#
 | `app-icon.png` | App icon nguồn | 1024×1024 |
 
 Upload event (logo/banner) phải tuân `docs/ops/MEDIA-ASSET-CHECKLIST.md` và `ASSET_LIMITS` (PNG/JPEG/WebP, ≤5 MiB). SVG **không** đi qua C-B upload.
+
+Regenerate raster/SVG: `python3 brand/vemoki/scripts/generate-brand-assets.py` (Python + Pillow). Nguồn Logo Kit nằm trong `sources/`, sao chép nguyên bản từ VD09 `95a5d8a3`: mark từ `apps/web/public/marketing/neon/vemoki-v-mark.png`, OG từ `apps/web/app/opengraph-image.png`, icon từ `apps/web/app/icon.png`. Script dùng font đã có trong `apps/web/fonts` và chỉ ghi các artifact trong `brand/vemoki`; không sửa demo Web.
