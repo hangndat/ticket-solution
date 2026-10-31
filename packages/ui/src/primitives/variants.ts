@@ -16,7 +16,10 @@ export const buttonVariants = cva(
     variants: {
       variant: {
         primary:
-          'border border-signal bg-signal text-white shadow-[0_4px_20px_color-mix(in_srgb,var(--color-signal)_35%,transparent)] hover:border-ink hover:bg-ink hover:text-paper hover:-translate-y-px motion-reduce:hover:translate-y-0',
+          'border border-primary bg-primary text-white hover:border-[color-mix(in_srgb,var(--color-primary)_88%,var(--color-ink))] hover:bg-[color-mix(in_srgb,var(--color-primary)_88%,var(--color-ink))] active:bg-[color-mix(in_srgb,var(--color-primary)_92%,var(--color-ink))]',
+        /** Consumer attendee primary — solid product violet (portal-aligned). */
+        attendeePrimary:
+          'border border-primary bg-primary text-white hover:border-[color-mix(in_srgb,var(--color-primary)_88%,var(--color-ink))] hover:bg-[color-mix(in_srgb,var(--color-primary)_88%,var(--color-ink))] active:bg-[color-mix(in_srgb,var(--color-primary)_92%,var(--color-ink))]',
         secondary:
           'border border-ink/20 bg-white text-ink hover:border-ink/40 hover:bg-paper',
         secondaryOnInk:
@@ -69,7 +72,7 @@ export const inputVariants = cva(
 );
 
 export const alertVariants = cva(
-  'grid gap-2 rounded-md border p-4 text-sm',
+  'grid gap-2 rounded-2xl border p-4 text-sm',
   {
     variants: {
       variant: {
@@ -84,7 +87,7 @@ export const alertVariants = cva(
   },
 );
 
-export const cardVariants = cva('rounded-md border bg-white text-ink', {
+export const cardVariants = cva('rounded-2xl border bg-white text-ink', {
   variants: {
     variant: {
       elevated: 'border-line shadow-sm',
