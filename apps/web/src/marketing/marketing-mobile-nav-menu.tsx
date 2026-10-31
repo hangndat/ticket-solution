@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useState } from 'react';
 import { Button } from '@ticket/ui';
 import {
@@ -44,8 +43,9 @@ export function MarketingMobileNavMenu({
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <button
+        <Button
           type="button"
+          variant="ghostOnInk"
           className={marketingNavMenuToggle}
           aria-controls={MENU_ID}
           aria-haspopup="dialog"
@@ -57,7 +57,7 @@ export function MarketingMobileNavMenu({
           <span className="text-lg leading-none" aria-hidden="true">
             {open ? '×' : '☰'}
           </span>
-        </button>
+        </Button>
       </SheetTrigger>
       <SheetContent
         id={MENU_ID}
@@ -85,15 +85,6 @@ export function MarketingMobileNavMenu({
             <a href={login} onClick={closeMobile}>
               {t(locale, 'nav.login')}
             </a>
-          </Button>
-          <Button asChild variant="primary" block>
-            <Link
-              href={`${sales}#interest`}
-              data-testid="cta-interest-nav-mobile"
-              onClick={closeMobile}
-            >
-              {t(locale, 'nav.interest')}
-            </Link>
           </Button>
         </div>
       </SheetContent>

@@ -1,0 +1,45 @@
+[
+  {
+    "event": "journey_progress",
+    "props": {
+      "locale": "en",
+      "milestone": "invitation"
+    }
+  },
+  {
+    "event": "journey_progress",
+    "props": {
+      "locale": "en",
+      "milestone": "arrival"
+    }
+  },
+  {
+    "event": "journey_progress",
+    "props": {
+      "locale": "en",
+      "milestone": "gateway"
+    }
+  },
+  {
+    "event": "journey_progress",
+    "props": {
+      "locale": "en",
+      "milestone": "moment"
+    }
+  },
+  {
+    "event": "journey_progress",
+    "props": {
+      "locale": "en",
+      "milestone": "complete"
+    }
+  },
+  {
+    "event": "cta_click",
+    "props": {
+      "cta_id": "cta-demo",
+      "locale": "en",
+      "surface": "journey"
+    }
+  }
+]

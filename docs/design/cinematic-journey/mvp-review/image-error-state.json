@@ -1,0 +1,69 @@
+{
+  "cta": [
+    {
+      "inert": false,
+      "rect": {
+        "bottom": 533.515625,
+        "height": 46,
+        "left": 94.671875,
+        "right": 295.328125,
+        "top": 487.515625,
+        "width": 200.65625,
+        "x": 94.671875,
+        "y": 487.515625
+      },
+      "text": "M\u1edf demo tr\u00ean \u1ee9ng d\u1ee5ng"
+    },
+    {
+      "inert": false,
+      "rect": {
+        "bottom": 589.515625,
+        "height": 44,
+        "left": 120.78125,
+        "right": 269.21875,
+        "top": 545.515625,
+        "width": 148.4375,
+        "x": 120.78125,
+        "y": 545.515625
+      },
+      "text": "\u0110\u0103ng k\u00fd t\u01b0 v\u1ea5n"
+    }
+  ],
+  "images": [
+    {
+      "complete": true,
+      "src": "http://127.0.0.1:3013/_next/image?url=%2Fmarketing%2Fneon%2Fvemoki-v-mark.png&w=48&q=75",
+      "width": 0
+    },
+    {
+      "complete": true,
+      "src": "http://127.0.0.1:3013/marketing/journey/ticket-night-1536.avif",
+      "width": 0
+    },
+    {
+      "complete": true,
+      "src": "http://127.0.0.1:3013/marketing/journey/gateway-closed-1536.avif",
+      "width": 0
+    },
+    {
+      "complete": true,
+      "src": "http://127.0.0.1:3013/marketing/journey/gateway-open-1536.avif",
+      "width": 0
+    },
+    {
+      "complete": true,
+      "src": "http://127.0.0.1:3013/marketing/journey/stage-main-1536.avif",
+      "width": 0
+    },
+    {
+      "complete": true,
+      "src": "http://127.0.0.1:3013/_next/image?url=%2Fmarketing%2Fneon%2Fvemoki-v-mark.png&w=48&q=75",
+      "width": 0
+    }
+  ],
+  "overflow": 0,
+  "viewport": [
+    390,
+    844
+  ]
+}

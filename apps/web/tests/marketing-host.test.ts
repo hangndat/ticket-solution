@@ -50,6 +50,15 @@ describe('marketing host helpers', () => {
     );
   });
 
+  it('locale switch keeps viewers in the cinematic journey', () => {
+    assert.equal(localeSwitchHref('en', 'journey'), '/en/experience');
+    assert.equal(localeSwitchHref('vi', 'journey'), '/experience');
+    assert.equal(
+      decideHostRouting({ host: 'vemoki.com', pathname: '/en/experience' }).type,
+      'next',
+    );
+  });
+
   it('CTA hrefs point at product origin', () => {
     assert.equal(
       demoHref('https://app.vemoki.com'),
