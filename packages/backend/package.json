@@ -13,6 +13,7 @@
     "test:offline-receipt": "pnpm --filter @ticket/contracts build && pnpm build && node --test test/offline-sync-receipt.test.cjs test/offline-sync-unit.test.cjs",
     "test:architecture-recovery": "pnpm --filter @ticket/contracts build && pnpm build && node --test test/apns-atleast-once.test.cjs test/apns-env-fallback.test.cjs test/outbox-fence.test.cjs",
     "test:worker-budget-db": "pnpm --filter @ticket/contracts build && pnpm build && node --test --test-name-pattern='outbox fence: MembershipInvite' test/outbox-fence.test.cjs",
+    "test:job04-email-budget": "pnpm --filter @ticket/contracts build && pnpm build && node --test test/email-budget.test.cjs",
     "test:worker-budget-fault": "pnpm build && pnpm --filter @ticket/worker build && node --test test/worker-db-cancel.test.cjs",
     "test:worker-provider-deadline": "pnpm build && node --test test/worker-provider-deadline.test.cjs",
     "test:architecture-quota": "pnpm --filter @ticket/contracts build && pnpm build && node --test test/approval.test.cjs test/issue.test.cjs test/event-quota-suspended.test.cjs",
