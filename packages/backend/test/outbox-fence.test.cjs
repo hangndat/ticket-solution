@@ -207,6 +207,10 @@ test(
           data: { id: tenantId, slug: 'fence-tenant', name: 'Fence Tenant' },
         });
         await tx.$executeRaw`
+          INSERT INTO tenant_limits (tenant_id, email_per_day)
+          VALUES (${tenantId}::uuid, NULL)
+        `;
+        await tx.$executeRaw`
           INSERT INTO outbox (
             tenant_id, event_id, id, type, aggregate_id, payload_version,
             payload, status, attempts, lease_owner, lease_token,
@@ -420,6 +424,10 @@ test(
         await tx.tenant.create({
           data: { id: tenantId, slug: 'fence-t2', name: 'Fence T2' },
         });
+        await tx.$executeRaw`
+          INSERT INTO tenant_limits (tenant_id, email_per_day)
+          VALUES (${tenantId}::uuid, NULL)
+        `;
         await tx.event.create({
           data: {
             tenantId,
