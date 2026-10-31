@@ -22,4 +22,3 @@ export function PortalBrandLockup() {
   );
 }
 import Image from 'next/image';
-
