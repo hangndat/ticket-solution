@@ -85,7 +85,7 @@ export function AccountGroupedRow({
     >
       <View style={{ flex: 1, gap: space.xxs }}>
         <Text
-          style={{ ...typography.body, color: destructive ? brand.signal : brand.ink,
+          style={{ ...typography.body, color: destructive ? colors.destructive : brand.ink,
             fontFamily: fontFamilies.body,
             fontWeight: destructive ? '600' : '400' }}
         >
