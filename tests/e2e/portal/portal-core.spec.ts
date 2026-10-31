@@ -1,5 +1,11 @@
 import { readFileSync, writeFileSync } from 'node:fs';
-import { test, expect, loadManifest, fixtureFor } from '../harness/fixtures';
+import {
+  test,
+  expect,
+  loadManifest,
+  fixtureFor,
+  accountFor,
+} from '../harness/fixtures';
 import {
   bffGet,
   bffMutate,
@@ -8,6 +14,7 @@ import {
   login,
   portalUrl,
 } from './helpers';
+import { createPendingRequests, createSecondOwnerTenant } from './port13-db';
 
 function reportUpstreamPath(f: ReturnType<typeof fixtureFor>): string {
   return `/v1/tenants/${f.tenantId}/events/${f.eventId}/report`;
@@ -522,4 +529,168 @@ test('[PORT-13] Portal locale defaults VI and persists EN through reload', async
   );
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+});
+
+test('[PORT-13] Portal filter + saved view persist for owner and are not hydrated after switching actor in the same browser profile', async ({
+  page,
+}) => {
+  const m = loadManifest();
+  const f = fixtureFor(m, 'PORT-13');
+  const owner = accountFor(m, 'PORT-13', 'owner');
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!f.sourceId || !f.ticketTypeId || !owner.userId || !databaseUrl)
+    throw new Error('BLOCKED: PORT-13 pending fixture inputs missing');
+  const seededIds = await createPendingRequests({
+    databaseUrl,
+    tenantId: f.tenantId,
+    eventId: f.eventId,
+    sourceId: f.sourceId,
+    ticketTypeId: f.ticketTypeId,
+    actorUserId: owner.userId,
+  });
+  await login(page, m, 'PORT-13', 'owner');
+  await page.goto(portalUrl(m, eventPath(f, '/guests#pending')));
+  const pending = page.locator('#pending');
+  const rows = () => pending.locator('.ant-table-tbody tr.ant-table-row');
+  const visibleIds = async () =>
+    rows().locator('td:first-child').allTextContents().then((values) =>
+      values.map((value) => value.trim()),
+    );
+  await expect(rows()).toHaveCount(50);
+  const firstPage = await visibleIds();
+  await pending.getByRole('button', { name: 'Trang tiếp theo' }).click();
+  await expect(rows()).toHaveCount(5);
+  const secondPage = await visibleIds();
+  expect([...firstPage, ...secondPage]).toEqual(seededIds);
+  expect(new Set([...firstPage, ...secondPage]).size).toBe(55);
+
+  const requestFilter = pending.getByLabel(
+    'Tìm theo mã UUID của yêu cầu',
+  );
+  await requestFilter.waitFor({ state: 'visible' });
+  await requestFilter.fill(seededIds[30]);
+  await pending
+    .getByRole('button', { name: 'Áp dụng bộ lọc chờ duyệt' })
+    .click();
+  await expect(rows()).toHaveCount(1);
+  await expect.poll(visibleIds).toEqual([seededIds[30]]);
+  await expect(requestFilter).toHaveValue(seededIds[30]);
+
+  const toolbar = pending.getByRole('button', {
+    name: 'Chọn hoặc lưu view danh sách',
+  });
+  await expect(toolbar).toBeVisible();
+  await pending.getByRole('button', { name: 'Lưu view', exact: true }).click();
+  const saveDialog = page.getByRole('dialog', { name: 'Lưu view' });
+  await saveDialog.getByLabel('Tên').fill('PORT-13 source filter');
+  await saveDialog.getByRole('button', { name: 'Lưu', exact: true }).click();
+  await expect(saveDialog).toHaveCount(0);
+  await expect(toolbar).toContainText('PORT-13 source filter');
+
+  await requestFilter.fill(seededIds[31]);
+  await pending.getByRole('button', { name: 'Áp dụng bộ lọc chờ duyệt' }).click();
+  await expect(rows()).toHaveCount(1);
+  await expect.poll(visibleIds).toEqual([seededIds[31]]);
+  await toolbar.click();
+  await page.getByRole('menuitem', { name: 'PORT-13 source filter' }).click();
+  await expect(rows()).toHaveCount(1);
+  await expect.poll(visibleIds).toEqual([seededIds[30]]);
+
+  // Apply the saved view again after reload; persisted name alone is insufficient.
+  await page.reload();
+  await page.locator('#pending').waitFor({ state: 'visible' });
+  await page
+    .locator('#pending')
+    .getByRole('button', { name: 'Chọn hoặc lưu view danh sách' })
+    .click();
+  await page.getByRole('menuitem', { name: 'PORT-13 source filter' }).click();
+  await expect(rows()).toHaveCount(1);
+  await expect.poll(visibleIds).toEqual([seededIds[30]]);
+  await expect(requestFilter).toHaveValue(seededIds[30]);
+
+  // Switch actor in the SAME browser profile (same context -> same
+  // localStorage/cookies): owner's saved view must not hydrate for a
+  // different staff member on the same tenant/event. A fresh page in the
+  // same context avoids a state/PKCE cookie race from reusing the page
+  // that just navigated through the logout redirect chain.
+  await page.goto(portalUrl(m, '/api/auth/logout'));
+  await page.waitForURL((url) => url.pathname.startsWith('/auth'), {
+    timeout: 20_000,
+  });
+  const managerPage = await page.context().newPage();
+  await login(managerPage, m, 'PORT-13', 'manager');
+  await managerPage.goto(portalUrl(m, eventPath(f, '/guests#pending')));
+  const pendingAsManager = managerPage.locator('#pending');
+  await pendingAsManager
+    .getByRole('button', { name: 'Chọn hoặc lưu view danh sách' })
+    .waitFor({ state: 'visible' });
+  await expect(
+    pendingAsManager.getByRole('button', { name: 'Quản lý view' }),
+  ).toBeDisabled();
+  await expect(managerPage.getByText('PORT-13 source filter')).toHaveCount(0);
+  await managerPage.close();
+});
+
+test('[PORT-13] Portal saved view does not hydrate across tenants for the same owner in the same browser profile', async ({
+  page,
+}) => {
+  const m = loadManifest();
+  const f = fixtureFor(m, 'PORT-13');
+  const owner = accountFor(m, 'PORT-13', 'owner');
+  if (!owner.userId)
+    throw new Error('BLOCKED: PORT-13 owner userId fixture missing');
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl)
+    throw new Error(
+      'BLOCKED: harness DATABASE_URL missing for PORT-13 second-tenant setup',
+    );
+  // Fixture gap (tests/e2e/portal/FIXTURES.md): PORT-13 needs a second ACTIVE
+  // tenant for the same owner, which the shared seed does not provision.
+  const second = await createSecondOwnerTenant({
+    databaseUrl,
+    ownerUserId: owner.userId,
+    slugPrefix: `port13-${f.tenantSlug}`,
+  });
+
+  await login(page, m, 'PORT-13', 'owner');
+
+  await page.goto(portalUrl(m, `/t/${encodeURIComponent(f.tenantId)}/members`));
+  const toolbar = page.getByRole('button', {
+    name: 'Chọn hoặc lưu view danh sách',
+  });
+  await toolbar.waitFor({ state: 'visible' });
+  await page.getByRole('button', { name: 'Lưu view', exact: true }).click();
+  const firstDialog = page.getByRole('dialog', { name: 'Lưu view' });
+  await firstDialog.getByLabel('Tên').fill('Tenant A members view');
+  await firstDialog.getByRole('button', { name: 'Lưu', exact: true }).click();
+  await expect(firstDialog).toHaveCount(0);
+  await expect(toolbar).toContainText('Tenant A members view');
+
+  // Same owner, same browser profile, SECOND ACTIVE tenant: must not hydrate.
+  await page.goto(
+    portalUrl(m, `/t/${encodeURIComponent(second.tenantId)}/members`),
+  );
+  await toolbar.waitFor({ state: 'visible' });
+  await expect(
+    page.getByRole('button', { name: 'Quản lý view' }),
+  ).toBeDisabled();
+  await expect(page.getByText('Tenant A members view')).toHaveCount(0);
+
+  // Save a distinct view on tenant B, then confirm tenant A kept its own.
+  await page.getByRole('button', { name: 'Lưu view', exact: true }).click();
+  const secondDialog = page.getByRole('dialog', { name: 'Lưu view' });
+  await secondDialog.getByLabel('Tên').fill('Tenant B members view');
+  await secondDialog
+    .getByRole('button', { name: 'Lưu', exact: true })
+    .click();
+  await expect(secondDialog).toHaveCount(0);
+  await expect(toolbar).toContainText('Tenant B members view');
+
+  await page.goto(portalUrl(m, `/t/${encodeURIComponent(f.tenantId)}/members`));
+  await toolbar.waitFor({ state: 'visible' });
+  // The toolbar label only reflects the view selected in THIS page lifecycle
+  // (neither view was marked default); open the menu to check what persisted.
+  await toolbar.click();
+  await expect(page.getByText('Tenant A members view')).toBeVisible();
+  await expect(page.getByText('Tenant B members view')).toHaveCount(0);
 });

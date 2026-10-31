@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
 import { usePortalLocale, type MessageKey } from '../../src/i18n';
 import { SURFACE_MESSAGE_KEYS } from '../../src/prep/surface-copy';
+import { PortalBrandMark } from '../../src/components/portal-brand-lockup';
 
 const ERROR_COPY_KEYS: Record<string, MessageKey> = {
   misconfigured: 'auth.h_1l6yc4c',
@@ -40,7 +41,8 @@ function AuthInner() {
 
   return (
     <Card style={{ maxWidth: 480, margin: '48px auto' }}>
-      <Typography.Title level={2} style={{ marginTop: 0 }}>
+      <Typography.Title level={2} style={{ marginTop: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <PortalBrandMark />
         Vemoki Portal
       </Typography.Title>
       <Typography.Paragraph>{t('auth.h_1dyukbi')}</Typography.Paragraph>

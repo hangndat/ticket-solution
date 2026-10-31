@@ -1,4 +1,4 @@
-import { Link, router, useLocalSearchParams } from 'expo-router';
+import { Link, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import {
   useCallback,
   useEffect,
@@ -55,6 +55,7 @@ import {
   decideTicketSyncApply
 } from '@/tickets/ticket-sync-guard';
 import { walletOfflineNoticeBody } from '@/tickets/wallet-sync-display';
+import { startWalletFocusRefresh } from '@/tickets/wallet-focus-refresh';
 import { logoutAndClearWalletArtifacts } from '@/tickets/wallet-logout';
 import { isApnsProvider, pushProviderName } from '@/push/push';
 import { normalizeIosNotificationPermission } from '@/push/push-permission';
@@ -489,7 +490,7 @@ function VerifiedWallet({ userId }: { userId: string }) {
   const [refreshing, setRefreshing] = useState(false);
   const [showPushPrompt, setShowPushPrompt] = useState(false);
 
-  const hydrateFromCache = useCallback(async () => {
+  const hydrateFromCache = useCallback(async (isActive: () => boolean) => {
     const epoch = session.captureEpoch();
     if (!epoch || epoch.userId !== userId) return;
     const cache = await readTicketDisplayCache(userId, cacheScope);
@@ -499,7 +500,7 @@ function VerifiedWallet({ userId }: { userId: string }) {
       cached: cache,
       expectedUserId: userId
     });
-    if (decision.action !== 'apply') return;
+    if (!isActive() || decision.action !== 'apply') return;
     setTickets(decision.tickets);
     setOffline(true);
     setLastSyncedAt(decision.syncedAt);
@@ -507,13 +508,13 @@ function VerifiedWallet({ userId }: { userId: string }) {
     await session.load(sessionScope, 'me-tickets', async () => decision.tickets);
   }, [cacheScope, sessionScope, userId]);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (isActive: () => boolean = () => true) => {
     const epoch = session.captureEpoch();
     if (!epoch || epoch.userId !== userId) return;
 
     setError(null);
     const credential = await session.resolveCredential();
-    if (!session.isEpochCurrent(epoch)) return;
+    if (!isActive() || !session.isEpochCurrent(epoch)) return;
     if (credential.status === 'unavailable') {
       setError('Phiên đăng nhập không còn hiệu lực. Đăng nhập lại.');
       return;
@@ -534,13 +535,13 @@ function VerifiedWallet({ userId }: { userId: string }) {
             fetchScope,
             controller.signal,
           );
-      if (!session.isEpochCurrent(epoch)) return;
+      if (!isActive() || !session.isEpochCurrent(epoch)) return;
 
       const cached =
         probe.status === 'ok'
           ? null
           : await readTicketDisplayCache(userId, cacheScope);
-      if (!session.isEpochCurrent(epoch)) return;
+      if (!isActive() || !session.isEpochCurrent(epoch)) return;
 
       const decision = decideTicketSyncApply({
         epoch,
@@ -564,6 +565,7 @@ function VerifiedWallet({ userId }: { userId: string }) {
             walletScope: fetchScope
           });
         } catch (err) {
+          if (!isActive() || !session.isEpochCurrent(epoch)) return;
           setError(
             err instanceof Error
               ? err.message
@@ -578,7 +580,7 @@ function VerifiedWallet({ userId }: { userId: string }) {
         return;
       }
 
-      if (!session.isEpochCurrent(epoch)) return;
+      if (!isActive() || !session.isEpochCurrent(epoch)) return;
       setTickets(decision.tickets);
       setOffline(decision.offline);
       if (decision.action === 'apply' || decision.action === 'offline-cache') {
@@ -591,7 +593,7 @@ function VerifiedWallet({ userId }: { userId: string }) {
       }
 
       if (decision.action === 'apply') {
-        if (!session.isEpochCurrent(epoch)) return;
+        if (!isActive() || !session.isEpochCurrent(epoch)) return;
         await persistWalletTicketCaches(
           userId,
           fetchScope,
@@ -599,13 +601,13 @@ function VerifiedWallet({ userId }: { userId: string }) {
           decision.syncedAt,
           writeEpoch,
         );
-        if (!session.isEpochCurrent(epoch)) return;
+        if (!isActive() || !session.isEpochCurrent(epoch)) return;
         const loaded = await session.load(
           sessionScope,
           'me-tickets',
           async () => decision.tickets,
         );
-        if (!loaded || !session.isEpochCurrent(epoch)) return;
+        if (!loaded || !isActive() || !session.isEpochCurrent(epoch)) return;
         const tenantIds = [
           ...new Set(
             decision.tickets
@@ -623,7 +625,7 @@ function VerifiedWallet({ userId }: { userId: string }) {
           });
         }
       } else if (decision.action === 'offline-cache') {
-        if (!session.isEpochCurrent(epoch)) return;
+        if (!isActive() || !session.isEpochCurrent(epoch)) return;
         await session.load(
           sessionScope,
           'me-tickets',
@@ -635,21 +637,11 @@ function VerifiedWallet({ userId }: { userId: string }) {
     }
   }, [cacheScope, fetchScope, sessionScope, userId]);
 
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      setBusy(true);
-      try {
-        await hydrateFromCache();
-        if (!cancelled) await refresh();
-      } finally {
-        if (!cancelled) setBusy(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [hydrateFromCache, refresh]);
+  useFocusEffect(
+    useCallback(() => {
+      return startWalletFocusRefresh({ hydrate: hydrateFromCache, refresh, setBusy });
+    }, [hydrateFromCache, refresh]),
+  );
 
   useEffect(() => {
     if (tickets.length < 1) {

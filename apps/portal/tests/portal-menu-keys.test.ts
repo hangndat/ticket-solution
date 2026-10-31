@@ -43,6 +43,10 @@ test('pathnameMatchesMenuPath org vs event routes', () => {
 });
 
 test('resolvePortalMenuKeys selects leaf and parent open key', () => {
+  assert.deepEqual(resolvePortalMenuKeys('/t/t1/e/e1/guests/pending', sampleMenu), {
+    selectedKeys: ['/t/t1/e/e1/guests'],
+    openKeys: ['nav-event-setup'],
+  });
   assert.deepEqual(resolvePortalMenuKeys('/t/t1/e/e1/guests', sampleMenu), {
     selectedKeys: ['/t/t1/e/e1/guests'],
     openKeys: ['nav-event-setup'],
