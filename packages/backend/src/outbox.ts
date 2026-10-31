@@ -1,7 +1,9 @@
 import { createHash, randomUUID } from 'node:crypto';
 import type { PrismaClient, Prisma } from './generated/prisma/client';
-import type { EmailAdapter } from './email-adapter';
+import type { EmailAdapter, EmailSendResult } from './email-adapter';
 import { readPublicWebBaseUrl } from './email-adapter';
+import { reserveEmailBudget, settleEmailBudget } from './email-budget';
+import { isSmtpDefiniteReject } from './smtp-send';
 import type { ApnsAdapter } from './apns';
 import {
   correctDeviceTokenEnvironment,
@@ -92,6 +94,7 @@ export async function processClaimedOutbox(
 
   for (const row of rows) {
     let emailAttempted = false;
+    let emailFailureState: 'FAILED' | 'UNKNOWN' = 'FAILED';
     try {
       if (row.type === 'MembershipInvite') {
         const invitePayload = await withTenant(
@@ -136,7 +139,7 @@ export async function processClaimedOutbox(
           publicWebBaseUrl,
           token: inviteToken,
         });
-        await email.sendMembershipInvite({
+        const delivery = await sendBudgetedEmail(db, row, () => email.sendMembershipInvite!({
           tenantId: row.tenant_id,
           inviteId: invitePayload.inviteId ?? row.aggregate_id,
           toEmail: invitePayload.email ?? '',
@@ -144,7 +147,16 @@ export async function processClaimedOutbox(
           token: inviteToken,
           expiresAt: invitePayload.expiresAt ?? '',
           acceptUrl,
-        });
+        }), () => { emailAttempted = true; });
+        if (delivery.kind === 'deferred') {
+          await deferEmailBudget(db, row, options.leaseOwner, delivery.due, delivery.reason);
+          continue;
+        }
+        if (delivery.kind !== 'sent') continue;
+        if (delivery.result.providerStatus === 'UNKNOWN') {
+          emailFailureState = 'UNKNOWN';
+          throw new Error('provider_result_unknown');
+        }
         const completedInvite = await withTenant(db, row.tenant_id, (tx) =>
           markOutboxCompleteFenced(tx, row, options.leaseOwner),
         );
@@ -247,7 +259,7 @@ export async function processClaimedOutbox(
           tenantSlug: meta.tenantSlug || undefined,
           eventSlug: meta.eventSlug || undefined,
         });
-        await email.sendGuestInvitation({
+        const delivery = await sendBudgetedEmail(db, row, () => email.sendGuestInvitation!({
           tenantId: row.tenant_id,
           eventId,
           invitationId: readyPayload.invitationId ?? row.aggregate_id,
@@ -256,7 +268,16 @@ export async function processClaimedOutbox(
           claimUrl,
           eventName: meta.eventName || undefined,
           ttlHours: readyPayload.ttlHours,
-        });
+        }), () => { emailAttempted = true; });
+        if (delivery.kind === 'deferred') {
+          await deferEmailBudget(db, row, options.leaseOwner, delivery.due, delivery.reason);
+          continue;
+        }
+        if (delivery.kind !== 'sent') continue;
+        if (delivery.result.providerStatus === 'UNKNOWN') {
+          emailFailureState = 'UNKNOWN';
+          throw new Error('provider_result_unknown');
+        }
         const completedReady = await withTenant(db, row.tenant_id, (tx) =>
           markOutboxCompleteFenced(tx, row, options.leaseOwner),
         );
@@ -566,8 +587,16 @@ export async function processClaimedOutbox(
       }
 
       // Provider I/O outside tenant transaction (H2); ack in a follow-up tx.
-      emailAttempted = true;
-      const result = await email.sendTicketIssued(prep.sendPayload);
+      const delivery = await sendBudgetedEmail(
+        db, row, () => email.sendTicketIssued(prep.sendPayload),
+        () => { emailAttempted = true; },
+      );
+      if (delivery.kind === 'deferred') {
+        await deferEmailBudget(db, row, options.leaseOwner, delivery.due, delivery.reason);
+        continue;
+      }
+      if (delivery.kind !== 'sent') continue;
+      const result = delivery.result;
 
       const outcome = await withTenant(db, row.tenant_id, async (tx) => {
         if (!(await lockOutboxLease(tx, row, options.leaseOwner))) {
@@ -682,6 +711,9 @@ export async function processClaimedOutbox(
         error instanceof Error ? error.message : 'unknown error',
       );
       try {
+        if (emailAttempted && !isSmtpDefiniteReject(error)) {
+          emailFailureState = 'UNKNOWN';
+        }
         await withTenant(db, row.tenant_id, async (tx) => {
           await scheduleRetryFenced(
             tx,
@@ -689,7 +721,7 @@ export async function processClaimedOutbox(
             options.leaseOwner,
             retry,
             message,
-            'FAILED',
+            emailFailureState,
             emailAttempted,
           );
         });
@@ -700,6 +732,61 @@ export async function processClaimedOutbox(
   }
 
   return { claimed: rows.length, completed, failed };
+}
+
+async function sendBudgetedEmail(
+  db: PrismaClient,
+  row: ClaimedOutboxRow,
+  send: () => Promise<EmailSendResult>,
+  onAttempt: () => void,
+): Promise<
+  | { kind: 'sent'; result: EmailSendResult }
+  | { kind: 'deferred'; reason: 'email_budget_deferred' | 'email_budget_config_missing'; due: Date }
+  | { kind: 'duplicate' | 'stale' }
+> {
+  const admission = await reserveEmailBudget(db, {
+    tenantId: row.tenant_id,
+    outboxId: row.outbox_id,
+    leaseToken: row.lease_token,
+  });
+  if (admission.kind !== 'reserved') return admission;
+  onAttempt();
+  let result: EmailSendResult;
+  try {
+    result = await send();
+  } catch (error) {
+    await settleEmailBudget(
+      db, row.tenant_id, admission.attemptId,
+      isSmtpDefiniteReject(error) ? 'RELEASED' : 'UNKNOWN',
+    );
+    throw error;
+  }
+  await settleEmailBudget(
+    db, row.tenant_id, admission.attemptId,
+    result.providerStatus === 'ACCEPTED' ? 'ACCEPTED' : 'UNKNOWN',
+    result.providerStatus === 'ACCEPTED' ? result.providerRef : null,
+  );
+  return { kind: 'sent', result };
+}
+
+async function deferEmailBudget(
+  db: PrismaClient,
+  row: ClaimedOutboxRow,
+  leaseOwner: string,
+  due: Date,
+  reason: 'email_budget_deferred' | 'email_budget_config_missing',
+): Promise<void> {
+  await withTenant(db, row.tenant_id, async (tx) => {
+    if (!(await lockOutboxLease(tx, row, leaseOwner))) return;
+    await tx.$executeRaw`
+      UPDATE outbox SET status = 'PENDING', next_attempt_at = ${due}::timestamptz,
+        payload = payload || ${JSON.stringify({ emailBudgetDeferred: reason })}::jsonb,
+        lease_owner = NULL, lease_token = NULL, lease_expires_at = NULL,
+        updated_at = now()
+      WHERE tenant_id = ${row.tenant_id}::uuid AND id = ${row.outbox_id}::uuid
+        AND lease_owner = ${leaseOwner} AND lease_token = ${row.lease_token}
+    `;
+  });
 }
 
 type TicketIssuedPushContext = {
@@ -1131,7 +1218,11 @@ async function scheduleRetryFenced(
   emailAttempted = false,
 ): Promise<void> {
   if (!(await lockOutboxLease(tx, row, leaseOwner))) return;
-  const businessKey = `ticket:${row.aggregate_id}:issued:email`;
+  const payloads = await tx.$queryRaw<Array<{ business_key: string | null }>>`
+    SELECT payload->>'businessKey' AS business_key FROM outbox
+    WHERE tenant_id = ${row.tenant_id}::uuid AND id = ${row.outbox_id}::uuid
+  `;
+  const businessKey = payloads[0]?.business_key || `ticket:${row.aggregate_id}:issued:email`;
   const notes = await tx.$queryRaw<
     Array<{ id: string; attempts: number; state: string }>
   >`
@@ -1296,6 +1387,7 @@ async function markOutboxDeadFenced(
     UPDATE outbox
     SET status = 'DEAD',
         payload = payload || ${JSON.stringify({ deadReason: reason })}::jsonb,
+        next_attempt_at = NULL,
         lease_owner = NULL,
         lease_token = NULL,
         lease_expires_at = NULL,

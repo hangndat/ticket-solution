@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { portalGet } from '../client/portal-fetch';
 
 const SUBJECT_REQUEST_TIMEOUT_MS = 8_000;
 
@@ -19,29 +20,18 @@ export function usePortalUserId(): SubjectState {
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const controller = new AbortController();
-      const timer = setTimeout(
-        () => controller.abort(),
-        SUBJECT_REQUEST_TIMEOUT_MS,
-      );
       try {
-        const res = await fetch('/api/bff/me/subject', {
-          method: 'GET',
-          credentials: 'same-origin',
-          cache: 'no-store',
-          signal: controller.signal,
-          headers: { Accept: 'application/json' },
-        });
+        const res = await portalGet('/api/bff/me/subject', SUBJECT_REQUEST_TIMEOUT_MS);
         if (cancelled) return;
         if (res.status === 401) {
           setState({ status: 'unauthenticated' });
           return;
         }
-        if (!res.ok) {
+        if (res.status !== 200) {
           setState({ status: 'error' });
           return;
         }
-        const json: unknown = await res.json();
+        const json: unknown = res.json;
         const userId =
           typeof json === 'object' &&
           json !== null &&
@@ -55,8 +45,6 @@ export function usePortalUserId(): SubjectState {
         setState({ status: 'ready', userId });
       } catch {
         if (!cancelled) setState({ status: 'error' });
-      } finally {
-        clearTimeout(timer);
       }
     })();
     return () => {

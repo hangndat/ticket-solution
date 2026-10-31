@@ -247,7 +247,7 @@ const VI: Record<CopyKey, string> = {
   'meta.title': 'Vemoki — Biến mọi sự kiện thành trải nghiệm đáng nhớ',
   'meta.description':
     'Một nền tảng. Mọi sự kiện. Vemoki giúp mời khách, phát vé QR và check-in trên cùng một nền tảng — dữ liệu demo cho trải nghiệm thử.',
-  'nav.brand': 'vemoki',
+  'nav.brand': 'Vemoki',
   'nav.demo': 'Xem demo',
   'nav.interest': 'Đăng ký tư vấn',
   'nav.product': 'Sản phẩm',
@@ -539,7 +539,7 @@ const EN: Record<CopyKey, string> = {
   'meta.title': 'Vemoki — Turn every event into a memorable experience',
   'meta.description':
     'One platform. Every event. Vemoki helps you invite guests, issue QR tickets, and check in on one platform — demo data for trial experiences.',
-  'nav.brand': 'vemoki',
+  'nav.brand': 'Vemoki',
   'nav.demo': 'View demo',
   'nav.interest': 'Book a consult',
   'nav.product': 'Product',

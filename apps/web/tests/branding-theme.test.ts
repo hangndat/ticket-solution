@@ -11,7 +11,7 @@ import {
 import { VEMOKI_BRANDING } from '../src/branding/vemoki';
 
 test('Vemoki defaults match Live Pulse v2 tokens', () => {
-  assert.equal(VEMOKI_BRANDING.wordmark, 'vemoki');
+  assert.equal(VEMOKI_BRANDING.wordmark, 'Vemoki');
   assert.equal(VEMOKI_BRANDING.colors.ink, '#0B1220');
   assert.equal(VEMOKI_BRANDING.colors.paper, '#F4F6F8');
   assert.equal(VEMOKI_BRANDING.colors.signal, '#E11D48');
@@ -67,7 +67,7 @@ test('brandingCssVarEntries expose Live Pulse token names', () => {
   assert.equal(entries['--paper'], '#F4F6F8');
   assert.equal(entries['--signal'], '#E11D48');
   assert.equal(entries['--focus'], '#2563EB');
-  assert.equal(entries['--brand'], '#E11D48');
+  assert.equal(entries['--brand'], '#7C4DED');
 });
 
 test('brandingFromEventBrand scopes demo event chrome', () => {
@@ -84,7 +84,7 @@ test('brandingFromEventBrand scopes demo event chrome', () => {
 
 test('toBrandingDto is JSON-safe for BFF responses', () => {
   const dto = toBrandingDto(VEMOKI_BRANDING);
-  assert.equal(dto.wordmark, 'vemoki');
-  assert.equal(dto.primaryColor, '#E11D48');
+  assert.equal(dto.wordmark, 'Vemoki');
+  assert.equal(dto.primaryColor, '#7C4DED');
   assert.equal(dto.logoUrl, null);
 });

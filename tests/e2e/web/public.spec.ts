@@ -16,6 +16,7 @@ import {
   webUrl,
 } from './helpers';
 import { readWeb09Database } from './web09-db';
+import { readTenantProvisionSnapshot } from './web12-db';
 
 test('[WEB-01] only published projection is discoverable', async ({ page }) => {
   const manifest = loadManifest();
@@ -400,4 +401,45 @@ test('[WEB-12] marketing VI/EN, demo CTA, and public links', async ({
     'data-locale',
     'en',
   );
+  // demo label source of truth: apps/web/src/marketing/copy.ts 'hero.demo_note'
+  await expect(page.getByTestId('demo-badge')).toHaveText(
+    'Simulated demo — not a real customer.',
+  );
+  await page.goto(manifest.origins.marketing);
+  await expect(page.getByTestId('demo-badge')).toHaveText(
+    'Demo giả lập — không phải khách hàng thật.',
+  );
+});
+
+test('[WEB-12] interest form submit does not provision tenant/Owner', async ({
+  page,
+}) => {
+  const manifest = loadManifest();
+  fixtureFor(manifest, 'WEB-12');
+  const email = `e2e-web12-${manifest.runId}-${randomUUID()}@example.invalid`;
+
+  const before = await readTenantProvisionSnapshot(email);
+
+  const response = await page.request.post(
+    new URL('/api/marketing/interest', manifest.origins.marketing).toString(),
+    {
+      data: {
+        name: 'E2E WEB-12 lead',
+        email,
+        org: 'E2E Co',
+        role: 'owner',
+        consent: true,
+        note: 'automated e2e evidence, not a real inquiry',
+      },
+    },
+  );
+  expect(response.status()).toBe(200);
+  const body = await response.json();
+  expect(body.ok).toBe(true);
+  expect(typeof body.lead_id).toBe('string');
+
+  const after = await readTenantProvisionSnapshot(email);
+  expect(after.usersWithEmail).toBe(0);
+  expect(after.ownerMembershipsForEmail).toBe(0);
+  expect(after.activeTenants).toBe(before.activeTenants);
 });

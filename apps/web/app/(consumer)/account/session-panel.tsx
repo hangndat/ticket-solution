@@ -93,7 +93,7 @@ export function SessionPanel() {
           <Button
             asChild
             variant="secondary"
-            className="hover:border-signal hover:bg-signal hover:text-paper"
+            className="hover:border-primary hover:bg-primary hover:text-paper"
           >
             <a href="/api/auth/logout" onClick={() => clearParkedClaimOnSessionEnd()}>
               Đăng xuất

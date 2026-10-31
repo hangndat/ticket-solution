@@ -74,6 +74,10 @@ const config: NextConfig = {
           },
         ],
       },
+      ...['/', '/platform', '/t/:path*', '/onboarding', '/onboarding/:path*', '/account/:path*'].map((source) => ({
+        source,
+        headers: [{ key: 'Cache-Control', value: 'private, no-store' }],
+      })),
     ];
   },
 };
