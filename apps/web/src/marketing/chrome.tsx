@@ -1,5 +1,6 @@
 import { Button } from '@ticket/ui';
 import Link from 'next/link';
+import Image from 'next/image';
 import type { ReactNode } from 'react';
 import { t } from './copy';
 import {
@@ -61,8 +62,8 @@ export function MarketingChrome({
           aria-label={t(locale, 'nav.brand')}
           data-testid="mkt-wordmark"
         >
+          <Image src="/marketing/neon/vemoki-v-mark.webp" alt="" width={34} height={30} className="mr-2 inline-block align-middle" />
           {t(locale, 'nav.brand')}
-          <span aria-hidden="true">↗</span>
         </Link>
         <LocaleSwitch locale={locale} pageKind={pageKind} onInk={onInk} />
         <nav className={marketingNav} aria-label={locale === 'en' ? 'Primary' : 'Chính'}>
