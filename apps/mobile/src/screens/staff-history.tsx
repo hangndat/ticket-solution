@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { RefreshControl, ScrollView, View } from 'react-native';
 import { StaffGateNoEventState } from '@/gate/staff-gate-empty-state';
 import { StaffGateDeviceHistoryPanel } from '@/gate/staff-gate-device-history-panel';
 import {
@@ -97,10 +97,21 @@ function StaffHistoryDeviceList({
 
 export function StaffHistoryScreen() {
   const gate = useStaffGateWorkspace();
+  const { refreshGateEvents } = gate;
+  const [pulling, setPulling] = useState(false);
 
   const scopeKey = gate.gateScope
     ? `${gate.gateScope.tenantId}:${gate.gateScope.eventId}`
     : 'none';
+
+  const onRefresh = useCallback(async () => {
+    setPulling(true);
+    try {
+      await refreshGateEvents();
+    } finally {
+      setPulling(false);
+    }
+  }, [refreshGateEvents]);
 
   return (
     <>
@@ -108,6 +119,12 @@ export function StaffHistoryScreen() {
         contentInsetAdjustmentBehavior="automatic"
         style={{ flex: 1, backgroundColor: brand.paper }}
         contentContainerStyle={{ padding: space.xl, paddingBottom: space.huge, gap: space.lg }}
+        refreshControl={
+          <RefreshControl
+            refreshing={pulling}
+            onRefresh={() => void onRefresh()}
+          />
+        }
       >
         <StaffGateNoEventState />
         <View>

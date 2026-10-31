@@ -4,7 +4,8 @@ import { ModalForm, ProFormText, ProTable } from '@ant-design/pro-components';
 import type { ProColumns } from '@ant-design/pro-components';
 import { Alert, Button, Empty, Flex, Result, Spin, Typography } from 'antd';
 import { useParams } from 'next/navigation';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
+import { useActorState as useState } from '../../../../../../src/client/use-actor-state';
 import type { PortalTicketTypeSummary } from '@ticket/contracts';
 import {
   apiErrorMessage,

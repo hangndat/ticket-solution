@@ -4,9 +4,10 @@ import {
   useRef,
   useState,
   useSyncExternalStore,
-  startTransition
+  startTransition,
+  type PropsWithChildren
 } from 'react';
-import { Animated, Text, View } from 'react-native';
+import { Animated, ScrollView, Text, View } from 'react-native';
 import { Input } from '@/components/ui/input';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import type { RedemptionResolveResponse } from '@ticket/contracts';
@@ -19,7 +20,8 @@ import {
 import { presentRedeemDecision } from '@/attendee/attendee-outcome-copy';
 import { useAttendeeSignIn } from '@/attendee/use-attendee-sign-in';
 import { AttendeeCta } from '@/components/attendee-cta';
-import { Notice, Page } from '@/components/page';
+import { Notice } from '@/components/page';
+import { AttendeeScreenChrome } from '@/navigation/attendee-screen-chrome';
 import { ErrorState, LoadingState } from '@/components/screen-state';
 import { redeemCopy } from '@/components/screen-state-copy';
 import { getApiBaseUrl } from '@/identity/config';
@@ -50,9 +52,17 @@ import { useFadeInOnMount } from '@/hooks/use-fade-in-on-mount';
 import {
   parkSignInReturn
 } from '@/navigation/sign-in-return-intent';
-import { sanitizeRedeemCodeParam } from '@/navigation/attendee-redeem-entry';
-import { colors } from '@/theme/colors';
+import {
+  ATTENDEE_REDEEM_PATH,
+  sanitizeRedeemCodeParam,
+} from '@/navigation/attendee-redeem-entry';
+import { randomId } from '@/lib/random-id';
+import { refreshWalletAfterIssue } from '@/tickets/refresh-wallet-after-issue';
+import { ticketDetailHref } from '@/tickets/ticket-detail-href';
+import { resolveTermsForDisplay } from '@/redeem/terms-display';
+import { brand, colors } from '@/theme/colors';
 import { fontFamilies } from '@/theme/fonts';
+import { space } from '@/theme/tokens';
 import { typography } from '@/theme/typography';
 
 const AUTH_CODES = new Set(['UNAUTHENTICATED', 'EMAIL_NOT_VERIFIED']);
@@ -112,7 +122,6 @@ export function GlobalRedeemScreen() {
   const [offlineNotice, setOfflineNotice] = useState<string | null>(null);
 
   const verified = identity.status === 'verified';
-  const guestGate = !verified;
   const resolved = resolveContext !== null;
 
   const applyResolveBody = useCallback((body: RedemptionResolveResponse) => {
@@ -121,8 +130,9 @@ export function GlobalRedeemScreen() {
     setResolveError(null);
     const publishedForm = body.published.form;
     setForm(publishedForm ? (publishedForm as FormDefinition) : null);
-    setTermsVersion(body.published.terms?.version ?? null);
-    setTermsBody(body.published.terms?.bodyMarkdown ?? null);
+    const terms = resolveTermsForDisplay(body.published.terms);
+    setTermsVersion(terms.version);
+    setTermsBody(terms.body);
     setAnswers({});
     setTermsAccepted(false);
     setFieldErrors({});
@@ -244,7 +254,7 @@ export function GlobalRedeemScreen() {
         parkedUserId: epoch?.userId ?? null,
         parkedGeneration: epoch?.generation ?? null
       });
-      parkSignInReturn({ pathname: '/redeem-global' });
+      parkSignInReturn({ pathname: ATTENDEE_REDEEM_PATH });
       const ok = await signIn();
       if (ok) setResolveError(null);
       return;
@@ -279,7 +289,16 @@ export function GlobalRedeemScreen() {
     }
     if (termsIssue) nextErrors.terms = termsIssue.message;
     setFieldErrors(nextErrors);
-    if (!validated.ok || termsIssue) return;
+    if (!validated.ok || termsIssue) {
+      setDecision({
+        kind: 'denied',
+        code: termsIssue?.code ?? 'FORM_INVALID',
+        message:
+          termsIssue?.message ??
+          'Điền đủ biểu mẫu rồi xác nhận. Chưa gửi lên máy chủ.'
+      });
+      return;
+    }
 
     const payload = {
       tenantId: resolveContext.tenantId,
@@ -292,7 +311,7 @@ export function GlobalRedeemScreen() {
     };
     const fingerprint = redeemPayloadFingerprint(payload);
     const { key } = resolveIdempotencyKey(attempt, fingerprint, () =>
-      crypto.randomUUID(),
+      randomId(),
     );
     setAttempt({ key, fingerprint, unclear: true });
     setBusy(true);
@@ -317,6 +336,11 @@ export function GlobalRedeemScreen() {
       setDecision(next);
       if (next.kind === 'issued' || next.kind === 'pending') {
         clearGlobalRedeemDraftIntent();
+      }
+      if (next.kind === 'issued') {
+        await refreshWalletAfterIssue();
+        if (!session.isEpochCurrent(epoch)) return;
+        router.push(ticketDetailHref(next.ticketId));
       }
       if (next.kind === 'unknown') {
         setAttempt({ key, fingerprint, unclear: true });
@@ -384,7 +408,9 @@ export function GlobalRedeemScreen() {
             requestId: body.requestId,
             replayed: true
           });
-          setStatusNote('Vé đã sẵn sàng — mở tab Vé của tôi.');
+          await refreshWalletAfterIssue();
+          if (!session.isEpochCurrent(epoch)) return;
+          router.push(ticketDetailHref(body.ticketId));
         } else if (body.status === 'PENDING_REVIEW') {
           setStatusNote(
             `Vẫn chờ duyệt${body.expiresAt ? ` · hết hạn ${body.expiresAt}` : ''}. Chưa phải vé.`,
@@ -420,7 +446,7 @@ export function GlobalRedeemScreen() {
         parkedGeneration: epoch?.generation ?? null
       });
     }
-    parkSignInReturn({ pathname: '/redeem-global' });
+    parkSignInReturn({ pathname: ATTENDEE_REDEEM_PATH });
     const ok = await signIn();
     if (ok && decision?.kind === 'denied' && AUTH_CODES.has(decision.code)) {
       setDecision(null);
@@ -439,54 +465,45 @@ export function GlobalRedeemScreen() {
 
   if (!configured) {
     return (
-      <Page>
+      <RedeemTabPage>
         <Notice title="Chưa sẵn sàng đổi mã">
           Bản dựng chưa bật đăng nhập. Bạn vẫn có thể xem sự kiện công khai.
         </Notice>
-      </Page>
-    );
-  }
-
-  if (guestGate) {
-    return (
-      <Page>
-        <Text accessibilityRole="header" style={{ color: colors.ink, ...typography.display }}>
-          {redeemCopy.globalGuestTitle}
-        </Text>
-        <Text style={{ color: colors.secondary, ...typography.body }}>
-          {redeemCopy.globalGuestBody}
-        </Text>
-        <AttendeeCta
-          label={
-            signInBusy ? 'Đang đăng nhập…' : redeemCopy.authGateCta
-          }
-          disabled={busy || signInBusy}
-          onPress={() => void onSignIn()}
-          testID="global-redeem-cta-continue"
-        />
-        {signInBusy ? (
-          <LoadingState title="Đang đăng nhập">
-            Chờ xác minh — chưa tra cứu mã.
-          </LoadingState>
-        ) : null}
-        {signInError ? (
-          <ErrorState
-            title={redeemCopy.authCancelTitle}
-            onRetry={() => void onSignIn()}
-            retryLabel="Thử lại"
-          >
-            {signInError}
-          </ErrorState>
-        ) : null}
-      </Page>
+      </RedeemTabPage>
     );
   }
 
   return (
-    <Page>
-      <Text accessibilityRole="header" style={{ color: colors.ink, ...typography.display }}>
-        Đổi mã lấy vé
-      </Text>
+    <RedeemTabPage>
+      {!verified ? (
+        <>
+          <Notice title={redeemCopy.globalGuestTitle}>
+            {redeemCopy.globalGuestBody}
+          </Notice>
+          <AttendeeCta
+            label={
+              signInBusy ? 'Đang đăng nhập…' : redeemCopy.authGateCta
+            }
+            disabled={busy || signInBusy}
+            onPress={() => void onSignIn()}
+            testID="global-redeem-cta-continue"
+          />
+          {signInBusy ? (
+            <LoadingState title="Đang đăng nhập">
+              Chờ xác minh — chưa tra cứu mã.
+            </LoadingState>
+          ) : null}
+          {signInError ? (
+            <ErrorState
+              title={redeemCopy.authCancelTitle}
+              onRetry={() => void onSignIn()}
+              retryLabel="Thử lại"
+            >
+              {signInError}
+            </ErrorState>
+          ) : null}
+        </>
+      ) : null}
 
       {offlineNotice ? (
         <Notice title={redeemCopy.offlineTitle}>{offlineNotice}</Notice>
@@ -524,23 +541,13 @@ export function GlobalRedeemScreen() {
         testID="global-redeem-code"
       />
       {!resolved ? (
-        <Text style={{ color: colors.secondary, ...typography.callout }}>
-          {redeemCopy.globalVerifiedHint}
-        </Text>
+        <AttendeeCta
+          label={busy ? 'Đang tra cứu…' : redeemCopy.lookupCta}
+          disabled={busy || code.trim().length === 0}
+          onPress={() => void onContinueOrResolve()}
+          testID="global-redeem-cta-resolve"
+        />
       ) : null}
-
-      <AttendeeCta
-        label={
-          busy
-            ? 'Đang tra cứu…'
-            : resolved
-              ? redeemCopy.lookupAgainCta
-              : redeemCopy.lookupCta
-        }
-        disabled={busy || code.trim().length === 0}
-        onPress={() => void onContinueOrResolve()}
-        testID="global-redeem-cta-resolve"
-      />
 
       {resolved ? (
         <>
@@ -560,7 +567,7 @@ export function GlobalRedeemScreen() {
 
           <View {...redeemActionAnnouncement()}>
             <AttendeeCta
-              label={busy ? 'Đang xử lý…' : 'Xác nhận đổi mã'}
+              label={busy ? 'Đang xử lý…' : redeemCopy.confirmCta}
               disabled={busy || code.trim().length === 0}
               onPress={() => void submit()}
               testID="global-redeem-cta-submit"
@@ -589,9 +596,11 @@ export function GlobalRedeemScreen() {
 
       {decision?.kind === 'issued' ? (
         <AttendeeCta
-          label="Xem vé của tôi"
+          label={redeemCopy.walletCta}
           variant="secondary"
-          onPress={() => router.push('/my-tickets')}
+          onPress={() =>
+            router.push(ticketDetailHref(decision.ticketId))
+          }
           testID="global-redeem-cta-wallet"
         />
       ) : null}
@@ -620,14 +629,36 @@ export function GlobalRedeemScreen() {
 
       {decision?.kind === 'stale' ? (
         <AttendeeCta
-          label="Tra cứu lại mã"
+          label={redeemCopy.lookupAgainCta}
           variant="secondary"
           disabled={busy}
           onPress={() => void runResolve(code.trim())}
           testID="global-redeem-cta-re-resolve"
         />
       ) : null}
-    </Page>
+    </RedeemTabPage>
+  );
+}
+
+/** Scroll root first, then native large-title chrome (Events / Vé của tôi). */
+function RedeemTabPage({ children }: PropsWithChildren) {
+  return (
+    <>
+      <ScrollView
+        contentInsetAdjustmentBehavior="automatic"
+        keyboardShouldPersistTaps="handled"
+        style={{ flex: 1, backgroundColor: brand.paper }}
+        contentContainerStyle={{
+          paddingHorizontal: space.xl,
+          paddingTop: space.sm,
+          paddingBottom: space.huge,
+          gap: space.xl,
+        }}
+      >
+        {children}
+      </ScrollView>
+      <AttendeeScreenChrome title={redeemCopy.screenTitle} />
+    </>
   );
 }
 

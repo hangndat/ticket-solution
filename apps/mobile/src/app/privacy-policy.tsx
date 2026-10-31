@@ -1,6 +1,6 @@
-import { PrivacyPolicyWebViewScreen } from '@/screens/privacy-policy-webview';
+import { PrivacyScreen } from '@/screens/privacy-policy-screen';
 
-/** Root stack — full screen, no tab bar (guest prototype parity). */
+/** Root stack — native policy, no WebView, no tab bar. */
 export default function PrivacyPolicyRoute() {
-  return <PrivacyPolicyWebViewScreen presentation="root" />;
+  return <PrivacyScreen />;
 }

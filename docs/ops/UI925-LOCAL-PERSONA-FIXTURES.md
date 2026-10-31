@@ -66,3 +66,7 @@ node scripts/dev-local-persona-verify.mjs
 1. `docker compose -p ui869dev` + `./scripts/dev-local-stack.sh up`
 2. Nếu `persona-fixtures` báo token/password: chạy `node scripts/lib/ui869-keycloak-personas.mjs` (admin `admin`/`admin` mặc định compose).
 3. Public catalog `500` do AR891-INT-F01: ghi route + SHA, không sửa trong task #925.
+
+## S6 (27/10/2026)
+
+UAT Epic #914 dùng fixture này trên stack `vcx914s6` (không shared `ticket_d9_demo`). `dev-local-persona-verify.mjs` **13/13 PASS** trên SHA `2645999f0ad535276b63a95c6c96bace9cff025e`; AR891-INT-F01 không tái hiện local (public events 200). Chi tiết ma trận: Issue #946.

@@ -57,8 +57,8 @@ export function presentGateScanStatus(input: {
   if (!input.op || outcome.kind === 'idle') {
     return {
       kind: 'idle',
-      label: 'Sẵn sàng quét',
-      hint: 'Đưa QR vào khung hoặc nhập mã thủ công.',
+      label: 'Chưa có lượt quét',
+      hint: 'Chưa có lượt quét nào.',
       tone: 'default',
       symbol: 'qrcode.viewfinder',
       assertive: false,
@@ -176,8 +176,8 @@ function mapOutcomeKind(
     default:
       return {
         kind: 'idle',
-        label: 'Sẵn sàng quét',
-        hint: 'Đưa QR vào khung hoặc nhập mã thủ công.',
+        label: 'Chưa có lượt quét',
+        hint: 'Chưa có lượt quét nào.',
         tone: 'default',
         symbol: 'qrcode.viewfinder',
       };

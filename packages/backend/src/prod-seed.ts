@@ -13,6 +13,7 @@ import {
 } from './config-publish';
 import {
   eventPermissionsForRole,
+  samePermissionSet,
   tenantPermissionsForRole,
 } from './role-map';
 import { withTenant } from './tenant-context';
@@ -87,10 +88,45 @@ function redeemCodes(prefix: string): string[] {
   );
 }
 
+/** O31 gate UUID: kind 0009, tail = eventNum (2) + gateNum (2). */
+function gateId(eventNum: number, gateNum: number): string {
+  const ee = String(eventNum).padStart(2, '0');
+  const gg = String(gateNum).padStart(2, '0');
+  return `686f0001-0009-4000-8000-00000000${ee}${gg}`;
+}
+
+const GATE_NAME_BY_COUNT: Readonly<
+  Record<1 | 2 | 3, readonly { name: string; sortOrder: number }[]>
+> = {
+  1: [{ name: 'Cổng chính', sortOrder: 0 }],
+  2: [
+    { name: 'Cổng chính', sortOrder: 0 },
+    { name: 'Cổng VIP', sortOrder: 1 },
+  ],
+  3: [
+    { name: 'Cổng chính', sortOrder: 0 },
+    { name: 'Cổng VIP', sortOrder: 1 },
+    { name: 'Cổng phụ', sortOrder: 2 },
+  ],
+};
+
+function gatesForEvent(
+  eventNum: number,
+  count: 1 | 2 | 3,
+): readonly { id: string; name: string; sortOrder: number }[] {
+  return GATE_NAME_BY_COUNT[count].map((g, i) => ({
+    id: gateId(eventNum, i + 1),
+    name: g.name,
+    sortOrder: g.sortOrder,
+  }));
+}
+
 export type ProdSeedEventDef = {
   id: string;
   orgKey: OrgKey;
   orgNum: number;
+  /** Event index 1–6 (UUID segment + gate id). */
+  eventNum: number;
   slug: string;
   name: string;
   venueName: string;
@@ -106,6 +142,8 @@ export type ProdSeedEventDef = {
   eventQuota: number;
   rawCodes: readonly string[];
   marketingKey: string;
+  /** O31: demo gate count so Scan picker covers 1 / 2 / 3. */
+  gateCount: 1 | 2 | 3;
 };
 
 export const PROD_SEED = {
@@ -149,6 +187,7 @@ export const PROD_SEED = {
       id: eventId(1),
       orgKey: 'lucbao' as const,
       orgNum: 1,
+      eventNum: 1,
       slug: 'dem-am-indie',
       name: 'Đêm Nhạc Indie Lục Bảo',
       venueName: 'Nhà hát Lớn Hà Nội',
@@ -164,11 +203,13 @@ export const PROD_SEED = {
       eventQuota: 120,
       rawCodes: redeemCodes('VEM-LUCBAO'),
       marketingKey: 'demAmIndie',
+      gateCount: 1,
     },
     pulseAfterhours: {
       id: eventId(2),
       orgKey: 'saigon' as const,
       orgNum: 2,
+      eventNum: 2,
       slug: 'pulse-afterhours',
       name: 'Pulse Afterhours',
       venueName: 'The Observatory, Quận 1, TP.HCM',
@@ -184,11 +225,13 @@ export const PROD_SEED = {
       eventQuota: 200,
       rawCodes: redeemCodes('VEM-PULSE-AH'),
       marketingKey: 'pulseAfterhours',
+      gateCount: 2,
     },
     pulseRooftop: {
       id: eventId(3),
       orgKey: 'saigon' as const,
       orgNum: 2,
+      eventNum: 3,
       slug: 'pulse-rooftop',
       name: 'Pulse Rooftop Session',
       venueName: 'Chill Skybar, Quận 1, TP.HCM',
@@ -204,11 +247,13 @@ export const PROD_SEED = {
       eventQuota: 80,
       rawCodes: redeemCodes('VEM-PULSE-RT'),
       marketingKey: 'pulseRooftop',
+      gateCount: 3,
     },
     phoCoDem: {
       id: eventId(4),
       orgKey: 'hoian' as const,
       orgNum: 3,
+      eventNum: 4,
       slug: 'pho-co-dem',
       name: 'Phố Cổ Về Đêm',
       venueName: 'Khu phố cổ Hội An, Quảng Nam',
@@ -224,11 +269,13 @@ export const PROD_SEED = {
       eventQuota: 300,
       rawCodes: redeemCodes('VEM-HOIAN-PC'),
       marketingKey: 'phoCoDem',
+      gateCount: 1,
     },
     songThuWorkshop: {
       id: eventId(5),
       orgKey: 'hoian' as const,
       orgNum: 3,
+      eventNum: 5,
       slug: 'song-thu-workshop',
       name: 'Workshop Sông Thu',
       venueName: 'An Nhiên Garden, Hội An',
@@ -244,11 +291,13 @@ export const PROD_SEED = {
       eventQuota: 40,
       rawCodes: redeemCodes('VEM-HOIAN-WS'),
       marketingKey: 'songThuWorkshop',
+      gateCount: 2,
     },
     festivalAnSong: {
       id: eventId(6),
       orgKey: 'hoian' as const,
       orgNum: 3,
+      eventNum: 6,
       slug: 'festival-an-song',
       name: 'Festival Ăn Sống Hội An',
       venueName: 'Công viên An Bàng, Hội An',
@@ -264,6 +313,7 @@ export const PROD_SEED = {
       eventQuota: 1500,
       rawCodes: redeemCodes('VEM-HOIAN-FEST'),
       marketingKey: 'festivalAnSong',
+      gateCount: 3,
     },
   },
 } as const;
@@ -339,6 +389,8 @@ export type ProdSeedReport = {
   assignmentsSkipped: number;
   configsPublished: number;
   configsSkipped: number;
+  gatesInserted: number;
+  gatesSkipped: number;
   staffEmailsMissing: string[];
   staffUserIdsByEmail: Record<string, string[]>;
 };
@@ -623,6 +675,39 @@ function eventWindowTimes(event: ProdSeedEventDef) {
   };
 }
 
+/**
+ * O31: idempotent gates for demo events (unique tenant+event+name).
+ * Uses ticket_runtime + app.tenant_id via withTenant — same RLS path as createEventGate.
+ */
+async function ensureGates(
+  tx: Prisma.TransactionClient,
+  tenantId: string,
+  event: ProdSeedEventDef,
+): Promise<{ inserted: number; skipped: number }> {
+  assertFixtureId(event.id, 'event');
+  const gates = gatesForEvent(event.eventNum, event.gateCount);
+  let inserted = 0;
+  let skipped = 0;
+  for (const gate of gates) {
+    assertFixtureId(gate.id, 'gate');
+    const rows = await tx.$queryRaw<Array<{ id: string }>>`
+      INSERT INTO gates (tenant_id, event_id, id, name, sort_order)
+      VALUES (
+        ${tenantId}::uuid,
+        ${event.id}::uuid,
+        ${gate.id}::uuid,
+        ${gate.name},
+        ${gate.sortOrder}::int
+      )
+      ON CONFLICT (tenant_id, event_id, name) DO NOTHING
+      RETURNING id
+    `;
+    if (rows[0]) inserted += 1;
+    else skipped += 1;
+  }
+  return { inserted, skipped };
+}
+
 async function ensureEvent(
   tx: Prisma.TransactionClient,
   tenantId: string,
@@ -797,7 +882,10 @@ async function ensureMembershipAndAssignment(
   if (existing && !existing.revokedAt) {
     membershipId = existing.id;
     membership = 'skipped';
-    if (existing.role !== role) {
+    if (
+      existing.role !== role ||
+      !samePermissionSet(existing.permissions, tenantPerms)
+    ) {
       await tx.membership.update({
         where: { id: existing.id },
         data: {
@@ -806,6 +894,7 @@ async function ensureMembershipAndAssignment(
           activatedAt: existing.activatedAt ?? new Date(),
         },
       });
+      membership = 'granted';
     }
   } else if (existing?.revokedAt) {
     await tx.membership.update({
@@ -849,6 +938,16 @@ async function ensureMembershipAndAssignment(
     },
   });
   if (assignment && !assignment.revokedAt) {
+    if (!samePermissionSet(assignment.permissions, eventPerms)) {
+      await tx.eventAssignment.update({
+        where: { id: assignment.id },
+        data: {
+          permissions: [...eventPerms],
+          activatedAt: assignment.activatedAt ?? new Date(),
+        },
+      });
+      return { membership, assignment: 'granted' };
+    }
     return { membership, assignment: 'skipped' };
   }
   if (assignment?.revokedAt) {
@@ -1052,6 +1151,8 @@ async function runProdSeedBody(
     assignmentsSkipped: 0,
     configsPublished: 0,
     configsSkipped: 0,
+    gatesInserted: 0,
+    gatesSkipped: 0,
     staffEmailsMissing,
     staffUserIdsByEmail,
   };
@@ -1121,6 +1222,9 @@ async function runProdSeedBody(
       const codes = await ensureInventory(tx, hmac, tenant.id, event);
       report.codesInserted += codes.inserted;
       report.codesSkipped += codes.skipped;
+      const gates = await ensureGates(tx, tenant.id, event);
+      report.gatesInserted += gates.inserted;
+      report.gatesSkipped += gates.skipped;
 
       for (const binding of staffBindings) {
         const userIds = staffUserIdsByEmail[binding.email] ?? [];
@@ -1179,6 +1283,59 @@ async function runProdSeedBody(
   }
 
   return report;
+}
+
+/**
+ * O31-only: ensure demo gates (1/2/3) on fixture events. Idempotent by name.
+ * Prefer this for a gates-only prod apply; full seed also calls ensureGates.
+ */
+export async function seedProdDemoGates(
+  db: PrismaClient,
+): Promise<{
+  gatesInserted: number;
+  gatesSkipped: number;
+  events: Array<{
+    slug: string;
+    tenantSlug: string;
+    eventId: string;
+    gateCount: number;
+    names: string[];
+    inserted: number;
+    skipped: number;
+  }>;
+}> {
+  const events: Array<{
+    slug: string;
+    tenantSlug: string;
+    eventId: string;
+    gateCount: number;
+    names: string[];
+    inserted: number;
+    skipped: number;
+  }> = [];
+  let gatesInserted = 0;
+  let gatesSkipped = 0;
+  for (const event of Object.values(PROD_SEED.events) as ProdSeedEventDef[]) {
+    const tenant = tenantForOrgKey(event.orgKey);
+    const names = gatesForEvent(event.eventNum, event.gateCount).map(
+      (g) => g.name,
+    );
+    const result = await withTenant(db, tenant.id, (tx) =>
+      ensureGates(tx, tenant.id, event),
+    );
+    gatesInserted += result.inserted;
+    gatesSkipped += result.skipped;
+    events.push({
+      slug: event.slug,
+      tenantSlug: tenant.slug,
+      eventId: event.id,
+      gateCount: event.gateCount,
+      names,
+      inserted: result.inserted,
+      skipped: result.skipped,
+    });
+  }
+  return { gatesInserted, gatesSkipped, events };
 }
 
 /**

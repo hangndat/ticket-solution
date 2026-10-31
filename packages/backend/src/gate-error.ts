@@ -10,8 +10,13 @@ export const GATE_ERROR_CODES = {
   SESSION_NOT_ACTIVE: 'SESSION_NOT_ACTIVE',
   /** Open account-deletion request — cannot open a new Gate staff session. */
   ACCOUNT_DELETION_OPEN: 'ACCOUNT_DELETION_OPEN',
+  /** O31 — gate missing or not in the same tenant+event. */
+  GATE_NOT_FOUND: 'GATE_NOT_FOUND',
+  GATE_NAME_CONFLICT: 'GATE_NAME_CONFLICT',
   CHECKIN_NOT_FOUND: 'CHECKIN_NOT_FOUND',
   CHECKIN_ALREADY_UNDONE: 'CHECKIN_ALREADY_UNDONE',
+  /** Reissue — reason is mandatory (§0 point 4 of the reissue handoff). */
+  REASON_REQUIRED: 'REASON_REQUIRED',
   EVENT_NOT_FOUND: 'EVENT_NOT_FOUND',
   EVENT_CANCELLED: 'EVENT_CANCELLED',
   CHECKIN_WINDOW_CLOSED: 'CHECKIN_WINDOW_CLOSED',

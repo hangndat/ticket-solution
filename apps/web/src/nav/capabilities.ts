@@ -6,14 +6,6 @@ import type {
   PlatformMeResponse,
 } from '../bff/platform-contracts';
 
-/** Tenant permissions that unlock Quản trị chrome (handoff contract §3). */
-export const ADMIN_TENANT_PERMISSIONS = [
-  'event.create',
-  'event.list',
-  'members.manage',
-  'tenant.profile',
-] as const;
-
 export type NavLink = {
   href: string;
   label: string;
@@ -22,8 +14,6 @@ export type NavLink = {
 
 export type NavCapabilities = {
   authenticated: boolean;
-  /** Staff / operator — portal CTA via GET /admin redirect (D-7). */
-  showPortalStaff: boolean;
   showAccount: boolean;
 };
 
@@ -154,8 +144,8 @@ export function parsePlatformMeResponse(
 }
 
 /**
- * Derive SiteNav chrome from server discovery only.
- * Missing / invalid payloads → deny staff chrome (O02 deny-by-default).
+ * Derive attendee SiteNav from server discovery only.
+ * Staff chrome lives on portal (ADR-20) — never Admin/Cổng/Platform on app.vemoki.com.
  */
 export function deriveNavCapabilities(input: {
   authenticated: boolean;
@@ -163,29 +153,18 @@ export function deriveNavCapabilities(input: {
   meTenants: MeTenantsResponse | null;
   platformMe: PlatformMeResponse | null;
 }): NavCapabilities {
+  void input.meEvents;
+  void input.meTenants;
+  void input.platformMe;
   if (!input.authenticated) {
     return {
       authenticated: false,
-      showPortalStaff: false,
       showAccount: false,
     };
   }
 
-  const staffEligible = input.meEvents?.staffEligible === true;
-
-  const showPortalStaff =
-    input.platformMe?.operator === true ||
-    (staffEligible &&
-      (input.meTenants?.items.some((tenant) =>
-        tenant.tenantPermissions.some((perm) =>
-          (ADMIN_TENANT_PERMISSIONS as readonly string[]).includes(perm),
-        ),
-      ) ??
-        false));
-
   return {
     authenticated: true,
-    showPortalStaff,
     showAccount: true,
   };
 }
@@ -194,16 +173,8 @@ export function buildNavLinks(caps: NavCapabilities): NavLink[] {
   if (!caps.authenticated) return [...GUEST_NAV_LINKS];
 
   const links: NavLink[] = [...PRODUCT_NAV_LINKS];
-  if (caps.showPortalStaff) {
-    links.push({
-      href: '/admin',
-      label: 'Quản trị tổ chức',
-      testId: 'nav-portal-staff',
-    });
-  }
   if (caps.showAccount) {
     links.push({ href: '/account', label: 'Tài khoản', testId: 'nav-account' });
   }
-  // Logged-in chrome: Tài khoản replaces guest «Đăng nhập» (PKCE → /wallet).
   return links;
 }

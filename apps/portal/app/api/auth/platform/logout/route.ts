@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { after, NextRequest, NextResponse } from 'next/server';
 import { discoveryBase } from '../../../../../src/oidc/config';
 import {
   clearPlatformSessionCookies,
@@ -10,6 +10,7 @@ import {
   readPlatformOidcConfig,
 } from '../../../../../src/oidc/platform-config';
 import { requirePublicOrigin } from '../../../../../src/oidc/public-origin';
+import { rotateActorEpoch } from '../../../../../src/oidc/actor-epoch';
 
 async function bestEffortRevokeRefresh(
   issuer: string,
@@ -43,15 +44,16 @@ export async function GET(request: NextRequest) {
 
   const idToken = (await readPlatformIdToken()) ?? '';
   const refresh = (await readPlatformRefreshToken()) ?? '';
+  await rotateActorEpoch('platform');
 
   if (isPlatformOidcConfigured() && refresh) {
     const config = readPlatformOidcConfig()!;
-    await bestEffortRevokeRefresh(
+    after(() => bestEffortRevokeRefresh(
       config.issuer,
       config.clientId,
       config.clientSecret,
       refresh,
-    );
+    ));
   }
 
   await clearPlatformSessionCookies();

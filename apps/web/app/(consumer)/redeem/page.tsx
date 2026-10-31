@@ -1,37 +1,33 @@
-import { Button } from '@ticket/ui';
-import Link from 'next/link';
-import { authNoticeFromParam } from '../../../src/oidc/auth-notice';
 import { isOidcConfigured, resolveWebAuthState } from '../../../src/oidc/config';
 import { readSubject } from '../../../src/oidc/cookies';
-import { loginHref } from '../../../src/oidc/login-href';
+import { redeemLoginHref } from '../../../src/redeem/login-href';
 import { ConsumerPageShell } from '../../../src/consumer-page-shell';
 import {
   globalRedeemEntryEnabled,
   isTenantBoundRedeemQuery,
 } from '../../../src/redeem/global-entry';
 import {
-  authButtonsRow,
   redeemAuthNotice,
-  redeemFormCard,
   redeemGateCard,
-  redeemEyebrow,
-  redeemHeader,
-  redeemLead,
   redeemNarrow,
   redeemPageMain,
 } from '../../../src/redeem/redeem-surface';
 import { ATTENDEE_COPY } from '../../../src/attendee-copy';
 import { cn } from '../../../lib/utils';
 import { RedeemAuthGate } from './redeem-auth-gate';
-import { RedeemForm } from './redeem-form';
+import { RedeemVerifiedBoundary } from './redeem-verified-boundary';
+import {
+  RedeemAuthNoticePanel,
+  RedeemOidcDown,
+  RedeemPageHeader,
+} from './redeem-page-chrome';
 
 /** OIDC + redeem are runtime — never SSG the fail-closed branch. */
 export const dynamic = 'force-dynamic';
 
 export const metadata = {
   title: ATTENDEE_COPY.redeemTitle,
-  description:
-    'Nhập mã mời — không cần chọn sự kiện hay tổ chức. Đăng nhập trước khi đổi mã.',
+  description: ATTENDEE_COPY.redeemEyebrow,
 };
 
 type Props = {
@@ -49,10 +45,8 @@ export default async function RedeemPage({ searchParams }: Props) {
   const configured = isOidcConfigured();
   const subject = await readSubject();
   const authState = resolveWebAuthState({ configured, subject });
-  const redeemLogin = loginHref('/redeem');
-  const authNotice = authNoticeFromParam(params.notice?.trim(), {
-    retryHref: redeemLogin,
-  });
+  const redeemLogin = redeemLoginHref(params);
+  const noticeKey = params.notice?.trim() ?? '';
   const tenantBound = isTenantBoundRedeemQuery({
     tenantId: params.tenantId,
     eventId: params.eventId,
@@ -70,31 +64,10 @@ export default async function RedeemPage({ searchParams }: Props) {
   return (
     <ConsumerPageShell mainClassName={redeemPageMain}>
       <div className={redeemNarrow}>
-        <header className={redeemHeader}>
-          <p className={redeemEyebrow}>{ATTENDEE_COPY.redeemEyebrow}</p>
-          <h1>{ATTENDEE_COPY.redeemTitle}</h1>
-          <p className={redeemLead}>
-            Một mã mời duy nhất. Không cần chọn sự kiện hay tổ chức.
-          </p>
-        </header>
+        <RedeemPageHeader />
 
-        {authNotice ? (
-          <aside
-            className={redeemAuthNotice}
-            role="alert"
-            data-testid="redeem-auth-notice"
-          >
-            <h2>{authNotice.title}</h2>
-            <p>{authNotice.detail}</p>
-            <p className={authButtonsRow}>
-              <Button asChild variant="primary">
-                <a href={authNotice.retryHref}>Thử lại</a>
-              </Button>
-              <Button asChild variant="secondary">
-                <Link href="/">Về trang chủ</Link>
-              </Button>
-            </p>
-          </aside>
+        {noticeKey ? (
+          <RedeemAuthNoticePanel notice={noticeKey} retryHref={redeemLogin} />
         ) : null}
 
         {!configured ? (
@@ -102,42 +75,29 @@ export default async function RedeemPage({ searchParams }: Props) {
             className={cn(redeemGateCard, redeemAuthNotice, '[&_code]:text-[0.9em]')}
             role="status"
           >
-            <h2>Cần đăng nhập</h2>
-            <p>
-              Đăng nhập chưa sẵn sàng trên môi trường này — không thể đổi mã.
-              {process.env.NODE_ENV !== 'production' ? (
-                <>
-                  {' '}
-                  (dev: auth={authState.status}/
-                  {String(authState.authenticated)}; xem{' '}
-                  <code>apps/web/.env.example</code>)
-                </>
-              ) : null}
-            </p>
-            <p className={authButtonsRow}>
-              <Button asChild variant="primary">
-                <a href={redeemLogin}>Đăng nhập</a>
-              </Button>
-              <Button asChild variant="secondary">
-                <Link href="/">Về trang chủ</Link>
-              </Button>
-            </p>
+            <RedeemOidcDown
+              loginHref={redeemLogin}
+              devStatus={
+                process.env.NODE_ENV !== 'production'
+                  ? ` (dev: auth=${authState.status}/${String(authState.authenticated)}; xem apps/web/.env.example)`
+                  : null
+              }
+            />
           </aside>
         ) : !signedIn ? (
           <RedeemAuthGate loginHref={redeemLogin} />
         ) : (
-          <div className={redeemFormCard}>
-            <RedeemForm
-              key={`${globalEntry ? 'global' : ''}:${params.tenantId ?? ''}:${params.eventId ?? ''}:${params.tenantSlug ?? ''}:${params.eventSlug ?? ''}`}
-              productChrome
-              globalEntry={globalEntry}
-              tenantBound={tenantBound}
-              initialTenantId={params.tenantId?.trim() ?? ''}
-              initialEventId={params.eventId?.trim() ?? ''}
-              initialTenantSlug={params.tenantSlug?.trim() ?? ''}
-              initialEventSlug={params.eventSlug?.trim() ?? ''}
-            />
-          </div>
+          <RedeemVerifiedBoundary
+            loginHref={redeemLogin}
+            key={`${globalEntry ? 'global' : ''}:${params.tenantId ?? ''}:${params.eventId ?? ''}:${params.tenantSlug ?? ''}:${params.eventSlug ?? ''}`}
+            productChrome
+            globalEntry={globalEntry}
+            tenantBound={tenantBound}
+            initialTenantId={params.tenantId?.trim() ?? ''}
+            initialEventId={params.eventId?.trim() ?? ''}
+            initialTenantSlug={params.tenantSlug?.trim() ?? ''}
+            initialEventSlug={params.eventSlug?.trim() ?? ''}
+          />
         )}
       </div>
     </ConsumerPageShell>

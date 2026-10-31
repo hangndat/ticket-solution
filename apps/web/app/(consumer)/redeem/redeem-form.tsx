@@ -11,12 +11,14 @@ import {
   useTransition,
   type FormEvent,
 } from 'react';
-import type {
-  FormAnswerValue,
-  FormDefinition,
-  MeTicketsResponse,
-  RedeemResponse,
+import {
+  IDENTITY_ERROR_CODES,
+  type FormAnswerValue,
+  type FormDefinition,
+  type MeTicketsResponse,
+  type RedeemResponse,
 } from '@ticket/contracts';
+import { useAttendeeLocale } from '../../../src/i18n';
 import {
   messageForApiError,
   messageForDecision,
@@ -27,6 +29,11 @@ import {
   verifyingMessage,
   type RedeemUxMessage,
 } from '../../../src/redeem/messages';
+import {
+  redeemFormCopy,
+  schemaNoticeChrome,
+  type SchemaNoticeKey,
+} from '../../../src/redeem/form-copy';
 import { ticketStateLabel } from '../../../src/owner-ticket/ticket-state';
 import {
   redeemPayloadFingerprint,
@@ -59,7 +66,7 @@ import {
   readStoredResolveToken,
   writeStoredResolveToken,
 } from '../../../src/redeem/resolve-session';
-import { loginHref } from '../../../src/oidc/login-href';
+import { redeemLoginHref } from '../../../src/redeem/login-href';
 import { RedeemTermsConsent } from '../../../src/redeem/redeem-terms-consent';
 import {
   authButtonsRow,
@@ -88,8 +95,6 @@ import {
 import { liveRegionForStatus } from '../../../src/ui/live-region';
 import { SurfaceState } from '../../../src/ui/surface-state';
 
-const REDEEM_LOGIN_HREF = loginHref('/redeem');
-
 type Props = {
   productChrome?: boolean;
   globalEntry?: boolean;
@@ -110,6 +115,14 @@ export function RedeemForm({
   initialTenantSlug = '',
   initialEventSlug = '',
 }: Props) {
+  const redeemLogin = redeemLoginHref({
+    tenantId: initialTenantId,
+    eventId: initialEventId,
+    tenantSlug: initialTenantSlug,
+    eventSlug: initialEventSlug,
+  });
+  const { locale } = useAttendeeLocale();
+  const copy = redeemFormCopy(locale);
   const [tenantId, setTenantId] = useState(initialTenantId);
   const [eventId, setEventId] = useState(initialEventId);
   const [tenantSlug, setTenantSlug] = useState(initialTenantSlug);
@@ -123,7 +136,9 @@ export function RedeemForm({
   const [answers, setAnswers] = useState<Record<string, FormAnswerValue>>({});
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [schemaNotice, setSchemaNotice] = useState<string | null>(null);
+  const [schemaNotice, setSchemaNotice] = useState<SchemaNoticeKey | null>(
+    null,
+  );
   const [publishedSchemaReady, setPublishedSchemaReady] = useState(false);
   const [ux, setUx] = useState<RedeemUxMessage | null>(null);
   const [decision, setDecision] = useState<RedeemDecision | null>(null);
@@ -175,6 +190,7 @@ export function RedeemForm({
     [],
   );
 
+  /* eslint-disable react-hooks/preserve-manual-memoization -- stable setters */
   const loadSchema = useCallback(() => {
     const generation = ++generationRef.current;
     const slugTenant = tenantSlug.trim();
@@ -183,7 +199,7 @@ export function RedeemForm({
       slugTenant && slugEvent ? `${slugTenant}\u0000${slugEvent}` : null;
     startTransition(async () => {
       setPublishedSchemaReady(false);
-      setSchemaNotice('Đang tải biểu mẫu và điều khoản…');
+      setSchemaNotice('loadingForm');
       const result = await loadPublishedRedeemSchema(slugTenant, slugEvent);
       if (isStale(generation)) return;
       if (result.status === 'ok') {
@@ -198,13 +214,9 @@ export function RedeemForm({
         setAnswers({});
         setTermsAccepted(false);
         setFieldErrors({});
-        let notice =
-          'Đã tải biểu mẫu mới. Điền lại và đồng ý điều khoản trước khi gửi.';
-        if (!result.schema.tenantId) {
-          notice +=
-            ' Máy chủ chưa trả mã tổ chức — nhập «Mã tổ chức» (UUID) trong tùy chọn nâng cao trước khi đổi mã.';
-        }
-        setSchemaNotice(notice);
+        setSchemaNotice(
+          result.schema.tenantId ? 'loadedForm' : 'loadedFormNoTenant',
+        );
         return;
       }
       setPublishedSchemaReady(false);
@@ -214,18 +226,14 @@ export function RedeemForm({
       setTermsAccepted(false);
       setAnswers({});
       if (result.status === 'not-found') {
-        setSchemaNotice(
-          'Không tìm thấy sự kiện đã xuất bản. Không dùng biểu mẫu demo.',
-        );
+        setSchemaNotice('eventNotFound');
         return;
       }
       if (result.status === 'unreachable') {
-        setSchemaNotice(
-          'Không tải được biểu mẫu sự kiện. Thử lại sau — không dùng bản demo.',
-        );
+        setSchemaNotice('formUnreachable');
         return;
       }
-      setSchemaNotice('Biểu mẫu không hợp lệ hoặc thiếu mã sự kiện.');
+      setSchemaNotice('formInvalid');
     });
   }, [tenantSlug, eventSlug, isStale]);
 
@@ -249,7 +257,7 @@ export function RedeemForm({
     (next: RedeemDecision, generation: number, fingerprint?: string) => {
       if (isStale(generation)) return;
       setDecision(next);
-      setUx(messageForDecision(next));
+      setUx(messageForDecision(next, locale));
       if (next.kind === 'issued') {
         setTicket({
           ticketId: next.ticketId,
@@ -295,16 +303,12 @@ export function RedeemForm({
         setTermsBody(null);
         setPublishedSchemaReady(false);
         if (tenantSlug.trim() && eventSlug.trim()) {
-          setSchemaNotice(
-            'Biểu mẫu hoặc điều khoản đã đổi — đang tải lại. Bạn cần đồng ý lại trước khi gửi.',
-          );
+          setSchemaNotice('staleReloading');
           queueMicrotask(() => {
             loadSchema();
           });
         } else {
-          setSchemaNotice(
-            'Biểu mẫu hoặc điều khoản đã đổi — nhập đường dẫn tổ chức/sự kiện rồi bấm «Tải biểu mẫu» và đồng ý lại.',
-          );
+          setSchemaNotice('staleNeedPath');
         }
         return;
       }
@@ -321,7 +325,7 @@ export function RedeemForm({
       setTicket(null);
       setAttempt(null);
     },
-    [eventId, eventSlug, isStale, loadSchema, tenantSlug],
+    [eventId, eventSlug, isStale, loadSchema, tenantSlug, locale],
   );
 
   const runPoll = useCallback(
@@ -340,11 +344,11 @@ export function RedeemForm({
           onStart: () => {
             if (isStale(generation)) return;
             setPolling(true);
+            const pollCopy = redeemFormCopy(locale);
             setUx({
               kind: 'polling',
-              title: 'Đang kiểm tra lại…',
-              detail:
-                'Đang xác nhận kết quả đổi mã. Chưa phải vé cho đến khi có xác nhận.',
+              title: pollCopy.pollingTitle,
+              detail: pollCopy.pollingDetail,
               retryable: true,
             });
           },
@@ -354,7 +358,11 @@ export function RedeemForm({
           },
           onTransient: (kind) => {
             if (isStale(generation)) return;
-            setUx(kind === 'network' ? networkMessage() : timeoutMessage());
+            setUx(
+              kind === 'network'
+                ? networkMessage(locale)
+                : timeoutMessage(locale),
+            );
           },
           onDecision: (next) => applyDecision(next, generation, fingerprint),
           onFinally: () => {
@@ -367,12 +375,13 @@ export function RedeemForm({
       if (isStale(generation)) return outcome;
       if (outcome === 'timeout' || outcome === 'cancelled') {
         setAttempt({ key, fingerprint, unclear: true });
-        setUx(unknownMessage(key));
+        setUx(unknownMessage(key, locale));
       }
       return outcome;
     },
-    [applyDecision, isStale],
+    [applyDecision, isStale, locale],
   );
+  /* eslint-enable react-hooks/preserve-manual-memoization */
 
   function resetGlobalResolveSession() {
     setGlobalPhase('enter-code');
@@ -413,19 +422,21 @@ export function RedeemForm({
       setUx(
         messageForApiError(
           'CODE_INVALID',
-          'Mã đổi vé là bắt buộc.',
+          copy.codeRequired,
+          undefined,
+          locale,
         ),
       );
       return;
     }
     const generation = generationRef.current;
-    setUx(verifyingMessage());
-    setSchemaNotice('Đang tra mã…');
+    setUx(verifyingMessage(locale));
+    setSchemaNotice('resolvingCode');
     startTransition(async () => {
       const result = await resolveRedemptionCodeGlobal(trimmed);
       if (isStale(generation)) return;
       if (result.status === 'network') {
-        setUx(networkMessage());
+        setUx(networkMessage(locale));
         setSchemaNotice(null);
         return;
       }
@@ -435,6 +446,7 @@ export function RedeemForm({
             result.code,
             result.message,
             result.httpStatus >= 500,
+            locale,
           ),
         );
         setSchemaNotice(null);
@@ -445,7 +457,9 @@ export function RedeemForm({
         setUx(
           messageForApiError(
             'REDEMPTION_WINDOW_CLOSED',
-            'Thời gian đổi mã chưa mở hoặc đã kết thúc.',
+            undefined,
+            undefined,
+            locale,
           ),
         );
         setSchemaNotice(null);
@@ -468,9 +482,7 @@ export function RedeemForm({
       setResolveToken(body.resolveToken);
       writeStoredResolveToken(body.resolveToken);
       setGlobalPhase('confirm');
-      setSchemaNotice(
-        `Đã xác định: ${body.eventTitle} · ${body.ticketTypeLabel}. Điền biểu mẫu và đồng ý điều khoản trước khi đổi vé.`,
-      );
+      setSchemaNotice('resolvedNamed');
       setUx(null);
     });
   }
@@ -490,9 +502,8 @@ export function RedeemForm({
     ) {
       setUx({
         kind: 'error',
-        title: 'Đang tải biểu mẫu',
-        detail:
-          'Chờ biểu mẫu và điều khoản sự kiện tải xong, rồi đồng ý điều khoản trước khi đổi vé.',
+        title: copy.waitingFormTitle,
+        detail: copy.waitingFormDetail,
         retryable: true,
       });
       return;
@@ -512,10 +523,8 @@ export function RedeemForm({
     if (!validated.ok || termsIssue || scopeIssue) {
       if (scopeIssue && !showDevScopeFields) {
         setUx({
-          kind: 'error',
-          title: 'Thiếu phạm vi sự kiện',
+          ...messageForApiError('SCOPE_REQUIRED', scopeIssue.message, false, locale),
           detail: scopeIssue.message,
-          retryable: false,
         });
       }
       focusFirstFieldError(Object.keys(nextErrors));
@@ -543,7 +552,7 @@ export function RedeemForm({
     setTickets(null);
     setDecision(null);
     setRaw(null);
-    setUx(verifyingMessage());
+    setUx(verifyingMessage(locale));
 
     const tokenForIssue =
       resolveToken?.trim() || readStoredResolveToken() || undefined;
@@ -570,15 +579,23 @@ export function RedeemForm({
       if (isStale(generation)) return;
 
       if (result.timedOut || result.networkError) {
-        setUx(result.networkError ? networkMessage() : timeoutMessage());
+        const hungWithoutResponse = result.timedOut && !result.networkError;
+        setUx(
+          result.networkError
+            ? networkMessage(locale)
+            : timeoutMessage(locale),
+        );
         setRaw(null);
-        await runPoll(
+        const pollOutcome = await runPoll(
           key,
           payload.tenantId,
           payload.eventId,
           generation,
           fingerprint,
         );
+        if (hungWithoutResponse && pollOutcome === 'timeout') {
+          setUx(timeoutMessage(locale));
+        }
         return;
       }
 
@@ -596,6 +613,7 @@ export function RedeemForm({
           result.json.code,
           result.json.message,
           result.json.retryable,
+          locale,
         ).retryable;
 
       if (next.kind === 'unknown' || retryableApi || result.status === 503) {
@@ -649,7 +667,7 @@ export function RedeemForm({
       const result = await fetchOwnerRedemptionStatus(pendingRequestId, tenantId);
       if (isStale(generation)) return;
       if (result.status === 'ok') {
-        setUx(messageForOwnerStatus(result.body));
+        setUx(messageForOwnerStatus(result.body, locale));
         setRaw(JSON.stringify(result.body, null, 2));
         if (result.body.status === 'ISSUED') {
           setDecision({
@@ -676,15 +694,17 @@ export function RedeemForm({
         return;
       }
       if (result.status === 'unauthorized') {
-        setUx(messageForApiError('UNAUTHENTICATED'));
+        setUx(messageForApiError('UNAUTHENTICATED', undefined, undefined, locale));
         return;
       }
       setUx(
         messageForApiError(
           undefined,
           result.status === 'not-found'
-            ? 'Không tìm thấy yêu cầu (owner scope).'
-            : 'Không đọc được trạng thái hiện tại.',
+            ? redeemFormCopy(locale).ownerNotFound
+            : redeemFormCopy(locale).ownerUnread,
+          undefined,
+          locale,
         ),
       );
     });
@@ -701,16 +721,24 @@ export function RedeemForm({
       );
       if (isStale(generation)) return;
       if (result.timedOut || result.networkError) {
-        setUx(result.networkError ? networkMessage() : timeoutMessage());
+        setUx(
+          result.networkError
+            ? networkMessage(locale)
+            : timeoutMessage(locale),
+        );
         return;
       }
       setRaw(JSON.stringify(result.json, null, 2));
       if (result.status >= 200 && result.status < 300) {
         setTickets(result.json as MeTicketsResponse);
+        const loaded = redeemFormCopy(locale);
+        const count = String(
+          (result.json as MeTicketsResponse)?.tickets?.length ?? 0,
+        );
         setUx({
           kind: 'success',
-          title: 'Vé của bạn',
-          detail: `Có ${(result.json as MeTicketsResponse)?.tickets?.length ?? 0} vé trong tổ chức đã chọn.`,
+          title: loaded.ticketsLoadedTitle,
+          detail: loaded.ticketsLoadedDetail.replace('{count}', count),
           retryable: false,
         });
       } else if (isApiError(result.json)) {
@@ -719,10 +747,18 @@ export function RedeemForm({
             result.json.code,
             result.json.message,
             result.json.retryable,
+            locale,
           ),
         );
       } else {
-        setUx(messageForApiError(undefined, `HTTP ${result.status}`));
+        setUx(
+          messageForApiError(
+            undefined,
+            `HTTP ${result.status}`,
+            undefined,
+            locale,
+          ),
+        );
       }
     });
   }
@@ -748,8 +784,15 @@ export function RedeemForm({
     singleCodeFlow && globalPhase === 'enter-code'
       ? null
       : singleCodeFlow
-        ? 'Kiểm tra thông tin sự kiện, điền biểu mẫu và đồng ý điều khoản trước khi đổi vé.'
-        : 'Nhập mã và đồng ý điều khoản của sự kiện. Trạng thái chờ duyệt chưa phải vé.';
+        ? copy.leadGlobalConfirm
+        : copy.leadScoped;
+  const schemaNoticeVars =
+    schemaNotice === 'resolvedNamed' && globalContext
+      ? {
+          eventTitle: globalContext.eventTitle,
+          ticketTypeLabel: globalContext.ticketTypeLabel,
+        }
+      : undefined;
 
   const formClassName = productChrome ? redeemProductFormRoot : redeemDevFormRoot;
 
@@ -776,11 +819,13 @@ export function RedeemForm({
       <form onSubmit={onSubmit} aria-labelledby="redeem-form-title" noValidate
         className={productChrome ? 'grid gap-4' : undefined}>
         <h2 id="redeem-form-title" className={productChrome ? 'm-0 text-[1.2rem] font-bold' : undefined}>
-          {singleCodeFlow && globalPhase === 'enter-code' ? 'Nhập mã đổi vé' : 'Đổi mã lấy vé'}
+          {singleCodeFlow && globalPhase === 'enter-code'
+            ? copy.formTitleEnter
+            : copy.formTitleConfirm}
         </h2>
         {productChrome && singleCodeFlow && globalPhase === 'enter-code' ? (
           <p className="m-0 text-[0.95rem] leading-[1.55] text-muted">
-            Thông tin sự kiện và loại vé sẽ hiện ở bước tiếp theo.
+            {copy.enterCodeHint}
           </p>
         ) : null}
         {productChrome && productLead ? (
@@ -788,22 +833,13 @@ export function RedeemForm({
         ) : null}
         {productChrome && slugPinnedSchema && schemaNotice ? (
           <SurfaceState
-            kind={
-              schemaNotice.startsWith('Đang')
-                ? 'loading'
-                : schemaNotice.startsWith('Không') ||
-                    schemaNotice.startsWith('Biểu mẫu không')
-                  ? 'error'
-                  : 'empty'
-            }
-            title={
-              schemaNotice.startsWith('Đang')
-                ? 'Đang tải biểu mẫu…'
-                : schemaNotice.startsWith('Đã tải')
-                  ? 'Biểu mẫu sẵn sàng'
-                  : 'Trạng thái biểu mẫu'
-            }
-            detail={schemaNotice}
+            {...schemaNoticeChrome(
+              schemaNotice,
+              copy,
+              'published',
+              locale,
+              schemaNoticeVars,
+            )}
             testId="redeem-product-schema-notice"
           />
         ) : null}
@@ -811,9 +847,9 @@ export function RedeemForm({
           <p className={introLead}>
             {globalEntry
               ? globalPhase === 'enter-code'
-                ? 'Nhập mã đổi vé — hệ thống sẽ xác định sự kiện và loại vé. Sau đó điền biểu mẫu và đồng ý điều khoản.'
-                : 'Xác nhận thông tin sự kiện, hoàn thành biểu mẫu và đồng ý điều khoản trước khi đổi vé.'
-              : 'Tải biểu mẫu sự kiện đã xuất bản, nhập mã và đồng ý điều khoản. Đang chờ duyệt chưa phải vé; nếu chưa rõ kết quả, bấm «Kiểm tra lại».'}
+                ? copy.introGlobalEnter
+                : copy.introGlobalConfirm
+              : copy.introScoped}
           </p>
         ) : null}
 
@@ -824,18 +860,18 @@ export function RedeemForm({
               aria-labelledby="redeem-global-context-title"
               data-testid="redeem-global-context"
             >
-              <h3 id="redeem-global-context-title">Sự kiện từ mã của bạn</h3>
+              <h3 id="redeem-global-context-title">{copy.contextTitle}</h3>
               <dl>
                 <div>
-                  <dt>Tổ chức</dt>
+                  <dt>{copy.org}</dt>
                   <dd>{globalContext.tenantDisplayName}</dd>
                 </div>
                 <div>
-                  <dt>Sự kiện</dt>
+                  <dt>{copy.event}</dt>
                   <dd>{globalContext.eventTitle}</dd>
                 </div>
                 <div>
-                  <dt>Loại vé</dt>
+                  <dt>{copy.ticketType}</dt>
                   <dd>{globalContext.ticketTypeLabel}</dd>
                 </div>
               </dl>
@@ -845,7 +881,7 @@ export function RedeemForm({
                 onClick={resetGlobalResolveSession}
                 disabled={busy || outcomeRequiresStatusCheck}
               >
-                Nhập mã khác
+                {copy.otherCode}
               </Button>
             </section>
           ) : null}
@@ -1020,23 +1056,13 @@ export function RedeemForm({
               )}
               {schemaNotice && !(productChrome && slugPinnedSchema) ? (
                 <SurfaceState
-                  kind={
-                    schemaNotice.startsWith('Đang')
-                      ? 'loading'
-                      : schemaNotice.startsWith('Không') ||
-                          schemaNotice.startsWith('Biểu mẫu không')
-                        ? 'error'
-                        : 'empty'
-                  }
-                  title={
-                    schemaNotice.startsWith('Đang')
-                      ? 'Đang tải biểu mẫu…'
-                      : schemaNotice.startsWith('Đã tải') ||
-                          schemaNotice.startsWith('Đã xác định')
-                        ? 'Biểu mẫu sẵn sàng'
-                        : 'Trạng thái biểu mẫu'
-                  }
-                  detail={schemaNotice}
+                  {...schemaNoticeChrome(
+                    schemaNotice,
+                    copy,
+                    'published',
+                    locale,
+                    schemaNoticeVars,
+                  )}
                   testId="redeem-schema-notice"
                 />
               ) : null}
@@ -1045,22 +1071,13 @@ export function RedeemForm({
 
           {singleCodeFlow && schemaNotice ? (
             <SurfaceState
-              kind={
-                schemaNotice.startsWith('Đang')
-                  ? 'loading'
-                  : schemaNotice.startsWith('Không') ||
-                      schemaNotice.startsWith('Biểu mẫu không')
-                    ? 'error'
-                    : 'empty'
-              }
-              title={
-                schemaNotice.startsWith('Đang')
-                  ? 'Đang tra mã…'
-                  : schemaNotice.startsWith('Đã xác định')
-                    ? 'Đã xác định sự kiện'
-                    : 'Trạng thái tra mã'
-              }
-              detail={schemaNotice}
+              {...schemaNoticeChrome(
+                schemaNotice,
+                copy,
+                'global',
+                locale,
+                schemaNoticeVars,
+              )}
               testId="redeem-global-schema-notice"
             />
           ) : null}
@@ -1068,7 +1085,7 @@ export function RedeemForm({
           {singleCodeFlow && globalPhase === 'enter-code' ? (
             <div className={productChrome ? redeemCodeField : undefined}>
               <label htmlFor="redeem-code-global">
-                Mã đổi vé
+                {copy.codeLabel}
                 <input
                   id="redeem-code-global"
                   name="code"
@@ -1078,12 +1095,12 @@ export function RedeemForm({
                   onChange={(e) => setCode(e.target.value)}
                   autoComplete="off"
                   spellCheck={false}
-                  placeholder="Nhập mã đổi vé"
+                  placeholder={copy.codePlaceholder}
                   data-testid="redeem-global-code"
                 />
               </label>
               <p className="m-0 text-[0.85rem] leading-[1.45] text-muted">
-                Nhập mã trong email hoặc trên vé của bạn.
+                {copy.codeHint}
               </p>
             </div>
           ) : null}
@@ -1091,7 +1108,7 @@ export function RedeemForm({
           {!singleCodeFlow || globalPhase === 'confirm' ? (
             <div className={productChrome ? redeemCodeField : undefined}>
               <label htmlFor="redeem-code-confirm">
-                Mã đổi vé
+                {copy.codeLabel}
                 <input
                   id="redeem-code-confirm"
                   name="code"
@@ -1101,7 +1118,7 @@ export function RedeemForm({
                   onChange={(e) => setCode(e.target.value)}
                   autoComplete="off"
                   spellCheck={false}
-                  placeholder="Nhập mã đổi vé"
+                  placeholder={copy.codePlaceholder}
                   readOnly={singleCodeFlow && globalPhase === 'confirm'}
                   aria-readonly={
                     singleCodeFlow && globalPhase === 'confirm' ? true : undefined
@@ -1130,17 +1147,14 @@ export function RedeemForm({
             />
           ) : singleCodeFlow && globalPhase === 'enter-code' ? null : termsVersion ? (
             <p className={introLead} data-testid="redeem-schema-terms-only">
-              Sự kiện này không có trường biểu mẫu — nhập mã và đồng ý điều khoản bên
-              dưới để đổi vé.
+              {copy.termsOnly}
             </p>
           ) : (
             <SurfaceState
               kind="empty"
-              title="Chưa có biểu mẫu"
+              title={copy.noFormTitle}
               detail={
-                singleCodeFlow
-                  ? 'Tra mã thành công sẽ hiển thị biểu mẫu tại đây.'
-                  : 'Tải biểu mẫu bằng đường dẫn tổ chức/sự kiện, hoặc sự kiện chỉ cần mã và điều khoản.'
+                singleCodeFlow ? copy.noFormGlobal : copy.noFormScoped
               }
               testId="redeem-schema-empty"
             />
@@ -1177,10 +1191,10 @@ export function RedeemForm({
               variant="primary"
               disabled={busy}
               loading={busy}
-              loadingLabel="Đang tra mã…"
+              loadingLabel={copy.resolving}
               data-testid="redeem-global-resolve"
             >
-              Tiếp tục
+              {copy.continue}
             </Button>
           ) : (
             <Button
@@ -1188,25 +1202,25 @@ export function RedeemForm({
               variant="primary"
               disabled={redeemSubmitDisabled}
               loading={busy}
-              loadingLabel="Đang xử lý…"
+              loadingLabel={copy.processing}
             >
-              Đổi mã lấy vé
+              {copy.submit}
             </Button>
           )}
           {productChrome ? (
             canRepoll ? (
               <Button type="button" variant="secondary" onClick={pollAgain} disabled={!canRepoll}>
-                Kiểm tra lại
+                {copy.checkAgain}
               </Button>
             ) : decision?.kind === 'pending' && pendingRequestId ? (
               <Button type="button" variant="secondary" onClick={refreshOwnerStatus} disabled={busy}>
-                Kiểm tra trạng thái yêu cầu
+                {copy.checkRequest}
               </Button>
             ) : null
           ) : (
             <>
               <Button type="button" variant="secondary" onClick={pollAgain} disabled={!canRepoll}>
-                Kiểm tra lại
+                {copy.checkAgain}
               </Button>
               <Button
                 type="button"
@@ -1214,7 +1228,7 @@ export function RedeemForm({
                 onClick={refreshOwnerStatus}
                 disabled={busy || !pendingRequestId}
               >
-                Làm mới trạng thái yêu cầu
+                {copy.refreshRequest}
               </Button>
               <Button
                 type="button"
@@ -1222,10 +1236,10 @@ export function RedeemForm({
                 onClick={loadTickets}
                 disabled={busy || !tenantId.trim()}
               >
-                Xem vé của tôi
+                {copy.viewWallet}
               </Button>
               <Button asChild variant="primary">
-                <a href={REDEEM_LOGIN_HREF}>Đăng nhập</a>
+                <a href={redeemLogin}>{copy.login}</a>
               </Button>
             </>
           )}
@@ -1233,7 +1247,7 @@ export function RedeemForm({
       </form>
       {productChrome && singleCodeFlow && globalPhase === 'enter-code' ? (
         <p className="m-0 text-[0.9rem]">
-          <Link href="/wallet">Vé của tôi</Link>
+                    <Link href="/wallet" prefetch={false}>{copy.myTickets}</Link>
         </p>
       ) : null}
 
@@ -1260,29 +1274,29 @@ export function RedeemForm({
           {ux.kind === 'unknown' && canRepoll ? (
             <p>
               <Button type="button" variant="secondary" onClick={pollAgain} disabled={!canRepoll}>
-                Kiểm tra lại
+                {copy.checkAgain}
               </Button>
             </p>
           ) : null}
           {ux.kind === 'auth' ? (
             <p className={authButtonsRow}>
               <Button asChild variant="brand">
-                <a href={REDEEM_LOGIN_HREF}>Đăng nhập</a>
+                <a href={redeemLogin}>{copy.login}</a>
               </Button>
-              {ux.title === 'Cần xác minh email' ? (
-                <Button asChild variant="secondary">
-                  <Link href="/account">Mở Tài khoản</Link>
-                </Button>
-              ) : null}
+              {ux.code === IDENTITY_ERROR_CODES.EMAIL_NOT_VERIFIED ? (
+                  <Button asChild variant="secondary">
+                    <Link href="/account">{copy.openAccount}</Link>
+                  </Button>
+                ) : null}
             </p>
           ) : null}
           {productErrorOutcome ? (
             <div className={redeemOutcomeActions}>
               <Button type="button" variant="brand" onClick={resetRedeemAttempt} disabled={busy}>
-                Thử mã khác
+                {copy.tryOtherCode}
               </Button>
               <Button asChild variant="primary">
-                <Link href="/wallet">Vé của tôi</Link>
+                    <Link href="/wallet" prefetch={false}>{copy.myTickets}</Link>
               </Button>
             </div>
           ) : null}
@@ -1306,15 +1320,15 @@ export function RedeemForm({
                 disabled={busy}
               >
                 {ux.kind === 'stale' || ux.kind === 'timeout'
-                  ? 'Tải lại và thử lại'
-                  : 'Thử lại'}
+                  ? copy.reloadRetry
+                  : copy.retry}
               </Button>
             </p>
           ) : null}
           {ux.kind === 'success' ? (
             <p className={authButtonsRow}>
               <Button asChild variant="brand">
-                <Link href="/wallet">Xem vé của tôi</Link>
+                    <Link href="/wallet" prefetch={false}>{copy.viewWallet}</Link>
               </Button>
             </p>
           ) : null}
@@ -1326,7 +1340,7 @@ export function RedeemForm({
           productChrome ? (
             <p className={authButtonsRow}>
               <Button asChild variant="secondary">
-                <Link href="/">Về danh sách sự kiện</Link>
+                <Link href="/">{copy.eventsList}</Link>
               </Button>
             </p>
           ) : null}
@@ -1355,19 +1369,19 @@ export function RedeemForm({
           aria-labelledby="ticket-title"
           data-testid="redeem-ticket-card"
         >
-          <h3 id="ticket-title">Vé của bạn</h3>
+          <h3 id="ticket-title">{copy.yourTicket}</h3>
           <dl>
             <div>
-              <dt>Mã vé</dt>
+              <dt>{copy.ticketId}</dt>
               <dd>{ticket.ticketId}</dd>
             </div>
             <div>
-              <dt>Trạng thái</dt>
-              <dd>{ticketStateLabel(ticket.state)}</dd>
+              <dt>{copy.status}</dt>
+              <dd>{ticketStateLabel(ticket.state, locale)}</dd>
             </div>
             {ticket.requestId ? (
               <div>
-                <dt>Mã yêu cầu</dt>
+                <dt>{copy.requestId}</dt>
                 <dd>{ticket.requestId}</dd>
               </div>
             ) : null}
@@ -1377,7 +1391,7 @@ export function RedeemForm({
 
       {!productChrome && tickets?.tickets?.length ? (
         <section className={redeemTicketListSection} aria-labelledby="tickets-title">
-          <h3 id="tickets-title">Vé của tôi</h3>
+          <h3 id="tickets-title">{copy.myTickets}</h3>
           <ul>
             {tickets.tickets.map((t) => (
               <li key={t.ticketId}>

@@ -71,7 +71,7 @@ Admin CMS ──publish──► PG events + event_config_versions (published_at
 
 **Quy tắc projection (fail-closed):**
 
-- Chỉ trả event khi: `visibility=PUBLIC` và content đã publish (`published_config_version` không null **hoặc** policy Epic cho phép metadata-only — **khuyến nghị MVP: bắt buộc có published config** để trang marketing không “trống có chủ đích” lẫn với lỗi).
+- Catalog chỉ trả `visibility=PUBLIC`; detail theo link nhận `PUBLIC` hoặc `UNLISTED` theo PRD M03. Cả hai yêu cầu tenant ACTIVE, content PUBLISHED, business ACTIVE và published config khớp bản đã publish; không fallback metadata-only hoặc dữ liệu draft.
 - Draft / unpublished / wrong tenant slug → **404** (không lộ tồn tại nội bộ).
 - Payload không hợp schema → client `invalid` / web error state — **không** thay bằng fixture.
 - Branding chrome (D8) có thể fallback Vemoki; **nội dung sự kiện không** fallback fixture.
@@ -142,7 +142,7 @@ Khuyến nghị MVP: **ISR** `revalidate` (ví dụ 60s) hoặc on-demand revali
 
 | Layer | Case | Evidence |
 | --- | --- | --- |
-| BE unit/db | Public detail chỉ event PUBLIC+published; draft 404; cross-tenant 404 | `packages/backend` + `apps/api` tests |
+| BE unit/db | Detail PUBLIC/UNLISTED+published; catalog PUBLIC-only; draft/suspended tenant 404; cross-tenant 404 | `packages/backend` + `apps/api` tests |
 | BE list | Cursor/limit; chỉ published; empty items `[]` | API test |
 | Contracts | OpenAPI paths `/v1/public/tenants/...`; DTO khớp iOS guard | `apps/api/openapi.json` + contract build |
 | Seed | Second seed idempotent; GET public 200 cho `demo-fun/fun-fest` | `d9-demo-seed` + curl |

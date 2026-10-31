@@ -1,7 +1,7 @@
-import { Host, Switch } from '@expo/ui';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Switch, Text, View } from 'react-native';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { redeemCopy } from '@/components/screen-state-copy';
 import { colors } from '@/theme/colors';
 import { space } from '@/theme/tokens';
 import { typography } from '@/theme/typography';
@@ -46,10 +46,11 @@ export function RedeemFormFields({
             accessibilityRole="header"
             style={{ ...typography.sectionTitle, color: colors.label }}
           >
-            Required details
+            {redeemCopy.formSectionTitle}
           </Text>
           <Text style={{ ...typography.subhead, color: colors.secondary }}>
-            Form version {form.formVersion}. Server validates answers.
+            {redeemCopy.formVersionPrefix} {form.formVersion}.{' '}
+            {redeemCopy.formServerValidates}
           </Text>
           {form.fields.map((field) => (
             <FieldControl
@@ -70,10 +71,10 @@ export function RedeemFormFields({
             accessibilityRole="header"
             style={{ ...typography.sectionTitle, color: colors.label }}
           >
-            Terms
+            {redeemCopy.termsTitle}
           </Text>
           <Text selectable style={{ ...typography.subhead, color: colors.secondary }}>
-            Version {termsVersion}
+            {redeemCopy.termsVersionPrefix} {termsVersion}
           </Text>
           {termsBody ? (
             <Text
@@ -82,15 +83,25 @@ export function RedeemFormFields({
             >
               {termsBody}
             </Text>
-          ) : null}
-          <Host matchContents>
+          ) : (
+            <Text selectable style={{ ...typography.callout, color: colors.label, lineHeight: 24 }}>
+              Điều khoản đã công bố (phiên bản {termsVersion}) áp dụng khi đổi mã.
+              Nội dung đầy đủ chưa có trên thiết bị.
+            </Text>
+          )}
+          <View style={styles.switchRow}>
+            <Text
+              style={{ ...typography.callout, color: colors.label, flex: 1 }}
+            >
+              Tôi đồng ý điều khoản đã công bố
+            </Text>
             <Switch
-              label="I accept these published terms"
               value={termsAccepted}
               disabled={disabled}
               onValueChange={onTermsAcceptedChange}
+              accessibilityLabel="Tôi đồng ý điều khoản đã công bố"
             />
-          </Host>
+          </View>
           {fieldErrors?.terms ? (
             <Text
               accessibilityRole="alert"
@@ -118,20 +129,25 @@ function FieldControl({
   disabled?: boolean;
   onChange: (value: FormAnswerValue) => void;
 }) {
-  const label = `${field.label}${field.required ? ' (required)' : ''}`;
+  const label = `${field.label}${field.required ? ` ${redeemCopy.requiredSuffix}` : ''}`;
 
   if (field.type === 'checkbox') {
     const checked = value === true;
     return (
       <View style={{ gap: space.sm }}>
-        <Host matchContents>
+        <View style={styles.switchRow}>
+          <Text
+            style={{ ...typography.callout, color: colors.label, flex: 1 }}
+          >
+            {label}
+          </Text>
           <Switch
-            label={label}
             value={checked}
             disabled={disabled}
             onValueChange={(next) => onChange(next)}
+            accessibilityLabel={label}
           />
-        </Host>
+        </View>
         {error ? <ErrorText message={error} /> : null}
       </View>
     );
@@ -200,6 +216,12 @@ const styles = StyleSheet.create({
   stack: { gap: space.lg },
   section: { gap: space.md },
   termsBlock: { gap: space.sm + 2 },
+  switchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.md,
+    minHeight: 44
+  },
   selectBlock: { gap: space.sm },
   selectOptions: { gap: space.sm },
   selectOption: { alignSelf: 'stretch' },

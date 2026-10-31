@@ -6,6 +6,7 @@ import {
 } from '@ticket/web-session';
 import { discoveryBase } from '../../../../../src/oidc/config';
 import { PLATFORM_AUTH_COOKIES } from '../../../../../src/oidc/local-cookies';
+import { rotateActorEpoch } from '../../../../../src/oidc/actor-epoch';
 import {
   isPlatformOidcConfigured,
   readPlatformOidcConfig,
@@ -142,6 +143,7 @@ export async function GET(request: NextRequest) {
     grant.subject,
     sessionCookieOptions(60 * 60 * 24 * 30),
   );
+  await rotateActorEpoch('platform', grant.subject);
   jar.delete(PLATFORM_SESSION_COOKIES.pkce);
   jar.delete(PLATFORM_SESSION_COOKIES.state);
   jar.delete(PLATFORM_AUTH_COOKIES.nonce);
