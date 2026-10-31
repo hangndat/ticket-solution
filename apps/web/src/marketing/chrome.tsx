@@ -70,11 +70,9 @@ export function MarketingChrome({
           {onSales ? (
             <>
               <span className={marketingNavLinks}>
-                <a href={`${sales}#features`}>{t(locale, 'nav.features')}</a>
-                <a href={`${sales}#how_it_works`}>{t(locale, 'nav.how')}</a>
-                <a href={`${sales}#solutions`}>{t(locale, 'nav.solutions')}</a>
-                <a href={`${sales}#faq`}>{t(locale, 'nav.faq')}</a>
-                <a href={demo}>{t(locale, 'nav.demo')}</a>
+                <a href={`${sales}#product`}>{t(locale, 'nav.product')}</a>
+                <a href={`${sales}#events`}>{t(locale, 'nav.solutions')}</a>
+                <a href={`${sales}#interest`}>{t(locale, 'nav.advisory')}</a>
               </span>
               <MarketingMobileNavMenu
                 locale={locale}

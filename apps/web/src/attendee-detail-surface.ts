@@ -124,11 +124,7 @@ export const attendeeEventSidebox = cn(
 export const attendeeEventSideboxLead =
   'm-0 mb-4 text-[0.94rem] leading-[1.55] text-muted';
 
-export const attendeeEventSideboxCta = cn(
-  'mt-1 flex min-h-12 w-full justify-center rounded-md border-transparent',
-  'bg-gradient-to-br from-signal from-0% to-[color-mix(in_srgb,var(--color-signal)_88%,var(--color-ink))] to-100%',
-  'text-paper shadow-[0_10px_28px_color-mix(in_srgb,var(--color-signal)_28%,transparent)]',
-);
+export const attendeeEventSideboxCta = 'mt-1 min-h-12 border-primary bg-primary';
 
 export const attendeeEventSideboxHelp =
   'm-0 mt-4 text-[0.82rem] leading-[1.6] text-muted';
@@ -202,7 +198,7 @@ export const attendeeTicketNoticeUnknown = cn(
 );
 
 export const attendeeTicketStateTagBase =
-  'inline-flex items-center rounded-[5px] px-2 py-[5px] text-[0.68rem] font-bold tracking-[0.02em]';
+  'inline-flex items-center rounded-[5px] px-2 py-[5px] text-xs font-bold tracking-[0.02em]';
 
 export function attendeeTicketStateTag(state: string): string {
   if (state === 'ACTIVE') {
