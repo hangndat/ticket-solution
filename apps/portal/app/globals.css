@@ -237,8 +237,12 @@ body {
 }
 
 @media (max-width: 479px) {
-  .portal-page-container .ant-pro-page-container-warp-page-header {
+  .portal-main-surface {
     padding-inline: 12px;
+  }
+
+  .portal-page-container .ant-pro-page-container-warp-page-header {
+    padding-inline: 0;
   }
 
   .portal-page-container .ant-page-header-heading {
@@ -250,6 +254,18 @@ body {
     font-size: 1.125rem;
     width: 100%;
     min-width: 0;
+  }
+
+  .portal-page-container .ant-page-header-heading-left {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+  }
+
+  .portal-page-container .ant-page-header-heading-extra {
+    margin-top: 8px;
+    margin-inline-start: 0;
+    max-width: 100%;
   }
 
   .portal-page-container .ant-page-header-heading-sub-title {
