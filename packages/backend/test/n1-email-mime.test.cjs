@@ -227,6 +227,10 @@ test(
         await tx.tenant.create({
           data: { id: tenantId, slug: 'n1-tenant', name: 'N1 Tenant' },
         });
+        await tx.$executeRaw`
+          INSERT INTO tenant_limits (tenant_id, email_per_day)
+          VALUES (${tenantId}::uuid, 100)
+        `;
         await tx.event.create({
           data: {
             tenantId,

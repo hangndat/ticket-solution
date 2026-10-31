@@ -1,91 +1,29 @@
 import Image from 'next/image';
+import { Button } from '@ticket/ui';
 import { t } from '../copy';
-import { InterestCtaLink } from '../interest-cta-link';
-import { MarketingNeonPrimaryButton } from '../marketing-neon-primary-button';
-import { MarketingHeroDecor } from '../marketing-hero-decor';
-import { NEON_MARKETING_ASSETS } from '../neon-assets';
 import { marketingWrap } from '../marketing-surface';
 import type { MarketingSectionProps } from './types';
 
-const TRUST_KEYS = ['hero.proof1', 'hero.proof2', 'hero.proof3', 'hero.proof4'] as const;
-const TRUST_ICONS = ['✦', '◎', '▥', '⌁'] as const;
-
 export function HeroSection({ locale, demo }: MarketingSectionProps) {
   return (
-    <section
-      id="top"
-      className="mkt-neon-hero"
-      aria-labelledby="hero-title"
-      data-analytics-section="hero"
-      data-on-ink=""
-      data-testid="marketing-neon-hero"
-    >
-      <div className={`${marketingWrap} mkt-neon-hero-grid`}>
-        <div className="mkt-neon-hero-copy">
-          <p className="mkt-neon-eyebrow">{t(locale, 'hero.eyebrow')}</p>
-          <h1 id="hero-title" className="mkt-neon-hero-title" data-testid="hero-headline">
-            {t(locale, 'neon.hero.headline.lead')}
-            <span className="mkt-neon-grad">{t(locale, 'neon.hero.headline.emphasis')}</span>
-            <span className="mkt-neon-period" aria-hidden="true">.</span>
+    <section id="top" data-analytics-section="hero" data-on-ink="" data-testid="marketing-neon-hero" className="overflow-hidden bg-ink px-5 py-16 text-paper md:py-24 lg:py-32">
+      <div className={`${marketingWrap} grid items-center gap-10 md:grid-cols-2`}>
+        <div>
+          <h1 id="hero-title" data-testid="hero-headline" className="m-0 text-4xl font-bold leading-tight tracking-tight md:text-6xl">
+            {t(locale, 'neon.hero.headline.lead')}{' '}
+            <span className="text-primary">{t(locale, 'neon.hero.headline.emphasis')}</span>.
           </h1>
-          <p className="mkt-neon-intro">{t(locale, 'hero.sub')}</p>
-          <div className="mkt-neon-hero-actions">
-            <MarketingNeonPrimaryButton
-              asChild
-              data-testid="cta-demo"
-              data-analytics-cta="hero_demo"
-            >
-              <a id="demo" href={demo}>
-                {t(locale, 'hero.cta.demo')}
-                <span aria-hidden="true"> ↗</span>
-              </a>
-            </MarketingNeonPrimaryButton>
-            <InterestCtaLink
-              href="#interest"
-              className="mkt-neon-btn-secondary"
-              data-testid="cta-interest"
-              data-analytics-cta="hero_interest"
-            >
-              {t(locale, 'hero.cta.interest')}
-            </InterestCtaLink>
+          <p className="mt-6 text-lg leading-relaxed">{t(locale, 'hero.sub')}</p>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <Button asChild variant="primary" data-testid="cta-demo" data-analytics-cta="hero_demo"><a href={demo}>{t(locale, 'hero.cta.demo')}</a></Button>
+            <Button asChild variant="ghostOnInk" data-testid="cta-interest" data-analytics-cta="hero_interest"><a href="#interest">{t(locale, 'hero.cta.interest')}</a></Button>
           </div>
-          <p className="mkt-neon-demo-note" role="status" data-testid="demo-badge">
-            {t(locale, 'hero.demo_note')}
-          </p>
-          <div className="mkt-neon-trust-chips" aria-label={t(locale, 'hero.proofs.label')}>
-            {TRUST_KEYS.map((key, i) => (
-              <span key={key}>
-                <b aria-hidden="true">{TRUST_ICONS[i]}</b>
-                {t(locale, key)}
-              </span>
-            ))}
-          </div>
+          <p className="mt-4 text-sm" data-testid="demo-badge">{t(locale, 'hero.demo_note')}</p>
+          <ul className="mt-8 flex list-none flex-wrap gap-3 p-0 text-sm">
+            {(['hero.proof1', 'hero.proof2', 'hero.proof3', 'hero.proof4'] as const).map((key) => <li key={key} className="rounded-full border border-paper/25 px-3 py-2">{t(locale, key)}</li>)}
+          </ul>
         </div>
-        <div
-          className="mkt-neon-hero-visual"
-          aria-label={t(locale, 'neon.hero.visual.label')}
-          role="img"
-        >
-          <MarketingHeroDecor />
-          <Image
-            src={NEON_MARKETING_ASSETS.heroCompositeDesktop}
-            alt=""
-            width={960}
-            height={640}
-            priority
-            sizes="(min-width: 641px) 52vw, 0px"
-            className="mkt-neon-hero-composite"
-          />
-          <Image
-            src={NEON_MARKETING_ASSETS.heroFigure}
-            alt=""
-            width={720}
-            height={490}
-            priority
-            sizes="(max-width: 640px) 108vw, 0px"
-            className="mkt-neon-hero-figure"
-          />
-        </div>
+        <Image src="/marketing/neon/hero-composite-v2.png" alt={t(locale, 'neon.hero.visual.label')} width={960} height={640} priority sizes="(min-width: 768px) 50vw, 100vw" className="h-auto w-full" />
       </div>
     </section>
   );

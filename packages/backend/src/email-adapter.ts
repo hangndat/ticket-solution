@@ -3,7 +3,7 @@
  * Delivery failures must never roll back an already-committed ticket.
  * Production missing SMTP is fail-closed (no silent noop success).
  */
-import { sendMailViaSmtp, sendMimeMailViaSmtp } from './smtp-send';
+import { sendMailViaSmtp, sendMimeMailViaSmtp, SmtpPreflightError } from './smtp-send';
 import {
   NotificationError,
   NOTIFICATION_ERROR_CODES,
@@ -113,15 +113,22 @@ export function createFailingEmailAdapter(
 export function createMisconfiguredEmailAdapter(
   message = 'SMTP is not configured',
 ): EmailAdapter {
-  return {
-    async sendTicketIssued() {
-      throw new NotificationError(
-        NOTIFICATION_ERROR_CODES.SMTP_MISCONFIGURED,
-        message,
-        true,
-      );
-    },
+  const fail = (): never => {
+    throw new SmtpConfigurationError(
+      NOTIFICATION_ERROR_CODES.SMTP_MISCONFIGURED,
+      message,
+      true,
+    );
   };
+  return {
+    async sendTicketIssued() { return fail(); },
+    async sendMembershipInvite() { return fail(); },
+    async sendGuestInvitation() { return fail(); },
+  };
+}
+
+class SmtpConfigurationError extends NotificationError {
+  readonly definiteNoAccept = true;
 }
 
 export type SmtpAdapterOptions = {
@@ -154,10 +161,10 @@ export function createSmtpEmailAdapter(
   return {
     async sendTicketIssued(payload) {
       if (!payload.toEmail?.trim()) {
-        throw new Error('ticket recipient email is missing');
+        throw new SmtpPreflightError('ticket recipient email is missing');
       }
       if (!payload.qrPng?.length) {
-        throw new Error('QR PNG is required for TicketIssued email');
+        throw new SmtpPreflightError('QR PNG is required for TicketIssued email');
       }
       const from = options.fromAddress ?? 'tickets@localhost';
       const cid = 'ticket-qr@vemoki';
@@ -190,7 +197,7 @@ export function createSmtpEmailAdapter(
     },
     async sendMembershipInvite(payload) {
       if (!payload.toEmail?.trim()) {
-        throw new Error('invite recipient email is missing');
+        throw new SmtpPreflightError('invite recipient email is missing');
       }
       const from = options.fromAddress ?? 'tickets@localhost';
       const subject = 'Lời mời tham gia tenant';
@@ -219,7 +226,7 @@ export function createSmtpEmailAdapter(
     },
     async sendGuestInvitation(payload) {
       if (!payload.toEmail?.trim()) {
-        throw new Error('guest invitation recipient email is missing');
+        throw new SmtpPreflightError('guest invitation recipient email is missing');
       }
       const from = options.fromAddress ?? 'tickets@localhost';
       const eventLabel = payload.eventName?.trim() || 'sự kiện';

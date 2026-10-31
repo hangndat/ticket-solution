@@ -98,6 +98,71 @@ export async function readManualPendingHold(
   }
 }
 
+export async function expirePendingRedemptionRequest(
+  fixture: CaseFixture,
+  requestId: string,
+): Promise<void> {
+  if (!process.env.DATABASE_URL || !process.env.E2E_RUN_DIR)
+    throw new Error(
+      'BLOCKED: expire pending requires isolated PostgreSQL runtime',
+    );
+  const client = new Client({ connectionString: process.env.DATABASE_URL });
+  await client.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query("SELECT set_config('app.tenant_id', $1, true)", [
+      fixture.tenantId,
+    ]);
+    const updated = await client.query(
+      "UPDATE redemption_requests SET expires_at = now() - interval '1 hour' WHERE tenant_id=$1::uuid AND id=$2::uuid AND status='PENDING_REVIEW' RETURNING id",
+      [fixture.tenantId, requestId],
+    );
+    expect(updated.rowCount).toBe(1);
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw error;
+  } finally {
+    await client.end();
+  }
+}
+
+export function assertManualIssuedAfterApproval(
+  quotasBefore: Row[],
+  after: RedemptionState,
+  fixture: CaseFixture,
+  actorUserId: string,
+  ticketId: string,
+): void {
+  expect(after.code.status).toBe('CONSUMED');
+  expect(after.requests).toHaveLength(1);
+  expect(after.requests[0].status).toBe('ISSUED');
+  expect(after.requests[0].actor_user_id).toBe(actorUserId);
+  expect(after.tickets).toHaveLength(1);
+  expect(after.tickets[0].id).toBe(ticketId);
+  expect(after.tickets[0].owner_user_id).toBe(actorUserId);
+  expect(after.tickets[0].state).toBe('ACTIVE');
+  expect(after.outbox).toHaveLength(1);
+  for (let i = 0; i < after.quotas.length; i++) {
+    expect(
+      Number(after.quotas[i].allocated) - Number(quotasBefore[i].allocated),
+    ).toBe(1);
+  }
+}
+
+export function assertManualDecisionWithoutTicket(
+  after: RedemptionState,
+  requestStatus: 'REJECTED' | 'EXPIRED',
+  quotasBefore: Row[],
+): void {
+  expect(after.requests).toHaveLength(1);
+  expect(after.requests[0].status).toBe(requestStatus);
+  expect(after.tickets).toHaveLength(0);
+  expect(after.outbox).toHaveLength(0);
+  expect(after.quotas).toEqual(quotasBefore);
+  expect(after.requests.some((row) => row.status === 'ISSUED')).toBe(false);
+}
+
 /** Read the run-local database as e2e_runtime under transaction-local tenant RLS. */
 export async function readRedemptionState(
   fixture: CaseFixture,
@@ -208,8 +273,10 @@ export function assertIssuedExactlyOnce(
 export type Web04EventSnapshot = {
   ticketCount: number;
   codes: Array<{ id: string; status: string }>;
+  requests: Row[];
   quotas: Row[];
   operations: Row[];
+  outbox: Row[];
 };
 
 export async function readWeb04EventSnapshot(
@@ -238,8 +305,18 @@ export async function readWeb04EventSnapshot(
       'SELECT id, status FROM redemption_codes WHERE tenant_id=$1::uuid AND event_id=$2::uuid ORDER BY id',
       [tenantId, eventId],
     )) as Array<{ id: string; status: string }>;
+    const requests = await query(
+      `SELECT id, status, actor_user_id, redemption_code_id FROM redemption_requests
+       WHERE tenant_id=$1::uuid AND event_id=$2::uuid ORDER BY id`,
+      [tenantId, eventId],
+    );
     const quotas = await query(
       'SELECT id, scope, scope_id, capacity, allocated FROM quota_buckets WHERE tenant_id=$1::uuid AND event_id=$2::uuid ORDER BY scope, id',
+      [tenantId, eventId],
+    );
+    const outbox = await query(
+      `SELECT id, type, aggregate_id, status FROM outbox
+       WHERE tenant_id=$1::uuid AND event_id=$2::uuid ORDER BY id`,
       [tenantId, eventId],
     );
     const operations = await query(
@@ -256,8 +333,10 @@ export async function readWeb04EventSnapshot(
     return {
       ticketCount: Number(ticketRows[0]?.n ?? 0),
       codes,
+      requests,
       quotas,
       operations,
+      outbox: outbox.map(({ status, ...row }) => row),
     };
   } catch (error) {
     await client.query('ROLLBACK').catch(() => {});
@@ -278,8 +357,14 @@ export function assertWeb04NegativeUnchanged(
   expect(after.codes, `${label}: code status must not change`).toEqual(
     before.codes,
   );
+  expect(after.requests, `${label}: redemption_requests must not change`).toEqual(
+    before.requests,
+  );
   expect(after.quotas, `${label}: quota must not change`).toEqual(
     before.quotas,
+  );
+  expect(after.outbox, `${label}: outbox must not change`).toEqual(
+    before.outbox,
   );
   for (const op of after.operations) {
     expect(op.status, `${label}: no dangling IN_PROGRESS operation`).not.toBe(

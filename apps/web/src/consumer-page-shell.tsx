@@ -1,26 +1,20 @@
 import type { ComponentProps, ReactNode } from 'react';
-import { SiteNav } from './site-chrome';
 
 /**
- * Consumer page frame — SiteNav stays outside main so page shell padding does not
- * offset the sticky header (UA-WEB-02 / O22 shell boundary).
+ * Consumer page frame. The persistent navigation is owned by the consumer layout.
  */
 export function ConsumerPageShell({
   mainClassName,
   children,
-  navTrailing,
   mainTestId,
   mainProps,
 }: {
   mainClassName: string;
   children: ReactNode;
-  navTrailing?: ReactNode;
   mainTestId?: string;
   mainProps?: Partial<ComponentProps<'main'>>;
 }) {
   return (
-    <>
-      <SiteNav trailing={navTrailing} />
       <main
         id="main"
         className={mainClassName}
@@ -29,6 +23,5 @@ export function ConsumerPageShell({
       >
         {children}
       </main>
-    </>
   );
 }

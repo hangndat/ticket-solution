@@ -1,18 +1,18 @@
 /** Provider-neutral tiers; routes are ordered by dispatch preference (Claude before Codex). */
 export const COST_TIER_ROUTES = {
   cheap: [{ agent: "cursor", models: ["composer-2.5", "grok-4.7-low", "gemini-3.7-flash-low"], effort: null }],
-  standard: [{ agent: "cursor", models: ["composer-2.5", "grok-4.7-low", "gemini-3.7-flash-low"], effort: null }],
+  standard: [{ agent: "codex", models: ["gpt-6.1-terra"], effort: "low", quotaLimitIds: ["codex"] }, { agent: "cursor", models: ["composer-2.5", "grok-4.7-low", "gemini-3.7-flash-low"], effort: null }],
   focused: [
     { agent: "claude", models: ["claude-sonnet-5"], effort: "low" },
-    { agent: "codex", models: ["gpt-6-sol"], effort: "low", quotaLimitIds: ["codex"] },
+    { agent: "codex", models: ["gpt-6-sol", "gpt-6.1-sol", "gpt-6.1-terra"], effort: "low", quotaLimitIds: ["codex"] },
   ],
   advanced: [
     { agent: "claude", models: ["claude-sonnet-5"], effort: "medium" },
-    { agent: "codex", models: ["gpt-6-sol"], effort: "medium", quotaLimitIds: ["codex"] },
+    { agent: "codex", models: ["gpt-6-sol", "gpt-6.1-terra"], effort: "medium", quotaLimitIds: ["codex"] },
   ],
   high: [
     { agent: "claude", models: ["claude-sonnet-5"], effort: "high" },
-    { agent: "codex", models: ["gpt-6-sol"], effort: "high", quotaLimitIds: ["codex"] },
+    { agent: "codex", models: ["gpt-6-sol", "gpt-6.1-terra"], effort: "high", quotaLimitIds: ["codex"] },
   ],
 };
 

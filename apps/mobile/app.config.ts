@@ -52,11 +52,12 @@ function bakePublicConfig(
   assertRetailPublicEnv(apsEnvironment, env);
 
   if (apsEnvironment === 'production') {
-    env.EXPO_PUBLIC_API_BASE_URL ||= VEMOKI_PROD_PUBLIC.apiBaseUrl;
-    env.EXPO_PUBLIC_OIDC_ISSUER ||= VEMOKI_PROD_PUBLIC.oidcIssuer;
-    env.EXPO_PUBLIC_OIDC_CLIENT_ID ||= VEMOKI_PROD_PUBLIC.oidcClientId;
-    env.EXPO_PUBLIC_PUSH_PROVIDER ||= VEMOKI_PROD_PUBLIC.pushProvider;
-    env.EXPO_PUBLIC_APS_ENVIRONMENT ||= 'production';
+    // Force public prod hosts — leftover UAT `.env` must not win on TF/Release.
+    env.EXPO_PUBLIC_API_BASE_URL = VEMOKI_PROD_PUBLIC.apiBaseUrl;
+    env.EXPO_PUBLIC_OIDC_ISSUER = VEMOKI_PROD_PUBLIC.oidcIssuer;
+    env.EXPO_PUBLIC_OIDC_CLIENT_ID = VEMOKI_PROD_PUBLIC.oidcClientId;
+    env.EXPO_PUBLIC_PUSH_PROVIDER = VEMOKI_PROD_PUBLIC.pushProvider;
+    env.EXPO_PUBLIC_APS_ENVIRONMENT = 'production';
   }
 
   const ticketPublic: TicketPublicExtra = {
@@ -102,7 +103,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       supportsTablet: true,
       bundleIdentifier: 'com.hangndat.ticket',
       appleTeamId: 'BLUA62D52G',
-      buildNumber: '45',
+      buildNumber: '47',
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
         UIBackgroundModes: ['remote-notification'],

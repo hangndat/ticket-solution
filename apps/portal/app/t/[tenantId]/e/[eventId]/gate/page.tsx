@@ -5,7 +5,8 @@ import { Alert, Button, Descriptions, Flex, Result, Space, Spin } from 'antd';
 import { PortalPage } from '../../../../../../src/components/portal-page';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect } from 'react';
+import { useActorState as useState } from '../../../../../../src/client/use-actor-state';
 import { portalGet } from '../../../../../../src/client/portal-fetch';
 import { bffEventAction } from '../../../../../../src/prep/bff-urls';
 import {
@@ -213,14 +214,14 @@ export default function EventGateReportPage() {
               {t('gate.h_3keb7')}
             </Button>
             {reportShowsPendingApprovalCta(shown) ? (
-              <Link href={reportPendingApprovalHref(tenantId, eventId)}>
+              <Link prefetch={false} href={reportPendingApprovalHref(tenantId, eventId)}>
                 <Button data-testid="event-report-cta-pending-approval">
                   {t('gate.h_1n09r0f')}
                 </Button>
               </Link>
             ) : null}
             {reportShowsEmailCsCta(shown) ? (
-              <Link href={reportEmailCsHref(tenantId, eventId)}>
+              <Link prefetch={false} href={reportEmailCsHref(tenantId, eventId)}>
                 <Button data-testid="event-report-cta-email-cs">
                   {t('gate.h_4twiex')}
                 </Button>

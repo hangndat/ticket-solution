@@ -1,5 +1,50 @@
 # Portal/Platform E2E — bàn giao worker
 
+## PORT-13 — revalidation tích hợp 31/10/2026
+
+Clean run `mvvw54qv-c11d7d` tại SHA `dab48d601d34eed68ae8a8e13aa3b2a0157c2811`: browser **PASS 3/3**, zero retry, commitStable/evidenceExactShaEligible=true. Fixture có 55 PENDING_REVIEW; đã assert hai trang 50+5 UUID đúng thứ tự, không trùng, filter đổi UUID và khôi phục saved view trước/sau reload, actor/tenant isolation. Binaries từ `607d89ab` được tái dùng vì delta chỉ bốn assertion chuyển sang `expect.poll`; không đổi runtime. James revalidation đóng F01 provenance và F03 pagination; full PORT-13 vẫn BLOCKED bởi sort contract. Lượt sửa 1/2. Bản ghi trước dưới đây là lịch sử đã được checkpoint này thay thế về provenance và pagination.
+
+## PORT-13 — locale/filter/saved-view B, sort BLOCKED (Higo, 31/10/2026)
+
+**Runtime PASS (partial, không fullgroup)** tại tested SHA `70e1531b7925c5a71037ba27c54223c2d5dec6f1`, run `mvvtnabj-4ca5f2`, `node tests/e2e/harness/run.mjs e2e --case=PORT-13`. `workingTreeDirty=false`, `commitStable=true`, `evidenceExactShaEligible=true`. 3/3 test browser PASS, exitCode 0; cleanup containers/network đã chạy theo harness. AC → assertion → evidence:
+
+- **Locale VI mặc định/EN additive, giữ sau reload**: `portal-core.spec.ts [PORT-13] Portal locale defaults VI and persists EN through reload` — `html[lang]` vi→en, EN giữ sau `page.reload()`.
+- **Filter + saved view theo user+tenant, giữ sau reload**: `portal-core.spec.ts [PORT-13] Portal filter + saved view persist for owner and are not hydrated after switching actor...` — filter UUID (`q`) trên `#pending` áp dụng, lưu view qua `SavedViewsToolbar`, mở lại menu sau `page.reload()` thấy tên view đã lưu (localStorage key `userId:tenantId`, `apps/portal/src/views/storage.ts`).
+- **Đổi actor không hydrate view cũ (cùng browser profile)**: cùng test — logout owner → `page.context().newPage()` cho `manager` cùng context (cùng cookies/localStorage) → nút "Quản lý view" disabled, tên view của owner không xuất hiện.
+- **Đổi tenant không hydrate view cũ (cùng actor, cùng browser profile)**: `portal-core.spec.ts [PORT-13] Portal saved view does not hydrate across tenants for the same owner...` — fixture gốc chỉ có 1 tenant (`FIXTURES.md` ghi cần 2 tenant ACTIVE); provision tenant thứ hai qua helper runtime-role riêng `tests/e2e/portal/port13-db.ts` (không sửa `tests/e2e/harness/seed.mjs` của Gonic), grant owner Membership Owner ở tenant mới qua `@ticket/backend` (`withTenant`/`grantMembership`, cùng cơ chế seed.mjs dùng). Lưu view ở tenant A (`/t/{A}/members`) → không thấy ở tenant B và ngược lại; lưu view riêng ở tenant B → về tenant A vẫn giữ view A, không có view B.
+
+**BLOCKED (không PASS fullgroup):**
+- **Sort**: không có UI nào trong Portal wire sort qua `SavedViewsToolbar` (`sort` luôn null) dù `SORT_ALLOWLIST` tồn tại ở `apps/portal/src/views/allowlist.ts`. Kiểm backend: `apps/api/src/approval.ts` `listPending` → `packages/backend/src/redemption-status.ts` `listStaffPendingRedemptions` hard-code `ORDER BY r.created_at ASC, r.id ASC` với keyset cursor gắn chặt thứ tự đó; quét toàn bộ `ORDER BY` ở `cs.ts/gate.ts/guest-invitations.ts/issue.ts/published-events.ts` — không surface nào có sort param. Đây là contract gap Backend/API, không tự sửa trong ownership Web; đã báo coordinator (Minh/leader) qua `ask`, quyết định: giữ BLOCKED, giao backend/architect contract riêng sau slot WEB-12.
+- **Pagination (nextCursor thực tế)**: fixture PORT-13 không có PENDING_REVIEW nào được seed (0 dòng), nên nút "Trang sau" (`view.nextCursor`) chưa từng được kích hoạt/kiểm trong lượt này; cơ chế cursor có sẵn trong code (`pending-panel.tsx`) nhưng chưa có evidence browser với dữ liệu thật.
+
+**Không cover**: a11y (O33 OUT theo scope), automation/share server (P2b, chưa có contract — khớp AC "không yêu cầu shared saved views/automation chưa chốt").
+
+## PORT-09 — clean runtime B1 (Minh, 31/10/2026)
+
+**Runtime PASS** tại tested SHA `82089a959f24cf2ec52b110dcd47e5de325d7195`, run `mvvrilmh-ca2b2e`, `pnpm test:e2e --case=PORT-09`. `workingTreeDirty=false`, `commitStable=true`, `evidenceExactShaEligible=true`; start/end commit trùng nhau. Toàn bộ case qua F01 real worker/PG/Mailpit, F02 five-state BFF/list/detail/timeline và browser UNKNOWN, F03 cooldown/limit negative PG assertions. Witness response200/UNKNOWN, ảnh crop panel và metadata viewport1280x720/vi/cs nằm trong results.json attachments, trích nguyên bản ở `tests/e2e/.artifacts/mvvrilmh-ca2b2e/review-evidence/`. Cleanup containers/network đã hoàn tất.
+
+Run dirty B1 bên dưới chỉ là local diagnostic, không gắn lại cho commit. Lượt clean bổ sung được coordinator quyết định trong quyền user “Fix hết đi”; giữ lịch sử2/2 + exception1/1, B1 là batch mới. [Evidence canonical PR#1084](https://github.com/hangndat/ticket-solution/pull/1084#issuecomment-6537617846); verdict độc lập James và CI/merge cập nhật bằng comment trên exact HEAD, không tạo chuỗi commit đổi SHA báo cáo. Coverage chỉ áp dụng PORT-09, không kết luận toàn bộ Issue1035/85nhóm hoặc pilot ready.
+
+## PORT-09 — B1 fix (Higo, 31/10/2026)
+
+**Local PASS; chưa đủ evidence exact SHA.** Nguyên nhân: `isProviderStatus`/`CsProviderStatus` trong `apps/portal/src/ops/contract-shape.ts` + `apps/portal/src/ops/cs.ts` chỉ nhận 4 giá trị (thiếu `UNKNOWN` dù `packages/contracts` đã có từ BE PR#1085), nên `parseNotification` reject vé UNKNOWN → list/detail trả `kind:'unknown'`, bảng CS browser không có cột provider status nên không render chữ `UNKNOWN`, và dòng timeline gộp kind/time/summary vào một text node nên không có phần tử khớp đúng `notification UNKNOWN`.
+
+Sửa: mở rộng guard CS-local (không đụng `isProviderStatusFull` dùng cho notifications.ts — không tác động ngoài CS) thêm `UNKNOWN`; thêm cột provider status vào bảng `CsPanel` dùng `csNotificationStatusText`/`csProviderStatusLabel` có sẵn (nhãn VI chứa chuỗi `UNKNOWN (không rõ...)`, không claim PENDING); tách node `summary` của timeline ra `Typography.Text` riêng để giữ assertion `notification UNKNOWN` đúng, không bỏ assertion. Không đổi AC/fixture, không đổi contract PENDING resend.
+
+Runtime (đúng 1 lần theo scripts có sẵn): `node tests/e2e/harness/run.mjs e2e --case=PORT-09` → run `mvvrcxtx-538df2`, **PASS** (`browser` exitCode 0). Containers/network đã cleanup (`tests/e2e/.artifacts/mvvrcxtx-538df2/cleanup.log`). Run thực thi trên working tree đang sửa (chưa commit lúc chạy) nên `sourceProvenance.evidenceExactShaEligible=false`, `workingTreeDirty=true`; diff được commit sau đó ở `e18b7628`, nhưng không được gắn lại PASS của dirty run cho commit này. Coordinator không chấp nhận claim exact-SHA đó; theo quyền user “Fix hết đi”, bổ sung witness response/ảnh và thực hiện một lần đo clean trên commit mới. Kết quả mới và revalidation sẽ ghi bằng comment PR, không sửa provenance cũ.
+
+Kiểm trước runtime: `pnpm --filter portal typecheck` PASS; `pnpm --filter portal test apps/portal/tests/ops-cs-export.test.ts` (chạy cả suite portal) 305/305 PASS, gồm test mới "accepts all 5 providerStatus values incl. UNKNOWN; rejects malformed" (UNKNOWN + 4 state khác qua `interpretCsList`, và `DELIVERED` giả mạo bị reject `kind:'unknown'`).
+
+F01/F02/F03: F01 (real primary worker/PG/Mailpit ACCEPTED) và F02 (five-state list/detail/timeline + browser UNKNOWN row) nay PASS trong run này (toàn bộ `portal-ops.spec.ts` case PORT-09 xanh, không giới hạn riêng từng F). F03 (negative PG audit/notification/outbox/cooldown+limit) nằm trong cùng spec file/case và cũng PASS theo kết quả run tổng; không có log tách theo F-id trong harness này.
+
+Giới hạn: chỉ sửa `apps/portal/**` (contract-shape.ts, cs.ts, panels/cs-panel.tsx) + test unit mới, không sửa `apps/web`, API/worker/backend/contracts/lockfile, không sửa `tests/e2e/portal/portal-ops.spec.ts` (locator timeline khớp sau khi sửa DOM, không cần đổi spec). Không ảnh/screenshot lưu kèm. Bàn giao để James review độc lập; không tự coi merge-ready.
+
+## PORT-09 — checkpoint hiện tại 30/10/2026
+
+**BLOCKED**, PR #1084 Draft. Ngoại lệ 1/1 sau fix 2/2 đã dùng và dừng: thay fixture UNKNOWN bằng cập nhật notification hiện có, thêm assertion từng vé có expected/actual trước ma trận tổng. Runtime duy nhất `pnpm test:e2e --case=PORT-09`, run `mvv3h42r-633cc2`, **FAIL** trên exact SHA `8728423981ba5e0b73b021eda1859e1bc314806a` tại `portal-ops.spec.ts:735`: không tìm thấy hàng vé UNKNOWN trong browser `#cs` (timeout 15 giây). F01 real worker ACCEPTED + PG attempt/provider_ref + Mailpit correlation và ma trận năm trạng thái/BFF detail UNKNOWN đã qua; F02 browser UNKNOWN chưa đạt, các assertion F03 phía sau chưa chạy. Typecheck portal spec, discovery 1/1, Prettier và 19/19 guards PASS. Không sửa/retry runtime sau FAIL; không reset bộ đếm, chờ coordinator quyết định.
+
+Evidence: `tests/e2e/.artifacts/mvv3h42r-633cc2/summary.json`, `browser-tests.log`. `sourceProvenance`: workingTreeDirty=false, evidenceEligible=true, evidenceExactShaEligible=true, commitStable=true; fingerprint đầu/cuối `4b0e3b2d7b671ab42cd76e10bbe6aee3b4a3544d7915d9980b080a2fc1b37c84`. Các PASS lịch sử bên dưới không thay thế kết quả này.
+
 ## Kiểm tra đã chạy (worker task_b9427e2110b4 — James DoD F01/F02 fix 1/2 / PR #1072)
 
 | Lệnh | Kết quả |

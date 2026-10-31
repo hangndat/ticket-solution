@@ -76,12 +76,13 @@ test('attendee desktop nav stays a single row at 1024–1440', () => {
   );
 });
 
-test('consumer page shell keeps SiteNav outside padded main', () => {
+test('consumer layout keeps navigation mounted outside padded main', () => {
+  const layout = readFileSync(join(WEB_ROOT, 'app/(consumer)/layout.tsx'), 'utf8');
   const shell = readFileSync(
     join(WEB_ROOT, 'src/consumer-page-shell.tsx'),
     'utf8',
   );
-  assert.match(shell, /SiteNav/);
+  assert.match(layout, /<SiteNav\s*\/>/);
+  assert.doesNotMatch(shell, /<SiteNav/);
   assert.match(shell, /id="main"/);
-  assert.match(shell, /SiteNav trailing={navTrailing}/);
 });

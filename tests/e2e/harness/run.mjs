@@ -53,6 +53,7 @@ const httpCases = [
   'DB-11',
   'DB-12',
   'DB-14',
+  'JOB-04',
   'WEB-04',
   'WEB-05',
 ];
@@ -90,7 +91,7 @@ const caseIds = match
       : allBrowserCases;
 if (
   !['smoke', 'e2e', 'http', 'regression', 'list'].includes(mode) ||
-  caseIds.some((id) => !/^(AUTH|WEB|PORT|PLAT|SEC|DB|GATE)-\d{2}$/.test(id))
+  caseIds.some((id) => !/^(AUTH|WEB|PORT|PLAT|SEC|DB|GATE|JOB)-\d{2}$/.test(id))
 ) {
   console.error(
     'Usage: node tests/e2e/harness/run.mjs smoke|e2e|http|regression|list [--skip-build] [--case=WEB-02,PORT-07]',
@@ -426,7 +427,7 @@ if (mode === 'list' || args.includes('--list')) {
         'browser-tests',
         process.execPath,
         browserArgs(caseIds),
-        common,
+        { ...common, ...(caseIds.includes('AUTH-07') ? { E2E_AUTH07_BFCACHE: '1' } : {}) },
       );
       results.push({ layer: 'browser', exitCode: await exitCode(child) });
       if (mode === 'regression') {

@@ -3,6 +3,7 @@
 import { Alert, Button, Drawer, Dropdown, Flex, Layout, Menu, Result, Select, Spin, Typography, message, theme } from 'antd';
 import type { MenuProps } from 'antd';
 import Link from 'next/link';
+import { actorGeneration, beginActorLogout, checkActorMarkers, installActorLifecycle, subscribeActorGeneration } from '../client/actor-gate';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   useCallback,
@@ -59,11 +60,16 @@ import {
   tenantSwitchDestination,
 } from '../nav/context-destination';
 import { isPortalDualRunBannerEnabled } from '../dual-run/allowlist';
+import { mergePortalSiderOpenKeys, readPersistedSiderOpenKeys, writePersistedSiderOpenKeys } from '../nav/portal-sider-open-keys';
+import { PortalBrandLockup } from './portal-brand-lockup';
 
 const { Header, Sider, Content } = Layout;
 
 /** Align with portal context-strip layout (`globals.css` @1024). */
 const NARROW_NAV_MEDIA = '(max-width: 1023px)';
+const subscribeSiderStorage = () => () => {};
+const getSiderStorageSnapshot = () => JSON.stringify(readPersistedSiderOpenKeys());
+const getServerSiderStorageSnapshot = () => '[]';
 
 function subscribeNarrowNav(onChange: () => void): () => void {
   const mq = window.matchMedia(NARROW_NAV_MEDIA);
@@ -142,12 +148,13 @@ function PortalShellChrome({
     () => resolvePortalMenuKeys(pathname, menuData),
     [pathname, menuData],
   );
-  const [userOpenKeys, setUserOpenKeys] = useState<string[]>([]);
-  const openKeys = useMemo(() => {
-    const merged = new Set(userOpenKeys);
-    for (const key of pathOpenKeys) merged.add(key);
-    return [...merged];
-  }, [userOpenKeys, pathOpenKeys]);
+  const storedOpenKeys = useSyncExternalStore(subscribeSiderStorage, getSiderStorageSnapshot, getServerSiderStorageSnapshot);
+  const [changedOpenKeys, setUserOpenKeys] = useState<string[] | null>(null);
+  const userOpenKeys = useMemo(() => changedOpenKeys ?? JSON.parse(storedOpenKeys) as string[], [changedOpenKeys, storedOpenKeys]);
+  const openKeys = useMemo(
+    () => mergePortalSiderOpenKeys(pathOpenKeys, userOpenKeys),
+    [userOpenKeys, pathOpenKeys],
+  );
 
   const menuItems: MenuProps['items'] = useMemo(
     () =>
@@ -156,7 +163,7 @@ function PortalShellChrome({
         label: group.name,
         children: group.children.map((child) => ({
           key: child.key,
-          label: <Link href={child.path}>{child.name}</Link>,
+          label: <Link href={child.path} prefetch={false}>{child.name}</Link>,
         })),
       })),
     [menuData],
@@ -171,7 +178,11 @@ function PortalShellChrome({
       items={menuItems}
       selectedKeys={selectedKeys}
       openKeys={openKeys}
-      onOpenChange={(keys) => setUserOpenKeys(keys as string[])}
+      onOpenChange={(keys) => {
+        const next = mergePortalSiderOpenKeys(pathOpenKeys, keys as string[]);
+        setUserOpenKeys(next);
+        writePersistedSiderOpenKeys(next);
+      }}
       onClick={closeNavDrawer}
       data-testid="portal-sider"
     />
@@ -182,13 +193,14 @@ function PortalShellChrome({
       {
         key: 'security',
         label: (
-          <Link href="/account/security">{t('shell.account.security')}</Link>
+          <Link href="/account/security" prefetch={false}>{t('shell.account.security')}</Link>
         ),
       },
       {
         key: 'logout',
         label: t('shell.account.logout'),
         onClick: () => {
+          beginActorLogout();
           window.location.assign('/api/auth/logout');
         },
       },
@@ -299,11 +311,13 @@ function PortalShellChrome({
             </Button>
           ) : null}
           <Link
+            prefetch={false}
             href="/"
             className="portal-brand-link"
+            aria-label="Vemoki Portal"
             data-testid="portal-brand"
           >
-            Vemoki Portal
+            <PortalBrandLockup />
           </Link>
         </div>
         <div className="portal-header-actions">
@@ -513,7 +527,7 @@ function PortalShellChrome({
         title={t(SURFACE_MESSAGE_KEYS.pendingActivationTitle)}
         subTitle={t(SURFACE_MESSAGE_KEYS.pendingActivationDescription)}
         extra={
-                    <Link href={`/onboarding/${activeTenant.tenantId}`}>
+                    <Link href={`/onboarding/${activeTenant.tenantId}`} prefetch={false}>
                       <Button type="link">
                         {t('onboarding.pending.openWait')}
                       </Button>
@@ -540,6 +554,8 @@ export function PortalShell({
 }) {
   const { t } = usePortalLocale();
   const pathname = usePathname();
+  const generation = useSyncExternalStore(subscribeActorGeneration, actorGeneration, () => 0);
+  const [readyGeneration, setReadyGeneration] = useState<number | null>(null);
   const shell = useSyncExternalStore(
     subscribePortalShellSnapshot,
     getPortalShellSnapshot,
@@ -553,6 +569,8 @@ export function PortalShell({
   const discoveryGate = useRef(createContextRequestGate());
 
   useEffect(() => installUnsavedNavigation(), []);
+  useEffect(() => installActorLifecycle(), []);
+  useEffect(() => { checkActorMarkers(); }, [pathname]);
 
   useEffect(() => {
     const deny = (event: Event) => {
@@ -580,21 +598,24 @@ export function PortalShell({
 
   const reload = useCallback(() => {
     requestGate.current.begin('shell');
+    const started = actorGeneration();
+    setReadyGeneration(null);
     markPortalShellLoading();
-    void loadShellContext();
+    void loadShellContext().then(() => {
+      if (started === actorGeneration()) setReadyGeneration(started);
+    });
   }, []);
 
   useEffect(() => {
-    const gate = requestGate.current;
     let active = true;
-    queueMicrotask(() => {
-      if (active) reload();
-    });
-    return () => {
-      active = false;
-      gate.invalidate();
-    };
-  }, [reload]);
+    queueMicrotask(() => { if (active) reload(); });
+    return () => { active = false; };
+  }, [generation, reload]);
+
+  useEffect(() => {
+    const gate = requestGate.current;
+    return () => gate.invalidate();
+  }, []);
 
   const staffLoginUrl =
     shell.status === 'unauthenticated' ? staffLoginUrlForPath(pathname) : null;
@@ -605,11 +626,14 @@ export function PortalShell({
   }, [staffLoginUrl]);
 
   const ready = shell.status === 'ready' ? shell : null;
-  const caps: PortalShellCapabilities | null = ready?.caps ?? null;
+  const platformOnly = pathname === '/platform' || pathname.startsWith('/platform/');
+  const caps: PortalShellCapabilities | null = ready?.caps
+    ? { ...ready.caps, showOrgChrome: !platformOnly && ready.caps.showOrgChrome }
+    : null;
 
   const discoveredTenants: MeTenantItem[] = useMemo(
-    () => ready?.meTenants?.items ?? [],
-    [ready],
+    () => platformOnly ? [] : ready?.meTenants?.items ?? [],
+    [ready, platformOnly],
   );
   const tenants: MeTenantItem[] = useMemo(
     () => discoveredTenants.filter(isStaffPortalTenant),
@@ -622,8 +646,8 @@ export function PortalShell({
     tenants.length === 0 &&
     discoveredTenants.some((tenant) => tenant.role === 'Attendee');
   const events: MeEventItem[] = useMemo(
-    () => ready?.meEvents?.items ?? [],
-    [ready],
+    () => platformOnly ? [] : ready?.meEvents?.items ?? [],
+    [ready, platformOnly],
   );
 
   const resolvedTenantId =
@@ -784,7 +808,7 @@ export function PortalShell({
     return <>{children}</>;
   }
 
-  if (shell.status === 'loading' || eventDiscoveryLoading) {
+  if (shell.status === 'loading' || readyGeneration !== generation || eventDiscoveryLoading) {
     return (
     <Flex
       vertical
@@ -897,7 +921,7 @@ export function PortalShell({
       effectiveEventId={effectiveEventId}
       activeTenant={activeTenant}
     >
-      {children}
+      <div key={generation}>{children}</div>
     </PortalShellChrome>
   );
 }

@@ -58,6 +58,8 @@ const DEFINER_OWNER_TABLES = new Set([
   // Worker aggregate counters are writable/readable only by definer owner.
   'worker_job_reclaim_counters',
   'redemption_requests',
+  // JOB04 ledger is FORCE RLS; migration owner needs its explicit policy.
+  'tenant_email_budget_attempts',
 ]);
 /** Platform metadata pool — USING(true) cross-tenant (NOBYPASSRLS). */
 const PLATFORM_OPEN_TABLES = new Set([
@@ -279,6 +281,7 @@ test(
         'support_grants',
         'account_deletion_requests',
         'tenant_email_usage',
+        'tenant_email_budget_attempts',
       ]) {
         assert.ok(names.has(required), 'missing table ' + required);
       }

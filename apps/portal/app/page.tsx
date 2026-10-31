@@ -2,7 +2,8 @@
 
 import { Alert, Button, Card, Flex, Result, Spin, Typography } from 'antd';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
+import { useActorState as useState } from '../src/client/use-actor-state';
 import { loadShellContext } from '../src/nav/load-shell-context';
 import { usePortalLocale, type MessageKey } from '../src/i18n';
 import { SURFACE_MESSAGE_KEYS } from '../src/prep/surface-copy';
@@ -128,10 +129,10 @@ export default function PortalHomePage() {
       <Typography.Title level={3}>{t('shell.tenant.empty')}</Typography.Title>
       <Typography.Paragraph>{t('home.noOrgBody')}</Typography.Paragraph>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        <Link href="/onboarding">
+        <Link prefetch={false} href="/onboarding">
           <Button type="primary">{t('home.startOnboarding')}</Button>
         </Link>
-        <Link href="/account/security">
+        <Link prefetch={false} href="/account/security">
           <Button>{t('home.h_cb3p8s')}</Button>
         </Link>
       </div>

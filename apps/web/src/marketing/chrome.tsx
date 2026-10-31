@@ -1,5 +1,6 @@
 import { Button } from '@ticket/ui';
 import Link from 'next/link';
+import Image from 'next/image';
 import type { ReactNode } from 'react';
 import { t } from './copy';
 import {
@@ -23,7 +24,6 @@ import {
 import { privacyHref, salesHref, supportHref, type MarketingPageKind } from './links';
 import { MarketingNeonEdgeDecor } from './marketing-neon-edge-decor';
 import { MarketingNeonScope } from './marketing-neon-scope';
-import { MarketingNeonLogo } from './marketing-neon-logo';
 import { MarketingNeonPrimaryButton } from './marketing-neon-primary-button';
 
 export function MarketingChrome({
@@ -65,14 +65,8 @@ export function MarketingChrome({
           aria-label={t(locale, 'nav.brand')}
           data-testid="mkt-wordmark"
         >
-          {onSales ? (
-            <MarketingNeonLogo />
-          ) : (
-            <span className="font-display text-[1.35rem] font-bold tracking-tight">
-              Vemoki
-            </span>
-          )}
-          <span className="sr-only">{t(locale, 'nav.brand')}</span>
+          <Image src="/marketing/neon/vemoki-v-mark.webp" alt="" width={34} height={30} className="mr-2 inline-block align-middle" />
+          {t(locale, 'nav.brand')}
         </Link>
         <nav className={marketingNav} aria-label={locale === 'en' ? 'Primary' : 'Chính'}>
           {onSales ? (
@@ -108,17 +102,7 @@ export function MarketingChrome({
       {children}
       <footer className={marketingFooter(onSales)} data-testid="mkt-footer">
         <div className={marketingWrap}>
-          {onSales ? (
-            <Link
-              className={`${marketingWordmark} mkt-neon-wordmark-link mb-4 inline-flex`}
-              href={sales}
-              aria-label={t(locale, 'nav.brand')}
-              data-testid="mkt-footer-wordmark"
-            >
-              <MarketingNeonLogo />
-              <span className="sr-only">{t(locale, 'nav.brand')}</span>
-            </Link>
-          ) : null}
+          {onSales ? <Link className="mb-4 inline-flex items-center text-xl font-bold text-paper" href={sales}><Image src="/marketing/neon/vemoki-v-mark.webp" alt="" width={34} height={30} className="mr-2" />Vemoki</Link> : null}
           <div>
             <Link href={privacyHref(locale)}>{t(locale, 'nav.privacy')}</Link>
             {' · '}

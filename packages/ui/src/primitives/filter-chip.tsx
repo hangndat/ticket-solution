@@ -21,7 +21,7 @@ export function FilterChip({
         'transition-[border-color,background] motion-reduce:transition-none',
         'focus-visible:outline focus-visible:outline-3 focus-visible:outline-focus focus-visible:outline-offset-2',
         active &&
-          'border-signal bg-[color-mix(in_srgb,var(--color-signal)_8%,var(--color-paper))] font-semibold text-[color-mix(in_srgb,var(--color-signal)_75%,var(--color-ink))]',
+          'border-primary bg-[color-mix(in_srgb,var(--color-primary)_8%,var(--color-paper))] font-semibold text-[color-mix(in_srgb,var(--color-primary)_75%,var(--color-ink))]',
         className,
       )}
       aria-pressed={active}
