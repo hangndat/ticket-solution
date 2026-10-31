@@ -107,6 +107,70 @@ describe('portal CS / export / decide helpers', () => {
     assert.equal(limit.kind, 'rejected');
   });
 
+  it('accepts all 5 providerStatus values incl. UNKNOWN; rejects malformed', () => {
+    for (const providerStatus of ['PENDING', 'ACCEPTED', 'FAILED', 'DEAD', 'UNKNOWN']) {
+      const list = interpretCsList(
+        200,
+        {
+          items: [
+            {
+              ticketId,
+              state: 'ACTIVE',
+              ticketTypeId: '66666666-6666-4666-8666-666666666666',
+              sourceId: '55555555-5555-4555-8555-555555555555',
+              createdAt: '2026-01-01T00:00:00.000Z',
+              ownerEmailMasked: null,
+              lastCheckInAt: null,
+              notification: {
+                channel: 'email',
+                state: 'SENT',
+                providerStatus,
+                providerRef: null,
+                attempts: 1,
+                lastError: null,
+              },
+            },
+          ],
+          nextCursor: null,
+        },
+        false,
+      );
+      assert.equal(list.kind, 'list', `providerStatus ${providerStatus} should parse`);
+      if (list.kind === 'list') {
+        assert.equal(list.items[0]!.notification?.providerStatus, providerStatus);
+      }
+      assert.match(csProviderStatusLabel(providerStatus), /\S/);
+    }
+
+    const malformed = interpretCsList(
+      200,
+      {
+        items: [
+          {
+            ticketId,
+            state: 'ACTIVE',
+            ticketTypeId: '66666666-6666-4666-8666-666666666666',
+            sourceId: '55555555-5555-4555-8555-555555555555',
+            createdAt: '2026-01-01T00:00:00.000Z',
+            ownerEmailMasked: null,
+            lastCheckInAt: null,
+            notification: {
+              channel: 'email',
+              state: 'SENT',
+              providerStatus: 'DELIVERED',
+              providerRef: null,
+              attempts: 1,
+              lastError: null,
+            },
+          },
+        ],
+        nextCursor: null,
+      },
+      false,
+    );
+    assert.equal(malformed.kind, 'unknown');
+  });
+
   it('export create/status/download; rejects downloadUrl JSON', () => {
     assert.match(exportsCreatePath(scope), /\/exports$/);
     assert.match(exportDownloadPath(scope, exportId), /\/download$/);
