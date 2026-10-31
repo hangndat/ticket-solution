@@ -29,6 +29,7 @@ const CASE_IDS = [
   'DB-11',
   'DB-12',
   'DB-14',
+  'JOB-04',
   'WEB-04',
   'WEB-05',
 ];
@@ -2119,6 +2120,148 @@ for (const caseId of CASE_IDS) {
         cooldown,
         { code: 'RESEND_COOLDOWN', retryable: false, noRetryAfter: true },
         'CS resend cooldown',
+      );
+      return;
+    }
+    if (caseId === 'JOB-04') {
+      // PLAN JOB-04: resend cooldown/dedup (CS endpoint) + staff notification
+      // retry cooldown live qua Keycloak thật, cùng emailNeedsCs phân biệt
+      // retry tạm (FAILED/UNKNOWN) khỏi terminal (DEAD, dictionary O12).
+      // Tenant-cap AC riêng còn BLOCKED chờ contract wiring — xem
+      // .artifacts/job04-report.md; staff/recipient hourly cap numeric
+      // matrix đã có D-layer (packages/backend/test/job04-resend-caps.test.cjs)
+      // với PostgreSQL thật, không nhân đôi ở đây.
+      const owner = await bearer(ctx, 'owner');
+      const ticketId = required(f.ticketId, 'JOB-04 ticketId');
+      const resendPath = `/tenants/${f.tenantId}/events/${f.eventId}/tickets/${ticketId}/resend`;
+
+      const firstResend = await request(ctx, 'POST', resendPath, owner, null, {
+        'idempotency-key': 'job04-resend-1',
+      });
+      assert.ok(
+        [200, 201, 202].includes(firstResend.status),
+        `JOB-04 CS resend expected success, got ${firstResend.status} (${firstResend.body.code ?? 'none'})`,
+      );
+      assert.equal(firstResend.body.providerStatus, 'PENDING');
+      assert.equal(firstResend.body.replayed, false);
+
+      const dedupReplay = await request(ctx, 'POST', resendPath, owner, null, {
+        'idempotency-key': 'job04-resend-1',
+      });
+      expectStatus(dedupReplay, firstResend.status);
+      assert.equal(
+        dedupReplay.body.operationId,
+        firstResend.body.operationId,
+        'JOB-04 dedup: same Idempotency-Key must replay the same logical resend',
+      );
+      assert.equal(dedupReplay.body.replayed, true);
+
+      const cooldownDeny = await request(ctx, 'POST', resendPath, owner, null, {
+        'idempotency-key': 'job04-resend-2',
+      });
+      assertRateLimited(
+        cooldownDeny,
+        { code: 'RESEND_COOLDOWN', retryable: false, noRetryAfter: true },
+        'JOB-04 CS resend cooldown',
+      );
+
+      const [issuedNotification] = await web04Query(
+        f,
+        f.tenantId,
+        `SELECT id, state FROM notifications
+         WHERE tenant_id = $1::uuid AND business_key = $2
+         LIMIT 1`,
+        [f.tenantId, `ticket:${ticketId}:issued:email`],
+      );
+      assert.ok(
+        issuedNotification,
+        'JOB-04 TicketIssued notification must exist from issuance (JOB-01)',
+      );
+      const notificationId = issuedNotification.id;
+      const retryPath = `/tenants/${f.tenantId}/events/${f.eventId}/notifications/${notificationId}/retry`;
+
+      const retryTooSoon = await request(ctx, 'POST', retryPath, owner, {
+        reason: 'JOB-04 live retry cooldown probe',
+      });
+      assertRateLimited(
+        retryTooSoon,
+        { code: 'RESEND_COOLDOWN', retryable: true, noRetryAfter: true },
+        'JOB-04 notification retry cooldown (fresh issuance)',
+      );
+
+      await web04Query(
+        f,
+        f.tenantId,
+        `UPDATE notifications SET updated_at = clock_timestamp() - interval '2 minutes'
+         WHERE tenant_id = $1::uuid AND id = $2::uuid`,
+        [f.tenantId, notificationId],
+      );
+      const retrySuccess = await request(ctx, 'POST', retryPath, owner, {
+        reason: 'JOB-04 live retry after cooldown clears',
+      });
+      expectStatus(retrySuccess, 201);
+      assert.equal(retrySuccess.body.requeued, true);
+
+      const retryAgainTooSoon = await request(ctx, 'POST', retryPath, owner, {
+        reason: 'JOB-04 live retry cooldown probe 2',
+      });
+      assertRateLimited(
+        retryAgainTooSoon,
+        { code: 'RESEND_COOLDOWN', retryable: true, noRetryAfter: true },
+        'JOB-04 notification retry cooldown (after successful requeue)',
+      );
+
+      const [afterRequeue] = await web04Query(
+        f,
+        f.tenantId,
+        `SELECT state FROM notifications WHERE tenant_id = $1::uuid AND id = $2::uuid`,
+        [f.tenantId, notificationId],
+      );
+      assert.equal(
+        afterRequeue.state,
+        'PENDING',
+        'JOB-04 successful retry must requeue to PENDING',
+      );
+
+      const list = await request(
+        ctx,
+        'GET',
+        `/tenants/${f.tenantId}/events/${f.eventId}/notifications`,
+        owner,
+      );
+      expectStatus(list, 200);
+      const providerStates = new Set([
+        'PENDING',
+        'ACCEPTED',
+        'FAILED',
+        'DEAD',
+        'UNKNOWN',
+      ]);
+      assert.ok(list.body.items.length >= 1);
+      for (const item of list.body.items) {
+        assert.ok(
+          providerStates.has(item.providerStatus),
+          `JOB-04 providerStatus must be in the contract enum, got ${item.providerStatus}`,
+        );
+      }
+
+      const reportBeforeDead = await request(ctx, 'GET', reportPath(f), owner);
+      expectStatus(reportBeforeDead, 200);
+      const needsCsBefore = reportBeforeDead.body.emailNeedsCsCount;
+
+      await web04Query(
+        f,
+        f.tenantId,
+        `UPDATE notifications SET state = 'DEAD', last_error = 'provider rejected recipient', next_attempt_at = NULL
+         WHERE tenant_id = $1::uuid AND id = $2::uuid`,
+        [f.tenantId, notificationId],
+      );
+      const reportAfterDead = await request(ctx, 'GET', reportPath(f), owner);
+      expectStatus(reportAfterDead, 200);
+      assert.equal(
+        reportAfterDead.body.emailNeedsCsCount,
+        needsCsBefore + 1,
+        'JOB-04 terminal DEAD (not transient FAILED/UNKNOWN) must increment emailNeedsCs, not the earlier cooldown-denied transient retry',
       );
       return;
     }
