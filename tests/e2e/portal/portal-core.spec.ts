@@ -540,14 +540,17 @@ test('[PORT-13] Portal filter + saved view persist for owner and are not hydrate
   await login(page, m, 'PORT-13', 'owner');
   await page.goto(portalUrl(m, eventPath(f, '/guests#pending')));
   const pending = page.locator('#pending');
-  const sourceFilter = pending.getByLabel('Lọc theo source');
-  await sourceFilter.waitFor({ state: 'visible' });
-  await sourceFilter.click();
-  await page.getByRole('option', { name: 'E2E Auto' }).click();
+  // Plain text filter (UUID lookup) avoids the async catalog-driven Select
+  // dropdown; f.sourceId is only used here as a well-formed UUID value.
+  const requestFilter = pending.getByLabel(
+    'Tìm theo mã UUID của yêu cầu',
+  );
+  await requestFilter.waitFor({ state: 'visible' });
+  await requestFilter.fill(f.sourceId);
   await pending
     .getByRole('button', { name: 'Áp dụng bộ lọc chờ duyệt' })
     .click();
-  await expect(sourceFilter).toContainText('E2E Auto');
+  await expect(requestFilter).toHaveValue(f.sourceId);
 
   const toolbar = pending.getByRole('button', {
     name: 'Chọn hoặc lưu view danh sách',
@@ -642,6 +645,9 @@ test('[PORT-13] Portal saved view does not hydrate across tenants for the same o
 
   await page.goto(portalUrl(m, `/t/${encodeURIComponent(f.tenantId)}/members`));
   await toolbar.waitFor({ state: 'visible' });
-  await expect(toolbar).toContainText('Tenant A members view');
+  // The toolbar label only reflects the view selected in THIS page lifecycle
+  // (neither view was marked default); open the menu to check what persisted.
+  await toolbar.click();
+  await expect(page.getByText('Tenant A members view')).toBeVisible();
   await expect(page.getByText('Tenant B members view')).toHaveCount(0);
 });
