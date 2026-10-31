@@ -2132,9 +2132,12 @@ for (const caseId of CASE_IDS) {
       const ticketId = required(f.ticketId, 'JOB-04 ticketId');
       const resendPath = `/tenants/${f.tenantId}/events/${f.eventId}/tickets/${ticketId}/resend`;
 
-      await web04Query(f, f.tenantId,
-        `UPDATE tenant_limits SET email_per_day = 0 WHERE tenant_id = $1::uuid`,
+      const [budgetLimit] = await web04Query(f, f.tenantId,
+        `INSERT INTO tenant_limits (tenant_id, email_per_day) VALUES ($1::uuid, 0)
+         ON CONFLICT (tenant_id) DO UPDATE SET email_per_day = 0
+         RETURNING email_per_day`,
         [f.tenantId]);
+      assert.equal(budgetLimit?.email_per_day, 0);
 
       const firstResend = await request(ctx, 'POST', resendPath, owner, null, {
         'idempotency-key': 'job04-resend-1',
