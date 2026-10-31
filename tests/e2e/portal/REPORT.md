@@ -1,5 +1,9 @@
 # Portal/Platform E2E — bàn giao worker
 
+## PORT-13 — revalidation tích hợp 31/10/2026
+
+Clean run `mvvw54qv-c11d7d` tại SHA `dab48d601d34eed68ae8a8e13aa3b2a0157c2811`: browser **PASS 3/3**, zero retry, commitStable/evidenceExactShaEligible=true. Fixture có 55 PENDING_REVIEW; đã assert hai trang 50+5 UUID đúng thứ tự, không trùng, filter đổi UUID và khôi phục saved view trước/sau reload, actor/tenant isolation. Binaries từ `607d89ab` được tái dùng vì delta chỉ bốn assertion chuyển sang `expect.poll`; không đổi runtime. James revalidation đóng F01 provenance và F03 pagination; full PORT-13 vẫn BLOCKED bởi sort contract. Lượt sửa 1/2. Bản ghi trước dưới đây là lịch sử đã được checkpoint này thay thế về provenance và pagination.
+
 ## PORT-13 — locale/filter/saved-view B, sort BLOCKED (Higo, 31/10/2026)
 
 **Runtime PASS (partial, không fullgroup)** tại tested SHA `70e1531b7925c5a71037ba27c54223c2d5dec6f1`, run `mvvtnabj-4ca5f2`, `node tests/e2e/harness/run.mjs e2e --case=PORT-13`. `workingTreeDirty=false`, `commitStable=true`, `evidenceExactShaEligible=true`. 3/3 test browser PASS, exitCode 0; cleanup containers/network đã chạy theo harness. AC → assertion → evidence:

@@ -161,7 +161,7 @@
       "B"
     ],
     "status": "blocked",
-    "reason": "B PASS clean run mvvtnabj-4ca5f2 on code SHA 70e1531b: locale VI default/EN persists reload; pending-panel text filter + saved view save/reload roundtrip for owner; same-browser-profile isolation confirmed for actor switch (owner->manager, same tenant) and tenant switch (second ACTIVE tenant provisioned via tests/e2e/portal/port13-db.ts runtime-role helper for the same owner, members surface). Full PORT-13 BLOCKED: 'sort' has no UI wiring on any Portal panel and no backend/API support (apps/api/src/approval.ts listPending -> packages/backend/src/redemption-status.ts listStaffPendingRedemptions hardcodes ORDER BY created_at ASC, id ASC with a keyset cursor tied to that order; every other Portal list backend checked is the same) -- filed as a backend/API contract gap, not Web-fixable. Pagination's real cursor/next-page behavior is also unexercised: PORT-13's fixture has 0 seeded PENDING_REVIEW rows, never reaching nextCursor."
+    "reason": "B PASS clean run mvvw54qv-c11d7d on exact SHA dab48d601d34eed68ae8a8e13aa3b2a0157c2811, 3/3 zero retry: locale VI/EN persistence, 55-row pagination 50+5 unique ordered IDs, UUID filter and saved-view restore before/after reload, same-profile actor/tenant isolation. James revalidation closes F01 provenance and F03 pagination. Runtime binaries from607d89ab reused because delta changes only four test assertions to expect.poll. Full PORT-13 remains BLOCKED: sort lacks UI/backend/API contract; no waiver. Fix count1/2."
   },
   {
     "caseId": "PORT-14",
