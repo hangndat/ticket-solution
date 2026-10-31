@@ -465,6 +465,14 @@ export async function resendTicketEmail(
     );
   }
 
+  // Serialize the staff hourly count across different ticket row locks.
+  await tx.$queryRaw`
+    SELECT true AS locked FROM pg_advisory_xact_lock(
+      hashtext('cs_resend_staff'),
+      hashtext(${input.tenantId} || ':' || ${input.actorUserId})
+    )
+  `;
+
   const tickets = await tx.$queryRaw<{ id: string; owner_user_id: string }[]>`
     SELECT t.id, t.owner_user_id
     FROM tickets t

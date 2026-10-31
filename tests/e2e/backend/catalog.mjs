@@ -171,6 +171,10 @@ export const catalog = {
     b('csv-guard', 'providerStatus maps', 'U'),
     b('reporting', 'event report counts'),
     b('outbox-fence', 'TicketIssued: email outside tx'),
+    b(
+      'job04-resend-caps',
+      '[JOB-04] D staff resend: cooldown, staff hourly cap, recipient hourly cap, retry(transient)!=terminal for emailNeedsCs',
+    ),
   ],
   'JOB-05': [b('notification-unit', 'template allowlist', 'U')],
   'JOB-06': [
@@ -288,7 +292,7 @@ export const notes = {
   'JOB-03':
     'D issue relay fail/retry; U SMTP deadline; R worker reject đến DEAD ở cap=3, không gọi thêm provider, ticket ACTIVE; stall/Mailpit recovery và exit-after-smtp subprocess recovery (chưa SIGKILL main worker đúng crash window; ADR-17 không assert exactly-once SMTP).',
   'JOB-04':
-    'D/U provider mapping; thiếu resend caps/cooldown/final failure full matrix.',
+    'D/U/H cooldown+user/staff/recipient hourly cap+dedup+retry-vs-terminal emailNeedsCs; tenant-wide resend cap BLOCKED chờ contract wiring (xem .artifacts/job04-report.md).',
   'JOB-05': 'U template; thiếu D/H preview/publish/reminder schedule.',
   'JOB-06': 'D/U bounded timeout; thiếu R process kill/overlap and tenant cap.',
   'JOB-07': 'D object access; thiếu H signed URL authz/expiry across tenants.',

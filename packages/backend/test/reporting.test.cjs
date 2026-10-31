@@ -209,6 +209,10 @@ test(
         await tx.tenant.create({
           data: { id: tenantId, slug: 'report', name: 'Report' },
         });
+        await tx.$executeRaw`
+          INSERT INTO tenant_limits (tenant_id, email_per_day)
+          VALUES (${tenantId}::uuid, 100)
+        `;
         await tx.event.create({
           data: {
             tenantId,
@@ -598,12 +602,13 @@ test(
         `;
         return rows[0];
       });
-      assert.equal(waitingRow.note_state, 'FAILED');
+      assert.equal(waitingRow.note_state, 'UNKNOWN');
       assert.equal(waitingRow.waiting, true);
       assert.equal(waitingRow.outbox_waiting, true);
       assert.equal(waitingRow.outbox_status, 'PENDING');
 
-      // Temporary FAILED (retry scheduled) must not inflate emailNeedsCsCount.
+      // Ambiguous SMTP failure is UNKNOWN while retry is scheduled; it must
+      // not inflate emailNeedsCsCount before a terminal DEAD outcome.
       const midFailReport = await withTenant(db, tenantId, (tx) =>
         readEventReport(tx, {
           tenantId,

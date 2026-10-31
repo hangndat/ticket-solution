@@ -264,6 +264,7 @@ export async function seedRuntime(state, caseIds) {
           'DB-11',
           'DB-12',
           'DB-14',
+          'JOB-04',
         ].includes(caseId)
       ) {
         // Private, run-scoped control for H/DB reconciliation under tenant RLS.
@@ -1518,6 +1519,7 @@ export async function seedRuntime(state, caseIds) {
           'DB-09',
           'SEC-04',
           'SEC-05',
+          'JOB-04',
         ].includes(caseId)
       ) {
         const answers =

@@ -241,6 +241,10 @@ test(
         await tx.tenant.create({
           data: { id: tenantId, slug: 'cs-a', name: 'CS A' },
         });
+        await tx.$executeRaw`
+          INSERT INTO tenant_limits (tenant_id, email_per_day)
+          VALUES (${tenantId}::uuid, 100)
+        `;
         await grantMembership(tx, {
           tenantId,
           userId: manager.userId,
@@ -1048,6 +1052,35 @@ test(
           WHERE t.tenant_id = ${tenantId}::uuid AND t.id = ${ticket.ticketId}::uuid
         `;
       });
+
+      // JOB04: two tickets race for the last staff slot. The transaction
+      // advisory lock must make exactly one request observe count 9.
+      const raceTickets = await withTenant(db, tenantId, (tx) => tx.$queryRaw`
+        SELECT id FROM tickets WHERE tenant_id = ${tenantId}::uuid
+          AND id IN (md5('cs-page-ticket-1')::uuid, md5('cs-page-ticket-2')::uuid)
+        ORDER BY id
+      `);
+      assert.equal(raceTickets.length, 2);
+      await withTenant(db, tenantId, (tx) => tx.$executeRaw`
+        UPDATE audit_logs SET created_at = now() - interval '2 hours'
+        WHERE tenant_id = ${tenantId}::uuid AND id = (
+          SELECT id FROM audit_logs WHERE tenant_id = ${tenantId}::uuid
+            AND action = 'ticket.email_resend' ORDER BY id LIMIT 1
+        )
+      `);
+      const race = await Promise.allSettled(raceTickets.map((row, i) =>
+        withTenant(db, tenantId, (tx) => resendTicketEmail(tx, {
+          tenantId, eventId, actorUserId: cs.userId,
+          ticketId: row.id, clientKey: 'resend-race-' + i,
+        }))));
+      assert.equal(race.filter((result) => result.status === 'fulfilled').length, 1);
+      assert.equal(race.filter((result) => result.status === 'rejected' && result.reason.code === 'RESEND_LIMIT').length, 1);
+      const raceAudit = await withTenant(db, tenantId, (tx) => tx.$queryRaw`
+        SELECT count(*)::int AS n FROM audit_logs
+        WHERE tenant_id = ${tenantId}::uuid AND actor_user_id = ${cs.userId}::uuid
+          AND action = 'ticket.email_resend' AND created_at > now() - interval '1 hour'
+      `);
+      assert.equal(raceAudit[0].n, 10);
 
       const seen = [];
       let cursor;
