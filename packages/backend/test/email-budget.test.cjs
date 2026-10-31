@@ -63,7 +63,7 @@ async function tenant(db, slug, limit) {
   return tenantId;
 }
 
-async function invite(db, tenantId, owner, token = randomUUID()) {
+async function invite(db, tenantId, owner, token = randomUUID(), status = 'PROCESSING') {
   const row = {
     outbox_id: randomUUID(), tenant_id: tenantId, event_id: null,
     type: 'MembershipInvite', aggregate_id: randomUUID(),
@@ -77,7 +77,7 @@ async function invite(db, tenantId, owner, token = randomUUID()) {
       ${row.aggregate_id}::uuid,
       ${JSON.stringify({ inviteId: row.aggregate_id, email: 'fixture@example.test',
         role: 'manager', token: 'fixture-token', expiresAt: '2030-01-01' })}::jsonb,
-      'PROCESSING', 1, ${owner}, ${token}, clock_timestamp() + interval '60 seconds')
+      ${status}, 1, ${owner}, ${token}, clock_timestamp() + interval '60 seconds')
   `);
   return row;
 }
@@ -168,7 +168,10 @@ test('JOB04 D: worker invite calls SMTP once and defers another at tenant cap',
       boot = await postgres();
       db = createDatabase(boot.url, 6, true);
       const id = await tenant(db, 'budget-worker', 1);
-      const rows = [await invite(db, id, 'worker-x'), await invite(db, id, 'worker-y')];
+      const rows = [
+        await invite(db, id, 'worker-x', randomUUID(), 'LEASED'),
+        await invite(db, id, 'worker-y', randomUUID(), 'LEASED'),
+      ];
       let calls = 0;
       const email = {
         async sendTicketIssued() { throw new Error('unused'); },
