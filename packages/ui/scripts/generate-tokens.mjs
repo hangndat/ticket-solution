@@ -9,12 +9,14 @@ const outDir = path.join(pkgRoot, 'src/generated');
 
 const tokens = JSON.parse(fs.readFileSync(tokensPath, 'utf8'));
 const colors = tokens.colors ?? {};
-const { ink, paper, signal, focus, line, muted, destructive, admit, unknown } = colors;
+const { ink, paper, signal, primary, focus, line, muted, destructive, admit, unknown } =
+  colors;
 
 const requiredColors = {
   ink,
   paper,
   signal,
+  primary,
   focus,
   line,
   muted,
@@ -39,6 +41,7 @@ const themeLines = [
   `  --color-ink: ${ink};`,
   `  --color-paper: ${paper};`,
   `  --color-signal: ${signal};`,
+  `  --color-primary: ${primary};`,
   `  --color-focus: ${focus};`,
   `  --color-line: ${line};`,
   `  --color-muted: ${muted};`,
@@ -84,6 +87,7 @@ const snapshotLines = [
   `  --ink: ${ink};`,
   `  --paper: ${paper};`,
   `  --signal: ${signal};`,
+  `  --primary: ${primary};`,
   `  --focus: ${focus};`,
   `  --line: ${line};`,
   `  --muted: ${muted};`,
