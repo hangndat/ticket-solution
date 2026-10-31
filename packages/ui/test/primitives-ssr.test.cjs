@@ -16,7 +16,7 @@ describe('@ticket/ui primitives SSR', () => {
     );
     assert.match(html, /<button[^>]*type="button"/);
     assert.match(html, /min-h-11/);
-    assert.match(html, /hover:border-ink/);
+    assert.match(html, /hover:bg-\[color-mix/);
     assert.match(html, /disabled:pointer-events-none/);
     assert.match(html, />Lưu</);
   });
@@ -47,7 +47,7 @@ describe('@ticket/ui primitives SSR', () => {
     assert.match(html, /aria-invalid="true"/);
   });
 
-  it('SurfaceState loading exposes aria-busy and legacy classes', async () => {
+  it('SurfaceState loading exposes aria-busy and Tailwind chrome', async () => {
     const { SurfaceState } = await loadUi();
     const html = renderToStaticMarkup(
       React.createElement(SurfaceState, {
@@ -55,7 +55,8 @@ describe('@ticket/ui primitives SSR', () => {
         title: 'Đang tải…',
       }),
     );
-    assert.match(html, /class="surface-state state-loading"/);
+    assert.match(html, /rounded-2xl/);
+    assert.match(html, /animate-pulse/);
     assert.match(html, /aria-busy="true"/);
     assert.match(html, /role="status"/);
   });
