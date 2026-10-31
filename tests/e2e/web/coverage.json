@@ -197,10 +197,13 @@
   },
   {
     "caseId": "WEB-12",
-    "tests": ["public.spec.ts › [WEB-12]"],
+    "tests": [
+      "public.spec.ts › [WEB-12] marketing VI/EN, demo CTA, and public links",
+      "public.spec.ts › [WEB-12] interest form submit does not provision tenant/Owner"
+    ],
     "layers": ["B", "H"],
-    "status": "blocked",
-    "reason": "Có VI/EN, demo CTA, privacy/support; thiếu lead submit và tenant ACTIVE/Owner negative đối soát."
+    "status": "covered",
+    "reason": "VI/EN, demo CTA, privacy/support 200; lead submit thật qua /api/marketing/interest kèm đối soát PostgreSQL trước/sau (users/memberships/tenants ACTIVE) xác nhận không auto-provision tenant/Owner. Chưa phủ: locale marketing truyền sang app (OUT theo PLAN WEB-12 — chưa có AC)."
   },
   {
     "caseId": "WEB-13",
