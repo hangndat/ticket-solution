@@ -13,6 +13,7 @@ import { OutcomesSection } from './sections/outcomes';
 import { BentoSection } from './sections/bento';
 import { TrustSection } from './sections/trust';
 import { WorkflowSection } from './sections/workflow';
+import { NeonFinalCta, NeonShowcase } from './sections/neon-showcase';
 
 export function SalesPage({ locale }: { locale: MarketingLocale }) {
   const productOrigin = productOriginFromEnv();
@@ -26,12 +27,14 @@ export function SalesPage({ locale }: { locale: MarketingLocale }) {
     <MarketingChrome locale={locale} pageKind="sales">
       <main id="main" data-testid={`sales-${locale}`}>
         <HeroSection {...sectionProps} />
+        <NeonShowcase {...sectionProps} />
         <TrustSection {...sectionProps} />
         <BentoSection {...sectionProps} />
         <WorkflowSection {...sectionProps} />
         <AudienceSection {...sectionProps} />
         <OutcomesSection {...sectionProps} />
         <FaqSection {...sectionProps} />
+        <NeonFinalCta {...sectionProps} />
         <CtaSection {...sectionProps} />
       </main>
     </MarketingChrome>

@@ -17,6 +17,40 @@ export type CopyKey =
   | 'nav.how'
   | 'nav.solutions'
   | 'nav.faq'
+  | 'nav.product'
+  | 'nav.events'
+  | 'nav.advisory'
+  | 'neon.hero.headline.lead'
+  | 'neon.hero.headline.emphasis'
+  | 'neon.hero.visual.label'
+  | 'neon.events.eyebrow'
+  | 'neon.events.title.lead'
+  | 'neon.events.title.emphasis'
+  | 'neon.events.sub'
+  | 'neon.events.card1.title'
+  | 'neon.events.card1.alt'
+  | 'neon.events.card2.title'
+  | 'neon.events.card2.alt'
+  | 'neon.events.card3.title'
+  | 'neon.events.card3.alt'
+  | 'neon.events.card4.title'
+  | 'neon.events.card4.alt'
+  | 'neon.product.eyebrow'
+  | 'neon.product.title.lead'
+  | 'neon.product.title.emphasis'
+  | 'neon.product.f1'
+  | 'neon.product.f2'
+  | 'neon.product.f3'
+  | 'neon.product.f4'
+  | 'neon.product.cta'
+  | 'neon.product.image.alt'
+  | 'neon.product.image.caption'
+  | 'neon.final.eyebrow'
+  | 'neon.final.title.line1'
+  | 'neon.final.title.emphasis'
+  | 'neon.final.sub'
+  | 'neon.final.script.line1'
+  | 'neon.final.script.line2'
   | 'nav.locale.vi'
   | 'nav.locale.en'
   | 'nav.locale.label'
@@ -33,6 +67,7 @@ export type CopyKey =
   | 'hero.proof1'
   | 'hero.proof2'
   | 'hero.proof3'
+  | 'hero.proof4'
   | 'hero.proofs.label'
   | 'hero.preview.alt'
   | 'hero.preview.caption'
@@ -209,12 +244,15 @@ export type CopyKey =
   | 'interest.consent.privacy';
 
 const VI: Record<CopyKey, string> = {
-  'meta.title': 'Vemoki — Hệ điều hành sự kiện trực tiếp',
+  'meta.title': 'Vemoki — Biến mọi sự kiện thành trải nghiệm đáng nhớ',
   'meta.description':
-    'Event Operating System multi-tenant cho agency và doanh nghiệp sự kiện: mã mời, QR, cổng có audit — không marketplace.',
-  'nav.brand': 'vemoki',
+    'Một nền tảng. Mọi sự kiện. Vemoki giúp mời khách, phát vé QR và check-in trên cùng một nền tảng — dữ liệu demo cho trải nghiệm thử.',
+  'nav.brand': 'Vemoki',
   'nav.demo': 'Xem demo',
-  'nav.interest': 'Đăng ký quan tâm',
+  'nav.interest': 'Đăng ký tư vấn',
+  'nav.product': 'Sản phẩm',
+  'nav.events': 'Loại sự kiện',
+  'nav.advisory': 'Tư vấn',
   'nav.login': 'Đăng nhập',
   'nav.privacy': 'Quyền riêng tư',
   'nav.support': 'Hỗ trợ',
@@ -231,14 +269,47 @@ const VI: Record<CopyKey, string> = {
   skip: 'Bỏ qua nội dung',
   'badge.demo': 'Demo giả lập',
   'footer.attendee': 'Bạn có mã mời? Đổi vé trên ứng dụng',
-  'footer.tagline': 'vemoki↗ · Event Operating System',
-  'hero.eyebrow': 'Dành cho nhà tổ chức sự kiện',
-  'hero.headline': 'Vận hành sự kiện từ mã mời đến cổng.',
+  'footer.tagline': 'Nền tảng quản lý và vận hành sự kiện',
+  'hero.eyebrow': 'EVENTS MADE EASY',
+  'hero.headline': 'Biến mọi sự kiện thành trải nghiệm đáng nhớ.',
   'hero.sub':
-    'Phát mã mời, quản lý vé và kiểm soát cổng trong cùng một hệ thống. Khách tham dự nhìn thấy thương hiệu của bạn.',
-  'hero.proof1': 'Mã mời → đổi vé → QR ký theo sự kiện',
-  'hero.proof2': 'Cổng chống trùng + audit',
-  'hero.proof3': 'Tách tenant + RLS + deny-by-default',
+    'Mời khách, phát vé, check-in và theo dõi vận hành — tất cả trong một nền tảng.',
+  'hero.proof1': 'Thiết lập nhanh',
+  'hero.proof2': 'Mọi quy mô',
+  'hero.proof3': 'Một nền tảng',
+  'hero.proof4': 'Check-in QR',
+  'neon.hero.headline.lead': 'Biến mọi sự kiện thành ',
+  'neon.hero.headline.emphasis': 'trải nghiệm đáng nhớ',
+  'neon.hero.visual.label': 'Minh hoạ trải nghiệm sự kiện Vemoki (AI, dữ liệu demo)',
+  'neon.events.eyebrow': 'ONE PLATFORM · EVERY EVENT',
+  'neon.events.title.lead': 'Phù hợp cho',
+  'neon.events.title.emphasis': 'mọi quy mô',
+  'neon.events.sub': 'Từ workshop thân mật đến lễ hội sôi động.',
+  'neon.events.card1.title': 'Workshop & Meetup',
+  'neon.events.card1.alt': 'Một nhóm tham dự workshop (minh hoạ AI)',
+  'neon.events.card2.title': 'Conference & Summit',
+  'neon.events.card2.alt': 'Sân khấu hội nghị chuyên nghiệp (minh hoạ AI)',
+  'neon.events.card3.title': 'Concert & Festival',
+  'neon.events.card3.alt': 'Đám đông tại lễ hội âm nhạc (minh hoạ AI)',
+  'neon.events.card4.title': 'Corporate Events',
+  'neon.events.card4.alt': 'Khách giao lưu tại sự kiện doanh nghiệp (minh hoạ AI)',
+  'neon.product.eyebrow': 'YOUR EVENT. SIMPLIFIED.',
+  'neon.product.title.lead': 'Mọi thứ bạn cần để',
+  'neon.product.title.emphasis': 'tổ chức sự kiện',
+  'neon.product.f1': 'Tạo và quản lý sự kiện',
+  'neon.product.f2': 'Mời khách và phát vé',
+  'neon.product.f3': 'Check-in bằng QR',
+  'neon.product.f4': 'Theo dõi và báo cáo',
+  'neon.product.cta': 'Khám phá demo',
+  'neon.product.image.alt':
+    'Hình minh họa dashboard, vé QR và xác nhận check-in Vemoki; dữ liệu demo (AI)',
+  'neon.product.image.caption': 'Hình minh hoạ · dữ liệu demo',
+  'neon.final.eyebrow': 'YOUR NEXT EVENT STARTS HERE',
+  'neon.final.title.line1': 'Sự kiện tiếp theo.',
+  'neon.final.title.emphasis': 'Trải nghiệm khác biệt.',
+  'neon.final.sub': 'Khám phá Vemoki cho sự kiện của bạn.',
+  'neon.final.script.line1': 'Good Events',
+  'neon.final.script.line2': 'Brighter Together',
   'hero.proofs.label': 'Điểm mạnh sản phẩm',
   'hero.preview.alt':
     'Màn hình đổi mã vé trong ứng dụng Vemoki (môi trường pilot)',
@@ -261,8 +332,8 @@ const VI: Record<CopyKey, string> = {
   'hero.preview.gate.event': 'Sự kiện: MFest (fixture)',
   'hero.preview.phone.meta': 'Vé phổ thông · Cổng A',
   'hero.marquee': 'EOS · Invite → QR → Gate ·',
-  'hero.cta.demo': 'Xem sản phẩm',
-  'hero.cta.interest': 'Trao đổi nhu cầu',
+  'hero.cta.demo': 'Xem demo',
+  'hero.cta.interest': 'Đăng ký tư vấn',
   'hero.cta.login': 'Đăng nhập',
   'hero.login_prefix': 'Đã có tài khoản?',
   'hero.demo_note': 'Demo giả lập — không phải khách hàng thật.',
@@ -465,12 +536,15 @@ const VI: Record<CopyKey, string> = {
 };
 
 const EN: Record<CopyKey, string> = {
-  'meta.title': 'Vemoki — In-person Event Operating System',
+  'meta.title': 'Vemoki — Turn every event into a memorable experience',
   'meta.description':
-    'Multi-tenant Event Operating System for agencies and enterprise event teams: invites, QR, audited gate — not a marketplace.',
-  'nav.brand': 'vemoki',
+    'One platform. Every event. Vemoki helps you invite guests, issue QR tickets, and check in on one platform — demo data for trial experiences.',
+  'nav.brand': 'Vemoki',
   'nav.demo': 'View demo',
-  'nav.interest': 'Register interest',
+  'nav.interest': 'Book a consult',
+  'nav.product': 'Product',
+  'nav.events': 'Event types',
+  'nav.advisory': 'Consult',
   'nav.login': 'Log in',
   'nav.privacy': 'Privacy',
   'nav.support': 'Support',
@@ -487,15 +561,48 @@ const EN: Record<CopyKey, string> = {
   skip: 'Skip to content',
   'badge.demo': 'Simulated demo',
   'footer.attendee': 'Have an invite code? Redeem on the app',
-  'footer.tagline': 'vemoki↗ · Event Operating System',
-  'hero.eyebrow': 'For event organizers',
-  'hero.headline': 'Run events from invite to gate.',
+  'footer.tagline': 'Event management and operations platform',
+  'hero.eyebrow': 'EVENTS MADE EASY',
+  'hero.headline': 'Turn every event into a memorable experience.',
   'hero.sub':
-    'Send invites, manage tickets, and control the gate in one system. Guests see your brand.',
-  'hero.proof1': 'Invite → redeem → event-scoped signed QR',
-  'hero.proof2': 'Duplicate-safe gate + audit',
-  'hero.proof3': 'Tenant isolation + RLS + deny-by-default',
-  'hero.proofs.label': 'Product proof points',
+    'Invite guests, issue tickets, check in, and track operations — all in one platform.',
+  'hero.proof1': 'Fast setup',
+  'hero.proof2': 'Any scale',
+  'hero.proof3': 'One platform',
+  'hero.proof4': 'QR check-in',
+  'neon.hero.headline.lead': 'Turn every event into a ',
+  'neon.hero.headline.emphasis': 'memorable experience',
+  'neon.hero.visual.label': 'Vemoki event experience illustration (AI, demo data)',
+  'neon.events.eyebrow': 'ONE PLATFORM · EVERY EVENT',
+  'neon.events.title.lead': 'Built for',
+  'neon.events.title.emphasis': 'every scale',
+  'neon.events.sub': 'From intimate workshops to vibrant festivals.',
+  'neon.events.card1.title': 'Workshop & Meetup',
+  'neon.events.card1.alt': 'Workshop group illustration (AI)',
+  'neon.events.card2.title': 'Conference & Summit',
+  'neon.events.card2.alt': 'Conference stage illustration (AI)',
+  'neon.events.card3.title': 'Concert & Festival',
+  'neon.events.card3.alt': 'Festival crowd illustration (AI)',
+  'neon.events.card4.title': 'Corporate Events',
+  'neon.events.card4.alt': 'Corporate networking illustration (AI)',
+  'neon.product.eyebrow': 'YOUR EVENT. SIMPLIFIED.',
+  'neon.product.title.lead': 'Everything you need to',
+  'neon.product.title.emphasis': 'run your event',
+  'neon.product.f1': 'Create and manage events',
+  'neon.product.f2': 'Invite guests and issue tickets',
+  'neon.product.f3': 'QR check-in',
+  'neon.product.f4': 'Track and report',
+  'neon.product.cta': 'Explore the demo',
+  'neon.product.image.alt':
+    'Illustration of dashboard, QR ticket, and check-in confirmation; demo data (AI)',
+  'neon.product.image.caption': 'Illustration · demo data',
+  'neon.final.eyebrow': 'YOUR NEXT EVENT STARTS HERE',
+  'neon.final.title.line1': 'Your next event.',
+  'neon.final.title.emphasis': 'A different experience.',
+  'neon.final.sub': 'Explore Vemoki for your event.',
+  'neon.final.script.line1': 'Good Events',
+  'neon.final.script.line2': 'Brighter Together',
+  'hero.proofs.label': 'Highlights',
   'hero.preview.alt':
     'Redeem ticket screen in the Vemoki app (pilot environment)',
   'hero.preview.caption':
@@ -517,8 +624,8 @@ const EN: Record<CopyKey, string> = {
   'hero.preview.gate.event': 'Event: MFest (fixture)',
   'hero.preview.phone.meta': 'General · Gate A',
   'hero.marquee': 'EOS · Invite → QR → Gate ·',
-  'hero.cta.demo': 'Explore the product',
-  'hero.cta.interest': 'Discuss your needs',
+  'hero.cta.demo': 'View demo',
+  'hero.cta.interest': 'Book a consult',
   'hero.cta.login': 'Log in',
   'hero.login_prefix': 'Already have an account?',
   'hero.demo_note': 'Simulated demo — not a real customer.',
