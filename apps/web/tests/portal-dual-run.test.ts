@@ -1,13 +1,10 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
-import React from 'react';
-import { renderToStaticMarkup } from 'react-dom/server';
-import { DualRunBanner } from '../src/portal/dual-run-banner';
 import {
   decideAdminToPortalRedirect,
   filterMigrationSearch,
   isAdminToPortalRedirectEnabled,
-  isDualRunBannerEnabled,
+  isRetiredWebGatePath,
   LEGACY_ADMIN_GUEST_TABS,
   LEGACY_ADMIN_JOBS,
   mapLegacyAdminToPortalPath,
@@ -268,27 +265,9 @@ describe('portal dual-run redirect (ADR-20 §8 / D-7 #846)', () => {
     }
   });
 
-  test('VD-02: dual-run banner has no /gate scanner link (iOS Staff copy only)', () => {
-    const html = renderToStaticMarkup(
-      React.createElement(DualRunBanner, {
-        env: { PORTAL_ORIGIN: portal },
-      }),
-    );
-    assert.match(html, /data-testid="portal-dual-run-gate-ios"/);
-    assert.doesNotMatch(html, /href="\/gate"/);
-    assert.match(html, /Vemoki Staff/);
-  });
-
-  test('banner independent of redirect flag', () => {
-    assert.equal(isDualRunBannerEnabled({ PORTAL_ORIGIN: portal }), true);
-    assert.equal(
-      isDualRunBannerEnabled({
-        PORTAL_ORIGIN: portal,
-        PORTAL_DUAL_RUN_BANNER: '0',
-      }),
-      false,
-    );
-    assert.equal(isDualRunBannerEnabled({}), false);
+  test('O23: /gate is retired on web (308 home in proxy), never portal scanner', () => {
+    assert.equal(isRetiredWebGatePath('/gate'), true);
+    assert.equal(isRetiredWebGatePath('/gate/x'), true);
     assert.equal(
       portalHref('/admin', '?tenantId=t1&token=secret', {
         PORTAL_ORIGIN: portal,

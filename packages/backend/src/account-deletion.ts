@@ -426,11 +426,7 @@ export async function processDueAccountAnonymizations(
   );
 
   const slaRows = await db.$queryRaw<{ n: number }[]>`
-    SELECT count(*)::int AS n
-    FROM account_deletion_requests
-    WHERE state = 'REQUESTED'
-      AND policy_version IS NOT NULL
-      AND requested_at < clock_timestamp() - interval '30 days'
+    SELECT count_overdue_account_deletion_requests() AS n
   `;
   const slaOverdue = Number(slaRows[0]?.n ?? 0);
   if (slaOverdue > 0) {

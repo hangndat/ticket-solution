@@ -47,6 +47,14 @@ const config: NextConfig = {
   async headers() {
     return [
       {
+        source: '/wallet',
+        headers: [{ key: 'Cache-Control', value: 'private, no-store' }],
+      },
+      {
+        source: '/t/:tenantSlug/tickets/:ticketId',
+        headers: [{ key: 'Cache-Control', value: 'private, no-store' }],
+      },
+      {
         source: '/:path*',
         headers: [
           // CSP is set per-request in proxy.ts (runtime API_BASE_URL / OIDC_ISSUER).

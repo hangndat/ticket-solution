@@ -14,6 +14,8 @@ test('loginHref uses allowlisted return paths (AC-S2)', () => {
   assert.equal(loginHref('https://evil.example'), '/api/auth/login?return=/');
   assert.equal(sanitizePostLoginPath('/'), '/');
   assert.equal(sanitizePostLoginPath('/wallet'), '/wallet');
+  assert.equal(sanitizePostLoginPath('/admin'), null);
+  assert.equal(sanitizePostLoginPath('/gate'), null);
   assert.equal(
     sanitizePostLoginPath(
       '/redeem?tenantSlug=mfest-demo&eventSlug=mfest&evil=1',

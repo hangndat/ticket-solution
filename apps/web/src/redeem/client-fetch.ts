@@ -1,15 +1,7 @@
 'use client';
 
-import { CSRF_COOKIE, CSRF_HEADER } from '../bff/csrf-constants';
-import { fetchJson, type FetchJsonResult } from './fetch-json';
-
-function readCsrfFromDocument(): string {
-  if (typeof document === 'undefined') return '';
-  const match = document.cookie.match(
-    new RegExp(`(?:^|;\\s*)${CSRF_COOKIE}=([^;]+)`),
-  );
-  return match?.[1]?.trim() ?? '';
-}
+import { csrfJsonMutation } from '../bff/csrf-client';
+import type { FetchJsonResult } from './fetch-json';
 
 /** Same-origin JSON mutation with CSRF double-submit header. */
 export async function redeemMutate(
@@ -17,17 +9,5 @@ export async function redeemMutate(
   body: unknown,
   timeoutMs: number,
 ): Promise<FetchJsonResult> {
-  const csrf = readCsrfFromDocument();
-  return fetchJson(
-    path,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        [CSRF_HEADER]: csrf,
-      },
-      body: JSON.stringify(body),
-    },
-    timeoutMs,
-  );
+  return csrfJsonMutation(path, body, timeoutMs);
 }

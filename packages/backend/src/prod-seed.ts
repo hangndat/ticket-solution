@@ -13,6 +13,7 @@ import {
 } from './config-publish';
 import {
   eventPermissionsForRole,
+  samePermissionSet,
   tenantPermissionsForRole,
 } from './role-map';
 import { withTenant } from './tenant-context';
@@ -881,7 +882,10 @@ async function ensureMembershipAndAssignment(
   if (existing && !existing.revokedAt) {
     membershipId = existing.id;
     membership = 'skipped';
-    if (existing.role !== role) {
+    if (
+      existing.role !== role ||
+      !samePermissionSet(existing.permissions, tenantPerms)
+    ) {
       await tx.membership.update({
         where: { id: existing.id },
         data: {
@@ -890,6 +894,7 @@ async function ensureMembershipAndAssignment(
           activatedAt: existing.activatedAt ?? new Date(),
         },
       });
+      membership = 'granted';
     }
   } else if (existing?.revokedAt) {
     await tx.membership.update({
@@ -933,6 +938,16 @@ async function ensureMembershipAndAssignment(
     },
   });
   if (assignment && !assignment.revokedAt) {
+    if (!samePermissionSet(assignment.permissions, eventPerms)) {
+      await tx.eventAssignment.update({
+        where: { id: assignment.id },
+        data: {
+          permissions: [...eventPerms],
+          activatedAt: assignment.activatedAt ?? new Date(),
+        },
+      });
+      return { membership, assignment: 'granted' };
+    }
     return { membership, assignment: 'skipped' };
   }
   if (assignment?.revokedAt) {

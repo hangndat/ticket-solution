@@ -3,7 +3,8 @@ const assert = require('node:assert/strict');
 const { execFileSync } = require('node:child_process');
 const { randomBytes } = require('node:crypto');
 const { createHmac, createHash } = require('node:crypto');
-const { putObject, getObject } = require('../dist');
+const { createServer } = require('node:http');
+const { putObject, getObject, deleteObject } = require('../dist');
 
 const docker = (...args) =>
   execFileSync('docker', args, {
@@ -138,6 +139,9 @@ test(
       await putObject(cfg, key, payload, 'text/csv; charset=utf-8');
       const got = await getObject(cfg, key);
       assert.equal(got.toString('utf8'), payload.toString('utf8'));
+      await deleteObject(cfg, key);
+      await assert.rejects(getObject(cfg, key));
+      await deleteObject(cfg, key); // Repeated MinIO DELETE is idempotent.
     } finally {
       try {
         docker('rm', '-f', name);
@@ -155,3 +159,21 @@ test(
     }
   },
 );
+
+test('object store DELETE treats an explicit 404 as success', async () => {
+  const server = createServer((_request, response) => {
+    response.writeHead(404).end();
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  try {
+    const address = server.address();
+    const cfg = {
+      endpoint: 'http://127.0.0.1:' + address.port,
+      accessKey: 'fixture-access', secretKey: 'fixture-secret',
+      bucket: 'fixture-bucket', region: 'us-east-1',
+    };
+    await deleteObject(cfg, 'exports/missing.csv');
+  } finally {
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+  }
+});

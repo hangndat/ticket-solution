@@ -25,6 +25,7 @@ const {
   unwrapConfirmOutcome,
   undoCheckin,
   revokeTicket,
+  reissueTicketCredential,
   revokeStaffSession,
 } = require('../dist');
 
@@ -129,6 +130,10 @@ test(
         email: 'guest@example.com',
         emailVerified: true,
       });
+      const cs = await users.upsertFromVerifiedIdentity({
+        issuer: 'http://127.0.0.1:8080/realms/ticket',
+        subject: 'cs', email: 'cs@example.com', emailVerified: true,
+      });
       const tenantId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
       const eventId = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
       await withTenant(db, tenantId, async (tx) => {
@@ -148,22 +153,30 @@ test(
           tenantId,
           eventId,
           eventQuota: 5,
-          rawCodes: ['GATE-CODE', 'GATE-REVOKE'],
+          rawCodes: ['GATE-CODE', 'GATE-REVOKE', 'GATE-REISSUE-RACE'],
         });
         for (const userId of [staff.userId, staffB.userId]) {
           const membership = await grantMembership(tx, {
             tenantId,
             userId,
-            role: 'STAFF',
-            permissions: ['gate.confirm', 'gate.undo', 'ticket.revoke'],
+            role: 'Supervisor',
+            permissions: ['gate.confirm', 'gate.undo', 'ticket.revoke', 'ticket.reissue'],
           });
           await grantEventAssignment(tx, {
             tenantId,
             eventId,
             membershipId: membership.membershipId,
-            permissions: ['gate.confirm', 'gate.undo', 'ticket.revoke'],
+            permissions: ['gate.confirm', 'gate.undo', 'ticket.revoke', 'ticket.reissue'],
           });
         }
+        const csMembership = await grantMembership(tx, {
+          tenantId, userId: cs.userId, role: 'CS',
+          permissions: ['cs.lookup', 'cs.resend'],
+        });
+        await grantEventAssignment(tx, {
+          tenantId, eventId, membershipId: csMembership.membershipId,
+          permissions: ['cs.lookup', 'cs.resend'],
+        });
       });
 
       const issued = unwrapRedeemOutcome(
@@ -196,6 +209,106 @@ test(
             actorUserId: staff.userId,
           }),
         ),
+      );
+      const reissueKey = randomUUID();
+      const reissueInput = {
+        tenantId, eventId, ticketId: issued.ticketId,
+        actorUserId: staff.userId, reason: 'replace damaged QR',
+        idempotencyKey: reissueKey,
+      };
+      const rotated = await withTenant(db, tenantId, (tx) =>
+        reissueTicketCredential(tx, 'd3-cred-key', reissueInput),
+      );
+      assert.deepEqual(rotated, {
+        ok: true, ticketId: issued.ticketId, credentialVersion: 2, replayed: false,
+      });
+      assert.deepEqual(Object.keys(rotated).sort(),
+        ['credentialVersion', 'ok', 'replayed', 'ticketId']);
+      await assert.rejects(
+        () => withTenant(db, tenantId, (tx) =>
+          reissueTicketCredential(tx, 'd3-cred-key', {
+            ...reissueInput, actorUserId: cs.userId, idempotencyKey: randomUUID(),
+          }),
+        ),
+        (error) => error.code === 'PERMISSION_DENIED',
+      );
+      for (const role of ['Manager', 'CS', 'Scanner', randomUUID()]) {
+        const actor = await users.upsertFromVerifiedIdentity({
+          issuer: 'http://127.0.0.1:8080/realms/ticket',
+          subject: `reissue-forbidden-${role}`,
+          email: `forbidden-${randomUUID()}@example.com`,
+          emailVerified: true,
+        });
+        await withTenant(db, tenantId, async (tx) => {
+          const membership = await grantMembership(tx, {
+            tenantId, userId: actor.userId, role,
+            permissions: ['ticket.reissue'],
+          });
+          await grantEventAssignment(tx, {
+            tenantId, eventId, membershipId: membership.membershipId,
+            permissions: ['ticket.reissue'],
+          });
+        });
+        await assert.rejects(
+          () => withTenant(db, tenantId, (tx) =>
+            reissueTicketCredential(tx, 'd3-cred-key', {
+              ...reissueInput, actorUserId: actor.userId,
+              idempotencyKey: randomUUID(),
+            }),
+          ),
+          (error) => error.code === 'PERMISSION_DENIED', role,
+        );
+      }
+      const replay = await withTenant(db2, tenantId, (tx) =>
+        reissueTicketCredential(tx, 'd3-cred-key', reissueInput),
+      );
+      assert.deepEqual(replay, { ...rotated, replayed: true });
+      await assert.rejects(
+        () => withTenant(db, tenantId, (tx) =>
+          reissueTicketCredential(tx, 'd3-cred-key', {
+            ...reissueInput, reason: 'different reason',
+          }),
+        ),
+        (error) => error.code === 'IDEMPOTENCY_CONFLICT',
+      );
+      const rotatedRows = await withTenant(db, tenantId, async (tx) => {
+        const ticket = await tx.$queryRaw`
+          SELECT credential_version FROM tickets WHERE id = ${issued.ticketId}::uuid
+        `;
+        const credentials = await tx.$queryRaw`
+          SELECT version, status FROM ticket_credentials
+          WHERE ticket_id = ${issued.ticketId}::uuid ORDER BY version
+        `;
+        const reservations = await tx.$queryRaw`
+          SELECT status FROM checkin_reservations WHERE id = ${hold.reservationId}::uuid
+        `;
+        const outbox = await tx.$queryRaw`
+          SELECT count(*)::int AS n FROM outbox
+          WHERE aggregate_id = ${issued.ticketId}::uuid AND type = 'TicketIssued'
+        `;
+        const audit = await tx.$queryRaw`
+          SELECT sanitized_diff FROM audit_logs
+          WHERE resource_id = ${issued.ticketId}::uuid
+            AND action = 'ticket.credential_reissue'
+        `;
+        return { ticket, credentials, reservations, outbox, audit };
+      });
+      assert.equal(rotatedRows.ticket[0].credential_version, 2);
+      assert.deepEqual(rotatedRows.credentials, [
+        { version: 1, status: 'REVOKED' },
+        { version: 2, status: 'ACTIVE' },
+      ]);
+      assert.equal(rotatedRows.reservations[0].status, 'HELD');
+      assert.equal(rotatedRows.outbox[0].n, 2);
+      assert.deepEqual(rotatedRows.audit[0].sanitized_diff, { fromVersion: 1, toVersion: 2 });
+      await assert.rejects(
+        () => withTenant(db, tenantId, (tx) => tx.$executeRaw`
+          INSERT INTO ticket_credentials
+            (tenant_id, ticket_id, version, kid, token_hash, encrypted_token, status)
+          VALUES (${tenantId}::uuid, ${issued.ticketId}::uuid, 3,
+            'test', 'test', 'test', 'ACTIVE')
+        `),
+        (error) => String(error.message).includes('ticket_credentials_one_active_idx'),
       );
       const heldByOther = await withTenant(db, tenantId, (tx) =>
         reserveCheckin(tx, {
@@ -348,6 +461,78 @@ test(
         assert.ok(after.checkins === 0 || after.checkins === 1);
       }
       assert.ok(after.audit >= 2);
+
+      for (const state of ['USED', 'REVOKED', 'CANCELLED']) {
+        await withTenant(db, tenantId, (tx) => tx.$executeRaw`
+          UPDATE tickets SET state = ${state}
+          WHERE tenant_id = ${tenantId}::uuid AND id = ${second.ticketId}::uuid
+        `);
+        const denied = await withTenant(db, tenantId, (tx) =>
+          reissueTicketCredential(tx, 'd3-cred-key', {
+            tenantId, eventId, ticketId: second.ticketId,
+            actorUserId: staff.userId, reason: 'must deny non-active ticket',
+            idempotencyKey: randomUUID(),
+          }),
+        );
+        assert.equal(denied.ok, false, state);
+        assert.equal(denied.code, GATE_ERROR_CODES.TICKET_NOT_ACTIVE, state);
+      }
+
+      const third = unwrapRedeemOutcome(
+        await withTenant(db, tenantId, (tx) =>
+          redeemAndIssueTicket(tx, HMAC, 'd3-cred-key', {
+            tenantId, eventId, actorUserId: guest.userId,
+            actorEmail: guest.email, emailVerified: true,
+            rawCode: 'GATE-REISSUE-RACE', idempotencyKey: randomUUID(),
+          }),
+        ),
+      );
+      await withTenant(db, tenantId, (tx) => tx.$executeRaw`
+        UPDATE events SET business_status = 'CANCELLED',
+          cancelled_at = clock_timestamp(), cancel_reason = 'fixture cancellation'
+        WHERE tenant_id = ${tenantId}::uuid AND id = ${eventId}::uuid
+      `);
+      const cancelledEventRotate = await withTenant(db, tenantId, (tx) =>
+        reissueTicketCredential(tx, 'd3-cred-key', {
+          tenantId, eventId, ticketId: third.ticketId,
+          actorUserId: staff.userId, reason: 'event cancelled but ticket active',
+          idempotencyKey: randomUUID(),
+        }),
+      );
+      assert.equal(cancelledEventRotate.ok, true);
+      assert.equal(cancelledEventRotate.credentialVersion, 2);
+      const race = await Promise.allSettled([
+        withTenant(db, tenantId, (tx) =>
+          reissueTicketCredential(tx, 'd3-cred-key', {
+            tenantId, eventId, ticketId: third.ticketId,
+            actorUserId: staff.userId, reason: 'race with revoke',
+            idempotencyKey: randomUUID(),
+          }),
+        ),
+        withTenant(db2, tenantId, (tx) =>
+          revokeTicket(tx, {
+            tenantId, eventId, ticketId: third.ticketId,
+            actorUserId: staffB.userId, reason: 'race with reissue',
+          }),
+        ),
+      ]);
+      assert.equal(race[0].status, 'fulfilled');
+      assert.equal(race[1].status, 'fulfilled');
+      const racedFinal = await withTenant(db, tenantId, async (tx) => ({
+        ticket: await tx.$queryRaw`SELECT state, credential_version FROM tickets
+          WHERE id = ${third.ticketId}::uuid`,
+        credentials: await tx.$queryRaw`SELECT version, status FROM ticket_credentials
+          WHERE ticket_id = ${third.ticketId}::uuid ORDER BY version`,
+      }));
+      assert.equal(racedFinal.ticket[0].state, 'REVOKED');
+      assert.ok(racedFinal.credentials.every((row) => row.status === 'REVOKED'));
+      assert.equal(racedFinal.ticket[0].credential_version,
+        race[0].value.ok ? 3 : 2);
+      await withTenant(db, tenantId, (tx) => tx.$executeRaw`
+        UPDATE events SET business_status = 'ACTIVE',
+          cancelled_at = NULL, cancel_reason = NULL
+        WHERE tenant_id = ${tenantId}::uuid AND id = ${eventId}::uuid
+      `);
 
       await withTenant(db, tenantId, (tx) =>
         revokeStaffSession(tx, {

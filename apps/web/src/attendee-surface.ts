@@ -56,7 +56,7 @@ export const attendeeBrandMark = 'size-8 shrink-0 text-ink';
 export const attendeeBrandMarkImg = 'size-8 shrink-0 object-contain';
 
 export const attendeeNavLinksDesktop =
-  'ml-4 flex flex-1 flex-wrap items-center justify-start gap-1 max-md:hidden';
+  'ml-4 flex min-w-0 flex-1 flex-nowrap items-center justify-start gap-1 overflow-x-auto max-md:hidden';
 
 export function attendeeNavLink(active: boolean) {
   return cn(
@@ -75,7 +75,7 @@ export const attendeeNavAvatarBadge = cn(
 );
 
 export const attendeeNavAvatarLabel =
-  'max-w-40 overflow-hidden text-ellipsis whitespace-nowrap text-[0.82rem] font-semibold';
+  'hidden max-w-40 overflow-hidden text-ellipsis whitespace-nowrap text-[0.82rem] font-semibold xl:inline';
 
 export const attendeeNavMenuToggle = cn(
   'ml-auto inline-flex min-h-11 min-w-11 items-center gap-2 rounded-md border border-line bg-paper px-3 font-semibold text-ink md:hidden',

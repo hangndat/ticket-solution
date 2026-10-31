@@ -44,6 +44,9 @@ const relay = new WorkerRelay(
     MINIO_ENDPOINT: 'http://127.0.0.1:9000',
     MINIO_ACCESS_KEY: 'fixture',
     MINIO_SECRET_KEY: 'fixture',
+ MINIO_EXPORTS_ACCESS_KEY: 'fixture-exports',
+ MINIO_EXPORTS_SECRET_KEY: 'fixture-exports-secret',
+ MINIO_BUCKET_EXPORTS: 'fixture-exports',
   },
   { tickStepTimeoutMs: 100, shutdownTickTimeoutMs: 10 },
 );
