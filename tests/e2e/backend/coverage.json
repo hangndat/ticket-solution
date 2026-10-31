@@ -320,11 +320,14 @@
     "tests": [
       "U:packages/backend/test/csv-guard.test.cjs#providerStatus maps",
       "D:packages/backend/test/reporting.test.cjs#event report counts",
-      "D:packages/backend/test/outbox-fence.test.cjs#TicketIssued: email outside tx"
+      "D:packages/backend/test/outbox-fence.test.cjs#TicketIssued: email outside tx",
+      "D:packages/backend/test/cs-export.test.cjs#CS lookup/export/events",
+      "D:packages/backend/test/job04-resend-caps.test.cjs#[JOB-04] D staff resend: cooldown, staff hourly cap, recipient hourly cap, retry(transient)!=terminal for emailNeedsCs",
+      "H:tests/e2e/http/live.test.mjs#[JOB-04]"
     ],
-    "layers": ["U", "D"],
+    "layers": ["U", "D", "H"],
     "status": "blocked",
-    "reason": "D/U provider mapping; thiếu resend caps/cooldown/final failure full matrix."
+    "reason": "D/U/H PASS (dirty diagnostic run mvvti6gp-2b7654 trên JOB-04 live-HTTP; D targeted run packages/backend/test/job04-resend-caps.test.cjs xanh): cs.ts resendTicketEmail cooldown/user-hourly-limit/idempotency-dedup (cs-export.test.cjs + live H); notification-service.ts retryNotificationDelivery staff hourly cap (10/h) + recipient hourly cap (3/h) qua PostgreSQL thật (job04-resend-caps.test.cjs); cooldown trên cả 2 endpoint qua Keycloak thật; emailNeedsCsCount phân biệt đúng retry tạm (FAILED, next_attempt_at còn) khỏi terminal DEAD (O12) ở cả D và H. THIẾU: tenant-wide resend cap — PRD.md:208 yêu cầu 'hạn mức tenant' nhưng cs.ts không có tenant cap, và notification-retry.ts:assertResendCaps có tham số tenantCapPerHour song không caller nào (apps/api/src/notifications.ts) truyền giá trị nên unreachable qua mọi HTTP endpoint hiện có; tenant_email_usage.sent_count (tenant_limits.email_per_day) chỉ được ĐỌC, không nơi nào ghi. Đã escalate qua ask/orchestration — coordinator giữ AC này BLOCKED chờ contract wiring riêng (command admission vs delivery budget), không tự đặt cap mới. Xem .artifacts/job04-report.md."
   },
   {
     "caseId": "JOB-05",
