@@ -45,7 +45,7 @@ function useScrollMode(): boolean {
 /** Visual stack only — decorative, hidden from assistive tech. */
 function SceneStack({ p, copy, still = false }: { p: MotionValue<number>; copy: JourneyCopy; still?: boolean }) {
   return (
-    <div className="absolute inset-0 overflow-hidden bg-[#03040c]" aria-hidden="true">
+    <div className="absolute inset-0 overflow-hidden bg-[var(--jr-void)]" aria-hidden="true">
       <SceneLayers p={p} still={still} />
       <JourneyTicket p={p} copy={copy} />
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(3,4,12,0.7)_0%,transparent_45%)] max-md:bg-[linear-gradient(0deg,rgba(3,4,12,0.92)_0%,rgba(3,4,12,0.6)_28%,transparent_48%)]" />
@@ -75,10 +75,10 @@ function ChapterCaption({
         <span className="h-px w-8 bg-current opacity-60" />
         {c.label}
       </p>
-      <Heading id={`jr-${id}`} className="mt-4 font-display text-[clamp(2.1rem,5vw,4.25rem)] [@media(max-height:560px)_and_(orientation:landscape)]:mt-2 [@media(max-height:560px)_and_(orientation:landscape)]:text-[1.9rem] font-bold leading-[0.98] tracking-[-0.02em] text-[#faf9ff] [text-wrap:balance]">
+      <Heading id={`jr-${id}`} className="mt-4 font-display text-[clamp(2.1rem,5vw,4.25rem)] [@media(max-height:560px)_and_(orientation:landscape)]:mt-2 [@media(max-height:560px)_and_(orientation:landscape)]:text-[1.9rem] font-bold leading-[0.98] tracking-[-0.02em] text-[var(--jr-paper)] [text-wrap:balance]">
         {c.title}
       </Heading>
-      <p className="mt-4 max-w-[26rem] [@media(max-height:560px)_and_(orientation:landscape)]:mt-2 [@media(max-height:560px)_and_(orientation:landscape)]:text-[0.9rem] text-[clamp(0.98rem,1.3vw,1.12rem)] leading-relaxed text-[#c2c6de]">
+      <p className="mt-4 max-w-[26rem] [@media(max-height:560px)_and_(orientation:landscape)]:mt-2 [@media(max-height:560px)_and_(orientation:landscape)]:text-[0.9rem] text-[clamp(0.98rem,1.3vw,1.12rem)] leading-relaxed text-[var(--jr-muted)]">
         {c.body}
       </p>
     </>
@@ -131,11 +131,11 @@ function BrandPanel({ copy, cta, active = true }: { copy: JourneyCopy; cta: Reac
       </p>
       <h2
         id="jr-brand"
-        className="mt-5 font-display text-[clamp(2.6rem,7vw,6rem)] [@media(max-height:560px)_and_(orientation:landscape)]:mt-2 [@media(max-height:560px)_and_(orientation:landscape)]:text-[2.5rem] font-bold leading-[0.95] tracking-[-0.03em] text-[#faf9ff] [text-wrap:balance]"
+        className="mt-5 font-display text-[clamp(2.6rem,7vw,6rem)] [@media(max-height:560px)_and_(orientation:landscape)]:mt-2 [@media(max-height:560px)_and_(orientation:landscape)]:text-[2.5rem] font-bold leading-[0.95] tracking-[-0.03em] text-[var(--jr-paper)] [text-wrap:balance]"
       >
         {copy.brandTitle}
       </h2>
-      <p className="mt-5 max-w-[34rem] text-[clamp(1rem,1.4vw,1.2rem)] leading-relaxed text-[#c2c6de]">
+      <p className="mt-5 max-w-[34rem] text-[clamp(1rem,1.4vw,1.2rem)] leading-relaxed text-[var(--jr-muted)]">
         {copy.brandBody}
       </p>
       <div className="mt-9 flex flex-wrap items-center justify-center gap-3 [@media(max-height:560px)_and_(orientation:landscape)]:mt-4">{cta}</div>
@@ -191,7 +191,7 @@ function ScrollJourney({ copy, cta, reach }: { copy: JourneyCopy; cta: ReactNode
             {copy.scrollHint}
             <span className="jr-anim jr-hint block h-10 w-px bg-gradient-to-b from-white/70 to-transparent" />
           </motion.div>
-          <motion.div className="pointer-events-none absolute inset-0 bg-[#03040c]" style={{ opacity: brandScrim }} />
+          <motion.div className="pointer-events-none absolute inset-0 bg-[var(--jr-void)]" style={{ opacity: brandScrim }} />
           <motion.section
             aria-labelledby="jr-brand"
             className="absolute inset-0 flex items-center justify-center"
@@ -240,7 +240,7 @@ function StillJourney({ copy, cta, reach, observe }: { copy: JourneyCopy; cta: R
         </StillFrame>
       ))}
       <StillFrame progress={1} copy={copy}>
-        <div className="absolute inset-0 bg-[#03040c]/60" />
+        <div className="absolute inset-0 bg-[color-mix(in_srgb,var(--jr-void)_60%,transparent)]" />
         <section data-milestone="complete" aria-labelledby="jr-brand" className="absolute inset-0 flex items-center justify-center">
           <BrandPanel copy={copy} cta={cta} />
         </section>

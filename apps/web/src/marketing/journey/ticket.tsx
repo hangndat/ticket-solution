@@ -40,27 +40,27 @@ export function JourneyTicket({ p, copy }: { p: MotionValue<number>; copy: Journ
           className="absolute -inset-[18%] rounded-[40%] bg-[radial-gradient(closest-side,rgba(155,77,255,0.55),rgba(40,212,239,0.18)_60%,transparent)] blur-2xl"
           style={{ opacity: glow }}
         />
-        <div className="relative overflow-hidden rounded-[22px] bg-[linear-gradient(160deg,#1a1450_0%,#0c0f2e_45%,#081a2c_100%)] p-[1px] shadow-[0_30px_80px_rgba(0,0,0,0.6)]">
+        <div className="relative overflow-hidden rounded-[22px] bg-[linear-gradient(160deg,var(--jr-edge-1)_0%,var(--jr-edge-2)_45%,var(--jr-edge-3)_100%)] p-[1px] shadow-[0_30px_80px_rgba(0,0,0,0.6)]">
           <div className="absolute inset-0 rounded-[22px] bg-[linear-gradient(140deg,rgba(155,77,255,0.9),rgba(40,212,239,0.6)_50%,rgba(255,181,71,0.7))] opacity-70" />
-          <div className="relative rounded-[21px] bg-[linear-gradient(170deg,#141238_0%,#090b22_60%,#07101f_100%)] px-[9%] pb-[8%] pt-[9%] text-[#f4f1ff]">
-            <div className="flex items-center justify-between gap-2 whitespace-nowrap text-[0.62rem] font-semibold uppercase tracking-[0.28em] text-[#c2c6de] [@media(max-height:560px)_and_(orientation:landscape)]:text-[0.45rem] [@media(max-height:560px)_and_(orientation:landscape)]:tracking-[0.16em]">
+          <div className="relative rounded-[21px] bg-[linear-gradient(170deg,var(--jr-face-1)_0%,var(--jr-face-2)_60%,var(--jr-face-3)_100%)] px-[9%] pb-[8%] pt-[9%] text-[var(--jr-ink)]">
+            <div className="flex items-center justify-between gap-2 whitespace-nowrap text-[0.62rem] font-semibold uppercase tracking-[0.28em] text-[var(--jr-muted)] [@media(max-height:560px)_and_(orientation:landscape)]:text-[0.45rem] [@media(max-height:560px)_and_(orientation:landscape)]:tracking-[0.16em]">
               <span>Vemoki ↗</span>
               <span>{copy.ticket.admit}</span>
             </div>
             <p className="mt-[14%] font-display text-[clamp(1.5rem,2.6vw,2.15rem)] [@media(max-height:560px)_and_(orientation:landscape)]:text-[1.05rem] font-bold leading-[0.95] tracking-tight">
               {copy.ticket.event}
             </p>
-            <div className="mt-3 flex gap-4 text-[0.7rem] text-[#c2c6de] [@media(max-height:560px)_and_(orientation:landscape)]:mt-1 [@media(max-height:560px)_and_(orientation:landscape)]:gap-2 [@media(max-height:560px)_and_(orientation:landscape)]:text-[0.5rem]">
+            <div className="mt-3 flex gap-4 text-[0.7rem] text-[var(--jr-muted)] [@media(max-height:560px)_and_(orientation:landscape)]:mt-1 [@media(max-height:560px)_and_(orientation:landscape)]:gap-2 [@media(max-height:560px)_and_(orientation:landscape)]:text-[0.5rem]">
               <span>{copy.ticket.date}</span>
               <span className="text-[color:var(--jr-amber)]">{copy.ticket.gate}</span>
             </div>
 
             <div className="relative -mx-[11%] my-[9%] border-t border-dashed border-white/20">
-              <span className="absolute -left-2 -top-2 size-4 rounded-full bg-[#03040c]" />
-              <span className="absolute -right-2 -top-2 size-4 rounded-full bg-[#03040c]" />
+              <span className="absolute -left-2 -top-2 size-4 rounded-full bg-[var(--jr-void)]" />
+              <span className="absolute -right-2 -top-2 size-4 rounded-full bg-[var(--jr-void)]" />
             </div>
 
-            <div className="relative mx-auto aspect-square w-[78%] rounded-xl bg-[#f4f1ff] p-[7%]">
+            <div className="relative mx-auto aspect-square w-[78%] rounded-xl bg-[var(--jr-ink)] p-[7%]">
               <svg viewBox={`0 0 ${QR_N} ${QR_N}`} className="block h-full w-full" shapeRendering="crispEdges" aria-hidden="true">
                 <path d={QR_D} fill={C.navy} />
               </svg>
@@ -81,7 +81,7 @@ export function JourneyTicket({ p, copy }: { p: MotionValue<number>; copy: Journ
                 </motion.span>
               </motion.div>
             </div>
-            <p className="mt-[8%] text-center text-[0.62rem] uppercase tracking-[0.3em] text-[#989dbd] [@media(max-height:560px)_and_(orientation:landscape)]:text-[0.45rem] [@media(max-height:560px)_and_(orientation:landscape)]:tracking-[0.18em]">
+            <p className="mt-[8%] text-center text-[0.62rem] uppercase tracking-[0.3em] text-[var(--jr-steel)] [@media(max-height:560px)_and_(orientation:landscape)]:text-[0.45rem] [@media(max-height:560px)_and_(orientation:landscape)]:tracking-[0.18em]">
               {copy.ticket.holder}
             </p>
           </div>

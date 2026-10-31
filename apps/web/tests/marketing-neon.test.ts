@@ -14,7 +14,7 @@ describe('approved neon marketing integration', () => {
       }
       assert.match(html, /vemoki-v-mark/);
       assert.match(html, /hero-composite-v2/);
-      assert.match(html, /id="interest"/);
+      assert.match(html, /href="#interest"/);
       assert.doesNotMatch(html, /data-testid="marketing-bento"/);
     }
   });
