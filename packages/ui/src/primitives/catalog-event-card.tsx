@@ -23,7 +23,7 @@ export type CatalogEventCardProps = {
 
 const artToneClass: Record<CatalogEventCardArtTone, string> = {
   default:
-    'bg-[linear-gradient(135deg,color-mix(in_srgb,var(--color-focus)_55%,var(--color-ink)),var(--color-ink))] after:border-[color-mix(in_srgb,var(--color-signal)_50%,transparent)]',
+    'bg-[linear-gradient(135deg,color-mix(in_srgb,var(--color-focus)_55%,var(--color-ink)),var(--color-ink))] after:border-[color-mix(in_srgb,var(--color-primary)_50%,transparent)]',
   green:
     'bg-[linear-gradient(135deg,color-mix(in_srgb,var(--color-admit)_65%,var(--color-ink)),var(--color-ink))] after:border-[color-mix(in_srgb,var(--color-admit)_55%,transparent)]',
   gold:
@@ -103,7 +103,7 @@ export function CatalogEventCard({
           </span>
           <h2 className="m-0 font-display text-[1.1rem] tracking-[-0.02em]">{title}</h2>
           <p className="m-0 text-[0.85rem] text-muted">{meta}</p>
-          <span className="mt-auto pt-1 text-[0.88rem] font-bold text-signal">
+          <span className="mt-auto pt-1 text-[0.88rem] font-bold text-primary">
             {actionLabel} <span aria-hidden="true">↗</span>
           </span>
         </div>
