@@ -223,43 +223,39 @@ body {
 }
 
 .portal-page-container .ant-page-header,
-.portal-page-container .ant-page-header-heading,
-.portal-page-container .ant-page-header-heading-left,
-.portal-page-container .ant-page-header-heading-title,
-.portal-page-container .ant-page-header-heading-sub-title {
+.portal-page-container .ant-page-header .ant-page-header-heading,
+.portal-page-container .ant-page-header .ant-page-header-heading-left,
+.portal-page-container .ant-page-header .ant-page-header-heading-title,
+.portal-page-container .ant-page-header .ant-page-header-heading-sub-title {
   overflow: visible;
   max-width: 100%;
 }
 
-.portal-page-container .ant-page-header-heading-title,
-.portal-page-container .ant-page-header-heading-sub-title {
+.portal-page-container .ant-page-header .ant-page-header-heading-title,
+.portal-page-container .ant-page-header .ant-page-header-heading-sub-title {
   display: block;
   white-space: normal;
-  text-overflow: clip;
   word-break: break-word;
   line-height: 1.35;
-  text-overflow: unset;
+  margin-inline-end: 0;
+  text-overflow: clip;
 }
 
-.portal-page-container .ant-page-header-heading {
+.portal-page-container .ant-page-header .ant-page-header-heading {
   display: block;
   width: 100%;
 }
 
-.portal-page-container .ant-page-header-heading-left {
+.portal-page-container .ant-page-header .ant-page-header-heading-left {
   flex: 1 1 100%;
   min-width: 0;
   max-width: 100%;
   width: 100%;
 }
 
-.portal-page-container .ant-page-header-heading-sub-title {
+.portal-page-container .ant-page-header .ant-page-header-heading-sub-title {
   width: 100%;
   max-width: 100%;
-}
-
-.portal-page-container .ant-page-header-heading-title {
-  text-overflow: clip;
 }
 
 @media (max-width: 479px) {
@@ -267,34 +263,34 @@ body {
     padding-inline: 12px;
   }
 
-  .portal-page-container .ant-pro-page-container-warp-page-header {
+  .portal-page-container .ant-pro-page-container-warp-page-header.ant-page-header {
     padding-inline: 0;
   }
 
-  .portal-page-container .ant-page-header-heading {
+  .portal-page-container .ant-page-header .ant-page-header-heading {
     display: block;
     width: 100%;
   }
 
-  .portal-page-container .ant-page-header-heading-title {
+  .portal-page-container .ant-page-header .ant-page-header-heading-title {
     font-size: 1.125rem;
     width: 100%;
     min-width: 0;
   }
 
-  .portal-page-container .ant-page-header-heading-left {
+  .portal-page-container .ant-page-header .ant-page-header-heading-left {
     flex-direction: column;
     align-items: stretch;
     gap: 4px;
   }
 
-  .portal-page-container .ant-page-header-heading-extra {
+  .portal-page-container .ant-page-header .ant-page-header-heading-extra {
     margin-top: 8px;
     margin-inline-start: 0;
     max-width: 100%;
   }
 
-  .portal-page-container .ant-page-header-heading-sub-title {
+  .portal-page-container .ant-page-header .ant-page-header-heading-sub-title {
     font-size: 0.8125rem;
     width: 100%;
     margin-top: 4px;
