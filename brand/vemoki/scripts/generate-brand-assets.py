@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Regenerate brand/vemoki raster assets from approved Logo Kit sources in apps/web."""
+"""Regenerate brand/vemoki raster assets from vendored approved Logo Kit sources."""
 from __future__ import annotations
 
 import base64
@@ -11,9 +11,9 @@ from PIL import Image, ImageDraw, ImageFont, ImageOps
 REPO = Path(__file__).resolve().parents[3]
 BRAND = REPO / "brand" / "vemoki"
 WEB = REPO / "apps" / "web"
-MARK_SRC = WEB / "public" / "marketing" / "neon" / "vemoki-v-mark.png"
-ICON_SRC = WEB / "app" / "icon.png"
-OG_SRC = WEB / "app" / "opengraph-image.png"
+MARK_SRC = BRAND / "sources" / "vemoki-v-mark.png"
+ICON_SRC = BRAND / "sources" / "icon.png"
+OG_SRC = BRAND / "sources" / "opengraph-image.png"
 FONT_DISPLAY = WEB / "fonts" / "Sora-Variable.ttf"
 FONT_BODY = WEB / "fonts" / "BeVietnamPro-Medium.ttf"
 FONT_BODY_BOLD = WEB / "fonts" / "BeVietnamPro-Bold.ttf"
@@ -124,28 +124,6 @@ def write_og() -> None:
     print(f"wrote {out}")
 
 
-def write_demo_banner() -> None:
-    w, h = 1200, 630
-    canvas = Image.new("RGB", (w, h), BANNER_BG)
-    lockup = compose_lockup(760, 200, bg=BANNER_BG, ink=INK, mark_height=156, word_size=72, gap=24)
-    canvas.paste(lockup, (56, 48))
-
-    draw = ImageDraw.Draw(canvas)
-    headline_font = sora(64)
-    headline = "Good things\nbring us together."
-    draw.multiline_text((56, 300), headline, font=headline_font, fill=INK, spacing=8)
-
-    footer_font = be_vietnam(20, bold=True)
-    draw.text((56, h - 72), "EVENTS · TICKETS · CHECK-IN", font=footer_font, fill=INK)
-
-    demo_logo = REPO / "apps" / "web" / "public" / "demo" / "logo.png"
-    demo_banner = REPO / "apps" / "web" / "public" / "demo" / "banner.png"
-    lockup.save(demo_logo, format="PNG", optimize=True)
-    canvas.save(demo_banner, format="PNG", optimize=True)
-    print(f"wrote {demo_logo}")
-    print(f"wrote {demo_banner}")
-
-
 def _png_data_uri(img: Image.Image) -> str:
     buf = io.BytesIO()
     img.save(buf, format="PNG", optimize=True)
@@ -181,7 +159,6 @@ def main() -> None:
     write_email_header()
     write_app_icon()
     write_og()
-    write_demo_banner()
     write_mark_svg(mono=False)
     write_mark_svg(mono=True)
 
