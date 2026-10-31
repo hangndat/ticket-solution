@@ -121,6 +121,20 @@ body {
   font-weight: 600;
 }
 
+.portal-brand-lockup {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  vertical-align: middle;
+}
+
+.portal-brand-mark { flex: none; }
+
+@media (max-width: 480px) {
+  .portal-brand-text { display: none; }
+  .portal-brand-link { overflow: visible; }
+}
+
 @media (min-width: 768px) {
   .portal-brand-link {
     max-width: 200px;
