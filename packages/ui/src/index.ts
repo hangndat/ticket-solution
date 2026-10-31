@@ -5,6 +5,7 @@ export const VEMOKI_BRAND_COLORS = {
   ink: '#0B1220',
   paper: '#F4F6F8',
   signal: '#E11D48',
+  primary: '#7C4DED',
   focus: '#2563EB',
 } as const;
 
