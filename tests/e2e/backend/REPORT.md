@@ -88,7 +88,29 @@ Checks (SHA sau commit): `node tests/e2e/backend/entry.mjs --case DB-14 --suite 
 
 **F01 fix (DoD revalidation):** D/H assert `form_definition_hash` và `terms_content_hash` trên `redemption_requests` khớp hash suy ra từ form/terms published (seed/save payload), khác v1↔v2; vé/request v1 giữ hash v1 sau publish v2. Evidence SHA sạch `0dc5e1f50147a54466e258ac972f47709c02f4f5`: D `entry.mjs --case DB-14 --suite D --no-build` PASS; H `pnpm test:e2e:http -- --case=DB-14` run `mvurdu1z-873d1d` PASS, `workingTreeDirty=false`.
 
+## Cập nhật JOB-01 (Issue #1032, worktree `f04-job01-durable-outbox`)
+
+Thêm `tests/e2e/backend/job-01-durable-outbox.test.cjs` (R) và `redis-fixture.cjs`: cấp vé khi worker tắt → vé ACTIVE, outbox/notification PENDING; restart Redis cô lập không COMPLETE/ACCEPTED sớm và Mailpit trống; worker process thật + Mailpit một email đúng recipient/tenant slug. D giữ `issue.test.cjs` + `outbox-fence.test.cjs`. `coverage.json` JOB-01 → `implemented`, layers D+R.
+
+Checks: `node tests/e2e/backend/entry.mjs --case JOB-01 --no-build` PASS 3/3 selector; artifact `tests/e2e/.artifacts/mvuj01-579677a/summary.json`. Không assert exactly-once SMTP/inbox/read.
+
+## Cập nhật JOB-02 (Issue #1032, worktree `f04-job02-lease-fence`)
+
+Thêm `tests/e2e/backend/job-02-lease-fence.test.cjs` (R): cấp vé khi worker tắt → outbox PENDING; worker A claim với SMTP treo, SIGKILL sau claim; lease PG hết hạn tự nhiên (~30s); snapshot due/reclaim; worker B + Mailpit relay một logical email; `processClaimedOutbox` với lease token worker A chết không gọi provider và không COMPLETE lại. D giữ `outbox-fence.test.cjs#MembershipInvite`. `coverage.json` JOB-02 → `implemented`, layers D+R.
+
+Checks: `node tests/e2e/backend/entry.mjs --case JOB-02` PASS 2/2 selector (D+R, ~54s build+run). Không assert exactly-once SMTP delivery.
+
+## Cập nhật JOB-03 (Issue #1032, worktree `f04-job03-smtp-failures`)
+
+Thêm `tests/e2e/backend/job-03-smtp-failures.test.cjs` (R), `tests/e2e/backend/smtp-fixture.cjs`, `packages/backend/test/fixtures/exit-after-smtp.cjs`. D giữ `issue.test.cjs` (relay fail + retry) và U `worker-provider-deadline.test.cjs`. R: worker process + SMTP reject/stall/Mailpit; crash-after-accept qua relay subprocess + SMTP thật (Mailpit), reclaim worker main.js. `coverage.json` JOB-03 → `implemented`, layers D+U+R. Không assert exactly-once SMTP.
+
+Checks (SHA `d54f3e3d8ce2d4f177fb8f6d2957e89b09516f19`): `node tests/e2e/backend/entry.mjs --case JOB-03` PASS 4/4 selector (1 D, 1 U, 2 R). Crash window: `exit-after-smtp.cjs` + real `createSmtpEmailAdapter`/Mailpit, not SIGKILL of worker mid-accept; recovery via `apps/worker/dist/main.js`.
+
 ## Giới hạn còn mở
+
+### JOB-03 revalidation F01 (code SHA `ffb997d2be34b436c62eec7d1a06b3330c6ee35e`)
+
+`markOutboxDeadFenced` xóa `outbox.next_attempt_at` khi chuyển DEAD, giữ nguyên điều kiện lease fence. R cap test đọc cả `outbox.next_attempt_at` và `notifications.next_attempt_at`: NULL tại DEAD và sau quiet window 2,5 giây; worker process còn sống, đúng 3 attempts/provider calls, vé ACTIVE. Trên checkout sạch code SHA này: `node tests/e2e/backend/entry.mjs --case JOB-03 --suite D` PASS 1/1; `node tests/e2e/backend/entry.mjs --case JOB-03 --suite R --no-build` PASS 3/3; `pnpm --filter @ticket/backend test:worker-budget-db` PASS. `pnpm --filter @ticket/backend test:architecture-recovery` bị giới hạn output/time 120 giây của lean-ctx, exit 137 sau nhiều test pass; không ghi là PASS. F02 giữ giới hạn relay subprocess sau SMTP accept trước PG ack, chưa chứng minh SIGKILL main worker.
 
 - Các ca H cần HTTPS hostname run, Keycloak issuer/JWT thật và manifest case riêng từ harness; local verifier hay `app.inject` fixture không đủ. Các ca R cần worker process, Mailpit, restart/kill/lease và tài nguyên run riêng. Xem `FIXTURES.md`.
 - POL-02 có test D lọc audit quá 730 ngày khi đọc, nhưng chưa thấy sweeper anonymize ticket/check-in 365 ngày hoặc xóa audit quá 730 ngày trong worker hiện hành; POL-03 thiếu object cleanup 90 ngày theo O06. Đây là gap feature/test, không đánh PASS bằng hằng số retention.

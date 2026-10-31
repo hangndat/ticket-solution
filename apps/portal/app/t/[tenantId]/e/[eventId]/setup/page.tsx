@@ -4,7 +4,8 @@ import { ProCard, ProForm, ProFormText } from '@ant-design/pro-components';
 import { Alert, Button, Flex, Form, Modal, Result, Spin } from 'antd';
 import { PortalPage } from '../../../../../../src/components/portal-page';
 import { useParams, useRouter } from 'next/navigation';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
+import { useActorState as useState } from '../../../../../../src/client/use-actor-state';
 import type { EventDetail } from '@ticket/contracts';
 import {
   apiErrorMessage,

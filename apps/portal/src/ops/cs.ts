@@ -38,7 +38,7 @@ export function ticketResendPath(scope: EventScope, ticketId: string): string {
 }
 
 /** CS notification providerStatus from OpenAPI — never invent DELIVERED. */
-export type CsProviderStatus = 'PENDING' | 'ACCEPTED' | 'FAILED' | 'DEAD';
+export type CsProviderStatus = 'PENDING' | 'ACCEPTED' | 'FAILED' | 'DEAD' | 'UNKNOWN';
 
 export type CsNotification = {
   channel: string;

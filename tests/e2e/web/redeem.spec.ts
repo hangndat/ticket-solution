@@ -23,13 +23,21 @@ import {
   webUrl,
   assertRedeemRejectedWithoutTicket,
 } from './helpers';
-import { ticketLink, waitForMail } from './mailpit';
+import { assertTicketIssuedMail, waitForMail } from './mailpit';
+import {
+  portalApproveRedemptionRequest,
+  portalDenyRedemptionRequest,
+  refreshRedeemOwnerStatus,
+} from './manual-redemption-flow';
 import {
   assertIssuedExactlyOnce,
+  assertManualDecisionWithoutTicket,
+  assertManualIssuedAfterApproval,
   assertNoExtraIssue,
   assertWeb04NegativeUnchanged,
   assertWeb05BusinessUnchanged,
   codeIdFor,
+  expirePendingRedemptionRequest,
   readEventQuotas,
   readManualPendingHold,
   readRedemptionState,
@@ -52,11 +60,13 @@ async function redeemCode(
   page: import('playwright/test').Page,
   manifest: import('../harness/contract').E2EManifest,
   caseId: string,
+  rawCode?: string,
 ) {
   const f = fixtureFor(manifest, caseId);
-  if (!f.code) throw new Error(`BLOCKED: ${caseId} cần code riêng`);
+  const code = rawCode ?? f.code;
+  if (!code) throw new Error(`BLOCKED: ${caseId} cần code riêng`);
   await login(page, manifest, accountFor(manifest, caseId, 'attendee'));
-  await openCodeConfirmation(page, manifest, f.code);
+  await openCodeConfirmation(page, manifest, code);
   await fillPublishedForm(
     page,
     f.data?.answers as Record<string, string | boolean> | undefined,
@@ -790,22 +800,174 @@ test.describe('[WEB-05] published form and terms validation', () => {
   });
 });
 
-test('[WEB-06] manual source stays pending without a QR before approval', async ({
-  page,
-}) => {
-  const manifest = loadManifest();
-  const f = fixtureFor(manifest, 'WEB-06');
-  const actor = accountFor(manifest, 'WEB-06', 'attendee');
-  const quotasBefore = await readEventQuotas(f);
-  await redeemCode(page, manifest, 'WEB-06');
-  await expect(page.getByTestId('redeem-ux-pending')).toBeVisible();
-  await expect(page.getByTestId('redeem-ticket-card')).toHaveCount(0);
-  const hold = await readManualPendingHold(f, actor.userId!);
-  expect(hold.code.status).toBe('HELD');
-  expect(hold.request.status).toBe('PENDING_REVIEW');
-  expect(hold.request.actor_user_id).toBe(actor.userId);
-  expect(hold.code.active_request_id).toBe(hold.request.id);
-  expect(await readEventQuotas(f)).toEqual(quotasBefore);
+test.describe('[WEB-06] manual source redemption', () => {
+  test('submit stays pending without QR or quota allocation', async ({
+    page,
+  }) => {
+    const manifest = loadManifest();
+    const f = fixtureFor(manifest, 'WEB-06');
+    const actor = accountFor(manifest, 'WEB-06', 'attendee');
+    const quotasBefore = await readEventQuotas(f);
+    await redeemCode(page, manifest, 'WEB-06');
+    await expect(page.getByTestId('redeem-ux-pending')).toBeVisible();
+    await expect(page.getByTestId('redeem-ticket-card')).toHaveCount(0);
+    const hold = await readManualPendingHold(f, actor.userId!);
+    expect(hold.code.status).toBe('HELD');
+    expect(hold.request.status).toBe('PENDING_REVIEW');
+    expect(hold.request.actor_user_id).toBe(actor.userId);
+    expect(hold.code.active_request_id).toBe(hold.request.id);
+    expect(await readEventQuotas(f)).toEqual(quotasBefore);
+  });
+
+  test('manager approve reflects on owner wallet, detail QR, and PG ticket/quota', async ({
+    browser,
+  }) => {
+    test.setTimeout(180_000);
+    const manifest = loadManifest();
+    const f = fixtureFor(manifest, 'WEB-06');
+    const actor = accountFor(manifest, 'WEB-06', 'attendee');
+    const approveCode = caseData<string>(f, 'approveCode');
+    const codeId = codeIdFor(f, 'approve');
+    const quotasBefore = await readEventQuotas(f);
+    const attendeeContext = await browser.newContext();
+    const managerContext = await browser.newContext();
+    try {
+      const attendee = await attendeeContext.newPage();
+      const manager = await managerContext.newPage();
+      await login(attendee, manifest, actor);
+      const beforeWallet = await walletTicketIds(attendee, manifest, f.tenantId);
+      await openCodeConfirmation(attendee, manifest, approveCode);
+      await fillPublishedForm(
+        attendee,
+        f.data?.answers as Record<string, string | boolean> | undefined,
+      );
+      await attendee
+        .getByRole('button', { name: 'Đổi mã lấy vé', exact: true })
+        .click();
+      await expect(attendee.getByTestId('redeem-ux-pending')).toBeVisible();
+      const hold = await readManualPendingHold(f, actor.userId!);
+      const requestId = String(hold.request.id);
+      expect(await readEventQuotas(f)).toEqual(quotasBefore);
+      const { ticketId } = await portalApproveRedemptionRequest(
+        manager,
+        manifest,
+        f,
+        requestId,
+      );
+      await refreshRedeemOwnerStatus(attendee);
+      await expect(attendee.getByTestId('redeem-ux-success')).toBeVisible();
+      await expect(attendee.getByTestId('redeem-ticket-card')).toBeVisible();
+      const after = await readRedemptionState(f, codeId);
+      assertManualIssuedAfterApproval(
+        quotasBefore,
+        after,
+        f,
+        actor.userId!,
+        ticketId,
+      );
+      const wallet = await walletTicketIds(attendee, manifest, f.tenantId);
+      expect(wallet.filter((id) => !beforeWallet.includes(id))).toEqual([
+        ticketId,
+      ]);
+      await attendee.goto(webUrl(manifest, '/wallet'));
+      await expect(
+        attendee.getByTestId(`wallet-ticket-${ticketId}`),
+      ).toBeVisible();
+      await attendee.getByTestId(`wallet-ticket-${ticketId}`).click();
+      await expect(attendee.getByTestId('owner-ticket-qr-figure')).toBeVisible();
+    } finally {
+      await Promise.allSettled([
+        attendeeContext.close(),
+        managerContext.close(),
+      ]);
+    }
+  });
+
+  test('manager reject leaves owner denied without ticket or quota change', async ({
+    browser,
+  }) => {
+    test.setTimeout(180_000);
+    const manifest = loadManifest();
+    const f = fixtureFor(manifest, 'WEB-06');
+    const actor = accountFor(manifest, 'WEB-06', 'attendee');
+    const rejectCode = caseData<string>(f, 'rejectCode');
+    const denyReason = caseData<string>(f, 'denyReason');
+    const codeId = codeIdFor(f, 'reject');
+    const quotasBefore = await readEventQuotas(f);
+    const attendeeContext = await browser.newContext();
+    const managerContext = await browser.newContext();
+    try {
+      const attendee = await attendeeContext.newPage();
+      const manager = await managerContext.newPage();
+      await login(attendee, manifest, actor);
+      const beforeWallet = await walletTicketIds(attendee, manifest, f.tenantId);
+      await openCodeConfirmation(attendee, manifest, rejectCode);
+      await fillPublishedForm(
+        attendee,
+        f.data?.answers as Record<string, string | boolean> | undefined,
+      );
+      await attendee
+        .getByRole('button', { name: 'Đổi mã lấy vé', exact: true })
+        .click();
+      await expect(attendee.getByTestId('redeem-ux-pending')).toBeVisible();
+      const hold = await readManualPendingHold(f, actor.userId!);
+      const requestId = String(hold.request.id);
+      await portalDenyRedemptionRequest(
+        manager,
+        manifest,
+        f,
+        requestId,
+        denyReason,
+      );
+      await refreshRedeemOwnerStatus(attendee);
+      await expect(attendee.getByTestId('redeem-ux-denied')).toBeVisible();
+      await expect(attendee.getByTestId('redeem-ticket-card')).toHaveCount(0);
+      expect(await walletTicketIds(attendee, manifest, f.tenantId)).toEqual(
+        beforeWallet,
+      );
+      const after = await readRedemptionState(f, codeId);
+      assertManualDecisionWithoutTicket(after, 'REJECTED', quotasBefore);
+    } finally {
+      await Promise.allSettled([
+        attendeeContext.close(),
+        managerContext.close(),
+      ]);
+    }
+  });
+
+  test('expired pending shows clear owner status and never ISSUED without ticket', async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    const manifest = loadManifest();
+    const f = fixtureFor(manifest, 'WEB-06');
+    const actor = accountFor(manifest, 'WEB-06', 'attendee');
+    const expiryCode = caseData<string>(f, 'expiryCode');
+    const codeId = codeIdFor(f, 'expiry');
+    const quotasBefore = await readEventQuotas(f);
+    await login(page, manifest, actor);
+    const beforeWallet = await walletTicketIds(page, manifest, f.tenantId);
+    await openCodeConfirmation(page, manifest, expiryCode);
+    await fillPublishedForm(
+      page,
+      f.data?.answers as Record<string, string | boolean> | undefined,
+    );
+    await page
+      .getByRole('button', { name: 'Đổi mã lấy vé', exact: true })
+      .click();
+    await expect(page.getByTestId('redeem-ux-pending')).toBeVisible();
+    const hold = await readManualPendingHold(f, actor.userId!);
+    const requestId = String(hold.request.id);
+    await expirePendingRedemptionRequest(f, requestId);
+    await refreshRedeemOwnerStatus(page);
+    await expect(page.getByTestId('redeem-ux-expired')).toBeVisible();
+    await expect(page.getByTestId('redeem-ticket-card')).toHaveCount(0);
+    expect(await walletTicketIds(page, manifest, f.tenantId)).toEqual(
+      beforeWallet,
+    );
+    const after = await readRedemptionState(f, codeId);
+    assertManualDecisionWithoutTicket(after, 'EXPIRED', quotasBefore);
+  });
 });
 
 test.describe('[WEB-07] idempotent redemption', () => {
@@ -1071,27 +1233,75 @@ test('[WEB-08] real worker delivers issued ticket email to run Mailpit', async (
     ticketId,
   );
   const actor = accountFor(manifest, 'WEB-08', 'attendee');
-  const mail = await waitForMail(
-    page,
-    manifest,
-    actor.username,
-    caseData<string>(f, 'eventName'),
-  );
-  const url = ticketLink(mail, manifest.origins.web);
-  const mailTicketId = url.match(/\/tickets\/([0-9a-f-]{36})/i)?.[1];
-  expect(mailTicketId).toBe(ticketId);
-  expect(mail.Text ?? '').toContain(mailTicketId!);
-  expect(mail.HTML ?? '').toContain('cid:ticket-qr');
+  const eventName = caseData<string>(f, 'eventName');
+  expect(await walletTicketIds(page, manifest, f.tenantId)).toContain(ticketId);
+  const mail = await waitForMail(page, manifest, actor.username, eventName);
+  const url = await assertTicketIssuedMail(page, manifest, mail, {
+    eventName,
+    ticketId: ticketId!,
+    webOrigin: manifest.origins.web,
+  });
   const guest = await browser.newContext();
   try {
     const guestPage = await guest.newPage();
     await guestPage.goto(url);
     await expect(
-      guestPage.getByTestId('owner-ticket-need-login'),
+      guestPage.getByTestId('owner-ticket-need-login-state'),
     ).toBeVisible();
+    await expect(guestPage.getByTestId('owner-ticket-qr-figure')).toHaveCount(0);
+    await expect(guestPage.getByTestId('owner-ticket-id')).toHaveCount(0);
   } finally {
     await guest.close();
   }
+  const otherAttendee = accountFor(manifest, 'WEB-08', 'otherAttendee');
+  const otherCtx = await browser.newContext();
+  try {
+    const otherPage = await otherCtx.newPage();
+    await login(otherPage, manifest, otherAttendee);
+    const deniedBff = await otherPage.request.get(
+      webUrl(
+        manifest,
+        `/api/bff/tickets/${ticketId}?tenantId=${f.tenantId}`,
+      ),
+    );
+    expect([403, 404]).toContain(deniedBff.status());
+    if (deniedBff.status() === 200) {
+      const payload = (await deniedBff.json()) as { id?: string };
+      expect(payload.id).not.toBe(ticketId);
+    } else {
+      const body = await deniedBff.text();
+      expect(body).not.toContain(ticketId!);
+    }
+    await otherPage.goto(url);
+    await expect(otherPage.getByTestId('owner-ticket-loading-state')).toHaveCount(0, {
+      timeout: 30_000,
+    });
+    await expect(otherPage.getByTestId('owner-ticket-ready')).toHaveCount(0);
+    await expect(otherPage.getByTestId('owner-ticket-qr-figure')).toHaveCount(0);
+    await expect(otherPage.getByTestId('owner-ticket-id')).toHaveCount(0);
+    await expect(
+      otherPage
+        .getByTestId('owner-ticket-forbidden-state')
+        .or(otherPage.getByTestId('owner-ticket-missing-state'))
+        .or(otherPage.getByTestId('owner-ticket-tenant-unresolved-state')),
+    ).toBeVisible();
+    const deniedAfterNav = await otherPage.request.get(
+      webUrl(
+        manifest,
+        `/api/bff/tickets/${ticketId}?tenantId=${f.tenantId}`,
+      ),
+    );
+    expect([403, 404]).toContain(deniedAfterNav.status());
+  } finally {
+    await otherCtx.close();
+  }
   await page.goto(url);
+  await expect(page).toHaveURL(
+    new RegExp(`/tickets/${ticketId!.replace(/-/g, '\\-')}`, 'i'),
+  );
   await expect(page.getByTestId('owner-ticket-qr-figure')).toBeVisible();
+  await expect(page.getByTestId('owner-ticket-id')).toHaveAttribute(
+    'title',
+    ticketId!,
+  );
 });

@@ -143,6 +143,10 @@ async function seedTenantEvent(db, tenantId, eventId, slug) {
     await tx.tenant.create({
       data: { id: tenantId, slug: 'tenant-' + slug, name: 'T ' + slug },
     });
+    await tx.$executeRaw`
+      INSERT INTO tenant_limits (tenant_id, email_per_day)
+      VALUES (${tenantId}::uuid, 100)
+    `;
     await tx.event.create({
       data: {
         tenantId,

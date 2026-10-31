@@ -3,7 +3,8 @@
 import { StatisticCard } from '@ant-design/pro-components';
 import { Alert, Button, Flex, Progress, Result, Spin } from 'antd';
 import { useParams } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect } from 'react';
+import { useActorState as useState } from '../../../../../../src/client/use-actor-state';
 import { portalGet } from '../../../../../../src/client/portal-fetch';
 import { EventReportAsOfLine } from '../../../../../../src/components/event-report-as-of';
 import { EventSetupNav } from '../../../../../../src/components/event-setup-nav';

@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 const runDir = process.env.E2E_RUN_DIR;
 const trust = process.env.E2E_TLS_SPKI;
 const suffix = process.env.E2E_HOST_SUFFIX;
+const auth07Bfcache = process.env.E2E_AUTH07_BFCACHE === '1';
 
 export default defineConfig({
   testDir: '.',
@@ -43,6 +44,8 @@ export default defineConfig({
     video: 'off',
     ignoreHTTPSErrors: false,
     launchOptions: {
+      // AUTH-07 alone probes private-page back/forward restoration.
+      ignoreDefaultArgs: auth07Bfcache ? ['--disable-back-forward-cache'] : undefined,
       args: [
         ...(suffix
           ? [

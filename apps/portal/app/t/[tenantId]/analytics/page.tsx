@@ -5,7 +5,8 @@ import { Alert, Button, Empty, Flex, Result, Spin, Tag, Tooltip } from 'antd';
 import { PortalPage } from '../../../../src/components/portal-page';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, type ReactNode } from 'react';
+import { useActorState as useState } from '../../../../src/client/use-actor-state';
 import { portalGet } from '../../../../src/client/portal-fetch';
 import { usePortalLocale } from '../../../../src/i18n';
 import { SURFACE_MESSAGE_KEYS } from '../../../../src/prep/surface-copy';
@@ -257,7 +258,7 @@ export default function AnalyticsPortfolioPage() {
         <Empty description={t('analytics.empty')} style={{ padding: 48 }}>
           {
             canListEvents ? (
-              <Link href={`/t/${tenantId}/events`}>
+              <Link prefetch={false} href={`/t/${tenantId}/events`}>
                 <Button type="primary">{t('analytics.viewEvents')}</Button>
               </Link>
             ) : undefined
@@ -303,7 +304,7 @@ export default function AnalyticsPortfolioPage() {
                   const destination = eventPath(row.eventId);
                   if (!destination) return <span>{label}</span>;
                   return (
-                    <Link
+                    <Link prefetch={false}
                       href={destination}
                       onClick={(e) => e.stopPropagation()}
                     >

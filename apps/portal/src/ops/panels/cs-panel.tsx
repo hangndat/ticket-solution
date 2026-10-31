@@ -1,12 +1,14 @@
 'use client';
 
 import { Alert, Button, Input, Space, Table, Timeline, Typography } from 'antd';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
+import { useActorState as useState } from '../../client/use-actor-state';
 import { portalGet, portalMutate } from '../../client/portal-fetch';
 import { bffTickets } from '../../prep/bff-urls';
 import { useMutationIntent } from '../../client/use-mutation-intent';
 import { MutationIntentAlert } from '../../client/mutation-intent-alert';
 import {
+  csNotificationStatusText,
   csProviderStatusLabel,
   csResendRejectedLabel,
   CS_RESEND_COOLDOWN_SECONDS,
@@ -221,6 +223,13 @@ export function CsPanel({ tenantId, eventId, canCs }: Props) {
               ellipsis: true,
             },
             {
+              title: t('ops.table.providerStatus'),
+              key: 'providerStatus',
+              render: (_, row) => (
+                <span>{csNotificationStatusText(row.notification, locale)}</span>
+              ),
+            },
+            {
               title: '',
               key: 'open',
               render: (_, row) => (
@@ -247,7 +256,12 @@ export function CsPanel({ tenantId, eventId, canCs }: Props) {
                     <Typography.Text strong>{item.kind}</Typography.Text>
                     {' · '}
                     {item.at}
-                    {item.summary ? ` — ${item.summary}` : ''}
+                    {item.summary ? (
+                      <>
+                        {' — '}
+                        <Typography.Text>{item.summary}</Typography.Text>
+                      </>
+                    ) : null}
                   </span>
                 ),
               }))}
