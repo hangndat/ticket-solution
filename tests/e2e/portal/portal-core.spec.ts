@@ -576,6 +576,9 @@ test('[PORT-13] Portal filter + saved view persist for owner and are not hydrate
   // Switch actor in the SAME browser profile: owner's saved view must not
   // hydrate for a different staff member on the same tenant/event.
   await page.goto(portalUrl(m, '/api/auth/logout'));
+  await page.waitForURL((url) => url.pathname.startsWith('/auth'), {
+    timeout: 20_000,
+  });
   await login(page, m, 'PORT-13', 'manager');
   await page.goto(portalUrl(m, eventPath(f, '/guests#pending')));
   const pendingAsManager = page.locator('#pending');
