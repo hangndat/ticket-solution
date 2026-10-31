@@ -31,11 +31,33 @@ export type SmtpMimeSendResult = {
   unknown: boolean;
 };
 
+export class SmtpDefiniteRejectError extends Error {
+  readonly definiteNoAccept = true;
+  constructor() {
+    super('smtp_definite_reject');
+  }
+}
+
+/** Validation failed before a socket or SMTP command could accept the mail. */
+export class SmtpPreflightError extends Error {
+  readonly definiteNoAccept = true;
+}
+
+export function isSmtpDefiniteReject(error: unknown): boolean {
+  return error instanceof SmtpDefiniteRejectError ||
+    (error instanceof Error && 'definiteNoAccept' in error && error.definiteNoAccept === true);
+}
+
 function parseSmtpUrl(smtpUrl: string): {
   transport: SMTPTransport.Options;
   secureRequired: boolean;
 } {
-  const url = new URL(smtpUrl);
+  let url: URL;
+  try {
+    url = new URL(smtpUrl);
+  } catch {
+    throw new SmtpPreflightError('SMTP_URL is invalid');
+  }
   const protocol = url.protocol.replace(/:$/, '');
   if (
     protocol !== 'smtp' &&
@@ -43,7 +65,7 @@ function parseSmtpUrl(smtpUrl: string): {
     protocol !== 'smtp+tls' &&
     protocol !== 'smtp+plain'
   ) {
-    throw new Error(
+    throw new SmtpPreflightError(
       'SMTP_URL must use smtp://, smtps://, smtp+tls://, or smtp+plain://',
     );
   }
@@ -160,7 +182,8 @@ export async function sendMimeMailViaSmtp(
         ? info.messageId
         : messageId;
     const accepted = Array.isArray(info.accepted) && info.accepted.length > 0;
-    return { providerRef, accepted: accepted || true, unknown: false };
+    if (!accepted) throw new SmtpDefiniteRejectError();
+    return { providerRef, accepted: true, unknown: false };
   } catch (error) {
     const code =
       error && typeof error === 'object' && 'code' in error
@@ -172,6 +195,17 @@ export async function sendMimeMailViaSmtp(
       /timeout/i.test(String(error))
     ) {
       return { providerRef: messageId, accepted: false, unknown: true };
+    }
+    const responseCode =
+      error && typeof error === 'object' && 'responseCode' in error
+        ? Number((error as { responseCode?: unknown }).responseCode)
+        : NaN;
+    if (
+      error instanceof SmtpDefiniteRejectError ||
+      (responseCode >= 400 && responseCode < 600) ||
+      code === 'EENVELOPE'
+    ) {
+      throw new SmtpDefiniteRejectError();
     }
     throw error;
   } finally {
@@ -206,7 +240,7 @@ export async function sendMailViaSmtp(input: {
       .replace(/>/g, '&gt;')}</pre>`,
   });
   if (result.unknown) {
-    throw Object.assign(new Error('SMTP timeout'), { code: 'ETIMEDOUT' });
+    throw Object.assign(new Error('SMTP result unknown'), { code: 'ETIMEDOUT' });
   }
   return result.providerRef;
 }
