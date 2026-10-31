@@ -24,6 +24,7 @@ import {
   marketingForm,
   marketingFormField,
   marketingHp,
+  marketingInterestSecondary,
 } from './marketing-surface';
 
 type FormState = 'empty' | 'loading' | 'error' | 'success';
@@ -139,7 +140,11 @@ export function InterestForm({
       {banner ? (
         <Alert variant="destructive">
           <p>{banner}</p>
-          <Button type="submit" variant="secondary" disabled={busy}>
+          <Button
+            type="submit"
+            variant="secondary"
+            disabled={busy}
+          >
             {t(locale, 'interest.retry')}
           </Button>
         </Alert>
@@ -334,7 +339,10 @@ export function InterestForm({
             fieldErrors.consent ? `${formId}-err-consent` : undefined
           }
         />
-        <label htmlFor={`${formId}-consent`} className="min-w-0 cursor-pointer text-sm font-normal leading-relaxed">
+        <label
+          htmlFor={`${formId}-consent`}
+          className="min-w-0 cursor-pointer text-sm font-normal leading-relaxed text-ink"
+        >
           {t(locale, 'interest.consent.before')}{' '}
           <Link href={privacyHref(locale)}>
             {t(locale, 'interest.consent.privacy')}
@@ -356,7 +364,7 @@ export function InterestForm({
       >
         {t(locale, 'interest.submit')}
       </Button>
-      <p>
+      <p className={marketingInterestSecondary}>
         <a href={demo}>{t(locale, 'interest.secondary_demo')}</a>
       </p>
     </form>

@@ -2,6 +2,7 @@ import { Button } from '@ticket/ui';
 import Link from 'next/link';
 import Image from 'next/image';
 import type { ReactNode } from 'react';
+import { cn } from '../../lib/utils';
 import { t } from './copy';
 import {
   demoHref,
@@ -21,7 +22,7 @@ import {
   marketingWordmark,
   marketingWrap,
 } from './marketing-surface';
-import { privacyHref, salesHref, supportHref } from './links';
+import { privacyHref, salesHref, supportHref, type MarketingPageKind } from './links';
 import { MarketingNeonScope } from './marketing-neon-scope';
 
 export function MarketingChrome({
@@ -30,14 +31,14 @@ export function MarketingChrome({
   children,
 }: {
   locale: MarketingLocale;
-  pageKind: 'sales' | 'privacy' | 'support';
+  pageKind: MarketingPageKind;
   children: ReactNode;
 }) {
   const productOrigin = productOriginFromEnv();
   const demo = demoHref(productOrigin);
   const login = loginHref(productOrigin);
   const sales = salesHref(locale);
-  const onSales = pageKind === 'sales';
+  const onSales = pageKind === 'sales' || pageKind === 'journey';
   const onInk = onSales;
 
   return (
@@ -57,7 +58,10 @@ export function MarketingChrome({
         data-header-on-ink={onInk ? '' : undefined}
       >
         <Link
-          className={marketingWordmark}
+          className={cn(
+            marketingWordmark,
+            'inline-flex items-center gap-[0.15rem] no-underline text-inherit focus-visible:rounded-md focus-visible:outline focus-visible:outline-3 focus-visible:outline-focus focus-visible:outline-offset-2',
+          )}
           href={sales}
           aria-label={t(locale, 'nav.brand')}
           data-testid="mkt-wordmark"
@@ -65,7 +69,6 @@ export function MarketingChrome({
           <Image src="/marketing/neon/vemoki-v-mark.webp" alt="" width={34} height={30} className="mr-2 inline-block align-middle" />
           {t(locale, 'nav.brand')}
         </Link>
-        <LocaleSwitch locale={locale} pageKind={pageKind} onInk={onInk} />
         <nav className={marketingNav} aria-label={locale === 'en' ? 'Primary' : 'Chính'}>
           {onSales ? (
             <>
@@ -89,22 +92,13 @@ export function MarketingChrome({
           >
             <a href={login}>{t(locale, 'nav.login')}</a>
           </Button>
-          {onSales ? (
-            <Button
-              asChild
-              variant="primary"
-              className="shrink-0 whitespace-nowrap max-md:hidden"
-            >
-              <Link href={`${sales}#interest`} data-testid="cta-interest-nav">
-                {t(locale, 'nav.interest')}
-              </Link>
-            </Button>
-          ) : (
-            <Button asChild variant="primary">
+          {!onSales ? (
+            <Button asChild variant="ghost" className="mkt-neon-btn-primary" data-testid="mkt-chrome-demo">
               <a href={demo}>{t(locale, 'nav.demo')}</a>
             </Button>
-          )}
+          ) : null}
         </nav>
+        <LocaleSwitch locale={locale} pageKind={pageKind} onInk={onInk} />
       </header>
       {children}
       <footer className={marketingFooter(onSales)} data-testid="mkt-footer">

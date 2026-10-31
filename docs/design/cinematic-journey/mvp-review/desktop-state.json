@@ -1,0 +1,55 @@
+{
+  "url": "http://127.0.0.1:3011/experience",
+  "viewport": [
+    923,
+    1059
+  ],
+  "overflow": 0,
+  "inert": 0,
+  "canonical": "http://127.0.0.1:3011/experience",
+  "languages": [
+    [
+      "vi",
+      "http://127.0.0.1:3011/experience"
+    ],
+    [
+      "en",
+      "http://127.0.0.1:3011/en/experience"
+    ],
+    [
+      "x-default",
+      "http://127.0.0.1:3011/experience"
+    ]
+  ],
+  "robots": "noindex, follow",
+  "cta": [
+    {
+      "href": "https://app.vemoki.com/?demo=1",
+      "visible": true,
+      "rect": {
+        "x": 274.9375,
+        "y": 613.203125,
+        "width": 212.65625,
+        "height": 48,
+        "top": 613.203125,
+        "right": 487.59375,
+        "bottom": 661.203125,
+        "left": 274.9375
+      }
+    },
+    {
+      "href": "http://127.0.0.1:3011/#interest",
+      "visible": true,
+      "rect": {
+        "x": 499.59375,
+        "y": 615.203125,
+        "width": 148.4375,
+        "height": 44,
+        "top": 615.203125,
+        "right": 648.03125,
+        "bottom": 659.203125,
+        "left": 499.59375
+      }
+    }
+  ]
+}

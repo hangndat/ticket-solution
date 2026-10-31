@@ -58,7 +58,7 @@ export function OutcomesSection({ locale, demo }: MarketingSectionProps) {
           <p className={marketingChartCaption}>{t(locale, 'outcomes.chart.caption')}</p>
         </div>
         <p className="mt-4">
-          <Button asChild variant="secondaryOnInk">
+          <Button asChild variant="primary" data-analytics-cta="outcomes_demo">
             <a href={demo}>{t(locale, 'demo.cta')}</a>
           </Button>
           <span className={marketingOutcomesDemoNote}>{t(locale, 'badge.demo')}</span>
