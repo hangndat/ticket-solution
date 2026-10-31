@@ -220,3 +220,7 @@ Wrapper `agent-workflow-run.mjs start` kiểm snapshot Codex mới (tối đa 5 
 Lưu quyết định trong `quota-decision.json` riêng tư. `--tier-reason` và `--essential-reason` là metadata local. Quota là allowance theo tài khoản/bucket, không phải số token còn lại cho từng model; gate không bảo đảm task tiếp theo không dùng hết quota. Coordinator phải xác minh tài khoản CLI snapshot trùng tài khoản worker Orca; wrapper chưa chứng minh được binding này. Reuse terminal cũng cần kiểm quota trước giao việc mới.
 
 Claude/Codex recovery (tier `focused|advanced|high`): `scripts/agent-provider-recovery.mjs` + state `.orca-metrics/provider-recovery/` — [provider-recovery.md](./provider-recovery.md). Wrapper chặn start Claude khi probe chưa `serviceAvailable`; không suy phần trăm quota Claude từ probe. Cursor/Composer không bị gate Codex. Không tự chọn model ngoài route đã đăng ký.
+
+## Chỉ định Terra — 2026-10-31
+
+User yêu cầu ngừng spawn Cursor khi hết usage và dùng ChatGPT Terra cho đợt tích hợp/phát hành. Host catalog có `gpt-6.1-terra`, effort low/medium/high. Đăng ký Codex Terra cho standard/focused low, advanced medium và high high; giữ quota bucket `codex`, dự phòng và caps. Chỉ định user ưu tiên hơn route mặc định trong đợt này; không tự suy entitlement hoặc quota riêng từ tên model.
