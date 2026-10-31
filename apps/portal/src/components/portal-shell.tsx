@@ -60,6 +60,7 @@ import {
   tenantSwitchDestination,
 } from '../nav/context-destination';
 import { isPortalDualRunBannerEnabled } from '../dual-run/allowlist';
+import { mergePortalSiderOpenKeys, readPersistedSiderOpenKeys, writePersistedSiderOpenKeys } from '../nav/portal-sider-open-keys';
 
 const { Header, Sider, Content } = Layout;
 
@@ -144,11 +145,13 @@ function PortalShellChrome({
     [pathname, menuData],
   );
   const [userOpenKeys, setUserOpenKeys] = useState<string[]>([]);
-  const openKeys = useMemo(() => {
-    const merged = new Set(userOpenKeys);
-    for (const key of pathOpenKeys) merged.add(key);
-    return [...merged];
-  }, [userOpenKeys, pathOpenKeys]);
+  useEffect(() => {
+    setUserOpenKeys(readPersistedSiderOpenKeys());
+  }, []);
+  const openKeys = useMemo(
+    () => mergePortalSiderOpenKeys(pathOpenKeys, userOpenKeys),
+    [userOpenKeys, pathOpenKeys],
+  );
 
   const menuItems: MenuProps['items'] = useMemo(
     () =>
@@ -172,7 +175,11 @@ function PortalShellChrome({
       items={menuItems}
       selectedKeys={selectedKeys}
       openKeys={openKeys}
-      onOpenChange={(keys) => setUserOpenKeys(keys as string[])}
+      onOpenChange={(keys) => {
+        const next = mergePortalSiderOpenKeys(pathOpenKeys, keys as string[]);
+        setUserOpenKeys(next);
+        writePersistedSiderOpenKeys(next);
+      }}
       onClick={closeNavDrawer}
       data-testid="portal-sider"
     />
