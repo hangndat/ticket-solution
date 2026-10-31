@@ -12,7 +12,11 @@ export { buildDisplayQrPayload } from './display-payload';
 export { ticketStateLabel, ticketStateTagClass } from './ticket-state';
 export {
   OWNER_TICKET_COPY,
+  OWNER_TICKET_COPY_CATALOG,
+  ownerTicketCopy,
   WALLET_COPY,
+  WALLET_COPY_CATALOG,
+  walletCopy,
   type LoadOwnerTicketResult,
   type LoadOwnerWalletResult,
   type OwnerTicketDetail,

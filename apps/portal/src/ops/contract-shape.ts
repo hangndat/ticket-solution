@@ -40,11 +40,12 @@ export function isExportStatus(
 
 export function isProviderStatus(
   value: unknown,
-): value is 'PENDING' | 'ACCEPTED' | 'FAILED' | 'DEAD' {
+): value is 'PENDING' | 'ACCEPTED' | 'FAILED' | 'DEAD' | 'UNKNOWN' {
   return (
     value === 'PENDING' ||
     value === 'ACCEPTED' ||
     value === 'FAILED' ||
-    value === 'DEAD'
+    value === 'DEAD' ||
+    value === 'UNKNOWN'
   );
 }

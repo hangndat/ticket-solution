@@ -5055,6 +5055,79 @@
           "gate"
         ]
       }
+    },
+    "/v1/gate/events/{eventId}/tickets/{ticketId}/reissue": {
+      "post": {
+        "operationId": "GateController_reissue",
+        "parameters": [
+          {
+            "name": "eventId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ticketId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReasonBodyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReissueResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "gate"
+        ]
+      }
     }
   },
   "info": {
@@ -8478,6 +8551,26 @@
         "required": [
           "tenantId",
           "name"
+        ]
+      },
+      "ReissueResponseDto": {
+        "type": "object",
+        "properties": {
+          "ticketId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "credentialVersion": {
+            "type": "number"
+          },
+          "replayed": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ticketId",
+          "credentialVersion",
+          "replayed"
         ]
       }
     }

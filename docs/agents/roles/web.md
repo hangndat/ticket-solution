@@ -14,7 +14,7 @@
 
 ## Stack neo
 
-- Next.js portal / admin / web Gate theo TECHNICAL-DESIGN.
+- Next.js consumer Web theo TECHNICAL-DESIGN; Portal thuộc role `portal`.
 - Auth qua BFF/OIDC đã có trong repo — không thêm Clerk/Auth0/mock production.
 - UAT: Playwright headless / `scripts/web-uat.sh` — không `cliclick` / computer-use trên Chrome user.
 

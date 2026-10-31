@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 /**
- * Headless UAT — UX-10 / Issue #382 a11y residual on redeem / admin / gate.
+ * Headless UAT — UX-10 / Issue #382 a11y residual on redeem (attendee).
  *
  * Usage: node apps/web/tests/a11y-redeem-admin-gate-uat.mjs [baseUrl]
  *
  * AC (scoped — does NOT claim WCAG AA whole app):
- * - Playwright axe on redeem (+ admin/gate critical paths or soft-redirect landings)
+ * - Playwright axe on redeem; /gate is retired (O23) — no web scanner a11y
  * - Focus-visible ring present for keyboard
  * - Primary controls hit ≥44px
  * - Live-region contracts: unknown → assertive alert
@@ -204,70 +204,18 @@ try {
   const redeemShot = join(OUT, 'd12-a11y-382-redeem.png');
   await page.screenshot({ path: redeemShot, fullPage: true });
 
-  // --- /admin — soft-redirect or staff chrome; /gate retired → home ---
-  for (const path of ['/admin']) {
-    const res = await page.goto(`${BASE}${path}`, {
-      waitUntil: 'domcontentloaded',
-      // Follow redirects; soft-redirect may be client or server.
-    });
-    if (!res || res.status() >= 500) die(`GET ${path} failed: ${res?.status()}`);
-    // Allow Next navigation redirect settle.
-    await page.waitForLoadState('networkidle').catch(() => {});
-    const url = page.url();
-    const label = path.slice(1);
-    if (url.includes('/auth')) {
-      await page.locator('main#main').first().waitFor({ state: 'visible' });
-      const authAxe = await runAxe(page, `${label}-soft-redirect-auth`);
-      axeReports.push(authAxe);
-      if (authAxe.seriousCritical.length > 0) {
-        die(
-          `axe serious/critical on ${path}→auth: ${JSON.stringify(authAxe.seriousCritical)}`,
-        );
-      }
-      checks.push(`${label}: soft-redirect /auth axe serious/critical=0`);
-      const authBtn = page
-        .locator('.auth-buttons a, .auth-buttons button, details.redeem-meta > summary')
-        .first();
-      if ((await authBtn.count()) > 0) {
-        await assertHitTarget(page, authBtn, `${label} auth control`);
-        await assertFocusVisible(page, authBtn, `${label} auth control`);
-        checks.push(`${label}: auth landing control ≥44px + focus-visible CSS`);
-      } else {
-        const navLink = page.locator('[data-testid="site-nav"] a').first();
-        await assertHitTarget(page, navLink, `${label} site-nav`);
-        await assertFocusVisibleRule(page);
-        checks.push(`${label}: site-nav hit + focus-visible CSS (no auth CTA)`);
-      }
-      proofLimits.push(
-        `${path}: anonymous soft-redirect → /auth (O02); staff chrome axe deferred to session UAT`,
-      );
-      const shot = join(OUT, `d12-a11y-382-${label}-auth-redirect.png`);
-      await page.screenshot({ path: shot, fullPage: true });
-      continue;
-    }
-
-    await page.locator('main#main').first().waitFor({ state: 'visible' });
-    const pageAxe = await runAxe(page, label);
-    axeReports.push(pageAxe);
-    if (pageAxe.seriousCritical.length > 0) {
-      die(`axe serious/critical on ${path}: ${JSON.stringify(pageAxe.seriousCritical)}`);
-    }
-    checks.push(`${label}: axe serious/critical=0`);
-
-    if (path === '/admin') {
-      const job = page.getByTestId('admin-job-setup');
-      if ((await job.count()) > 0) {
-        await assertHitTarget(page, job, 'admin job nav');
-        await assertFocusVisible(page, job, 'admin job nav');
-        checks.push('admin: job nav ≥44px + focus-visible');
-      } else {
-        proofLimits.push('admin job nav not visible (auth/capability fail-closed branch)');
-      }
-    }
-
-    const shot = join(OUT, `d12-a11y-382-${label}.png`);
-    await page.screenshot({ path: shot, fullPage: true });
+  // O23: /gate is not a staff scanner — must leave the route (308 → home).
+  const gateRes = await page.goto(`${BASE}/gate`, {
+    waitUntil: 'domcontentloaded',
+  });
+  if (!gateRes || gateRes.status() >= 500) {
+    die(`GET /gate failed: ${gateRes?.status()}`);
   }
+  const gateUrl = page.url();
+  if (gateUrl.includes('/gate')) {
+    die(`/gate: expected redirect off scanner, landed ${gateUrl}`);
+  }
+  checks.push('GET /gate retired → home (O23)');
 
   // Fixture: unknown assertive + pending/queued polite without staff session
   await page.setContent(`<!doctype html><html lang="vi"><head><title>A11y live-region fixture</title></head><body>
@@ -304,7 +252,7 @@ try {
 
   const handoff = {
     issue: 382,
-    scope: 'redeem/admin/gate residual a11y (UX-10 A2/A3/A5 + axe)',
+    scope: 'redeem residual a11y (UX-10 A2/A3/A5 + axe); /gate retired O23',
     claimWcagAaWholeApp: false,
     base: BASE,
     checks,

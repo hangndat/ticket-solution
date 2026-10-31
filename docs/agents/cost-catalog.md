@@ -28,11 +28,13 @@ Nguồn: `agent models` trên máy này. Effort nằm **trong** model id Cursor 
 | --- | --- | --- | --- | --- |
 | `cheap` | `cursor` | `composer-2.5` | Không truyền | `grok-4.7-low`, `gemini-3.7-flash-low` |
 | `standard` | `cursor` | `composer-2.5` | Không truyền | `grok-4.7-low`, `gemini-3.7-flash-low` |
-| `focused` | `claude` | `claude-sonnet-5` | `low` | Codex `gpt-6-sol` / `low` |
+| `focused` | `claude` | `claude-sonnet-5` | `low` | Codex `gpt-6-sol` / `low`; `gpt-6.1-sol` / `low` khi Sol 6 đầy tải |
 | `advanced` | `claude` | `claude-sonnet-5` | `medium` | Codex `gpt-6-sol` / `medium` |
 | `high` | `claude` | `claude-sonnet-5` | `high` | Codex `gpt-6-sol` / `high` |
 
 Task mới khai báo tier độc lập với agent/model/effort. Mapping thực thi nằm trong `scripts/lib/agent-cost-tiers.mjs`: mỗi tier là danh sách các route được phép. Khi thêm model khác, xác minh pin/effort trên host và cập nhật route cùng bảng này; tên tier và tiêu chí công việc giữ nguyên. Preflight chấp nhận đúng tổ hợp đã đăng ký, không tự mở model mới.
+
+**Pinned at 2026-10-30 — fallback focused:** user yêu cầu chọn model tiết kiệm khi Cursor hết usage; Claude cũng usage-limited và dispatch `ctx_303d8eee5ee5` gặp `gpt-6-sol` capacity error. Host probe cache `agent-model-catalog.json` lúc `2026-10-30T14:29:34.365Z` (fingerprint `54876ac0198101d3b359b7fe638e4611cd11153f76da98c256309a6dd8f09db0`) có `gpt-6.1-sol` với effort `low`; session James đã chạy tiếp thành công trên model này, còn receipt trước recovery giữ pin cũ. Đăng ký fallback `focused` / `low` để launch mới có receipt đúng; không bật Fast. Cùng bucket quota `codex`, giữ reserve và giới hạn worker hiện hành. Chưa có phép đo giá hoặc benchmark chứng minh hai model tương đương.
 
 ### Claude cùng tier với Codex
 
@@ -188,7 +190,7 @@ Sau `worker-start`: đối chiếu `launch.requested` vs `launch.effective` trê
 | DoD | cursor / `composer-2.5` hoặc Codex/Claude theo tier | Thường lệ `standard`; Codex/Claude chọn `focused`, `advanced` hoặc `high` theo câu hỏi review và rủi ro |
 | Critical implementation | claude / `claude-sonnet-5`, sau đó codex / `gpt-6-sol` | `high`; coordinator ghi lý do và scope cụ thể |
 
-Pin GPT-6 = `gpt-6-sol`, có trong catalog host 2026-10-23; catalog không chứng minh entitlement. Không tự đổi sang Astra/6.1 hoặc model khác. Codex truyền đúng effort của tier: `focused` → `low`, `advanced` → `medium`, `high` → `high`; preflight từ chối mọi cặp lệch và effort cao hơn `high`. Cặp agent/model phải khớp; không truyền Codex pin vào Cursor.
+Pin GPT-6 = `gpt-6-sol`, có trong catalog host 2026-10-23; catalog không chứng minh entitlement. Fallback `gpt-6.1-sol` chỉ được đăng ký ở `focused` / `low` theo refresh 2026-10-30 bên trên; các model khác cần refresh và đăng ký trước. Codex truyền đúng effort của tier: `focused` → `low`, `advanced` → `medium`, `high` → `high`; preflight từ chối mọi cặp lệch và effort cao hơn `high`. Cặp agent/model phải khớp; không truyền Codex pin vào Cursor.
 
 Thử nghiệm ban đầu: tối đa **1 Codex worker live** toàn fleet được coordinator quan sát (các session user khác vẫn có thể dùng chung allowance). Không tăng đồng loạt 5 coding + 3 reviewer. Kiểm allowance trước/sau, ghi thời điểm/reset/source; dữ liệu thiếu = unknown, không coi bằng 0 hoặc unlimited. Khi allowance unknown, coordinator Codex vẫn điều phối theo chỉ định user; không mở thêm Codex worker ngoài benchmark được chỉ định. Task thực thi thông thường giao Composer. Token count không quy đổi trực tiếp thành phần trăm allowance hay USD. Gói ChatGPT không cấp thêm Cursor quota; không tự chuyển sang API billing.
 

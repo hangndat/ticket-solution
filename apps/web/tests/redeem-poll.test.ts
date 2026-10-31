@@ -170,6 +170,56 @@ test('pollOperation recovers after network rejection then COMPLETED redeem', asy
   assert.equal(usedCommand, REDEMPTION_COMMAND);
 });
 
+test('pollOperation keeps retryable pre-commit 404 unknown until the same operation completes', async () => {
+  const key = 'idem-key-before-commit';
+  const requests: string[] = [];
+  const decisions: RedeemDecision[] = [];
+  const response = {
+    ticketId: '33333333-3333-4333-8333-333333333333',
+    requestId: 'req-1',
+    operationId: 'op-1',
+    state: 'ACTIVE' as const,
+  };
+  const outcome = await pollOperation(
+    key,
+    '11111111-1111-4111-8111-111111111111',
+    '22222222-2222-4222-8222-222222222222',
+    {
+      onStart: () => {},
+      onRaw: () => {},
+      onTransient: () => {},
+      onDecision: (decision) => decisions.push(decision),
+      onFinally: () => {},
+    },
+    {
+      fetchJsonImpl: async (input): Promise<FetchJsonResult> => {
+        requests.push(String(input));
+        return requests.length === 1
+          ? {
+              status: 404,
+              json: { code: 'NOT_FOUND', message: 'Operation not found', retryable: true },
+              timedOut: false,
+              networkError: false,
+            }
+          : {
+              status: 200,
+              json: { status: 'COMPLETED', response },
+              timedOut: false,
+              networkError: false,
+            };
+      },
+      sleep: async () => {},
+      now: () => 0,
+      pollMaxMs: 10,
+    },
+  );
+  assert.equal(outcome, 'success');
+  assert.equal(requests.length, 2);
+  assert.ok(requests.every((request) => request.includes(`/operations/${key}?`)));
+  assert.equal(decisions.length, 1);
+  assert.equal(decisions[0]?.kind, 'issued');
+});
+
 test('pollOperation maps COMPLETED pending without claiming ticket', async () => {
   let kind: RedeemDecision['kind'] | null = null;
 

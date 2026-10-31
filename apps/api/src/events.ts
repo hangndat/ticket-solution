@@ -212,6 +212,7 @@ function eventHttpStatus(code: string): number {
   if (code === EVENT_ERROR_CODES.EVENT_NOT_FOUND) return 404;
   if (
     code === EVENT_ERROR_CODES.REVISION_CONFLICT ||
+    code === EVENT_ERROR_CODES.EVENT_RETENTION_FENCED ||
     code === EVENT_ERROR_CODES.SLUG_TAKEN ||
     code === EVENT_ERROR_CODES.IDEMPOTENCY_CONFLICT ||
     code === EVENT_ERROR_CODES.IMPACT_CONFIRM_REQUIRED

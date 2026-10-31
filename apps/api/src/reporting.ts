@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import {
   Controller,
   Get,
+  Header,
   Headers,
   HttpException,
   Injectable,
@@ -291,6 +292,7 @@ export class ReportController {
   @Get('tenants/:tenantId/events/:eventId/report')
   @ApiBearerAuth()
   @ApiOkResponse({ type: EventReportDto })
+  @Header('Cache-Control', 'private, no-store')
   report(
     @Headers('authorization') authorization: string | undefined,
     @Param('tenantId') tenantId: string,
@@ -312,6 +314,7 @@ export class ReportController {
     required: false,
     description: 'Default 20; hard max 50 (clamped server-side)',
   })
+  @Header('Cache-Control', 'private, no-store')
   portfolio(
     @Headers('authorization') authorization: string | undefined,
     @Param('tenantId') tenantId: string,
@@ -331,6 +334,7 @@ export class ReportController {
   @ApiQuery({ name: 'from', required: false })
   @ApiQuery({ name: 'to', required: false })
   @ApiQuery({ name: 'action', required: false })
+  @Header('Cache-Control', 'private, no-store')
   audit(
     @Headers('authorization') authorization: string | undefined,
     @Param('tenantId') tenantId: string,

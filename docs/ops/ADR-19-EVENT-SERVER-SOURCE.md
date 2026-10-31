@@ -19,9 +19,11 @@ Chi tiết thiết kế: [architecture/event-server-source.md](../architecture/e
 
 ## Fail-closed
 
-- Chỉ trả event khi `visibility=PUBLIC`, `content_status=PUBLISHED`, `business_status=ACTIVE`, và có `published_config_version` khớp bản đã `published_at`.  
+- Catalog chỉ trả event `visibility=PUBLIC`. Detail theo link nhận `PUBLIC` hoặc `UNLISTED`, theo PRD M03: private không xuất hiện ở catalog và không là cơ chế bảo mật. Cả hai đường vẫn yêu cầu tenant ACTIVE, `content_status=PUBLISHED`, `business_status=ACTIVE`, và `published_config_version` khớp bản đã `published_at`.
 - Draft / unpublished / wrong tenant slug / unknown → **404** (không lộ tồn tại nội bộ).  
 - Không trả admin fields (`revision`, lifecycle internals, …).
+
+Đối chiếu ngày 2026-10-28 trong lượt user yêu cầu sửa E2E failures: làm rõ khác biệt catalog/direct link để thực thi PRD M03, không mở quyền đọc draft hoặc dữ liệu attendee.
 
 ## Hậu quả
 
