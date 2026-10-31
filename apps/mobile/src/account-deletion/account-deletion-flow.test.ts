@@ -13,6 +13,7 @@ import {
 } from './account-deletion-copy.ts';
 import {
   clearAllPendingIdempotencyKeys,
+ createIdempotencyKey,
   loadCurrentAccountDeletionRequest,
   mapGetResult,
   mapPostResult,
@@ -22,6 +23,37 @@ import {
   retryAccountDeletionError,
   submitAccountDeletionRequest,
 } from './account-deletion-flow.ts';
+test('default deletion keys use the shared UUID generator and stay user scoped', () => {
+ clearAllPendingIdempotencyKeys();
+ const a = resolveIdempotencyKeyForSubmit('user-a');
+ const b = resolveIdempotencyKeyForSubmit('user-b');
+ const direct = createIdempotencyKey();
+ for (const key of [a, b, direct]) assert.match(key, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+ assert.equal(resolveIdempotencyKeyForSubmit('user-a'), a);
+ assert.notEqual(a, b);
+ clearAllPendingIdempotencyKeys();
+});
+test('default deletion key uses the native UUID fallback without global crypto', () => {
+ const cryptoDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'crypto');
+ const globals = globalThis as unknown as { require?: (name: string) => unknown };
+ const previousRequire = globals.require;
+ try {
+  Object.defineProperty(globalThis, 'crypto', { configurable: true, value: undefined });
+  globals.require = (name) => {
+   assert.equal(name, 'expo-crypto');
+   return { randomUUID: () => 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' };
+  };
+  clearAllPendingIdempotencyKeys();
+  assert.equal(createIdempotencyKey(), 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
+  assert.equal(resolveIdempotencyKeyForSubmit('user-a'), 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
+ } finally {
+  if (cryptoDescriptor) Object.defineProperty(globalThis, 'crypto', cryptoDescriptor);
+  else Reflect.deleteProperty(globalThis, 'crypto');
+  if (previousRequire) globals.require = previousRequire;
+  else delete globals.require;
+  clearAllPendingIdempotencyKeys();
+ }
+});
 
 function credentialStore(initial: string | null = 'tok'): CredentialStore {
   let credential = initial;
