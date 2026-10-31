@@ -1,7 +1,8 @@
 'use client';
 
 import { Alert, Button, Input, Space, Table } from 'antd';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect } from 'react';
+import { useActorState as useState } from '../../client/use-actor-state';
 import type { PortalAuditEntry } from '@ticket/contracts';
 import { portalGet } from '../../client/portal-fetch';
 import { bffAudit } from '../../prep/bff-urls';

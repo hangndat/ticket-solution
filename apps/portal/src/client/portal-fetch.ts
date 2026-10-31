@@ -1,6 +1,7 @@
 'use client';
 
 import { CSRF_COOKIE, CSRF_HEADER } from '../bff/csrf-constants';
+import { actorResponseMatches, actorStillCurrent, actorSurfaceForPath, beginActorRequest, failActorRequest } from './actor-gate';
 
 export type PortalFetchResult = {
   status: number;
@@ -83,6 +84,10 @@ async function parseJsonSafe(res: Response): Promise<unknown> {
   }
 }
 
+const actorDenied = (): PortalFetchResult => ({
+  status: 401, json: { code: 'ACTOR_EPOCH_MISMATCH' }, networkError: false, timedOut: false,
+});
+
 /** Same-origin GET — discovery / list reads. */
 export async function portalGet(
   path: string,
@@ -91,16 +96,24 @@ export async function portalGet(
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
+    const actor = await beginActorRequest(path);
+    if (!actorStillCurrent(actor)) return actorDenied();
     const res = await fetch(path, {
       method: 'GET',
       credentials: 'same-origin',
       cache: 'no-store',
       signal: controller.signal,
     });
+    if (!actorResponseMatches(actor, res)) {
+      if (actorStillCurrent(actor)) failActorRequest(actorSurfaceForPath(path));
+      return actorDenied();
+    }
     reportForbidden(path, res.status);
+    const json = await parseJsonSafe(res);
+    if (!actorStillCurrent(actor)) return actorDenied();
     return {
       status: res.status,
-      json: await parseJsonSafe(res),
+      json,
       networkError: false,
       timedOut: false,
       retryAfterMs: retryAfterMs(res),
@@ -123,6 +136,8 @@ export async function portalMutate(
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
+    const actor = await beginActorRequest(path);
+    if (!actorStillCurrent(actor)) return actorDenied();
     const res = await fetch(path, {
       method,
       credentials: 'same-origin',
@@ -134,10 +149,16 @@ export async function portalMutate(
       body: JSON.stringify(body),
       signal: controller.signal,
     });
+    if (!actorResponseMatches(actor, res)) {
+      if (actorStillCurrent(actor)) failActorRequest(actorSurfaceForPath(path));
+      return actorDenied();
+    }
     reportForbidden(path, res.status);
+    const json = await parseJsonSafe(res);
+    if (!actorStillCurrent(actor)) return actorDenied();
     return {
       status: res.status,
-      json: await parseJsonSafe(res),
+      json,
       networkError: false,
       timedOut: false,
       retryAfterMs: retryAfterMs(res),
@@ -176,6 +197,8 @@ export async function portalMultipart(
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
+    const actor = await beginActorRequest(path);
+    if (!actorStillCurrent(actor)) return actorDenied();
     const res = await fetch(path, {
       method: 'POST',
       credentials: 'same-origin',
@@ -186,10 +209,16 @@ export async function portalMultipart(
       body: form,
       signal: controller.signal,
     });
+    if (!actorResponseMatches(actor, res)) {
+      if (actorStillCurrent(actor)) failActorRequest(actorSurfaceForPath(path));
+      return actorDenied();
+    }
     reportForbidden(path, res.status);
+    const json = await parseJsonSafe(res);
+    if (!actorStillCurrent(actor)) return actorDenied();
     return {
       status: res.status,
-      json: await parseJsonSafe(res),
+      json,
       networkError: false,
       timedOut: false,
       retryAfterMs: retryAfterMs(res),
@@ -218,27 +247,49 @@ export async function portalDownload(
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
+    const actor = await beginActorRequest(path);
+    if (!actorStillCurrent(actor)) return {
+      status: 401, blob: null, json: { code: 'ACTOR_EPOCH_MISMATCH' },
+      contentType: null, contentDisposition: null, networkError: false, timedOut: false,
+    };
     const res = await fetch(path, {
       method: 'GET',
       credentials: 'same-origin',
       cache: 'no-store',
       signal: controller.signal,
     });
+    if (!actorResponseMatches(actor, res)) {
+      if (actorStillCurrent(actor)) failActorRequest(actorSurfaceForPath(path));
+      return {
+      status: 401, blob: null, json: { code: 'ACTOR_EPOCH_MISMATCH' },
+      contentType: null, contentDisposition: null, networkError: false, timedOut: false,
+      };
+    }
     reportForbidden(path, res.status);
     if (!res.ok) {
+      const json = await parseJsonSafe(res);
+      if (!actorStillCurrent(actor)) return {
+        status: 401, blob: null, json: { code: 'ACTOR_EPOCH_MISMATCH' },
+        contentType: null, contentDisposition: null, networkError: false, timedOut: false,
+      };
       return {
         status: res.status,
         blob: null,
-        json: await parseJsonSafe(res),
+        json,
         contentType: res.headers.get('Content-Type'),
         contentDisposition: res.headers.get('Content-Disposition'),
         networkError: false,
         timedOut: false,
       };
     }
+    const blob = await res.blob();
+    if (!actorStillCurrent(actor)) return {
+      status: 401, blob: null, json: { code: 'ACTOR_EPOCH_MISMATCH' },
+      contentType: null, contentDisposition: null, networkError: false, timedOut: false,
+    };
     return {
       status: res.status,
-      blob: await res.blob(),
+      blob,
       json: null,
       contentType: res.headers.get('Content-Type'),
       contentDisposition: res.headers.get('Content-Disposition'),

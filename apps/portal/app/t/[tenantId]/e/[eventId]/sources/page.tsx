@@ -11,7 +11,8 @@ import { Alert, Button, Empty, Flex, Form, Result, Spin } from 'antd';
 import { PortalPage } from '../../../../../../src/components/portal-page';
 import { EventSetupNav } from '../../../../../../src/components/event-setup-nav';
 import { useParams } from 'next/navigation';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
+import { useActorState as useState } from '../../../../../../src/client/use-actor-state';
 import type {
   PortalSourceSummary,
   PortalTicketTypeSummary,
