@@ -14,7 +14,8 @@ const events = [
 export function NeonShowcase({ locale, demo }: MarketingSectionProps) {
   return (
     <>
-      <section id="events" data-testid="marketing-neon-events" className="bg-ink px-5 py-16 text-paper md:py-24">
+      <section id="events" data-testid="marketing-neon-events" className="relative isolate overflow-hidden bg-ink px-5 py-16 text-paper md:py-24">
+        <Image src="/marketing/neon/page-edge-decor-left.png" alt="" width={320} height={941} className="pointer-events-none absolute -left-24 top-0 -z-10 h-full w-64 object-cover opacity-60" />
         <div className={marketingWrap}>
           <h2 className="text-3xl font-bold md:text-5xl">{t(locale, 'neon.events.title.lead')} <span className="text-primary">{t(locale, 'neon.events.title.emphasis')}</span></h2>
           <p className="mt-4 text-lg">{t(locale, 'neon.events.sub')}</p>
@@ -28,7 +29,8 @@ export function NeonShowcase({ locale, demo }: MarketingSectionProps) {
           </div>
         </div>
       </section>
-      <section id="product" data-testid="marketing-neon-product" className="bg-ink px-5 py-16 text-paper md:py-24">
+      <section id="product" data-testid="marketing-neon-product" className="relative isolate overflow-hidden bg-ink px-5 py-16 text-paper md:py-24">
+        <Image src="/marketing/neon/page-edge-decor-left.png" alt="" width={320} height={941} className="pointer-events-none absolute -right-24 top-0 -z-10 h-full w-64 scale-x-[-1] object-cover opacity-60" />
         <div className={`${marketingWrap} grid items-center gap-10 md:grid-cols-2`}>
           <div>
             <h2 className="text-3xl font-bold md:text-5xl">{t(locale, 'neon.product.title.lead')} <span className="text-primary">{t(locale, 'neon.product.title.emphasis')}</span></h2>
