@@ -1,5 +1,6 @@
 import { Button } from '@ticket/ui';
 import Link from 'next/link';
+import Image from 'next/image';
 import type { ReactNode } from 'react';
 import { t } from './copy';
 import {
@@ -61,19 +62,17 @@ export function MarketingChrome({
           aria-label={t(locale, 'nav.brand')}
           data-testid="mkt-wordmark"
         >
+          <Image src="/marketing/neon/vemoki-v-mark.webp" alt="" width={34} height={30} className="mr-2 inline-block align-middle" />
           {t(locale, 'nav.brand')}
-          <span aria-hidden="true">↗</span>
         </Link>
         <LocaleSwitch locale={locale} pageKind={pageKind} onInk={onInk} />
         <nav className={marketingNav} aria-label={locale === 'en' ? 'Primary' : 'Chính'}>
           {onSales ? (
             <>
               <span className={marketingNavLinks}>
-                <a href={`${sales}#features`}>{t(locale, 'nav.features')}</a>
-                <a href={`${sales}#how_it_works`}>{t(locale, 'nav.how')}</a>
-                <a href={`${sales}#solutions`}>{t(locale, 'nav.solutions')}</a>
-                <a href={`${sales}#faq`}>{t(locale, 'nav.faq')}</a>
-                <a href={demo}>{t(locale, 'nav.demo')}</a>
+                <a href={`${sales}#product`}>{t(locale, 'nav.product')}</a>
+                <a href={`${sales}#events`}>{t(locale, 'nav.solutions')}</a>
+                <a href={`${sales}#interest`}>{t(locale, 'nav.advisory')}</a>
               </span>
               <MarketingMobileNavMenu
                 locale={locale}
@@ -110,6 +109,7 @@ export function MarketingChrome({
       {children}
       <footer className={marketingFooter(onSales)} data-testid="mkt-footer">
         <div className={marketingWrap}>
+          {onSales ? <Link className="mb-4 inline-flex items-center text-xl font-bold text-paper" href={sales}><Image src="/marketing/neon/vemoki-v-mark.webp" alt="" width={34} height={30} className="mr-2" />Vemoki</Link> : null}
           <div>
             <Link href={privacyHref(locale)}>{t(locale, 'nav.privacy')}</Link>
             {' · '}

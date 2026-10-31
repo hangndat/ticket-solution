@@ -1,84 +1,29 @@
-import { Button } from '@ticket/ui';
 import Image from 'next/image';
-import Link from 'next/link';
+import { Button } from '@ticket/ui';
 import { t } from '../copy';
-import { MarketingHeroDecor } from '../marketing-hero-decor';
-import {
-  marketingDemoNote,
-  marketingHeroCopy,
-  marketingHeroEyebrow,
-  marketingHeroGrid,
-  marketingHeroHeadline,
-  marketingHeroLogin,
-  marketingHeroMedia,
-  marketingHeroMediaCaption,
-  marketingHeroMediaImg,
-  marketingHeroProofs,
-  marketingHeroSection,
-  marketingLead,
-  marketingWrap,
-} from '../marketing-surface';
+import { marketingWrap } from '../marketing-surface';
 import type { MarketingSectionProps } from './types';
 
-export function HeroSection({ locale, demo, login }: MarketingSectionProps) {
+export function HeroSection({ locale, demo }: MarketingSectionProps) {
   return (
-    <section
-      id="top"
-      className={marketingHeroSection}
-      aria-labelledby="hero-title"
-      data-analytics-section="hero"
-      data-on-ink=""
-    >
-      <MarketingHeroDecor />
-      <div className={`${marketingWrap} ${marketingHeroGrid}`}>
-        <div className={marketingHeroCopy}>
-          <p className={marketingHeroEyebrow}>{t(locale, 'hero.eyebrow')}</p>
-          <h1 id="hero-title" className={marketingHeroHeadline} data-testid="hero-headline">
-            {t(locale, 'hero.headline')}
+    <section id="top" data-analytics-section="hero" data-on-ink="" data-testid="marketing-neon-hero" className="overflow-hidden bg-ink px-5 py-16 text-paper md:py-24 lg:py-32">
+      <div className={`${marketingWrap} grid items-center gap-10 md:grid-cols-2`}>
+        <div>
+          <h1 id="hero-title" data-testid="hero-headline" className="m-0 text-4xl font-bold leading-tight tracking-tight md:text-6xl">
+            {t(locale, 'neon.hero.headline.lead')}{' '}
+            <span className="text-primary">{t(locale, 'neon.hero.headline.emphasis')}</span>.
           </h1>
-          <p className={marketingLead}>{t(locale, 'hero.sub')}</p>
-          <div className="mt-7 flex flex-wrap items-center gap-3">
-            <Button asChild variant="primary" data-testid="cta-demo" data-analytics-cta="hero_demo">
-              <a href={demo}>{t(locale, 'hero.cta.demo')}</a>
-            </Button>
-            <Link
-              href="#interest"
-              className="inline-flex min-h-11 items-center px-2 font-semibold text-paper underline underline-offset-4 hover:text-paper/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-focus"
-              data-testid="cta-interest"
-              data-analytics-cta="hero_interest"
-            >
-              {t(locale, 'hero.cta.interest')}
-            </Link>
+          <p className="mt-6 text-lg leading-relaxed">{t(locale, 'hero.sub')}</p>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <Button asChild variant="primary" data-testid="cta-demo" data-analytics-cta="hero_demo"><a href={demo}>{t(locale, 'hero.cta.demo')}</a></Button>
+            <Button asChild variant="ghostOnInk" data-testid="cta-interest" data-analytics-cta="hero_interest"><a href="#interest">{t(locale, 'hero.cta.interest')}</a></Button>
           </div>
-          <p className={marketingHeroLogin}>
-            {t(locale, 'hero.login_prefix')}{' '}
-            <a href={login} data-testid="cta-login" data-analytics-cta="hero_login">
-              {t(locale, 'hero.cta.login')}
-            </a>
-          </p>
-          <p className={marketingDemoNote} role="status" data-testid="demo-badge">
-            {t(locale, 'hero.demo_note')}
-          </p>
-          <ul className={marketingHeroProofs} aria-label={t(locale, 'hero.proofs.label')}>
-            <li>{t(locale, 'hero.proof1')}</li>
-            <li>{t(locale, 'hero.proof2')}</li>
-            <li>{t(locale, 'hero.proof3')}</li>
+          <p className="mt-4 text-sm" data-testid="demo-badge">{t(locale, 'hero.demo_note')}</p>
+          <ul className="mt-8 flex list-none flex-wrap gap-3 p-0 text-sm">
+            {(['hero.proof1', 'hero.proof2', 'hero.proof3', 'hero.proof4'] as const).map((key) => <li key={key} className="rounded-full border border-paper/25 px-3 py-2">{t(locale, key)}</li>)}
           </ul>
         </div>
-        <figure className={marketingHeroMedia}>
-          <Image
-            className={marketingHeroMediaImg}
-            src="/marketing/product/catalog-7bd933401625.png"
-            alt={t(locale, 'hero.media.alt')}
-            width={1440}
-            height={900}
-            sizes="(max-width: 1024px) 100vw, 52vw"
-            priority
-          />
-          <figcaption className={marketingHeroMediaCaption}>
-            {t(locale, 'hero.media.caption')}
-          </figcaption>
-        </figure>
+        <Image src="/marketing/neon/hero-composite-v2.png" alt={t(locale, 'neon.hero.visual.label')} width={960} height={640} priority sizes="(min-width: 768px) 50vw, 100vw" className="h-auto w-full" />
       </div>
     </section>
   );

@@ -57,7 +57,7 @@ export function attendeeEventHeroArt(tone: string) {
       ? 'bg-[color-mix(in_srgb,var(--color-admit)_85%,var(--color-ink))] after:border-[color-mix(in_srgb,var(--color-admit)_55%,var(--color-paper))]'
       : tone === 'gold'
         ? 'bg-[color-mix(in_srgb,var(--color-unknown)_90%,var(--color-ink))] after:border-[color-mix(in_srgb,var(--color-unknown)_45%,var(--color-paper))]'
-        : 'bg-[color-mix(in_srgb,var(--color-ink)_92%,var(--color-focus))] after:border-[color-mix(in_srgb,var(--color-signal)_75%,var(--color-paper))]';
+        : 'bg-[color-mix(in_srgb,var(--color-ink)_92%,var(--color-focus))] after:border-[color-mix(in_srgb,var(--color-primary)_75%,var(--color-paper))]';
   return cn(
     'relative flex min-h-[clamp(200px,32vw,280px)] items-end overflow-hidden rounded-2xl',
     'animate-in fade-in duration-500 fill-mode-both motion-reduce:animate-none',
@@ -114,9 +114,9 @@ export const attendeeEventProse = cn(
 export const attendeeEventMuted = 'text-muted';
 
 export const attendeeEventSidebox = cn(
-  'self-start rounded-2xl border border-[color-mix(in_srgb,var(--color-signal)_22%,var(--color-line))] p-6 max-md:p-5',
-  'bg-gradient-to-br from-white from-0% via-[color-mix(in_srgb,var(--color-signal)_6%,white)] via-[48%] to-white to-100%',
-  'shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-signal)_8%,transparent),var(--shadow-md)]',
+  'self-start rounded-2xl border border-[color-mix(in_srgb,var(--color-primary)_22%,var(--color-line))] p-6 max-md:p-5',
+  'bg-gradient-to-br from-white from-0% via-[color-mix(in_srgb,var(--color-primary)_6%,white)] via-[48%] to-white to-100%',
+  'shadow-[var(--shadow-md)]',
   'min-[900px]:sticky min-[900px]:top-[5.75rem]',
   '[&_h2]:m-0 [&_h2]:mb-2.5 [&_h2]:font-display [&_h2]:text-[1.15rem] [&_h2]:tracking-[-0.02em]',
 );
@@ -124,11 +124,7 @@ export const attendeeEventSidebox = cn(
 export const attendeeEventSideboxLead =
   'm-0 mb-4 text-[0.94rem] leading-[1.55] text-muted';
 
-export const attendeeEventSideboxCta = cn(
-  'mt-1 flex min-h-12 w-full justify-center rounded-md border-transparent',
-  'bg-gradient-to-br from-signal from-0% to-[color-mix(in_srgb,var(--color-signal)_88%,var(--color-ink))] to-100%',
-  'text-paper shadow-[0_10px_28px_color-mix(in_srgb,var(--color-signal)_28%,transparent)]',
-);
+export const attendeeEventSideboxCta = 'mt-1 min-h-12 border-primary bg-primary';
 
 export const attendeeEventSideboxHelp =
   'm-0 mt-4 text-[0.82rem] leading-[1.6] text-muted';
@@ -202,7 +198,7 @@ export const attendeeTicketNoticeUnknown = cn(
 );
 
 export const attendeeTicketStateTagBase =
-  'inline-flex items-center rounded-[5px] px-2 py-[5px] text-[0.68rem] font-bold tracking-[0.02em]';
+  'inline-flex items-center rounded-[5px] px-2 py-[5px] text-xs font-bold tracking-[0.02em]';
 
 export function attendeeTicketStateTag(state: string): string {
   if (state === 'ACTIVE') {
@@ -230,7 +226,7 @@ export function attendeeTicketStateTag(state: string): string {
 export const attendeeWalletPage = cn(
   attendeeProductAtmosphere,
   attendeeDetailMain,
-  'pb-10 [--brand:var(--color-signal)]',
+  'pb-10 [--brand:var(--color-primary)]',
 );
 
 export const attendeeWalletHeading = cn(
@@ -242,7 +238,7 @@ export const attendeeWalletIntro =
   'm-0 max-w-[36rem] text-[1.02rem] leading-[1.6] text-muted';
 
 export const attendeeWalletHeadingCta = cn(
-  'min-h-11 shrink-0 rounded-md shadow-[0_8px_24px_color-mix(in_srgb,var(--color-signal)_22%,transparent)]',
+  'min-h-11 shrink-0 rounded-md',
 );
 
 export const attendeeWalletGrid = cn(
@@ -258,7 +254,7 @@ export function attendeeWalletFilterChip(active: boolean) {
     'bg-[color-mix(in_srgb,var(--color-focus)_10%,var(--color-paper))] text-ink',
     !active && 'border-transparent hover:border-line',
     active &&
-      'border-line bg-white shadow-[inset_0_-2px_var(--color-signal)]',
+      'border-line bg-white shadow-[inset_0_-2px_var(--color-primary)]',
   );
 }
 
@@ -272,7 +268,7 @@ export const attendeeWalletTicketCard = cn(
   'before:h-[18px] before:w-[18px] before:-translate-y-1/2 before:rounded-full before:border before:border-line before:bg-paper before:content-[""]',
   'after:pointer-events-none after:absolute after:right-[-10px] after:top-[62%] after:z-[2]',
   'after:h-[18px] after:w-[18px] after:-translate-y-1/2 after:rounded-full after:border after:border-line after:bg-paper after:content-[""]',
-  'hover:-translate-y-0.5 hover:border-[color-mix(in_srgb,var(--color-signal)_28%,var(--color-line))] hover:shadow-md motion-reduce:hover:translate-y-0',
+  'hover:-translate-y-0.5 hover:border-[color-mix(in_srgb,var(--color-primary)_28%,var(--color-line))] hover:shadow-md motion-reduce:hover:translate-y-0',
 );
 
 export const attendeeWalletTicketCardDisabled = cn(

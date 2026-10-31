@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useCallback, useMemo, useState } from 'react';
-import { Button } from '@ticket/ui';
+import { Button, Input } from '@ticket/ui';
 import { CatalogEventCard, FilterChip } from '@ticket/ui/client';
 import {
   attendeeCatalogOwnedStrip,
@@ -89,7 +89,7 @@ export function HomeCatalogGrid({ items }: { items: HomeCatalogItem[] }) {
           <span className={attendeeHomeCatalogSearchIcon} aria-hidden="true">
             ⌕
           </span>
-          <input
+          <Input
             type="search"
             name="q"
             className={attendeeHomeCatalogSearchInput}
