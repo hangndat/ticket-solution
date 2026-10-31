@@ -1,7 +1,9 @@
 'use client';
 
 import {
-  motion,
+  domAnimation,
+  LazyMotion,
+  m,
   useMotionValue,
   useMotionValueEvent,
   useScroll,
@@ -91,9 +93,9 @@ function ScrollCaption({ id, p, copy }: { id: JourneyChapterId; p: MotionValue<n
   const y = useTransform(p, [...w], [28, 0, 0, -20]);
   const filter = useTransform(p, [w[0], w[1]], ['blur(8px)', 'blur(0px)']);
   return (
-    <motion.section aria-labelledby={`jr-${id}`} className={captionBox} style={{ opacity, y, filter }}>
+    <m.section aria-labelledby={`jr-${id}`} className={captionBox} style={{ opacity, y, filter }}>
       <ChapterCaption id={id} copy={copy} heading={id === 'invitation' ? 'h1' : 'h2'} />
-    </motion.section>
+    </m.section>
   );
 }
 
@@ -101,13 +103,13 @@ function ChapterRail({ p, copy }: { p: MotionValue<number>; copy: JourneyCopy })
   const fill = useTransform(p, [0, 0.86], ['0%', '100%']);
   const opacity = useTransform(p, [0.86, 0.9], [1, 0]);
   return (
-    <motion.div
+    <m.div
       className="absolute right-[clamp(1rem,3vw,2.5rem)] top-1/2 flex -translate-y-1/2 items-stretch gap-3 max-md:hidden [@media(max-height:560px)_and_(orientation:landscape)]:hidden"
       style={{ opacity }}
       aria-hidden="true"
     >
       <div className="relative w-px bg-white/15">
-        <motion.div className="absolute inset-x-0 top-0 bg-[var(--jr-amber)]" style={{ height: fill }} />
+        <m.div className="absolute inset-x-0 top-0 bg-[var(--jr-amber)]" style={{ height: fill }} />
       </div>
       <ol className="flex flex-col justify-between gap-10 py-1 text-[0.62rem] font-semibold uppercase tracking-[0.28em] text-white/45">
         {CHAPTERS.map((id) => (
@@ -116,7 +118,7 @@ function ChapterRail({ p, copy }: { p: MotionValue<number>; copy: JourneyCopy })
           </li>
         ))}
       </ol>
-    </motion.div>
+    </m.div>
   );
 }
 
@@ -183,22 +185,22 @@ function ScrollJourney({ copy, cta, reach }: { copy: JourneyCopy; cta: ReactNode
             <ScrollCaption key={id} id={id} p={p} copy={copy} />
           ))}
           <ChapterRail p={p} copy={copy} />
-          <motion.div
+          <m.div
             className="absolute inset-x-0 bottom-8 flex flex-col items-center gap-3 max-md:hidden [@media(max-height:560px)_and_(orientation:landscape)]:hidden text-[0.68rem] font-semibold uppercase tracking-[0.3em] text-white/60"
             style={{ opacity: hintO }}
             aria-hidden="true"
           >
             {copy.scrollHint}
             <span className="jr-anim jr-hint block h-10 w-px bg-gradient-to-b from-white/70 to-transparent" />
-          </motion.div>
-          <motion.div className="pointer-events-none absolute inset-0 bg-[var(--jr-void)]" style={{ opacity: brandScrim }} />
-          <motion.section
+          </m.div>
+          <m.div className="pointer-events-none absolute inset-0 bg-[var(--jr-void)]" style={{ opacity: brandScrim }} />
+          <m.section
             aria-labelledby="jr-brand"
             className="absolute inset-0 flex items-center justify-center"
             style={{ opacity: brandO, y: brandY, pointerEvents: brandActive ? 'auto' : 'none' }}
           >
             <BrandPanel copy={copy} cta={cta} active={brandActive} />
-          </motion.section>
+          </m.section>
         </div>
       </div>
     </div>
@@ -252,8 +254,12 @@ function StillJourney({ copy, cta, reach, observe }: { copy: JourneyCopy; cta: R
 export function JourneyExperience({ copy, cta, locale }: { copy: JourneyCopy; cta: ReactNode; locale: MarketingLocale }) {
   const scrollMode = useScrollMode();
   const [reach] = useState(() => oncePerView((milestone) => trackJourneyMilestone(milestone, locale)));
-  return scrollMode
-    ? <ScrollJourney copy={copy} cta={cta} reach={reach} />
-    : <StillJourney copy={copy} cta={cta} reach={reach} observe={!scrollMode} />;
+  return (
+    <LazyMotion features={domAnimation} strict>
+      {scrollMode
+        ? <ScrollJourney copy={copy} cta={cta} reach={reach} />
+        : <StillJourney copy={copy} cta={cta} reach={reach} observe={!scrollMode} />}
+    </LazyMotion>
+  );
 }
 
