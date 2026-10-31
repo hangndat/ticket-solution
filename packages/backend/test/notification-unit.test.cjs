@@ -18,6 +18,7 @@ const {
   sealCredentialToken,
   openCredentialToken,
 } = require('../dist');
+const { isSmtpDefiniteReject } = require('../dist/smtp-send');
 
 test('production SMTP missing is fail-closed (no noop success)', async () => {
   const prod = createSmtpEmailAdapter({
@@ -46,6 +47,21 @@ test('production SMTP missing is fail-closed (no noop success)', async () => {
 
   const mis = createMisconfiguredEmailAdapter();
   await assert.rejects(() => mis.sendTicketIssued({}), /SMTP/);
+});
+
+test('SMTP preflight errors are definite no-accept; generic transport errors stay ambiguous', async () => {
+  const smtp = createSmtpEmailAdapter({ smtpUrl: 'smtp://127.0.0.1:1025' });
+  const ticket = {
+    tenantId: 't', eventId: 'e', ticketId: 'ticket', toEmail: 'a@example.test',
+    requestId: 'r', subject: 's', text: 't', html: '<p>t</p>',
+    qrPng: Buffer.from([1]), credentialVersion: 1, credentialTokenHash: 'x',
+  };
+  await assert.rejects(() => smtp.sendTicketIssued({ ...ticket, toEmail: '' }), isSmtpDefiniteReject);
+  await assert.rejects(() => smtp.sendTicketIssued({ ...ticket, qrPng: Buffer.alloc(0) }), isSmtpDefiniteReject);
+  await assert.rejects(() => smtp.sendMembershipInvite({ toEmail: '', inviteId: 'i' }), isSmtpDefiniteReject);
+  await assert.rejects(() => smtp.sendGuestInvitation({ toEmail: '', invitationId: 'i' }), isSmtpDefiniteReject);
+  assert.equal(isSmtpDefiniteReject(new Error('socket closed')), false);
+  assert.equal(isSmtpDefiniteReject(Object.assign(new Error('timeout'), { code: 'ETIMEDOUT' })), false);
 });
 
 test('explicit noop/failing adapters remain for tests', async () => {

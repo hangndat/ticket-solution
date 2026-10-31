@@ -3,7 +3,8 @@
 import { Alert, Button, Card, Flex, Form, Input, Result, Select, Space, Spin, Typography } from 'antd';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
+import { useActorState as useState } from '../../src/client/use-actor-state';
 import {
   apiErrorCode,
   apiErrorMessage,
@@ -244,7 +245,7 @@ export default function OnboardingEntryPage() {
             <Button type="primary" htmlType="submit" loading={busy}>
               {t('onboarding.signup.submit')}
             </Button>
-            <Link href="/">
+            <Link prefetch={false} href="/">
               <Button>{t('onboarding.backHome')}</Button>
             </Link>
           </Space>
