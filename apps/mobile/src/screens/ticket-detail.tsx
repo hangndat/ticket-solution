@@ -372,14 +372,14 @@ export function TicketDetailScreen() {
           borderCurve: 'continuous',
           overflow: 'hidden',
           borderWidth: 1,
-          borderColor: used ? colors.line : brand.signal
+          borderColor: used ? colors.line : brand.primary
         }}
       >
         {used ? <TicketUsedStamp /> : null}
         <View
           style={{
             height: 6,
-            backgroundColor: brand.signal
+            backgroundColor: brand.primary
           }}
         />
         <EventBanner
