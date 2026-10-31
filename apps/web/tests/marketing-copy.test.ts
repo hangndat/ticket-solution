@@ -10,7 +10,7 @@ import { validateInterest } from '../src/marketing/interest-validate';
 describe('marketing copy VI/EN', () => {
   it('hero and CTA keys differ by locale where expected', () => {
     assert.notEqual(t('vi', 'hero.headline'), t('en', 'hero.headline'));
-    assert.equal(t('vi', 'nav.brand'), 'vemoki');
+    assert.equal(t('vi', 'nav.brand'), 'Vemoki');
     assert.equal(t('en', 'badge.demo'), 'Simulated demo');
     assert.equal(t('vi', 'badge.demo'), 'Demo giả lập');
   });

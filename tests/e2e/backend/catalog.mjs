@@ -134,16 +134,47 @@ export const catalog = {
   'JOB-01': [
     b('issue', 'issue: last-seat'),
     b('outbox-fence', 'TicketIssued: email outside tx'),
+    {
+      file: 'tests/e2e/backend/job-01-durable-outbox.test.cjs',
+      name: '[JOB-01] R durable outbox',
+      layer: 'R',
+    },
   ],
-  'JOB-02': [b('outbox-fence', 'outbox fence: MembershipInvite')],
+  'JOB-02': [
+    b('outbox-fence', 'outbox fence: MembershipInvite'),
+    {
+      file: 'tests/e2e/backend/job-02-lease-fence.test.cjs',
+      name: '[JOB-02] R lease fence',
+      layer: 'R',
+    },
+  ],
   'JOB-03': [
     b('issue', 'issue: last-seat'),
     b('worker-provider-deadline', 'stalled SMTP transport', 'U'),
+    {
+      file: 'tests/e2e/backend/job-03-smtp-failures.test.cjs',
+      name: '[JOB-03] R rejecting SMTP exhausts three worker attempts without a fourth delivery',
+      layer: 'R',
+    },
+    {
+      file: 'tests/e2e/backend/job-03-smtp-failures.test.cjs',
+      name: '[JOB-03] R SMTP failure and timeout: bounded retry, truthful PG state, ticket stays committed',
+      layer: 'R',
+    },
+    {
+      file: 'tests/e2e/backend/job-03-smtp-failures.test.cjs',
+      name: '[JOB-03] R crash after SMTP accept before PG ack: ticket not rolled back, recovery may duplicate SMTP',
+      layer: 'R',
+    },
   ],
   'JOB-04': [
     b('csv-guard', 'providerStatus maps', 'U'),
     b('reporting', 'event report counts'),
     b('outbox-fence', 'TicketIssued: email outside tx'),
+    b(
+      'job04-resend-caps',
+      '[JOB-04] D staff resend: cooldown, staff hourly cap, recipient hourly cap, retry(transient)!=terminal for emailNeedsCs',
+    ),
   ],
   'JOB-05': [b('notification-unit', 'template allowlist', 'U')],
   'JOB-06': [
@@ -255,12 +286,13 @@ export const notes = {
   'GATE-09':
     'D receipt matrix và H validation; thiếu H real authz/ownership/rate matrix.',
   'JOB-01':
-    'D ticket/outbox atomic; thiếu R worker stop/restart + Mailpit và Redis restart.',
-  'JOB-02': 'D fence; thiếu R kill worker/lease reclaim.',
+    'D ticket/outbox atomic; R worker stop + Redis restart + Mailpit once (ADR-17 PG SoT, không assert exactly-once SMTP/inbox).',
+  'JOB-02':
+    'D fence + R process kill sau claim, lease PG hết hạn/reclaim, stale ack fenced; một logical email (ADR-17 at-least-once SMTP).',
   'JOB-03':
-    'D retry và U deadline; thiếu R SMTP timeout/accept-before-ack crash.',
+    'D issue relay fail/retry; U SMTP deadline; R worker reject đến DEAD ở cap=3, không gọi thêm provider, ticket ACTIVE; stall/Mailpit recovery và exit-after-smtp subprocess recovery (chưa SIGKILL main worker đúng crash window; ADR-17 không assert exactly-once SMTP).',
   'JOB-04':
-    'D/U provider mapping; thiếu resend caps/cooldown/final failure full matrix.',
+    'D/U/H cooldown+user/staff/recipient hourly cap+dedup+retry-vs-terminal emailNeedsCs; tenant-wide resend cap BLOCKED chờ contract wiring (xem .artifacts/job04-report.md).',
   'JOB-05': 'U template; thiếu D/H preview/publish/reminder schedule.',
   'JOB-06': 'D/U bounded timeout; thiếu R process kill/overlap and tenant cap.',
   'JOB-07': 'D object access; thiếu H signed URL authz/expiry across tenants.',

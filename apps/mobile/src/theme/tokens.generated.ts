@@ -7,6 +7,7 @@ export const brandGenerated = {
   ink: '#0B1220',
   paper: '#F4F6F8',
   signal: '#E11D48',
+  primary: '#7C4DED',
   focus: '#2563EB',
   line: '#D7DFE9',
   muted: '#5B687B',
@@ -16,8 +17,8 @@ export const brandGenerated = {
   paperDeep: '#d8dbde',
   inkMuted: '#5B687B',
   inkFaint: 'rgba(11, 18, 32, 0.18)',
-  wordmark: 'vemoki',
-  signalMark: '↗',
+  wordmark: 'Vemoki',
+  signalMark: '',
 } as const;
 
 export const spaceGenerated = {

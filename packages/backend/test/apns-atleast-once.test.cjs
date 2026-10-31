@@ -184,6 +184,10 @@ async function seedTicketIssuedFixture(db, HMAC, CREDENTIAL_KEY) {
     await tx.tenant.create({
       data: { id: tenantId, slug: 'apns-652', name: 'APNs 652' },
     });
+    await tx.$executeRaw`
+      INSERT INTO tenant_limits (tenant_id, email_per_day)
+      VALUES (${tenantId}::uuid, 100)
+    `;
     await tx.event.create({
       data: {
         tenantId,

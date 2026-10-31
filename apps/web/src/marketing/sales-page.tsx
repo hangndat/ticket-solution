@@ -6,11 +6,8 @@ import {
 } from './hosts';
 import { MarketingChrome } from './chrome';
 import { HeroSection } from './sections/hero';
-import { MarketingInterestProvider } from './marketing-interest-provider';
-import { NeonEventsSection } from './sections/neon-events';
-import { NeonFinalCtaSection } from './sections/neon-final-cta';
-import { NeonProductSection } from './sections/neon-product';
-import { MarketingNeonInteriorRibbons } from './marketing-neon-interior-ribbons';
+import { NeonFinalCta, NeonShowcase } from './sections/neon-showcase';
+import { MarketingInterestDialog } from './marketing-interest-dialog';
 
 export function SalesPage({ locale }: { locale: MarketingLocale }) {
   const productOrigin = productOriginFromEnv();
@@ -21,16 +18,14 @@ export function SalesPage({ locale }: { locale: MarketingLocale }) {
   };
 
   return (
-    <MarketingInterestProvider locale={locale} demo={sectionProps.demo}>
+    <MarketingInterestDialog locale={locale} demo={sectionProps.demo}>
       <MarketingChrome locale={locale} pageKind="sales">
-        <main id="main" className="relative isolate" data-testid={`sales-${locale}`}>
-          <MarketingNeonInteriorRibbons />
+        <main id="main" data-testid={`sales-${locale}`}>
           <HeroSection {...sectionProps} />
-          <NeonEventsSection {...sectionProps} />
-          <NeonProductSection {...sectionProps} />
-          <NeonFinalCtaSection {...sectionProps} />
+          <NeonShowcase {...sectionProps} />
+          <NeonFinalCta {...sectionProps} />
         </main>
       </MarketingChrome>
-    </MarketingInterestProvider>
+    </MarketingInterestDialog>
   );
 }
