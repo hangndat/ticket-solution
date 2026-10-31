@@ -1,5 +1,11 @@
 # Portal/Platform E2E — bàn giao worker
 
+## PORT-09 — clean runtime B1 (Minh, 31/10/2026)
+
+**Runtime PASS** tại tested SHA `82089a959f24cf2ec52b110dcd47e5de325d7195`, run `mvvrilmh-ca2b2e`, `pnpm test:e2e --case=PORT-09`. `workingTreeDirty=false`, `commitStable=true`, `evidenceExactShaEligible=true`; start/end commit trùng nhau. Toàn bộ case qua F01 real worker/PG/Mailpit, F02 five-state BFF/list/detail/timeline và browser UNKNOWN, F03 cooldown/limit negative PG assertions. Witness response200/UNKNOWN, ảnh crop panel và metadata viewport1280x720/vi/cs nằm trong results.json attachments, trích nguyên bản ở `tests/e2e/.artifacts/mvvrilmh-ca2b2e/review-evidence/`. Cleanup containers/network đã hoàn tất.
+
+Run dirty B1 bên dưới chỉ là local diagnostic, không gắn lại cho commit. Lượt clean bổ sung được coordinator quyết định trong quyền user “Fix hết đi”; giữ lịch sử2/2 + exception1/1, B1 là batch mới. [Evidence canonical PR#1084](https://github.com/hangndat/ticket-solution/pull/1084#issuecomment-6537617846); verdict độc lập James và CI/merge cập nhật bằng comment trên exact HEAD, không tạo chuỗi commit đổi SHA báo cáo. Coverage chỉ áp dụng PORT-09, không kết luận toàn bộ Issue1035/85nhóm hoặc pilot ready.
+
 ## PORT-09 — B1 fix (Higo, 31/10/2026)
 
 **Local PASS; chưa đủ evidence exact SHA.** Nguyên nhân: `isProviderStatus`/`CsProviderStatus` trong `apps/portal/src/ops/contract-shape.ts` + `apps/portal/src/ops/cs.ts` chỉ nhận 4 giá trị (thiếu `UNKNOWN` dù `packages/contracts` đã có từ BE PR#1085), nên `parseNotification` reject vé UNKNOWN → list/detail trả `kind:'unknown'`, bảng CS browser không có cột provider status nên không render chữ `UNKNOWN`, và dòng timeline gộp kind/time/summary vào một text node nên không có phần tử khớp đúng `notification UNKNOWN`.
