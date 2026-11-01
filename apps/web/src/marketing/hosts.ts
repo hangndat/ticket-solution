@@ -161,6 +161,36 @@ export type HostRoutingDecision =
     }
   | { type: 'redirect'; location: string; status: 301 | 302 };
 
+/** Keep safe local navigation params, but do not carry external targets to product. */
+function productRedirectSearch(search: string): string {
+  const params = new URLSearchParams(search);
+  if (!['return', 'next', 'redirect'].some((key) => params.has(key))) {
+    return search;
+  }
+
+  let changed = false;
+  for (const key of ['return', 'next', 'redirect']) {
+    if (!params.has(key)) continue;
+    const raw = params.get(key)?.trim() ?? '';
+    const safe =
+      raw.startsWith('/') &&
+      !raw.startsWith('//') &&
+      !raw.includes('\\') &&
+      !/[\u0000-\u001f\u007f]/.test(raw)
+        ? raw
+        : null;
+    if (params.getAll(key).length === 1 && safe === params.get(key)) {
+      continue;
+    }
+    changed = true;
+    params.delete(key);
+    if (safe) params.set(key, safe);
+  }
+  if (!changed) return search;
+  const query = params.toString();
+  return query ? `?${query}` : '';
+}
+
 export function decideHostRouting(input: {
   host: string;
   pathname: string;
@@ -192,7 +222,7 @@ export function decideHostRouting(input: {
     const dest = productOrigin.replace(/\/$/, '');
     return {
       type: 'redirect',
-      location: `${dest}${pathname}${search}`,
+      location: `${dest}${pathname}${productRedirectSearch(search)}`,
       status: 302,
     };
   }
