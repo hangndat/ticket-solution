@@ -84,7 +84,18 @@ test('timeout and 5xx never admit', () => {
     },
     networkError: false,
   });
-  assert.equal(already.phase, 'admitted');
-  assert.equal(already.admissionKind, 'already');
-  assert.equal(classifySupervisorOp(already), 'admission');
+  assert.equal(already.phase, 'denied');
+  assert.equal(already.admissionKind, undefined);
+  assert.equal(classifySupervisorOp(already), 'not-admission');
+});
+
+test('legacy already-checked-in history is not a supervisor admission', () => {
+  const legacyAlready: GateOp = {
+    ...holding,
+    phase: 'admitted',
+    admissionKind: 'already',
+    checkinId: '66666666-6666-4666-8666-666666666666',
+    message: 'Đã check-in. Kết quả đã rõ — cho vào theo lần ghi nhận trước.',
+  };
+  assert.equal(classifySupervisorOp(legacyAlready), 'not-admission');
 });

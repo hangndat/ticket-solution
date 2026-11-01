@@ -41,8 +41,8 @@ export type GateOp = {
   /** Link to SecureStore offline queue row when phase === 'queued'. */
   clientEventId?: string;
   /**
-   * UI-only hint when phase === 'admitted'.
-   * Does not affect classifyScan / reconcile / supervisor admission class.
+   * UI hint when phase === 'admitted'; legacy `already` entries are not
+   * supervisor admissions and never authorize a new presentation.
    */
   admissionKind?: 'fresh' | 'already';
   /** Device-local history ordering; stamped via stampGateOpsRecordedAt. */
@@ -101,14 +101,11 @@ export function classifyScan(
   ops: readonly GateOp[],
   ticketId: string,
 ):
-  | { action: 'show'; op: GateOp }
   | { action: 'wait'; op: GateOp }
   | { action: 'start' } {
   const mine = ops.filter((op) => op.ticketId === ticketId);
-  const admitted = mine.find((op) => op.phase === 'admitted' && op.checkinId);
-  if (admitted) return { action: 'show', op: admitted };
-  const recorded = mine.find((op) => op.phase === 'recorded' && op.checkinId);
-  if (recorded) return { action: 'show', op: recorded };
+  // Completed local history is not proof for a new presentation. Every fresh
+  // QR/manual proof must reach the server before the UI can admit again.
   const queued = mine.find((op) => op.phase === 'queued');
   if (queued) return { action: 'wait', op: queued };
   const inflight = mine.find(
@@ -146,10 +143,11 @@ export type SupervisorClass = 'admission' | 'not-admission';
 
 /** Only a recorded check-in is an admission. Unknown/queued are never admissions. */
 export function classifySupervisorOp(
-  op: Pick<GateOp, 'phase' | 'checkinId'>,
+  op: Pick<GateOp, 'phase' | 'checkinId' | 'admissionKind'>,
 ): SupervisorClass {
   if (
     op.phase === 'admitted' &&
+    op.admissionKind !== 'already' &&
     typeof op.checkinId === 'string' &&
     op.checkinId.length > 0
   ) {
@@ -200,12 +198,11 @@ export function applyConfirm(op: GateOp, result: FetchResult): GateOp {
   if (result.status === 409 && body?.code === 'ALREADY_CHECKED_IN') {
     return {
       ...op,
-      phase: 'admitted',
-      admissionKind: 'already',
-      checkinId: typeof body.checkinId === 'string' ? body.checkinId : op.checkinId,
+      phase: 'denied',
+      admissionKind: undefined,
+      checkinId: undefined,
       token: undefined,
-      message:
-        'Đã check-in. Kết quả đã rõ — cho vào theo lần ghi nhận trước, không tạo lượt mới.',
+      message: 'Vé đã được check-in trước đó. Không cho vào.',
     };
   }
   return {
@@ -236,6 +233,8 @@ function gateFailureMessage(
     case 'TICKET_NOT_ACTIVE':
     case 'TICKET_REVOKED':
       return 'Vé đã bị thu hồi hoặc không còn hiệu lực. Không cho vào.';
+    case 'ALREADY_CHECKED_IN':
+      return 'Vé đã được check-in trước đó. Không cho vào.';
     default:
       return fallback;
   }
