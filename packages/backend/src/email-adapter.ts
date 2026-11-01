@@ -22,8 +22,6 @@ export type TicketIssuedEmailPayload = {
   qrPng: Buffer;
   /** Stable Message-ID / business correlation. */
   messageId?: string;
-  credentialVersion: number;
-  credentialTokenHash: string;
 };
 
 export type EmailSendResult = {

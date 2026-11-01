@@ -19,8 +19,8 @@ const {
   redeemAndIssueTicket,
   unwrapRedeemOutcome,
   readCodeHmacEnvironment,
-  processClaimedOutbox,
-  relayOutboxOnce,
+  processClaimedOutbox: processClaimedOutboxRaw,
+  relayOutboxOnce: relayOutboxOnceRaw,
   claimOutboxBatch,
   collectWorkerDueJobSnapshot,
   metricsQuantileSeconds,
@@ -30,6 +30,21 @@ const {
   saveEventConfigVersion,
   DEFAULT_TICKET_ISSUED_TEMPLATE,
 } = require('../dist');
+const { withTestEmailSigner } = require('./gate-test-credentials.cjs');
+
+async function relayOutboxOnce(db, email, leaseOwner, limit, options) {
+  return relayOutboxOnceRaw(
+    db,
+    email,
+    leaseOwner,
+    limit,
+    withTestEmailSigner(options),
+  );
+}
+
+async function processClaimedOutbox(db, email, rows, options) {
+  return processClaimedOutboxRaw(db, email, rows, withTestEmailSigner(options));
+}
 
 const TASK_LABEL = 'task_9d8888fbc855';
 

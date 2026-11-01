@@ -8,7 +8,7 @@ const db = createDatabase(process.env.DATABASE_URL, 2);
 relayOutboxOnce(db, createNoopEmailAdapter(), 'worker-crash-process', 10, {
   credentialKeyMaterial: process.env.TEST_CREDENTIAL_KEY,
   publicWebBaseUrl: 'https://tickets.example.test',
-  env: { NODE_ENV: 'test' },
+  env: { ...process.env, NODE_ENV: 'test' },
   apns: {
     async send() {
       process.stdout.write('APNS_ACCEPTED\n');
