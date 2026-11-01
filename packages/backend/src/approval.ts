@@ -16,6 +16,8 @@ import { expirePendingRequest } from './pending-expiry';
 import type { FormAnswerValue } from '@ticket/contracts';
 import { lockIssuanceQuotas } from './quota-lock';
 import { isRetryableTransactionConflict } from './transaction-conflict';
+import { assignManualEntryCode } from './gate';
+import { readGateManualCodePepper } from './gate-credential';
 
 export const APPROVE_COMMAND = 'redemption.approve' as const;
 export const DENY_COMMAND = 'redemption.deny' as const;
@@ -49,6 +51,8 @@ export type DecideRedemptionInput = {
   decision: ApprovalDecision;
   idempotencyKey: string;
   reason?: string | null;
+  /** Internal API configuration; never accepted from a public request body. */
+  manualCodePepper?: import('./code-hmac').CodeHmacConfig;
 };
 
 export type ApprovalResult = {
@@ -828,6 +832,13 @@ async function approvePending(
       'ACTIVE', 1, ${JSON.stringify(entitlement)}::jsonb, now(), now()
     )
   `;
+  await assignManualEntryCode(tx, {
+    tenantId: input.tenantId,
+    eventId: input.eventId,
+    ticketId,
+    manualCodePepper: input.manualCodePepper ?? readGateManualCodePepper(process.env),
+    credentialKeyMaterial,
+  });
 
   const rawToken = randomBytes(32).toString('base64url');
   const sealed = sealCredentialToken(rawToken, credentialKeyMaterial);

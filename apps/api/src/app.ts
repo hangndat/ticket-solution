@@ -15,8 +15,10 @@ import {
 } from '@nestjs/swagger';
 import { API_VERSION } from '@ticket/contracts';
 import {
+  readGateCredentialConfig,
   readProcessEnvironment,
   type PrismaClient,
+  type GateCredentialConfig,
 } from '@ticket/backend';
 import { ConfigPublishController, ConfigPublishService } from './config';
 import { InventoryController, InventoryService } from './inventory';
@@ -122,13 +124,23 @@ export async function createApp(
   const env = normalized.env ?? process.env;
 
   const issueDeps = resolveIssueDeps(env);
+  const credentialKey = identity.credentialKey ?? issueDeps.credentialKey;
+  const gateCredentialConfig: GateCredentialConfig | null =
+    credentialKey &&
+    (env['GATE_CREDENTIAL_CURRENT_KEY_ID'] ||
+      env['GATE_CREDENTIAL_SIGNING_KEY_SEALED'] ||
+      env['GATE_CREDENTIAL_VERIFY_KEYS_JSON'] ||
+      env['GATE_MANUAL_CODE_PEPPER'])
+      ? await readGateCredentialConfig(env, credentialKey)
+      : null;
   const ticketDeps: TicketServices = {
     db: identity.db,
     verifier: identity.verifier,
     users: identity.users,
     bootError: identity.bootError,
     hmac: identity.hmac ?? issueDeps.hmac,
-    credentialKey: identity.credentialKey ?? issueDeps.credentialKey,
+    credentialKey,
+    gateCredentialConfig,
     routingPeppers: issueDeps.routingPeppers,
     resolveTokenSecret: issueDeps.resolveTokenSecret,
   };
