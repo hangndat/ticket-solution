@@ -44,6 +44,22 @@ function databaseError(code, postgresCode, message) {
   });
 }
 
+function adapterDatabaseError(constraintIndex) {
+  return Object.assign(new Error('Raw query failed'), {
+    code: 'P2010',
+    meta: {
+      driverAdapterError: {
+        cause: {
+          originalCode: '23503',
+          kind: 'ForeignKeyConstraintViolation',
+          constraint: { index: constraintIndex },
+          originalMessage: `Foreign key violation on ${constraintIndex}`,
+        },
+      },
+    },
+  });
+}
+
 function createTransactionDatabase(insertError) {
   const committed = { grants: [], auditTenantIds: [] };
   let grantInsertAttempts = 0;
@@ -126,6 +142,28 @@ test('foreign tenant/event support grant mismatch returns hidden 404 and commits
   assert.equal(body.eventId, originalEventId);
 });
 
+test('Prisma adapter support grant event FK returns hidden 404 and commits no grant or audit', async () => {
+  const store = createTransactionDatabase(
+    adapterDatabaseError('support_grants_event_fk'),
+  );
+  const service = createService(store.db);
+
+  await assert.rejects(
+    () => service.supportGrant('Bearer platform-token', supportGrantBody()),
+    (error) => {
+      assert.equal(error.getStatus(), 404);
+      assert.equal(error.getResponse().code, PLATFORM_ERROR_CODES.RESOURCE_NOT_FOUND);
+      assert.equal(error.getResponse().message, 'Resource not found');
+      return true;
+    },
+  );
+
+  assert.equal(store.grantInsertAttempts, 1);
+  assert.equal(store.auditInsertAttempts, 0);
+  assert.deepEqual(store.committed.grants, []);
+  assert.deepEqual(store.committed.auditTenantIds, []);
+});
+
 test('support grant API propagates unrelated database errors', async () => {
   const unrelatedError = databaseError(
     'P2010',
@@ -138,4 +176,22 @@ test('support grant API propagates unrelated database errors', async () => {
     () => service.supportGrant('Bearer platform-token', supportGrantBody()),
     (error) => error === unrelatedError,
   );
+});
+
+test('support grant API propagates Prisma adapter errors for unrelated foreign keys', async () => {
+  const unrelatedError = adapterDatabaseError(
+    'support_grants_operator_user_id_fkey',
+  );
+  const store = createTransactionDatabase(unrelatedError);
+  const service = createService(store.db);
+
+  await assert.rejects(
+    () => service.supportGrant('Bearer platform-token', supportGrantBody()),
+    (error) => error === unrelatedError,
+  );
+
+  assert.equal(store.grantInsertAttempts, 1);
+  assert.equal(store.auditInsertAttempts, 0);
+  assert.deepEqual(store.committed.grants, []);
+  assert.deepEqual(store.committed.auditTenantIds, []);
 });
