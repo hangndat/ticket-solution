@@ -23,7 +23,7 @@ const {
   AuthzError,
   AUTHZ_ERROR_CODES,
   claimOutboxBatch,
-  relayOutboxOnce,
+  relayOutboxOnce: relayOutboxOnceRaw,
   createFailingEmailAdapter,
   createNoopEmailAdapter,
   openStaffSession,
@@ -33,7 +33,17 @@ const {
   unwrapConfirmOutcome,
   GATE_ERROR_CODES,
 } = require('../dist');
-const { reserveCheckin } = require('./gate-test-credentials.cjs');
+const { reserveCheckin, withTestEmailSigner } = require('./gate-test-credentials.cjs');
+
+async function relayOutboxOnce(db, email, leaseOwner, limit, options) {
+  return relayOutboxOnceRaw(
+    db,
+    email,
+    leaseOwner,
+    limit,
+    withTestEmailSigner(options),
+  );
+}
 
 const docker = (...args) =>
   execFileSync('docker', args, {

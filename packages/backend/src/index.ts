@@ -520,6 +520,8 @@ export {
   readPublishedGuideContact,
 } from './notification-templates';
 export {
+  buildGateCredentialQrJson,
+  renderGateCredentialQrPng,
   buildCredentialQrJson,
   renderCredentialQrPng,
   openCurrentCredentialForQr,
