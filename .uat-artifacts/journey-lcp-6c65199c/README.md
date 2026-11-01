@@ -108,6 +108,5 @@ task against `@ticket/ui`'s build output / root layout with the right
 owner(s).
 
 ## Files
-- `experience-run{1,2,3}.report.json` / `.report.html` — raw Lighthouse reports, VI, post-fix.
-- `en-experience-run{1,2,3}.report.json` / `.report.html` — raw Lighthouse reports, EN, post-fix.
-- `*.stderr.log` — Lighthouse CLI stderr per run (non-fatal warnings only).
+- `experience-run2.report.json` — one retained Lighthouse sample for the VI median.
+- The other raw reports remain available in the Git history of PR #1091; the results table above records all six runs.
