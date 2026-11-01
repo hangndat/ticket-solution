@@ -1,5 +1,7 @@
 # Release bất biến cho VPS — #899
 
+Sơ đồ luồng deploy (build tăng dần, rollout, dữ liệu trên VPS): [DEPLOY-PIPELINE.md](./DEPLOY-PIPELINE.md).
+
 **Trạng thái:** cutover bất biến **đầu tiên trên production** 27/10/2026, SHA nguồn `2645999f0ad535276b63a95c6c96bace9cff025e` (5 service; evidence comment Epic #914). Quy trình dưới đây vẫn là hợp đồng pin/verify. Chỉ operator có ủy quyền production mới chạy Compose trên VPS. Không đọc hoặc đưa `.env`, APNs `.p8`, realm secrets, signing keys vào release/log/manifest. `/opt/vemoki/state` và `/opt/vemoki/secrets` nằm ngoài release. Cutover ≠ pilot ready ≠ store.
 
 ## Layout và contract
