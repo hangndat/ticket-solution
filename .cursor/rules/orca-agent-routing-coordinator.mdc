@@ -19,7 +19,7 @@ Bổ sung [orca-agent-routing-core.mdc](./orca-agent-routing-core.mdc). Leader *
 
 ## Spawn evidence
 
-OpenCode Go gặp limit/quota thật → đọc [opencode-limit-fallback.mdc](opencode-limit-fallback.mdc), checkpoint attempt và phục hồi bằng `opencode-go/beam-free` cùng tier qua wrapper. Đây là fallback user đã duyệt, không đổi primary Flash/Pro hoặc route reviewer.
+OpenCode Go gặp limit/quota hoặc lỗi runtime → đọc [opencode-limit-fallback.mdc](opencode-limit-fallback.mdc), checkpoint attempt và phục hồi bằng `opencode-go/beam-free` cùng tier qua wrapper. Đây là fallback user đã duyệt, không đổi primary Flash/Pro hoặc route reviewer.
 
 Trước mỗi spawn: ghi agent, Cost tier, Persona, model requested/effective, lý do. Codex quota không gate Cursor spawn.
 
@@ -67,3 +67,5 @@ Coordinator gốc dùng Codex theo chỉ định user. Khi code, OpenCode Go Fla
 
 - Tiết kiệm quota: việc khó nhưng scope rõ/rủi ro giới hạn mặc định `advanced`; `high` cần lý do rủi ro/kiến trúc cụ thể (`--tier-reason`). Không hạ phần auth/tenant/RLS, transaction/race, migration rủi ro hoặc verdict invariant nhạy cảm.
 - Quota trước dispatch theo cost-catalog: dự phòng 20%, việc thường hoãn khi chạm ngưỡng; dùng dự phòng cần `--essential-reason`. Hết/unknown/stale chặn worker Codex mới; không tự downgrade hoặc đổi billing. Provider khác kiểm thủ công; xác minh account snapshot trùng worker.
+
+User duyệt 02/11/2026: OpenCode/Beam lỗi → Codex tiết kiệm `gpt-6-luna`, effort theo tier (low/medium/high), cùng Task/employee/findings; quota/reserve/caps vẫn bắt buộc. Đây là ngoại lệ coding cho chỉ định OpenCode primary, không dùng route reviewer làm fallback ngầm. Chi tiết trong rule fallback trên.
