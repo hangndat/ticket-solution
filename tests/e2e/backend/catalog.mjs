@@ -198,8 +198,10 @@ export const catalog = {
   ],
   'SEC-03': [],
   'SEC-04': [
-    a('redemptions-resolve-rls', 'resolve rate limit', 'D'),
+    a('redemptions-resolve-rls', 'resolve rate limit and API endpoint matrix', 'D'),
+    b('job04-resend-caps', '[JOB-04] D staff resend: cooldown'),
     a('import-list', 'G-09 API limits'),
+    a('invitation-list', 'G-08 API requires bearer, masks q result'),
     a('tenant-limits', 'G-10 API limiter'),
   ],
   'SEC-05': [

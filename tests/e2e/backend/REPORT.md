@@ -116,3 +116,11 @@ Checks (SHA `d54f3e3d8ce2d4f177fb8f6d2957e89b09516f19`): `node tests/e2e/backend
 - POL-02 có test D lọc audit quá 730 ngày khi đọc, nhưng chưa thấy sweeper anonymize ticket/check-in 365 ngày hoặc xóa audit quá 730 ngày trong worker hiện hành; POL-03 thiếu object cleanup 90 ngày theo O06. Đây là gap feature/test, không đánh PASS bằng hằng số retention.
 - JOB-08 là OUT theo PLAN: không có provider callback handler/transport hiện hành để kiểm chữ ký/raw body/order.
 - Không có kết luận full 46 ID PASS; `coverage.json` giữ blocked khi còn nhánh chưa được chứng minh.
+
+## SEC-04 D-layer rate-limit matrix (#1036)
+
+`apps/api/test/redemptions-resolve-rls.test.cjs` dùng PostgreSQL cô lập, runtime role có RLS và `app.inject` với JWT local đã ký. Test bão hòa riêng từng bucket của global resolve, redeem, Gate reserve/confirm/offline-sync và receipt; mỗi route trả `429`, `RATE_LIMITED`, `retryable: true`, có `requestId`. Counter của request bị từ chối không tăng; snapshot mã đổi vé, quota, request/operation, ticket, Gate reservation/check-in/offline ledger, audit và outbox không đổi. Actor B vẫn resolve được khi bucket resolve của actor A đã đầy. Test reset bucket sau mỗi nhánh để route kế tiếp không PASS nhầm nếu dùng bucket trước; receipt được kiểm với bucket riêng của offline-sync.
+
+`catalog.mjs`/`coverage.json` map thêm D resend staff/recipient cooldown và hourly cap từ `job04-resend-caps.test.cjs`, cùng U invitation list `Retry-After` đã tồn tại. `pnpm test:integration:local --case SEC-04 --no-build` PASS 5/5 selector trên working tree sau build current checkout; exact clean SHA và run sau commit được ghi ở Draft PR. Không yêu cầu `Retry-After` cho Gate/redeem/resolve vì PLAN §6.4 chỉ ràng buộc header cho các route dùng `RateLimitedWithRetryAfter`.
+
+**SEC-04 full acceptance: BLOCKED.** H cần Keycloak/HTTPS/ingress thật để kiểm identity và bucket qua HTTP, admission token signature/expiry/scope, resend cooldown/limit/status qua endpoint, và toàn bộ ma trận 429/`Retry-After` cho import/invitation/tenant limits. Fixture H trong `tests/e2e/harness/seed.mjs` đang bị source admission chặn theo Dispatch; không đọc hoặc sửa nguồn đó, không suy H từ D/U. Không đổi runtime hoặc policy.
