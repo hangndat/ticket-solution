@@ -1,5 +1,7 @@
 # Kế hoạch kiểm thử local — Web, Portal và backend
 
+> Đối chiếu 01/11/2026: [ACCEPTANCE.md](ACCEPTANCE.md) gom evidence theo từng ID từ các PR đã tích hợp: **33 nhóm có nghiệm thu tại mốc lịch sử, 52 nhóm còn thiếu gate toàn phần, JOB-08 OUT**. Đây không phải full regression mới trên main hiện tại; các checkpoint ngày 30/10 bên dưới giữ nguyên SHA và phạm vi.
+
 Ngày đối chiếu: **28/10/2026**. Source baseline: `022cb80fd159dad2a7ebd0eeeea07fd64391f90a`.
 
 **Trạng thái: danh mục AC đã review, implementation và runtime evidence còn một phần.** Đây là phạm vi kiểm thử, không phải kết luận sản phẩm đã đáp ứng PRD. Một ID bên dưới có thể tách thành nhiều test theo dữ liệu; không tương đương một file test. Quyết định tách PR #1028 và trạng thái full AC ở bảng tiếp theo.
@@ -10,18 +12,18 @@ Danh mục hiện có **86 nhóm ca: 70 P0, 16 P1**, chia 9 suite. Smoke ban đ�
 
 User đã chọn tách các nhóm chưa đạt full functional AC khỏi gate của PR #1028. Trên SHA `e6359be97f7d4cd283ffd9d2b765ce34f44863ba`, matrix F04 ghi **0 PASS, 85 BLOCKED, 1 OUT**; selector chạy xanh hoặc test viết sẵn không đồng nghĩa cả nhóm đã PASS. PR #1028 bàn giao harness, test/coverage hiện có và thay đổi O06 theo review riêng; không tuyên bố hoàn thành 85 nhóm hoặc miễn gate phát hành/pilot. Các thay đổi test đang nằm ngoài commit và kết quả trên working tree dirty không là bằng chứng theo SHA của PR.
 
-| Suite | ID còn BLOCKED | P0 | P1 | Issue theo dõi full AC |
-| --- | --- | ---: | ---: | --- |
-| AUTH | AUTH-01–08 | 8 | 0 | [#1029](https://github.com/hangndat/ticket-solution/issues/1029) |
-| DB | DB-01–19 | 16 | 3 | [#1030](https://github.com/hangndat/ticket-solution/issues/1030) |
-| GATE | GATE-01–09, gồm GATE-03 signed QR | 9 | 0 | [#1031](https://github.com/hangndat/ticket-solution/issues/1031) |
-| JOB | JOB-01–07 | 6 | 1 | [#1032](https://github.com/hangndat/ticket-solution/issues/1032) |
-| PLAT | PLAT-01–05 | 4 | 1 | [#1033](https://github.com/hangndat/ticket-solution/issues/1033) |
-| POL | POL-01–04, gồm POL-03 retention | 0 | 4 | [#1034](https://github.com/hangndat/ticket-solution/issues/1034) |
-| PORT | PORT-01–14 | 10 | 4 | [#1035](https://github.com/hangndat/ticket-solution/issues/1035) |
-| SEC | SEC-01–06 | 6 | 0 | [#1036](https://github.com/hangndat/ticket-solution/issues/1036) |
-| WEB | WEB-01–13, gồm WEB-13 claim branches | 11 | 2 | [#1037](https://github.com/hangndat/ticket-solution/issues/1037) |
-| **BLOCKED** | **85 ID** | **70** | **15** | **Chưa lên lịch trên Project #3** |
+| Suite       | ID còn BLOCKED                       |     P0 |     P1 | Issue theo dõi full AC                                           |
+| ----------- | ------------------------------------ | -----: | -----: | ---------------------------------------------------------------- |
+| AUTH        | AUTH-01–08                           |      8 |      0 | [#1029](https://github.com/hangndat/ticket-solution/issues/1029) |
+| DB          | DB-01–19                             |     16 |      3 | [#1030](https://github.com/hangndat/ticket-solution/issues/1030) |
+| GATE        | GATE-01–09, gồm GATE-03 signed QR    |      9 |      0 | [#1031](https://github.com/hangndat/ticket-solution/issues/1031) |
+| JOB         | JOB-01–07                            |      6 |      1 | [#1032](https://github.com/hangndat/ticket-solution/issues/1032) |
+| PLAT        | PLAT-01–05                           |      4 |      1 | [#1033](https://github.com/hangndat/ticket-solution/issues/1033) |
+| POL         | POL-01–04, gồm POL-03 retention      |      0 |      4 | [#1034](https://github.com/hangndat/ticket-solution/issues/1034) |
+| PORT        | PORT-01–14                           |     10 |      4 | [#1035](https://github.com/hangndat/ticket-solution/issues/1035) |
+| SEC         | SEC-01–06                            |      6 |      0 | [#1036](https://github.com/hangndat/ticket-solution/issues/1036) |
+| WEB         | WEB-01–13, gồm WEB-13 claim branches |     11 |      2 | [#1037](https://github.com/hangndat/ticket-solution/issues/1037) |
+| **BLOCKED** | **85 ID**                            | **70** | **15** | **Chưa lên lịch trên Project #3**                                |
 
 `JOB-08` là P1 **OUT** theo PLAN §6.3, không tính vào 85 ID. GATE-03 và WEB-13 vẫn là blocker sản phẩm bên trong issue GATE/WEB, không được đếm hai lần; roadmap phải review trước khi mở feature mới. Tách scope PR không đổi expected outcome của bất kỳ ID nào.
 
