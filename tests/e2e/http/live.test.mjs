@@ -29,6 +29,8 @@ const CASE_IDS = [
   'DB-11',
   'DB-12',
   'DB-14',
+  'DB-15',
+  'DB-16',
   'JOB-04',
   'WEB-04',
   'WEB-05',
@@ -1258,6 +1260,350 @@ for (const caseId of CASE_IDS) {
   test(`[${caseId}] live HTTP`, async () => {
     const ctx = context(caseId);
     const f = ctx.fixture;
+    if (caseId === 'DB-15') {
+      const control = {
+        ...f,
+        data: { ...f.data, controlDatabaseUrl: process.env.DATABASE_URL },
+      };
+      const owner = await bearer(ctx, 'owner');
+      const attendee = await bearer(ctx, 'attendee');
+      const scanner = await bearer(ctx, 'scanner');
+      const supervisor = await bearer(ctx, 'supervisor');
+      const [configuration] = await web04Query(
+        control,
+        f.tenantId,
+        `SELECT v.payload FROM events e LEFT JOIN event_config_versions v ON v.tenant_id = e.tenant_id AND v.event_id = e.id AND v.version = e.published_config_version WHERE e.tenant_id = $1::uuid AND e.id = $2::uuid`,
+        [f.tenantId, f.eventId],
+      );
+      const payload = configuration?.payload ?? {};
+      const formVersion = (payload.form ?? payload.formDefinition)?.formVersion;
+      const termsVersion = payload.termsVersion;
+      const issue = await request(
+        ctx,
+        'POST',
+        redemptionPath(f),
+        attendee,
+        {
+          code: f.code,
+          ...(formVersion ? { formVersion } : {}),
+          ...(termsVersion ? { termsVersion } : {}),
+          answers: f.data?.answers ?? {},
+          termsAccepted: true,
+        },
+        { 'idempotency-key': randomUUID() },
+      );
+      expectStatus(issue, 201);
+      const ticketId = required(issue.body.ticketId, 'DB-15 ticketId');
+      const readReport = async () => {
+        const response = await request(ctx, 'GET', reportPath(f), owner);
+        expectStatus(response, 200);
+        return response.body;
+      };
+      const initial = await readReport();
+      await web04Query(
+        control,
+        f.tenantId,
+        `UPDATE tickets SET state = 'USED' WHERE tenant_id = $1::uuid AND id = $2::uuid`,
+        [f.tenantId, ticketId],
+      );
+      const usedOnly = await readReport();
+      assert.equal(usedOnly.checkInSuccessCount, initial.checkInSuccessCount);
+      assert.equal(
+        usedOnly.ticketsByState.USED,
+        initial.ticketsByState.USED + 1,
+      );
+      await web04Query(
+        control,
+        f.tenantId,
+        `UPDATE tickets SET state = 'ACTIVE' WHERE tenant_id = $1::uuid AND id = $2::uuid`,
+        [f.tenantId, ticketId],
+      );
+      const session = await request(
+        ctx,
+        'POST',
+        gatePath(f, 'sessions'),
+        scanner,
+        { tenantId: f.tenantId },
+      );
+      expectStatus(session, 200);
+      const reserveBody = {
+        tenantId: f.tenantId,
+        staffSessionId: session.body.sessionId,
+        ticketId,
+      };
+      const reservation = await request(
+        ctx,
+        'POST',
+        gatePath(f, 'reservations'),
+        scanner,
+        reserveBody,
+      );
+      expectStatus(reservation, 200);
+      const confirmed = await request(
+        ctx,
+        'POST',
+        `${gatePath(f, 'reservations')}/${reservation.body.reservationId}/confirm`,
+        scanner,
+        {
+          tenantId: f.tenantId,
+          staffSessionId: session.body.sessionId,
+          token: reservation.body.token,
+        },
+      );
+      expectStatus(confirmed, 200);
+      const rejection = await request(
+        ctx,
+        'POST',
+        gatePath(f, 'reservations'),
+        scanner,
+        reserveBody,
+      );
+      expectStatus(rejection, 409, 'TICKET_NOT_ACTIVE');
+      const afterConfirm = await readReport();
+      assert.equal(
+        afterConfirm.checkInSuccessCount,
+        initial.checkInSuccessCount + 1,
+      );
+      assert.equal(
+        afterConfirm.rejectByReason.TICKET_NOT_ACTIVE ?? 0,
+        (initial.rejectByReason.TICKET_NOT_ACTIVE ?? 0) + 1,
+      );
+      const checkinId = required(confirmed.body.checkinId, 'DB-15 checkinId');
+      const undo = await request(
+        ctx,
+        'POST',
+        `${gatePath(f, 'checkins')}/${checkinId}/undo`,
+        supervisor,
+        { tenantId: f.tenantId, reason: 'DB-15 correction' },
+      );
+      expectStatus(undo, 201);
+      const afterUndo = await readReport();
+      assert.equal(afterUndo.checkInSuccessCount, initial.checkInSuccessCount);
+      assert.equal(
+        afterUndo.rejectByReason.TICKET_NOT_ACTIVE,
+        afterConfirm.rejectByReason.TICKET_NOT_ACTIVE,
+      );
+      const history = await web04Query(
+        control,
+        f.tenantId,
+        `SELECT c.ticket_id, c.undone_at, c.undo_reason, c.undone_by, (SELECT count(*)::int FROM audit_logs a WHERE a.tenant_id = c.tenant_id AND a.event_id = c.event_id AND a.resource_id = c.id AND a.action = 'gate.undo') AS undo_audits FROM checkins c WHERE c.tenant_id = $1::uuid AND c.id = $2::uuid`,
+        [f.tenantId, checkinId],
+      );
+      assert.equal(history.length, 1);
+      assert.equal(history[0].ticket_id, ticketId);
+      assert.ok(history[0].undone_at);
+      assert.equal(history[0].undo_reason, 'DB-15 correction');
+      assert.equal(history[0].undone_by, f.accounts.supervisor.userId);
+      assert.equal(history[0].undo_audits, 1);
+      const noteId = randomUUID();
+      await web04Query(
+        control,
+        f.tenantId,
+        `INSERT INTO notifications (tenant_id, event_id, id, business_key, channel, kind, state, attempts, last_error, payload) VALUES ($1::uuid, $2::uuid, $3::uuid, $4, 'email', 'TicketIssued', 'UNKNOWN', 1, 'smtp down', '{}'::jsonb)`,
+        [f.tenantId, f.eventId, noteId, `db15-${noteId}`],
+      );
+      const retry = await readReport();
+      assert.equal(retry.emailNeedsCsCount, afterUndo.emailNeedsCsCount);
+      await web04Query(
+        control,
+        f.tenantId,
+        `UPDATE notifications SET state = 'DEAD', attempts = 2, last_error = 'smtp down' WHERE tenant_id = $1::uuid AND id = $2::uuid`,
+        [f.tenantId, noteId],
+      );
+      const finalFailure = await readReport();
+      assert.equal(finalFailure.emailNeedsCsCount, retry.emailNeedsCsCount + 1);
+      const cancelledNote = randomUUID();
+      await web04Query(
+        control,
+        f.tenantId,
+        `INSERT INTO notifications (tenant_id, event_id, id, business_key, channel, kind, state, attempts, last_error, payload) VALUES ($1::uuid, $2::uuid, $3::uuid, $4, 'email', 'TicketIssued', 'DEAD', 0, 'ticket revoked/cancelled', '{}'::jsonb)`,
+        [f.tenantId, f.eventId, cancelledNote, `db15-${cancelledNote}`],
+      );
+      assert.equal(
+        (await readReport()).emailNeedsCsCount,
+        finalFailure.emailNeedsCsCount,
+      );
+      const [event] = await web04Query(
+        control,
+        f.tenantId,
+        `SELECT revision FROM events WHERE tenant_id = $1::uuid AND id = $2::uuid`,
+        [f.tenantId, f.eventId],
+      );
+      const cancelled = await request(
+        ctx,
+        'POST',
+        `/tenants/${f.tenantId}/events/${f.eventId}/cancel`,
+        owner,
+        {
+          expectedRevision: event.revision,
+          reason: 'DB-15 cancellation',
+          notifyAttendees: false,
+        },
+        { 'idempotency-key': randomUUID() },
+      );
+      expectStatus(cancelled, 201);
+      const afterCancel = await readReport();
+      assert.deepEqual(
+        { ...afterCancel, asOf: null },
+        { ...finalFailure, asOf: null },
+      );
+      return;
+    }
+    if (caseId === 'DB-16') {
+      // The isolated harness supplies its runtime DB connection to every child.
+      // All control queries below use SET LOCAL ROLE and tenant context.
+      const control = {
+        ...f,
+        data: { ...f.data, controlDatabaseUrl: process.env.DATABASE_URL },
+      };
+      const owner = await bearer(ctx, 'owner');
+      const manager = await bearer(ctx, 'manager');
+      const attendee = await bearer(ctx, 'attendee');
+      const ids = [randomUUID(), randomUUID(), randomUUID()].sort();
+      const foreignTenant = randomUUID();
+      const foreignEvent = randomUUID();
+      await web04Query(
+        control,
+        foreignTenant,
+        `INSERT INTO tenants (id, slug, name) VALUES ($1::uuid, $2, 'DB16 foreign')`,
+        [foreignTenant, `db16-${foreignTenant}`],
+      );
+      await web04Query(
+        control,
+        foreignTenant,
+        `INSERT INTO events (tenant_id, id, slug, name) VALUES ($1::uuid, $2::uuid, $3, 'DB16 foreign event')`,
+        [foreignTenant, foreignEvent, `db16-${foreignEvent}`],
+      );
+      const members = await web04Query(
+        control,
+        f.tenantId,
+        `SELECT id, user_id FROM memberships WHERE tenant_id = $1::uuid AND user_id = ANY($2::uuid[]) AND revoked_at IS NULL`,
+        [
+          f.tenantId,
+          [
+            required(f.accounts.owner.userId, 'owner userId'),
+            required(f.accounts.manager.userId, 'manager userId'),
+          ],
+        ],
+      );
+      assert.equal(members.length, 2);
+      for (const [index, id] of ids.entries()) {
+        await web04Query(
+          control,
+          f.tenantId,
+          `INSERT INTO events (tenant_id, id, slug, name) VALUES ($1::uuid, $2::uuid, $3, $4)`,
+          [f.tenantId, id, `db16-${id}`, `DB16 event ${index}`],
+        );
+        if (index !== 1)
+          for (const member of members) {
+            await web04Query(
+              control,
+              f.tenantId,
+              `INSERT INTO event_assignments (id, tenant_id, event_id, membership_id, permissions, activated_at, updated_at) VALUES ($1::uuid, $2::uuid, $3::uuid, $4::uuid, ARRAY['report.read'], now(), now())`,
+              [randomUUID(), f.tenantId, id, member.id],
+            );
+          }
+      }
+      const snapshot = (tenantId) =>
+        web04Query(
+          control,
+          tenantId,
+          `SELECT
+            (SELECT md5(COALESCE(string_agg(row_to_json(t)::text, ',' ORDER BY id), '')) FROM events t) AS events,
+            (SELECT md5(COALESCE(string_agg(row_to_json(t)::text, ',' ORDER BY id), '')) FROM memberships t) AS memberships,
+            (SELECT md5(COALESCE(string_agg(row_to_json(t)::text, ',' ORDER BY id), '')) FROM event_assignments t) AS assignments,
+            (SELECT md5(COALESCE(string_agg(row_to_json(t)::text, ',' ORDER BY id), '')) FROM tickets t) AS tickets,
+            (SELECT md5(COALESCE(string_agg(row_to_json(t)::text, ',' ORDER BY id), '')) FROM checkins t) AS checkins,
+            (SELECT md5(COALESCE(string_agg(row_to_json(t)::text, ',' ORDER BY id), '')) FROM audit_logs t) AS audits`,
+          [],
+        );
+      const before = await snapshot(f.tenantId);
+      const foreignBefore = await snapshot(foreignTenant);
+      const base = `/tenants/${f.tenantId}/reports/portfolio`;
+      for (const [role, token] of [
+        ['owner', owner],
+        ['manager', manager],
+      ]) {
+        const all = [];
+        let cursor = null;
+        for (let page = 0; page < 10; page++) {
+          const started = Date.now();
+          const res = await request(
+            ctx,
+            'GET',
+            `${base}?limit=1${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`,
+            token,
+          );
+          const finished = Date.now();
+          expectStatus(res, 200);
+          assert.equal(res.body.limit, 1);
+          assert.ok(
+            Date.parse(res.body.asOf) >= started - 1000 &&
+              Date.parse(res.body.asOf) <= finished + 1000,
+          );
+          assert.ok(res.body.items.length <= 1);
+          all.push(...res.body.items.map((item) => item.eventId));
+          cursor = res.body.nextCursor;
+          if (!cursor) break;
+        }
+        assert.equal(cursor, null, `${role}: pagination must terminate`);
+        assert.equal(new Set(all).size, all.length);
+        const expected = await web04Query(
+          control,
+          f.tenantId,
+          `SELECT e.id FROM events e JOIN event_assignments a ON a.tenant_id = e.tenant_id AND a.event_id = e.id JOIN memberships m ON m.tenant_id = a.tenant_id AND m.id = a.membership_id WHERE e.tenant_id = $1::uuid AND m.user_id = $2::uuid AND a.revoked_at IS NULL AND a.activated_at IS NOT NULL AND a.activated_at <= clock_timestamp() AND 'report.read' = ANY(a.permissions) ORDER BY e.id`,
+          [f.tenantId, f.accounts[role].userId],
+        );
+        assert.deepEqual(
+          all,
+          expected.map((row) => row.id),
+        );
+        assert.ok(all.includes(ids[0]) && all.includes(ids[2]));
+        assert.ok(!all.includes(ids[1]), `${role}: unassigned event leaked`);
+        assert.ok(!all.includes(foreignEvent), `${role}: foreign event leaked`);
+        const maximum = await request(ctx, 'GET', `${base}?limit=999`, token);
+        expectStatus(maximum, 200);
+        assert.equal(maximum.body.limit, 50);
+        const minimum = await request(ctx, 'GET', `${base}?limit=0`, token);
+        expectStatus(minimum, 200);
+        assert.equal(minimum.body.limit, 1);
+        expectStatus(
+          await request(ctx, 'GET', `${base}?cursor=invalid`, token),
+          422,
+        );
+        deny(
+          await request(ctx, 'GET', reportPath(f, f.tenantId, ids[1]), token),
+        );
+        deny(
+          await request(
+            ctx,
+            'GET',
+            `/tenants/${foreignTenant}/reports/portfolio`,
+            token,
+          ),
+        );
+        deny(
+          await request(
+            ctx,
+            'GET',
+            reportPath(f, foreignTenant, foreignEvent),
+            token,
+          ),
+        );
+      }
+      deny(await request(ctx, 'GET', base, attendee));
+      assert.deepEqual(
+        await snapshot(f.tenantId),
+        before,
+        'denied requests must not mutate tenant business rows',
+      );
+      assert.deepEqual(
+        await snapshot(foreignTenant),
+        foreignBefore,
+        'cross-tenant deny must not mutate foreign rows',
+      );
+      return;
+    }
     if (caseId === 'SEC-01') {
       const owner = await bearer(ctx, 'owner');
       const own = await request(ctx, 'GET', reportPath(f), owner);
