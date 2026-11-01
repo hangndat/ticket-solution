@@ -19,7 +19,7 @@ Bổ sung [orca-agent-routing-core.mdc](./orca-agent-routing-core.mdc). Leader *
 
 ## Spawn evidence
 
-OpenCode Go gặp limit/quota hoặc lỗi runtime → đọc [opencode-limit-fallback.mdc](opencode-limit-fallback.mdc), checkpoint attempt và phục hồi bằng `opencode-go/beam-free` cùng tier qua wrapper. Đây là fallback user đã duyệt, không đổi primary Flash/Pro hoặc route reviewer.
+OpenCode Go limit/quota → Beam Free; lỗi runtime OpenCode hoặc Beam cũng lỗi → Codex `gpt-6-luna` với effort theo tier. Đọc [opencode-limit-fallback.mdc](opencode-limit-fallback.mdc), checkpoint và phục hồi cùng Task/tier qua wrapper. Đây là fallback user đã duyệt, không đổi primary Flash/Pro hoặc route reviewer.
 
 Trước mỗi spawn: ghi agent, Cost tier, Persona, model requested/effective, lý do. Codex quota không gate Cursor spawn.
 
