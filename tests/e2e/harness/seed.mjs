@@ -265,6 +265,7 @@ export async function seedRuntime(state, caseIds) {
           'DB-12',
           'DB-14',
           'JOB-04',
+          'PLAT-03',
         ].includes(caseId)
       ) {
         // Private, run-scoped control for H/DB reconciliation under tenant RLS.
@@ -295,6 +296,7 @@ export async function seedRuntime(state, caseIds) {
           'SEC-05',
           'WEB-04',
           'WEB-05',
+          'PLAT-03',
         ].includes(caseId)
       ) {
         fixture.data.formVersion = 'form-v1';
@@ -2462,7 +2464,12 @@ export async function seedRuntime(state, caseIds) {
           redeemLimit: API_RATE_LIMITS.redeemPerUser,
         };
       }
-      if (caseId === 'SEC-01' || caseId === 'SEC-02' || caseId === 'DB-01') {
+      if (
+        caseId === 'SEC-01' ||
+        caseId === 'SEC-02' ||
+        caseId === 'DB-01' ||
+        caseId === 'PLAT-03'
+      ) {
         const foreignTenantId = randomUUID();
         const foreignEventId = randomUUID();
         await backend.withTenant(db, foreignTenantId, async (tx) => {
