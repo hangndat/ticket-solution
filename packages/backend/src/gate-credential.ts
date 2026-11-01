@@ -88,6 +88,9 @@ export async function readGateCredentialVerifyKeys(
     ids.add(kid);
     let key: jose.KeyLike;
     try {
+      if (Object.hasOwn(e, 'publicKeyPem') && Object.hasOwn(e, 'publicKeyJwk')) {
+        throw new Error('only one public key format is allowed');
+      }
       if (typeof e.publicKeyPem === 'string' && e.publicKeyPem.trim()) {
         // `createPublicKey` accepts private PEMs too, so reject private input
         // before deriving its public half for the verification keyring.
