@@ -14,6 +14,7 @@ const {
   seedEventInventory,
   tryConsumeRateLimit,
   readCodeHmacEnvironment,
+  signGateCredentialJws,
   backfillCodeRoutingFromRedemptionCodes,
 } = require('@ticket/backend');
 const {
@@ -21,6 +22,7 @@ const {
 } = require('../../../packages/backend/test/migration-files.cjs');
 const { createApp } = require('../dist/app');
 const { API_RATE_BUCKETS, API_RATE_LIMITS } = require('../dist/http-limits');
+const { createGateTestConfig } = require('./gate-test-config.cjs');
 
 const ISSUER = 'http://127.0.0.1:8080/realms/ticket';
 const AUDIENCE = 'ticket-api';
@@ -163,7 +165,7 @@ async function startIsolatedPostgres() {
   };
 }
 
-function testEnv() {
+function testEnv(gateKey) {
   return {
     ...process.env,
     SINGLE_CODE_RESOLVE_GLOBAL: '1',
@@ -171,6 +173,7 @@ function testEnv() {
     CODE_HMAC_VERSION: '1',
     TICKET_CREDENTIAL_KEY: CRED_KEY,
     REDEMPTION_RESOLVE_TOKEN_SECRET: CRED_KEY,
+    ...gateKey.env,
   };
 }
 
@@ -228,6 +231,7 @@ test(
     let container;
     let db;
     const { privateKey, verifier } = await localVerifier();
+    const gateKey = createGateTestConfig(CRED_KEY, 'fe715-gate-test-kid');
     try {
       const boot = await startIsolatedPostgres();
       container = boot.name;
@@ -322,7 +326,7 @@ test(
         oidcVerifier: verifier,
         users,
         database: db,
-        env: testEnv(),
+        env: testEnv(gateKey),
         hmac: HMAC,
         credentialKey: CRED_KEY,
       });
@@ -359,6 +363,11 @@ test(
 
       const auth = { authorization: 'Bearer ' + token };
       const uuid = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+      const gateJws = await signGateCredentialJws({
+        claims: { tid: tenantId, eid: eventId, tkt: uuid, ver: 1 },
+        privateKeyPem: gateKey.privateKeyPem,
+        kid: gateKey.kid,
+      });
       const rateCases = [
         {
           name: 'global resolve',
@@ -398,7 +407,11 @@ test(
           request: {
             method: 'POST',
             url: `/v1/gate/events/${eventId}/reservations`,
-            payload: { tenantId, ticketId: uuid, staffSessionId: uuid },
+            payload: {
+              tenantId,
+              staffSessionId: uuid,
+              presented: { kind: 'qr', jws: gateJws },
+            },
           },
         },
         {

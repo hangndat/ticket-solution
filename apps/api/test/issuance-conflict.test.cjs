@@ -12,6 +12,7 @@ const {
 } = require('@ticket/backend');
 const { migrationFiles } = require('../../../packages/backend/test/migration-files.cjs');
 const { createApp } = require('../dist/app');
+const { createGateTestConfig } = require('./gate-test-config.cjs');
 const { ApprovalService } = require('../dist/approval');
 
 const docker = (...args) => execFileSync('docker', args, {
@@ -126,10 +127,12 @@ test('F01 HTTP: pre-savepoint lock waits roll back and same-key retry issues onc
         if (!subject) throw new Error('Unexpected test authorization');
         return { issuer, subject, email: subject + '@example.test', emailVerified: true };
       } };
+      const gateConfig = createGateTestConfig('f01-local-credential-key');
       app = await createApp({ logging: false, database: db, users, oidcVerifier: verifier,
         hmac, credentialKey: 'f01-local-credential-key',
         env: { ...process.env, CODE_HMAC_PEPPER: 'f01-api-lock-test-pepper',
-          CODE_HMAC_VERSION: '1', TICKET_CREDENTIAL_KEY: 'f01-local-credential-key' } });
+          CODE_HMAC_VERSION: '1', TICKET_CREDENTIAL_KEY: 'f01-local-credential-key',
+          ...gateConfig.env } });
       await app.init();
       await app.getHttpAdapter().getInstance().ready();
       const base = `/v1/tenants/${tenantId}/events/${eventId}`;

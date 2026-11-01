@@ -4,6 +4,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { randomUUID } = require('node:crypto');
 const { createApp } = require('../dist/app');
+const { createGateTestConfig } = require('./gate-test-config.cjs');
 
 const tenantId = randomUUID();
 const eventId = randomUUID();
@@ -12,8 +13,23 @@ const actorId = randomUUID();
 const membershipId = randomUUID();
 const url = `/v1/gate/events/${eventId}/tickets/${ticketId}/reissue`;
 
+test('createApp rejects missing gate manual-code pepper at startup', async () => {
+  const credentialKey = 'local-test-key-for-missing-pepper';
+  const gateConfig = createGateTestConfig(credentialKey, 'gate-missing-pepper-test-kid');
+  const env = { ...gateConfig.env };
+  delete env.GATE_MANUAL_CODE_PEPPER;
+  await assert.rejects(
+    createApp({ logging: false, credentialKey, env }),
+    (error) =>
+      error.code === 'MANUAL_CODE_INVALID' &&
+      /GATE_MANUAL_CODE_PEPPER must be set/.test(error.message),
+  );
+});
+
 test('reissue HTTP requires reason and UUID idempotency key; CS is forbidden', async () => {
   let assigned = true;
+  const credentialKey = 'local-test-key-for-reissue';
+  const gateConfig = createGateTestConfig(credentialKey, 'gate-reissue-test-kid');
   const tx = {
     $queryRaw: async (strings) => {
       const sql = strings.join('?');
@@ -45,7 +61,8 @@ test('reissue HTTP requires reason and UUID idempotency key; CS is forbidden', a
     database: db,
     oidcVerifier: { verifyBearerToken: async () => ({ subject: 'cs' }) },
     users: { upsertFromVerifiedIdentity: async () => ({ userId: actorId }) },
-    credentialKey: 'local-test-key-for-reissue',
+    credentialKey,
+    env: { ...process.env, ...gateConfig.env },
   });
   try {
     await app.init();

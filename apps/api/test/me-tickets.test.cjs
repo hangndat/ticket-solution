@@ -15,12 +15,14 @@ const {
   redeemAndIssueTicket,
   unwrapRedeemOutcome,
   readCodeHmacEnvironment,
+  readGateManualCodePepper,
   IDENTITY_ERROR_CODES,
 } = require('@ticket/backend');
 const {
   migrationFiles,
 } = require('../../../packages/backend/test/migration-files.cjs');
 const { createApp } = require('../dist/app');
+const { createGateTestConfig } = require('./gate-test-config.cjs');
 
 const ISSUER = 'http://127.0.0.1:8080/realms/ticket';
 const AUDIENCE = 'ticket-api';
@@ -78,14 +80,18 @@ function memoryUsers() {
 
 test('GET /v1/me/tickets auth and tenantId validation', async () => {
   const { privateKey, verifier } = await localVerifier();
+  const credentialKey = 'api-me-tickets-auth-test-key';
+  const gateConfig = createGateTestConfig(credentialKey, 'me-tickets-auth-gate-kid');
   const app = await createApp({
     logging: false,
     oidcVerifier: verifier,
     users: memoryUsers(),
+    credentialKey,
     env: {
       ...process.env,
       CODE_HMAC_PEPPER: 'api-me-tickets-test-pepper',
       CODE_HMAC_VERSION: '1',
+      ...gateConfig.env,
       TICKET_CREDENTIAL_KEY: 'api-me-tickets-cred-key-material',
     },
   });
@@ -257,6 +263,7 @@ test(
       const tenantId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
       const eventId = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
       const eventName = 'Gala Night 2026';
+      const gateConfig = createGateTestConfig(CRED_KEY, 'me-tickets-gate-test-kid');
       await seedTenantEvent(db, tenantId, eventId, 'gala', eventName);
 
       await withTenant(db, tenantId, async (tx) => {
@@ -268,6 +275,7 @@ test(
           emailVerified: true,
           rawCode: 'CODE-gala',
           idempotencyKey: randomUUID(),
+          manualCodePepper: readGateManualCodePepper(gateConfig.env),
         });
         unwrapRedeemOutcome(outcome);
       });
@@ -282,6 +290,7 @@ test(
           CODE_HMAC_PEPPER: 'api-me-tickets-event-name-pepper',
           CODE_HMAC_VERSION: '1',
           TICKET_CREDENTIAL_KEY: CRED_KEY,
+          ...gateConfig.env,
         },
         hmac: HMAC,
         credentialKey: CRED_KEY,
