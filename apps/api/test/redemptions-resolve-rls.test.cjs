@@ -357,7 +357,6 @@ test(
       assert.equal(body.eventId, eventId);
       assert.ok(body.resolveToken);
 
-      const before = await businessState(db, tenantId);
       const auth = { authorization: 'Bearer ' + token };
       const uuid = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
       const rateCases = [
@@ -365,6 +364,7 @@ test(
           name: 'global resolve',
           bucket: RESOLVE_BUCKET,
           limit: 30,
+          controlStatus: 201,
           request: {
             method: 'POST',
             url: '/v1/redemptions/resolve',
@@ -375,6 +375,8 @@ test(
           name: 'redeem',
           bucket: API_RATE_BUCKETS.redeem,
           limit: API_RATE_LIMITS.redeemPerUser,
+          controlStatus: 409,
+          controlCode: 'FORM_VERSION_STALE',
           request: {
             method: 'POST',
             url: `/v1/tenants/${tenantId}/events/${eventId}/redemptions`,
@@ -391,6 +393,8 @@ test(
           name: 'Gate reserve',
           bucket: API_RATE_BUCKETS.gateReserve,
           limit: API_RATE_LIMITS.gateReservePerUser,
+          controlStatus: 403,
+          controlCode: 'MEMBERSHIP_REQUIRED',
           request: {
             method: 'POST',
             url: `/v1/gate/events/${eventId}/reservations`,
@@ -401,6 +405,8 @@ test(
           name: 'Gate confirm',
           bucket: API_RATE_BUCKETS.gateConfirm,
           limit: API_RATE_LIMITS.gateConfirmPerUser,
+          controlStatus: 403,
+          controlCode: 'MEMBERSHIP_REQUIRED',
           request: {
             method: 'POST',
             url: `/v1/gate/events/${eventId}/reservations/${uuid}/confirm`,
@@ -411,6 +417,8 @@ test(
           name: 'Gate offline sync',
           bucket: API_RATE_BUCKETS.gateOfflineSync,
           limit: API_RATE_LIMITS.gateOfflineSyncPerUser,
+          controlStatus: 403,
+          controlCode: 'MEMBERSHIP_REQUIRED',
           request: {
             method: 'POST',
             url: `/v1/gate/events/${eventId}/offline-sync`,
@@ -427,14 +435,62 @@ test(
           name: 'Gate receipt',
           bucket: API_RATE_BUCKETS.gateOfflineSyncReceipt,
           limit: API_RATE_LIMITS.gateOfflineSyncReceiptPerUser,
+          controlStatus: 403,
+          controlCode: 'MEMBERSHIP_REQUIRED',
           request: {
             method: 'GET',
             url: `/v1/gate/events/${eventId}/offline-sync/receipts/${uuid}?tenantId=${tenantId}`,
           },
         },
       ];
-      for (const { name, bucket, limit, request } of rateCases) {
+      const bucketKeys = rateCases.map(({ bucket }) => bucket);
+      for (const {
+        name,
+        bucket,
+        limit,
+        controlStatus,
+        controlCode,
+        request,
+      } of rateCases) {
+        await withTenant(db, userA.userId, (tx) =>
+          tx.notificationRateCounter.updateMany({
+            where: { tenantId: userA.userId, bucketKey: { in: bucketKeys } },
+            data: { count: 0 },
+          }),
+        );
+        const control = await app.inject({
+          ...request,
+          headers: { ...request.headers, ...auth },
+        });
+        assert.equal(
+          control.statusCode,
+          controlStatus,
+          `${name} control response`,
+        );
+        if (controlCode) assert.equal(control.json().code, controlCode, name);
+        const controlCounters = await withTenant(db, userA.userId, (tx) =>
+          tx.notificationRateCounter.findMany({
+            where: { tenantId: userA.userId, bucketKey: { in: bucketKeys } },
+          }),
+        );
+        assert.equal(
+          controlCounters.filter(
+            (counter) => counter.bucketKey === bucket && counter.count === 1,
+          ).length,
+          1,
+          `${name} control must advance only its own bucket`,
+        );
+        assert.ok(
+          controlCounters.every(
+            (counter) =>
+              counter.count === 0 ||
+              (counter.bucketKey === bucket && counter.count === 1),
+          ),
+          `${name} control must advance only its own bucket`,
+        );
+
         await saturateBucket(db, userA.userId, bucket, limit);
+        const before = await businessState(db, tenantId);
         const denied = await app.inject({
           ...request,
           headers: { ...request.headers, ...auth },
@@ -450,24 +506,26 @@ test(
         );
         const counters = await withTenant(db, userA.userId, (tx) =>
           tx.notificationRateCounter.findMany({
-            where: { tenantId: userA.userId, bucketKey: bucket },
+            where: { tenantId: userA.userId, bucketKey: { in: bucketKeys } },
           }),
         );
-        assert.equal(counters.length, 2, name);
+        const rejectedBucket = counters.filter(
+          (counter) => counter.bucketKey === bucket,
+        );
+        assert.equal(rejectedBucket.length, 2, name);
         assert.ok(
-          counters.every((counter) => counter.count === limit),
+          rejectedBucket.every((counter) => counter.count === limit),
           `${name} must not advance a rejected bucket`,
         );
-        if (bucket !== RESOLVE_BUCKET) {
-          await withTenant(db, userA.userId, (tx) =>
-            tx.notificationRateCounter.updateMany({
-              where: { tenantId: userA.userId, bucketKey: bucket },
-              data: { count: 0 },
-            }),
-          );
-        }
+        assert.ok(
+          counters.every(
+            (counter) => counter.bucketKey === bucket || counter.count === 0,
+          ),
+          `${name} must leave all other buckets below cap`,
+        );
       }
 
+      const beforeOtherActor = await businessState(db, tenantId);
       const tokenB = await sign(privateKey, 'fe715-actor-b');
       const otherActor = await app.inject({
         method: 'POST',
@@ -480,7 +538,7 @@ test(
         201,
         'another user keeps an independent resolve bucket',
       );
-      assert.deepEqual(await businessState(db, tenantId), before);
+      assert.deepEqual(await businessState(db, tenantId), beforeOtherActor);
 
       await app.close();
     } finally {
