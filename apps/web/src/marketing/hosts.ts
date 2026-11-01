@@ -25,6 +25,11 @@ export const PRODUCT_PATH_PREFIXES = [
 
 export type MarketingLocale = 'vi' | 'en';
 
+/** The edge preserves Host; forwarded host is untrusted on direct upstream requests. */
+export function trustedRequestHost(headers: Pick<Headers, 'get'>): string | null {
+  return headers.get('host');
+}
+
 export function normalizeHost(raw: string | null | undefined): string {
   if (!raw) return '';
   const first = raw.split(',')[0]?.trim() ?? '';
