@@ -103,6 +103,7 @@ jobs:
             db:
               - 'packages/backend/**'
               - 'packages/contracts/**'
+              - 'tests/e2e/backend/**'
             hardening:
               - 'scripts/d5-**'
               - 'scripts/load/scanner-context.*'
@@ -301,6 +302,11 @@ jobs:
       - name: DB tests (${{ matrix.shard }})
         working-directory: packages/backend
         run: node --test --test-concurrency=4 --test-force-exit ${{ matrix.files }}
+      # POL-01 standard D command: chạy catalog selectors (account-idp-erasure) +
+      # retention-db qua package script hiện có, cùng nguồn với evidence thủ công.
+      - name: POL-01 standard D command (catalog + retention-db)
+        if: matrix.shard == 'account-deletion'
+        run: pnpm test:integration:local --case POL-01 --suite D --no-build
 
   # D5 drills tách 3 job song song (ports/container name độc lập).
   d5-observability:
