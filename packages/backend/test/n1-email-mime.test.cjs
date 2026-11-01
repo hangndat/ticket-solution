@@ -1,7 +1,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { execFileSync } = require('node:child_process');
-const { randomBytes, randomUUID, createHash } = require('node:crypto');
+const { randomBytes, randomUUID, createHash, generateKeyPairSync } = require('node:crypto');
 const { readFileSync } = require('node:fs');
 const { migrationFiles } = require('./migration-files.cjs');
 const path = require('node:path');
@@ -24,6 +24,8 @@ const {
   DEFAULT_TICKET_ISSUED_TEMPLATE,
   openCredentialToken,
   hashCredentialToken,
+  sealCredentialToken,
+  deriveGateSigningSealKey,
   tryConsumeRateLimit,
   retryNotificationDelivery,
   NotificationError,
@@ -43,10 +45,24 @@ const HMAC = readCodeHmacEnvironment({
   CODE_HMAC_VERSION: '1',
 });
 const CREDENTIAL_KEY = 'n1-email-credential-key';
+const GATE_KEYPAIR = generateKeyPairSync('ec', { namedCurve: 'P-256' });
+const GATE_PRIVATE_KEY_PEM = GATE_KEYPAIR.privateKey.export({ type: 'pkcs8', format: 'pem' });
+const GATE_PUBLIC_KEY_JWK = GATE_KEYPAIR.publicKey.export({ format: 'jwk' });
+const GATE_KID = 'n1-email-gate-current';
 const RELAY_OPTS = {
   credentialKeyMaterial: CREDENTIAL_KEY,
   publicWebBaseUrl: 'https://tickets.example.test',
-  env: { NODE_ENV: 'test' },
+  env: {
+    NODE_ENV: 'test',
+    GATE_CREDENTIAL_CURRENT_KEY_ID: GATE_KID,
+    GATE_CREDENTIAL_SIGNING_KEY_SEALED: sealCredentialToken(
+      GATE_PRIVATE_KEY_PEM,
+      deriveGateSigningSealKey(CREDENTIAL_KEY),
+    ).encryptedToken,
+    GATE_CREDENTIAL_VERIFY_KEYS_JSON: JSON.stringify([
+      { kid: GATE_KID, alg: 'ES256', publicKeyJwk: GATE_PUBLIC_KEY_JWK },
+    ]),
+  },
 };
 
 async function startIsolatedPostgres() {

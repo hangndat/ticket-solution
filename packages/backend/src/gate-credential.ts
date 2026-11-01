@@ -47,6 +47,11 @@ export type GateCredentialConfig = {
   manualCodePepper: CodeHmacConfig;
 };
 
+export type GateCredentialSigningConfig = Pick<
+  GateCredentialConfig,
+  'currentKeyId' | 'signingPrivateKeyPem' | 'verifyKeys'
+>;
+
 export function readGateManualCodePepper(env: NodeJS.ProcessEnv): CodeHmacConfig {
   const pepper = env['GATE_MANUAL_CODE_PEPPER']?.trim();
   if (!pepper || Buffer.byteLength(pepper, 'utf8') < MIN_MANUAL_PEPPER_BYTES) {
@@ -170,14 +175,13 @@ export function unsealSigningKey(
   return pem;
 }
 
-export async function readGateCredentialConfig(
+export async function readGateCredentialSigningConfig(
   env: NodeJS.ProcessEnv,
   credentialKeyMaterial: string,
-): Promise<GateCredentialConfig> {
+): Promise<GateCredentialSigningConfig> {
   const currentKeyId = env['GATE_CREDENTIAL_CURRENT_KEY_ID']?.trim();
   const sealed = env['GATE_CREDENTIAL_SIGNING_KEY_SEALED']?.trim();
   if (!currentKeyId || !sealed) throw invalidConfig('Gate signing key configuration is required');
-  const manualCodePepper = readGateManualCodePepper(env);
   const verifyKeys = await readGateCredentialVerifyKeys(env);
   const current = verifyKeys.find((key) => key.kid === currentKeyId);
   if (!current) throw invalidConfig('Current signing key id is absent from verification keyring');
@@ -192,7 +196,17 @@ export async function readGateCredentialConfig(
     currentKeyId,
     signingPrivateKeyPem,
     verifyKeys,
-    manualCodePepper,
+  };
+}
+
+export async function readGateCredentialConfig(
+  env: NodeJS.ProcessEnv,
+  credentialKeyMaterial: string,
+): Promise<GateCredentialConfig> {
+  const signing = await readGateCredentialSigningConfig(env, credentialKeyMaterial);
+  return {
+    ...signing,
+    manualCodePepper: readGateManualCodePepper(env),
   };
 }
 

@@ -23,6 +23,48 @@ async function signedQr({ tenantId, eventId, ticketId, version = 1 }) {
   });
 }
 
+function emailSignerEnv(credentialKeyMaterial) {
+  return {
+    GATE_CREDENTIAL_CURRENT_KEY_ID: kid,
+    GATE_CREDENTIAL_SIGNING_KEY_SEALED: backend.sealCredentialToken(
+      privateKeyPem,
+      backend.deriveGateSigningSealKey(credentialKeyMaterial),
+    ).encryptedToken,
+    GATE_CREDENTIAL_VERIFY_KEYS_JSON: JSON.stringify([
+      {
+        kid,
+        alg: 'ES256',
+        publicKeyJwk: publicKey.export({ format: 'jwk' }),
+      },
+    ]),
+  };
+}
+
+function withTestEmailSigner(options = {}) {
+  const credentialKeyMaterial = String(
+    options.credentialKeyMaterial ?? '',
+  ).trim();
+  if (credentialKeyMaterial.length < 16) return options;
+  if (
+    options.env &&
+    [
+      'GATE_CREDENTIAL_CURRENT_KEY_ID',
+      'GATE_CREDENTIAL_SIGNING_KEY_SEALED',
+      'GATE_CREDENTIAL_VERIFY_KEYS_JSON',
+    ].some((key) => Object.prototype.hasOwnProperty.call(options.env, key))
+  ) {
+    return options;
+  }
+  return {
+    ...options,
+    env: {
+      ...process.env,
+      ...options.env,
+      ...emailSignerEnv(credentialKeyMaterial),
+    },
+  };
+}
+
 async function reserveCheckin(tx, input) {
   if (input.presented) {
     return backend.reserveCheckin(tx, { ...input, verifyKeys: input.verifyKeys ?? verifyKeys });
@@ -51,4 +93,12 @@ async function reserveCheckin(tx, input) {
   });
 }
 
-module.exports = { reserveCheckin, signedQr, verifyKeys, privateKeyPem, kid };
+module.exports = {
+  reserveCheckin,
+  signedQr,
+  verifyKeys,
+  privateKeyPem,
+  kid,
+  emailSignerEnv,
+  withTestEmailSigner,
+};

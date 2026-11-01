@@ -56,6 +56,51 @@ test('gate verify keyring accepts public PEM and JWK and retains older signing k
   assert.equal((await backend.verifyGateCredentialJws(oldJws, config.verifyKeys)).tkt, 'old-ticket');
 });
 
+test('email signing config validates the current key pair without requiring manual-code pepper', async () => {
+  const current = keyPair('gate-email-current');
+  const credentialKeyMaterial = 'gate-email-test-credential-key-material';
+  const env = {
+    GATE_CREDENTIAL_CURRENT_KEY_ID: current.kid,
+    GATE_CREDENTIAL_SIGNING_KEY_SEALED: backend.sealCredentialToken(
+      current.privateKeyPem,
+      backend.deriveGateSigningSealKey(credentialKeyMaterial),
+    ).encryptedToken,
+    GATE_CREDENTIAL_VERIFY_KEYS_JSON: JSON.stringify([
+      keyringEntry(current, 'publicKeyJwk'),
+    ]),
+  };
+
+  const config = await backend.readGateCredentialSigningConfig(env, credentialKeyMaterial);
+  const jws = await backend.signGateCredentialJws({
+    claims: { tid: 'tenant', eid: 'event', tkt: 'email-ticket', ver: 7 },
+    privateKeyPem: config.signingPrivateKeyPem,
+    kid: config.currentKeyId,
+  });
+  const claims = await backend.verifyGateCredentialJws(jws, config.verifyKeys);
+  assert.equal(claims.tkt, 'email-ticket');
+  assert.equal(claims.ver, 7);
+
+  const mismatched = keyPair('gate-email-mismatch');
+  await assert.rejects(
+    backend.readGateCredentialSigningConfig(
+      {
+        ...env,
+        GATE_CREDENTIAL_SIGNING_KEY_SEALED: backend.sealCredentialToken(
+          mismatched.privateKeyPem,
+          backend.deriveGateSigningSealKey(credentialKeyMaterial),
+        ).encryptedToken,
+      },
+      credentialKeyMaterial,
+    ),
+    (error) => error.code === backend.GATE_ERROR_CODES.CREDENTIAL_SIGNATURE_INVALID,
+  );
+
+  await assert.rejects(
+    backend.readGateCredentialSigningConfig({}, credentialKeyMaterial),
+    (error) => error.code === backend.GATE_ERROR_CODES.CREDENTIAL_SIGNATURE_INVALID,
+  );
+});
+
 test('gate verify keyring rejects private PEM and private JWK material', async () => {
   const pair = keyPair('gate-private');
   const privateJwk = { ...pair.publicKeyJwk };
