@@ -1919,6 +1919,43 @@ export async function seedRuntime(state, caseIds) {
               reason: null,
             }),
           );
+          const exhaustedBuckets = await tx.$queryRaw`
+            SELECT id, scope, scope_id, capacity, allocated FROM quota_buckets
+            WHERE tenant_id=${tenantId}::uuid AND event_id=${eventId}::uuid
+              AND ((scope='TICKET_TYPE' AND scope_id=${exhausted.ticketTypeId}::uuid)
+                OR (scope='ISSUANCE_SOURCE' AND scope_id=${exhausted.sourceId}::uuid))
+            ORDER BY scope
+          `;
+          const targetState = await tx.$queryRaw`
+            SELECT r.status AS request_status, c.status AS code_status,
+                   c.active_request_id, c.source_id, c.ticket_type_id
+            FROM redemption_requests r
+            JOIN redemption_codes c ON c.tenant_id=r.tenant_id AND c.id=r.redemption_code_id
+            WHERE r.tenant_id=${tenantId}::uuid AND r.id=${quotaOutcome.result.requestId}::uuid
+          `;
+          if (
+            exhaustedBuckets.length !== 2 ||
+            exhaustedBuckets[0].scope !== 'ISSUANCE_SOURCE' ||
+            exhaustedBuckets[1].scope !== 'TICKET_TYPE' ||
+            exhaustedBuckets.some(
+              (row) => row.capacity !== 1 || row.allocated !== 1,
+            ) ||
+            targetState.length !== 1 ||
+            targetState[0].request_status !== 'PENDING_REVIEW' ||
+            targetState[0].code_status !== 'HELD' ||
+            targetState[0].active_request_id !==
+              quotaOutcome.result.requestId ||
+            targetState[0].source_id !== exhausted.sourceId ||
+            targetState[0].ticket_type_id !== exhausted.ticketTypeId
+          )
+            throw new Error(
+              'PORT-06 quota decoy did not exhaust its dedicated buckets',
+            );
+          fixture.data.quotaExhaustedState = {
+            buckets: exhaustedBuckets,
+            requestStatus: targetState[0].request_status,
+            codeStatus: targetState[0].code_status,
+          };
         });
       }
       if (caseId === 'PORT-08') {
