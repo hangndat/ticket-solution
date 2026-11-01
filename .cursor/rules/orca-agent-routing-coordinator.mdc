@@ -19,6 +19,8 @@ Bổ sung [orca-agent-routing-core.mdc](./orca-agent-routing-core.mdc). Leader *
 
 ## Spawn evidence
 
+OpenCode Go gặp limit/quota thật → đọc [opencode-limit-fallback.mdc](opencode-limit-fallback.mdc), checkpoint attempt và phục hồi bằng `opencode-go/beam-free` cùng tier qua wrapper. Đây là fallback user đã duyệt, không đổi primary Flash/Pro hoặc route reviewer.
+
 Trước mỗi spawn: ghi agent, Cost tier, Persona, model requested/effective, lý do. Codex quota không gate Cursor spawn.
 
 Worker mới dùng `scripts/agent-workflow-run.mjs start` để preflight + snapshot allowance + lưu receipt; tier `focused|advanced|high` và route Claude: chạy `node scripts/agent-provider-recovery.mjs route|check` (hoặc để wrapper check) trước spawn — xem [provider-recovery](../../docs/agents/provider-recovery.md); sau settlement hợp lệ dùng `settle` để collect transcript/token metadata trước release. Reuse terminal giữ receipt model gốc, snapshot theo wave và collect thủ công; thiếu source báo unknown. Coordinator Codex cũng phải có provider baseline tại boundary cần đo. Hướng dẫn chỉ đọc khi áp dụng: [workflow evidence/telemetry](../../docs/agents/workflow-evidence-telemetry.md). Không quy token/cache thành quota tiết kiệm.
