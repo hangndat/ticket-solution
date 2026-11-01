@@ -270,8 +270,8 @@ export const notes = {
   'DB-18':
     'D deletion/tombstone; thiếu H session/IdP end-to-end và audit retention.',
   'DB-19': 'Keyring tombstone tests không chứng minh code/QR rotation.',
-  'GATE-01': 'D gate FK/list/open; thiếu H permission và response contract.',
-  'GATE-02': 'D reserve conflict; thiếu H retry/cancel/expiry matrix.',
+  'GATE-01': 'D gate FK/list/open; H đăng ký riêng, chờ evidence exact SHA và review.',
+  'GATE-02': 'D reserve/retry/HELD/expiry; H đăng ký riêng, thiếu API cancel reservation.',
   'GATE-03':
     'Thiếu H QR audience/kid/version/hash/manual rejection và reject-audit.',
   'GATE-04':

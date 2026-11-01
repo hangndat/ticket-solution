@@ -212,14 +212,14 @@
     "tests": ["D:packages/backend/test/gates.test.cjs#O31 gates:"],
     "layers": ["D"],
     "status": "blocked",
-    "reason": "D gate FK/list/open; thiếu H permission và response contract."
+    "reason": "D gate FK/list/open; H được đăng ký riêng trong http/coverage.json; chờ evidence exact SHA và review."
   },
   {
     "caseId": "GATE-02",
     "tests": ["D:packages/backend/test/gate.test.cjs#gate: one confirm wins"],
     "layers": ["D"],
     "status": "blocked",
-    "reason": "D reserve conflict và cùng holder refresh token; token cũ không confirm hoặc tạo check-in. Thiếu H retry/cancel/expiry matrix."
+    "reason": "D reserve/retry/HELD/expiry; H được đăng ký riêng. Partial vì chưa có API cancel reservation; chờ evidence exact SHA và review."
   },
   {
     "caseId": "GATE-03",

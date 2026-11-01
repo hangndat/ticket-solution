@@ -43,6 +43,7 @@ const httpCases = [
   'AUTH-03',
   'AUTH-06',
   'GATE-01',
+  'GATE-02',
   'GATE-03',
   'DB-01',
   'DB-02',

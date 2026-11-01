@@ -347,6 +347,30 @@ test(
       assert.equal(heldByOther.ok, false);
       assert.equal(heldByOther.code, GATE_ERROR_CODES.HELD_BY_OTHER_SESSION);
 
+      // Expiry is resolved under the ticket lock by the next reserve, even
+      // when no scheduler or confirm has touched the expired hold.
+      await withTenant(db, tenantId, (tx) => tx.$executeRaw`
+        UPDATE checkin_reservations SET expires_at = clock_timestamp() - interval '1 second'
+        WHERE tenant_id = ${tenantId}::uuid AND id = ${hold.reservationId}::uuid`);
+      const afterExpiry = unwrapReserveOutcome(await withTenant(db2, tenantId, (tx) =>
+        reserveCheckin(tx, { tenantId, eventId, ticketId: issued.ticketId,
+          staffSessionId: other.sessionId, actorUserId: staffB.userId }),
+      ));
+      assert.notEqual(afterExpiry.reservationId, hold.reservationId);
+      const expiryState = await withTenant(db, tenantId, async (tx) => ({
+        rows: await tx.$queryRaw`SELECT id, status FROM checkin_reservations WHERE ticket_id = ${issued.ticketId}::uuid ORDER BY created_at`,
+        checkins: await tx.$queryRaw`SELECT count(*)::int AS n FROM checkins WHERE ticket_id = ${issued.ticketId}::uuid`,
+      }));
+      assert.deepEqual(expiryState.rows.map((row) => row.status), ['EXPIRED', 'HELD']);
+      assert.equal(expiryState.checkins[0].n, 0);
+      await withTenant(db, tenantId, (tx) => tx.$executeRaw`
+        UPDATE checkin_reservations SET expires_at = clock_timestamp() - interval '1 second'
+        WHERE tenant_id = ${tenantId}::uuid AND id = ${afterExpiry.reservationId}::uuid`);
+      hold = unwrapReserveOutcome(await withTenant(db, tenantId, (tx) =>
+        reserveCheckin(tx, { tenantId, eventId, ticketId: issued.ticketId,
+          staffSessionId: session.sessionId, actorUserId: staff.userId }),
+      ));
+
       const raced = await Promise.all([
         withTenant(db, tenantId, (tx) =>
           confirmCheckin(tx, {
