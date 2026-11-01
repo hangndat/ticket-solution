@@ -16,11 +16,13 @@ import {
 export type LoadPublishedDetailResult =
   | { status: 'ok'; event: PublishedEventDetail }
   | { status: 'not-found' }
+  | { status: 'rate-limited' }
   | { status: 'unreachable' }
   | { status: 'invalid' };
 
 export type LoadPublishedListResult =
   | { status: 'ok'; body: PublishedEventListResponse }
+  | { status: 'rate-limited' }
   | { status: 'unreachable' }
   | { status: 'invalid' };
 
@@ -63,6 +65,7 @@ export async function loadPublishedEventDetail(
   try {
     const response = await fetchImpl(url, nestFetchInit(revalidate));
     if (response.status === 404) return { status: 'not-found' };
+    if (response.status === 429) return { status: 'rate-limited' };
     if (response.status >= 500) return { status: 'unreachable' };
     if (!response.ok) return { status: 'invalid' };
     const json: unknown = await response.json();
@@ -102,6 +105,7 @@ export async function loadPublishedEventList(
 
   try {
     const response = await fetchImpl(url.toString(), nestFetchInit(revalidate));
+    if (response.status === 429) return { status: 'rate-limited' };
     if (response.status >= 500) return { status: 'unreachable' };
     if (!response.ok) return { status: 'invalid' };
     const json: unknown = await response.json();
