@@ -11,9 +11,6 @@ import {
 import { TicketQr } from './ticket-qr';
 
 type Props = {
-  tenantId: string;
-  ticketId: string;
-  state: string;
   qrPayload: string;
   qrLabel: string;
 };
