@@ -28,8 +28,11 @@ Khi giao **code**, thay Composer 2.5 bằng hai model **OpenCode Go** dưới đ
 | --- | --- | --- | --- | --- |
 | Nhanh, đơn giản, nhiều request | `cheap`, `standard` | `opencode` | `opencode-go/deepseek-v4.1-flash` | Không truyền |
 | Cần reasoning hoặc context lớn | `focused`, `advanced`, `high` theo rủi ro | `opencode` | `opencode-go/deepseek-v4-pro` | Không truyền |
+| Fallback khi OpenCode Go báo limit/quota | Giữ tier Task hiện tại (`cheap`–`high`) | `opencode` | `opencode-go/beam-free` | Không truyền |
 
 Pin đã được xác minh bằng `opencode models` trên host ngày 02/11/2026; Orca có active account OpenCode Zen-Go. OpenCode không hỗ trợ `--effort` qua Orca: tier vẫn là metadata về scope/rủi ro, `high` vẫn bắt buộc `--tier-reason`. Start qua wrapper với `--employee`, trên worktree hiện có và kiểm requested/effective trong receipt. Không suy quota hoặc mức giá/off-peak từ tên model hay từ quota Codex; giữ số lượng quota unknown khi provider không cung cấp.
+
+**Fallback user duyệt 02/11/2026:** khi provider OpenCode Go báo limit/quota thật, dùng đúng pin `opencode-go/beam-free` (đã xác minh qua `opencode models`), giữ employee, Task, Cost tier và review/fix budget. Checkpoint và xác minh attempt cũ đã dừng trước `--retry-of`; không bật Extra Usage hoặc tự đổi provider. Flash/Pro vẫn là primary. Chi tiết: [opencode-limit-fallback.mdc](../../.cursor/rules/opencode-limit-fallback.mdc).
 
 ## Pinned (Cursor host hangndat · 2026-10-19; Codex/Claude · 2026-10-24)
 
