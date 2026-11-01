@@ -221,17 +221,31 @@ def prepare_store(path):
     return path
 
 
-def container_script(skip=()):
+HIDDEN = ".build-hidden"
+
+
+def container_script(skip=(), hide=None):
     """Shell run in the builder; the store is the external mount, never under /app.
-    `skip` names build steps whose outputs were reused from an older release."""
+    `skip` names build steps whose outputs were reused from an older release. `hide` maps a step
+    name to workspace dirs moved out of the tree while that step runs, so a build that reads a
+    package it does not declare as a dependency fails instead of silently depending on it."""
+    hide = hide or {}
     lines = [
         'step() { n="$1"; shift; s=$(date +%s); echo "[container $(date +%H:%M:%S)] start: $n"; '
         'if "$@"; then echo "[container $(date +%H:%M:%S)] done: $n ($(( $(date +%s) - s ))s)"; '
         'else echo "[container $(date +%H:%M:%S)] FAILED: $n ($(( $(date +%s) - s ))s)"; return 1; fi; }',
+        f'hide() {{ for d in "$@"; do mkdir -p "{HIDDEN}/$(dirname "$d")"; mv "$d" "{HIDDEN}/$d"; done; }}',
+        f'unhide() {{ for d in "$@"; do mv "{HIDDEN}/$d" "$d"; done; rm -rf "{HIDDEN}"; }}',
         f"pnpm config set store-dir {STORE_MOUNT}",
         "pnpm config set package-import-method copy",
     ]
-    lines += [f'step "{name}" {cmd}' for name, cmd in STEPS if name not in skip]
+    for name, cmd in STEPS:
+        if name in skip:
+            continue
+        dirs = " ".join(hide.get(name, ()))
+        lines += [f"hide {dirs}"] if dirs else []
+        lines.append(f'step "{name}" {cmd}')
+        lines += [f"unhide {dirs}"] if dirs else []
     return "\n".join(lines)
 
 
@@ -264,7 +278,6 @@ def remove_tree(path):
 PACKAGES = {"contracts": "packages/contracts", "backend": "packages/backend", "ui": "packages/ui",
             "web-session": "packages/web-session", "api": "apps/api", "worker": "apps/worker",
             "web": "apps/web", "portal": "apps/portal"}
-INCREMENTAL_VERSION = "1"
 
 
 def copy_tree(src, dst):
@@ -313,7 +326,8 @@ def build_input_digests(stage, image_id, platform):
     """Call right after extraction, while the stage holds only tracked source files."""
     shared = [rel for top in SOURCE_PATHS if not top.startswith(("apps/", "packages/"))
               for rel in source_files(stage, top)]
-    global_digest = hashlib.sha256(json.dumps([INCREMENTAL_VERSION, image_id, platform, STEPS,
+    # This script decides what a build output is; any change to it invalidates every reuse.
+    global_digest = hashlib.sha256(json.dumps([digest(Path(__file__)), image_id, platform, STEPS,
                                                tree_digest(stage, shared)]).encode()).hexdigest()
     own = {name: tree_digest(stage, source_files(stage, path)) for name, path in PACKAGES.items()}
     result = {}
@@ -328,6 +342,20 @@ def build_input_digests(stage, image_id, platform):
     for name in PACKAGES:
         resolve(name)
     return result
+
+
+def hidden_during_build(stage):
+    """For each build step, the workspace package dirs outside that package's dependency closure."""
+    closure = {}
+
+    def deps(name):
+        if name not in closure:
+            closure[name] = set()
+            for dep in package_deps(stage, name):
+                closure[name] |= {dep} | deps(dep)
+        return closure[name]
+    return {f"build {name}": [PACKAGES[other] for other in PACKAGES if other != name and other not in deps(name)]
+            for name in PACKAGES}
 
 
 NEXT_APPS = ("web", "portal")
@@ -581,7 +609,7 @@ def build(args):
             if next_apps:
                 log(f"next build cache: {', '.join(warm) or 'none'} of {', '.join(next_apps)}")
         # Build inside Linux/Node 24. The store and every workspace link stay within stage.
-        command = container_script(skip={f"build {name}" for name in reused})
+        command = container_script(skip={f"build {name}" for name in reused}, hide=hidden_during_build(stage))
         with Timed("container install + builds"):
             subprocess.run(["docker", "run", "--rm", "--platform", args.platform, "-v", f"{stage}:/app",
                             "-v", f"{store}:{STORE_MOUNT}", "-w", "/app", args.image, "sh", "-ec", command], check=True)
