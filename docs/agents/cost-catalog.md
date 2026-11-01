@@ -4,7 +4,7 @@ Nguồn **pin** `--model` theo agent và Cost tier. Rules: `orca-agent-routing-c
 
 **Không** dùng `auto` / omit flags làm mặc định (inherit UI thường đắt). Chỉ fallback inherit khi host **reject** mọi ID trong band và đã ghi limitation.
 
-**Năm tier (2026-10-24):** `cheap`, `standard`, `focused`, `advanced`, `high`. Tier mô tả mức độ công việc; agent/model/effort được chọn từ mapping hiện hành bên dưới. Các tier `focused|advanced|high` ưu tiên Claude Sonnet 5 trước Codex; chọn theo task và quota provider. Cấm Cost tier `heavy` và các model/effort ngoài pin hiện hành (vd. Cursor `…-thinking-high`, `claude-sonnet-5-thinking-medium`, `gpt-5.6-sol-high`, `claude-opus-*`; Codex `xhigh`/`max`/`ultra`).
+**Năm tier (2026-10-24):** `cheap`, `standard`, `focused`, `advanced`, `high`. Tier mô tả mức độ công việc; agent/model/effort được chọn từ mapping hiện hành bên dưới. Coding theo bảng OpenCode Go; reviewer/chuyên gia không coding ở tier `focused|advanced|high` ưu tiên Claude Sonnet 5 trước Codex khi user không chỉ định khác. Cấm Cost tier `heavy` và các model/effort ngoài pin hiện hành (vd. Cursor `…-thinking-high`, `claude-sonnet-5-thinking-medium`, `gpt-5.6-sol-high`, `claude-opus-*`; Codex `xhigh`/`max`/`ultra`).
 
 **Composer (2026-10-19):** chỉ **Composer Standard** (`composer-2.5`). **Cấm** `composer-2.5-fast` (Composer Fast) trên mọi spawn Orca / preflight.
 
@@ -19,6 +19,17 @@ cursor-agent models
 Đối chiếu ID còn trong output. Với Cursor, ưu tiên ID khớp fingerprint host nếu có trong `~/Library/Application Support/orca/agent-model-catalog.json`; nếu không thì lấy từ `agent models`. Với Claude, đối chiếu entry `agent: claude` và effort trên host; không dùng pin Cursor cho Claude Code.
 
 Sau khi refresh: cập nhật bảng **Pinned** bên dưới + `Pinned at` nếu ID đổi.
+
+## Coding — chỉ định user 02/11/2026
+
+Khi giao **code**, thay Composer 2.5 bằng hai model **OpenCode Go** dưới đây. Đây là lựa chọn cho worker coding; coordinator vẫn Codex và reviewer độc lập giữ route được giao. Code đơn giản không dùng Codex. Các route cũ còn trong catalog phục vụ task khác hoặc chỉ định riêng; không tự fallback coding sang Cursor/Codex khi OpenCode chưa chạy được.
+
+| Loại coding | Cost tier | `--agent` | `--model` | `--effort` |
+| --- | --- | --- | --- | --- |
+| Nhanh, đơn giản, nhiều request | `cheap`, `standard` | `opencode` | `opencode-go/deepseek-v4.1-flash` | Không truyền |
+| Cần reasoning hoặc context lớn | `focused`, `advanced`, `high` theo rủi ro | `opencode` | `opencode-go/deepseek-v4-pro` | Không truyền |
+
+Pin đã được xác minh bằng `opencode models` trên host ngày 02/11/2026; Orca có active account OpenCode Zen-Go. OpenCode không hỗ trợ `--effort` qua Orca: tier vẫn là metadata về scope/rủi ro, `high` vẫn bắt buộc `--tier-reason`. Start qua wrapper với `--employee`, trên worktree hiện có và kiểm requested/effective trong receipt. Không suy quota hoặc mức giá/off-peak từ tên model hay từ quota Codex; giữ số lượng quota unknown khi provider không cung cấp.
 
 ## Pinned (Cursor host hangndat · 2026-10-19; Codex/Claude · 2026-10-24)
 
@@ -38,7 +49,7 @@ Task mới khai báo tier độc lập với agent/model/effort. Mapping thực 
 
 ### Claude cùng tier với Codex
 
-Worker/reviewer tier `focused|advanced|high` ưu tiên Claude Sonnet 5 trước Codex; coordinator gốc vẫn dùng Codex, `cheap|standard` vẫn ưu tiên Composer. Claude Code dùng `--agent claude`, khác Claude qua Cursor (`--agent cursor`). Pin đọc từ cache Orca host ngày 2026-10-24, entry live gần nhất `2026-10-23T15:22:09.147Z`; đây là bằng chứng pin/effort, chưa chứng minh entitlement hoặc launch thành công. Dùng ID phiên bản ở bảng, không dùng alias trôi `sonnet`/`opus`, không bật Fast hoặc effort vượt high.
+Reviewer/chuyên gia không coding ở tier `focused|advanced|high` ưu tiên Claude Sonnet 5 trước Codex; coordinator gốc vẫn dùng Codex. Worker coding dùng bảng OpenCode Go ở trên. Claude Code dùng `--agent claude`, khác Claude qua Cursor (`--agent cursor`). Pin đọc từ cache Orca host ngày 2026-10-24, entry live gần nhất `2026-10-23T15:22:09.147Z`; đây là bằng chứng pin/effort, chưa chứng minh entitlement hoặc launch thành công. Dùng ID phiên bản ở bảng, không dùng alias trôi `sonnet`/`opus`, không bật Fast hoặc effort vượt high.
 
 “Tương ứng” là cùng tiêu chí task/gate; chưa có benchmark chứng minh ngang chất lượng, giá hay mức dùng quota. `focused` dùng Sonnet low cho câu hỏi hẹp; `advanced` dùng Sonnet medium cho suy luận nhiều bước; `high` dùng Sonnet high và vẫn bắt buộc `--tier-reason`.
 
@@ -46,7 +57,7 @@ Thứ tự route trong `agent-cost-tiers.mjs` là thứ tự ưu tiên: Claude t
 
 Tên cũ chỉ dùng khi đọc evidence: `codex-low` → `focused`, `codex-medium` → `advanced`, `heavy` → `standard`. Preflight yêu cầu tên mới cho launch mới; không sửa receipt lịch sử.
 
-**Cấm:** `composer-2.5-fast`; mọi `claude-sonnet-5-thinking-*` trên `--agent cursor` (kể cả `thinking-low`); Cursor vượt `standard`; tier `heavy`; Codex/Claude effort `xhigh|max|ultra`; model ngoài pin trong bảng. Tier `high` không mở các pin Cursor bị cấm. UI/docs/tests thường lệ spawn Composer `standard`; `high` chỉ khi khớp tiêu chí high.
+**Cấm:** `composer-2.5-fast`; mọi `claude-sonnet-5-thinking-*` trên `--agent cursor` (kể cả `thinking-low`); Cursor vượt `standard`; tier `heavy`; Codex/Claude effort `xhigh|max|ultra`; model ngoài pin trong bảng. Tier `high` không mở các pin Cursor bị cấm. Coding UI/test thường lệ dùng OpenCode Go Flash `standard`; coding cần reasoning/context lớn dùng Pro với tier tương ứng. `high` chỉ khi khớp tiêu chí high.
 
 ## Map spawn
 
@@ -74,7 +85,7 @@ Chọn tier theo **quyết định cần đưa ra, mức độ rõ của giải 
 | Tier | Khi nào chọn | Ví dụ / ranh giới |
 | --- | --- | --- |
 | `cheap` | Thao tác và expected outcome đã rõ, ít quyết định, hậu quả sai thấp | Thu log, chạy test có sẵn, sửa trình bày/link, ghi quyết định đã chốt, chia DAG đơn từ AC rõ. Chưa cấp verdict cho invariant nhạy cảm. |
-| `standard` | Cần thực hiện và tự kiểm một giải pháp trong phạm vi rõ; chưa cần phân tích sâu | Coding/UI/BA/PD thường lệ, viết test theo AC, tái hiện và sửa lỗi cục bộ, review thông thường. Composer là mặc định. |
+| `standard` | Cần thực hiện và tự kiểm một giải pháp trong phạm vi rõ; chưa cần phân tích sâu | Coding/UI/BA/PD thường lệ, viết test theo AC, tái hiện và sửa lỗi cục bộ, review thông thường. Coding dùng OpenCode Go Flash. |
 | `focused` | Cần phán đoán kỹ thuật tập trung cho một câu hỏi hẹp, bằng chứng và contract đã rõ, rủi ro thấp | Đối chiếu một consumer với contract đã chốt; xác minh một giả thuyết cụ thể hoặc một finding không nhạy cảm. Không dùng chỉ để chạy lệnh/thu log. |
 | `advanced` | Cần suy luận nhiều bước, lần theo vài module hoặc so sánh phương án; phạm vi và rủi ro vẫn có giới hạn | Phân tích tác động của contract tương thích, debug có vài giả thuyết từ evidence, review luồng logic nhiều module nhưng không ảnh hưởng invariant nhạy cảm. |
 | `high` | Quyết định kiến trúc còn mở với trade-off lớn hoặc hậu quả sai nghiêm trọng; bất kỳ tiêu chí high bên dưới đều ưu tiên tier này | Kiến trúc khó, auth/tenant, race/idempotency, migration rủi ro, sự cố nghiêm trọng; triển khai và review tương ứng. Spec rõ vẫn chọn high nếu rủi ro cao. |
@@ -98,21 +109,21 @@ Ghi trong Task Spec rủi ro cụ thể, quyết định cần suy luận và ev
 - Điều tra sự cố bảo mật hoặc lỗi production nghiêm trọng; chẩn đoán bug cần suy luận về race, thứ tự sự kiện, nhiều tầng hệ thống hoặc các giả thuyết xung đột sau khi đã thu evidence. Chỉ chưa biết nguyên nhân của một lỗi cục bộ không đủ để chọn `high`.
 - Review DoD/security độc lập của các thay đổi trên, hoặc review cần kiểm chứng nhiều invariant và đường tấn công trên exact SHA.
 
-Mapping primary của `high` là `--agent claude --model claude-sonnet-5 --effort high`; fallback cùng tier là `--agent codex --model gpt-6-sol --effort high`; giữ các gate allowance, giới hạn worker và reviewer độc lập hiện hành. `cheap` và `standard` hiện cùng dùng Composer primary; tên tier không chứng minh một task thực tế tiêu hao ít hơn task khác.
+Coding `high` dùng `--agent opencode --model opencode-go/deepseek-v4-pro`, không truyền effort. Reviewer/chuyên gia `high` ưu tiên `--agent claude --model claude-sonnet-5 --effort high`, Codex cùng tier khi phù hợp chỉ định/quota. Giữ lý do tier, caps và reviewer độc lập. Coding `cheap|standard` dùng OpenCode Go Flash; tên tier không chứng minh một task thực tế tiêu hao ít hơn task khác.
 
 ### Tách việc và chuyển tier
 
-- Tách phần thu evidence hoặc implementation thông thường cho Composer khi có đầu vào, đầu ra và ranh giới độc lập. Bàn giao ghi contract/AC đã chốt, expected outcome, paths và điểm phải dừng để coordinator quyết định. Không tách mọi hàng trong bảng thành một worker; gom việc nhỏ cùng context.
+- Tách implementation thông thường cho OpenCode Go Flash khi có đầu vào, đầu ra và ranh giới độc lập; coding cần reasoning/context lớn dùng Pro. Bàn giao ghi contract/AC đã chốt, expected outcome, paths và điểm phải dừng để coordinator quyết định. Không tách mọi hàng trong bảng thành một worker; gom việc nhỏ cùng context.
 - Việc sửa logic vẫn khớp tiêu chí `high` sau handoff thì tiếp tục chọn mapping thuộc `high`. Spec rõ hoặc đã có handoff thiết kế không tự biến thay đổi rủi ro cao thành `standard`.
 - Worker gặp quyết định/rủi ro vượt scope: checkpoint evidence và báo coordinator phân loại lại phần còn lại trước khi tiếp tục. Câu hỏi hẹp cần phán đoán kỹ thuật → `focused`; cần nhiều bước nhưng rủi ro giới hạn → `advanced`; khớp tiêu chí high → `high`. Một lần FAIL hoặc thiếu nguyên nhân ban đầu không tự nâng tier; chuyển tier không reset số lượt sửa theo review-convergence.
 - Reviewer chọn tier từ diff, invariant và findings đang mở. Người thu evidence có thể khác người kết luận; chạy test đạt không thay verdict độc lập.
 
 | Ví dụ | Cách chia |
 | --- | --- |
-| Offline sync/check-in | Claude `high` (Codex fallback) thiết kế và sửa logic xung đột/idempotency; Composer viết test từ expected outcome đã chốt (`standard`), chạy test/gom log (`cheap`); Claude `high` (Codex fallback) khác implementer review invariant. Nếu phải phát minh expected outcome cho race thì phần thiết kế test cũng là `high`. |
-| Sửa bảng/list trong portal | Composer `standard` triển khai và một reviewer độc lập review UI; thu ảnh theo kịch bản đã chốt có thể `cheap`. Nếu phải sửa logic cấp quyền hoặc tenant scoping, phần đó chuyển `high`. |
-| Lỗi chưa rõ nguyên nhân | Composer `standard` tái hiện và khoanh vùng lỗi cục bộ. Khi evidence chỉ ra race hoặc tương tác nhiều invariant, giao phần chẩn đoán đó cho Claude `high` (Codex fallback); sự cố nghiêm trọng vào `high` ngay. |
-| Đổi một field API tương thích | Composer `standard` triển khai theo spec; Claude `focused` (Codex fallback) đối chiếu một consumer cụ thể khi cần kiểm độc lập; `advanced` nếu phải lần tác động qua vài module và so phương án. Đụng quyền, dữ liệu nhạy cảm hoặc phá tương thích → `high`. |
+| Offline sync/check-in | Coding logic xung đột/idempotency dùng OpenCode Go Pro `high`; Flash viết test đơn giản từ expected outcome đã chốt (`standard`); reviewer Claude `high` (Codex fallback) khác implementer kiểm invariant. Nếu phải thiết kế expected outcome cho race thì phần test cũng là `high`. |
+| Sửa bảng/list trong portal | OpenCode Go Flash `standard` triển khai và reviewer độc lập review UI; thu ảnh theo kịch bản đã chốt có thể `cheap`. Nếu phải sửa logic cấp quyền hoặc tenant scoping, dùng Pro `high`. |
+| Lỗi chưa rõ nguyên nhân | Coding sửa lỗi cục bộ đã rõ dùng Flash `standard`; coding cần lần theo nhiều module dùng Pro `advanced`. Khi evidence chỉ ra race hoặc nhiều invariant nhạy cảm, chọn `high`; reviewer vẫn độc lập. |
+| Đổi một field API tương thích | Flash `standard` triển khai theo spec; Claude `focused` (Codex fallback) đối chiếu consumer khi cần review độc lập. Coding phải lần qua nhiều module dùng Pro `advanced`; đụng quyền, dữ liệu nhạy cảm hoặc phá tương thích → Pro `high`. |
 
 ## Soft caps liên quan
 
@@ -184,11 +195,11 @@ Sau `worker-start`: đối chiếu `launch.requested` vs `launch.effective` trê
 | Vai trò | Agent/model mặc định | Điều kiện |
 | --- | --- | --- |
 | Coordinator / Orchestrator | codex / `gpt-6-sol` | `advanced` cho điều phối thường lệ; phần quyết định khó/rủi ro theo tiêu chí `high` |
-| Backend, web/portal, iOS | cursor / `composer-2.5` | Coding thường lệ theo spec/AC rõ |
-| Documentation, unit tests | cursor / `composer-2.5` | `cheap` cho ghi chép/thu evidence đã chốt; `standard` cho viết test theo AC; quyết định policy/invariant và thiết kế test phức tạp phân loại theo tiêu chí tier |
+| Backend, web/portal, iOS coding | opencode / `opencode-go/deepseek-v4.1-flash` hoặc `opencode-go/deepseek-v4-pro` | Flash cho code đơn giản; Pro cho reasoning/context lớn, tier theo rủi ro |
+| Documentation, unit tests | Coding test dùng OpenCode Go Flash/Pro theo tier; docs/evidence không coding theo route được giao | `cheap` cho ghi chép/thu evidence đã chốt; test đơn giản `standard`; quyết định policy/invariant và thiết kế test phức tạp phân loại theo tiêu chí tier |
 | Architect phức tạp, security | Claude trước Codex theo tier | `high` nếu khớp tiêu chí trên; đối chiếu/phân tích có giới hạn chọn `focused` hoặc `advanced` |
 | DoD | cursor / `composer-2.5` hoặc Codex/Claude theo tier | Thường lệ `standard`; Codex/Claude chọn `focused`, `advanced` hoặc `high` theo câu hỏi review và rủi ro |
-| Critical implementation | claude / `claude-sonnet-5`, sau đó codex / `gpt-6-sol` | `high`; coordinator ghi lý do và scope cụ thể |
+| Critical implementation | opencode / `opencode-go/deepseek-v4-pro` | `high`; coordinator ghi lý do và scope cụ thể; reviewer độc lập theo route review |
 
 Pin GPT-6 = `gpt-6-sol`, có trong catalog host 2026-10-23; catalog không chứng minh entitlement. Fallback `gpt-6.1-sol` chỉ được đăng ký ở `focused` / `low` theo refresh 2026-10-30 bên trên; các model khác cần refresh và đăng ký trước. Codex truyền đúng effort của tier: `focused` → `low`, `advanced` → `medium`, `high` → `high`; preflight từ chối mọi cặp lệch và effort cao hơn `high`. Cặp agent/model phải khớp; không truyền Codex pin vào Cursor.
 
