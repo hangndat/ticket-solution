@@ -107,6 +107,21 @@ describe('decideHostRouting', () => {
     });
   });
 
+  it('drops external navigation targets on the marketing to product hop', () => {
+    const d = decideHostRouting({
+      ...base,
+      host: 'vemoki.com',
+      pathname: '/auth',
+      search:
+        '?return=https%3A%2F%2Fevil.example&next=%2F%2Fevil.example&redirect=https%3A%2F%2Fevil.example&tenantId=demo',
+    });
+    assert.deepEqual(d, {
+      type: 'redirect',
+      location: 'https://app.vemoki.com/auth?tenantId=demo',
+      status: 302,
+    });
+  });
+
   it('redirects apex /admin and /gate to product origin (before soft-redirect)', () => {
     for (const pathname of ['/admin', '/gate'] as const) {
       const d = decideHostRouting({

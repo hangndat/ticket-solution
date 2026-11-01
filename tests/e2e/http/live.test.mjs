@@ -419,6 +419,7 @@ async function db02MutationSnapshot(f, ctx) {
 }
 
 const FORGED_FORWARDED = {
+  forwarded: 'for=127.0.0.1;host=evil.example;proto=https',
   'x-forwarded-host': EVIL_HOST,
   'x-forwarded-proto': 'https',
 };
@@ -433,6 +434,7 @@ async function navigationFetch(origin, path, options = {}) {
     status: response.status,
     location: response.headers.get('location'),
     cacheControl: response.headers.get('cache-control'),
+    setCookie: response.headers.get('set-cookie'),
   };
 }
 
@@ -451,12 +453,34 @@ function directUpstreamFetch(port, hostHeader, path, options = {}) {
         },
       },
       (res) => {
-        resolve({
-          status: res.statusCode ?? 0,
-          location: res.headers.location ?? null,
-          cacheControl: res.headers['cache-control'] ?? null,
-        });
-        res.resume();
+        const chunks = [];
+        if (options.captureBody) res.on('data', (chunk) => chunks.push(chunk));
+        else res.resume();
+        res.on('end', () =>
+          resolve({
+            status: res.statusCode ?? 0,
+            location: res.headers.location ?? null,
+            cacheControl: res.headers['cache-control'] ?? null,
+            setCookie: res.headers['set-cookie'] ?? null,
+            cacheHeaders: Object.fromEntries(
+              [
+                'cache-control',
+                'vary',
+                'age',
+                'etag',
+                'expires',
+                'pragma',
+                'via',
+                'x-nextjs-cache',
+                'x-vercel-cache',
+                'cf-cache-status',
+              ].map((name) => [name, res.headers[name] ?? null]),
+            ),
+            body: options.captureBody
+              ? Buffer.concat(chunks).toString('utf8')
+              : null,
+          }),
+        );
       },
     );
     req.on('error', reject);
@@ -495,6 +519,17 @@ function assertNoOpenRedirectVector(location) {
     'unsafe return query in Location',
   );
   assert.ok(!location.includes('next=https'), 'unsafe next query in Location');
+}
+
+function assertUncacheableHostProbe(result, label) {
+  assert.ok(
+    result.cacheControl,
+    `${label}: missing Cache-Control cannot prove a forged response is uncacheable`,
+  );
+  assert.ok(
+    /(?:^|,)\s*(?:private|no-store)(?:\s*(?:,|$))/i.test(result.cacheControl),
+    `${label}: forged host response must explicitly forbid shared storage (${result.cacheControl})`,
+  );
 }
 
 async function request(ctx, method, path, token, body, headers = {}) {
@@ -1255,7 +1290,7 @@ async function web04AssertRejected(
 
 for (const caseId of CASE_IDS) {
   if (chosen && chosen !== caseId) continue;
-  test(`[${caseId}] live HTTP`, async () => {
+  test(`[${caseId}] live HTTP`, async (t) => {
     const ctx = context(caseId);
     const f = ctx.fixture;
     if (caseId === 'SEC-01') {
@@ -1720,6 +1755,14 @@ for (const caseId of CASE_IDS) {
     if (caseId === 'SEC-03') {
       const forged = FORGED_FORWARDED;
       const tenantId = required(f.tenantId, 'SEC-03 tenantId');
+      const cacheFailures = [];
+      function checkHostCache(result, label) {
+        try {
+          assertUncacheableHostProbe(result, label);
+        } catch (error) {
+          cacheFailures.push(error.message);
+        }
+      }
 
       const loginOpen = await navigationFetch(
         ctx.web,
@@ -1774,6 +1817,12 @@ for (const caseId of CASE_IDS) {
         'legacy admin GET',
       );
       assertNoOpenRedirectVector(adminMigrate.location);
+      assert.equal(
+        adminMigrate.setCookie,
+        null,
+        'legacy GET must not mutate session',
+      );
+      checkHostCache(adminMigrate, 'legacy admin GET');
 
       const adminHead = await navigationFetch(
         ctx.web,
@@ -1783,6 +1832,11 @@ for (const caseId of CASE_IDS) {
       assertRedirectStatus(adminHead);
       assertLocationOrigin(adminHead.location, ctx.portal, 'legacy admin HEAD');
       assertNoOpenRedirectVector(adminHead.location);
+      assert.equal(
+        adminHead.setCookie,
+        null,
+        'legacy HEAD must not mutate session',
+      );
 
       const adminPost = await navigationFetch(ctx.web, '/admin', {
         method: 'POST',
@@ -1834,6 +1888,7 @@ for (const caseId of CASE_IDS) {
         'direct OIDC login start',
       );
       assertNoOpenRedirectVector(directLogin.location);
+      checkHostCache(directLogin, 'direct OIDC login');
 
       const directRefresh = await directUpstreamFetch(
         webPort,
@@ -1848,6 +1903,7 @@ for (const caseId of CASE_IDS) {
         'direct SSR refresh fail-closed',
       );
       assertNoOpenRedirectVector(directRefresh.location);
+      checkHostCache(directRefresh, 'direct SSR refresh');
 
       const marketingAuth = await navigationFetch(
         ctx.marketing,
@@ -1865,6 +1921,20 @@ for (const caseId of CASE_IDS) {
         EVIL_HOST,
         'marketing bounce must not redirect to forged forwarded host',
       );
+      checkHostCache(marketingAuth, 'marketing /auth bounce');
+      const marketingAuthTarget = new URL(marketingAuth.location, ctx.web);
+      const productAuth = await navigationFetch(
+        ctx.web,
+        `${marketingAuthTarget.pathname}${marketingAuthTarget.search}`,
+        { headers: forged },
+      );
+      assertRedirectStatus(productAuth);
+      assertLocationOrigin(
+        productAuth.location,
+        ctx.web,
+        'marketing /auth next hop',
+      );
+      assertNoOpenRedirectVector(productAuth.location);
 
       const marketingAdmin = await navigationFetch(
         ctx.marketing,
@@ -1882,6 +1952,20 @@ for (const caseId of CASE_IDS) {
         EVIL_HOST,
         'marketing admin bounce must not leave marketing with forged host',
       );
+      checkHostCache(marketingAdmin, 'marketing /admin bounce');
+      const marketingAdminTarget = new URL(marketingAdmin.location, ctx.web);
+      const productAdmin = await navigationFetch(
+        ctx.web,
+        `${marketingAdminTarget.pathname}${marketingAdminTarget.search}`,
+        { headers: forged },
+      );
+      assertRedirectStatus(productAdmin);
+      assertLocationOrigin(
+        productAdmin.location,
+        ctx.portal,
+        'marketing /admin next hop',
+      );
+      assertNoOpenRedirectVector(productAdmin.location);
 
       const portalLogin = await navigationFetch(
         ctx.portal,
@@ -1895,6 +1979,10 @@ for (const caseId of CASE_IDS) {
         'portal staff OIDC login',
       );
       assertNoOpenRedirectVector(portalLogin.location);
+      assert.ok(
+        !String(portalLogin.setCookie).includes(EVIL_HOST),
+        'portal login must not persist external return in cookies',
+      );
 
       const portalPlatform = await navigationFetch(
         ctx.portal,
@@ -1922,6 +2010,7 @@ for (const caseId of CASE_IDS) {
         'direct portal OIDC login',
       );
       assertNoOpenRedirectVector(directPortalLogin.location);
+      checkHostCache(directPortalLogin, 'direct portal login');
 
       const directAdmin = await directUpstreamFetch(
         webPort,
@@ -1936,7 +2025,355 @@ for (const caseId of CASE_IDS) {
         'direct legacy admin GET',
       );
       assertNoOpenRedirectVector(directAdmin.location);
+      assert.equal(
+        directAdmin.setCookie,
+        null,
+        'direct legacy GET must not mutate session',
+      );
+      checkHostCache(directAdmin, 'direct legacy admin GET');
 
+      const directMarketingAuth = await directUpstreamFetch(
+        webPort,
+        new URL(ctx.marketing).host,
+        '/auth?return=https%3A%2F%2Fevil.example%2Fphish',
+        { headers: forged },
+      );
+      if ([302, 307, 308].includes(directMarketingAuth.status)) {
+        assertLocationOrigin(
+          directMarketingAuth.location,
+          ctx.web,
+          'direct marketing /auth',
+        );
+        assertNoOpenRedirectVector(directMarketingAuth.location);
+      } else {
+        assert.ok(
+          [400, 403, 421].includes(directMarketingAuth.status),
+          `direct marketing /auth must deny or redirect to product origin, got ${directMarketingAuth.status}`,
+        );
+      }
+      checkHostCache(directMarketingAuth, 'direct marketing /auth');
+
+      const canonicalPoison = await directUpstreamFetch(webPort, webHost, '/', {
+        headers: { ...forged, 'x-forwarded-host': 'www.vemoki.com' },
+      });
+      if ([301, 302, 307, 308].includes(canonicalPoison.status)) {
+        assertLocationOrigin(
+          canonicalPoison.location,
+          ctx.web,
+          'product Host with forged www forwarding',
+        );
+      } else {
+        assert.ok(
+          [200, 400, 403, 421].includes(canonicalPoison.status),
+          `product Host with forged www forwarding must serve product or deny, got ${canonicalPoison.status}`,
+        );
+      }
+      checkHostCache(canonicalPoison, 'forged www forwarding');
+
+      // Read the body as well as the cache headers: status-only probes miss a
+      // product policy or marketing URL served from the wrong host's cache.
+      const marketingHost = new URL(ctx.marketing).host;
+      const hostPairs = [
+        { name: 'robots', path: '/robots.txt' },
+        { name: 'sitemap', path: '/sitemap.xml' },
+      ];
+      for (const { name, path } of hostPairs) {
+        const productBefore = await directUpstreamFetch(
+          webPort,
+          webHost,
+          path,
+          {
+            captureBody: true,
+          },
+        );
+        const productForged = await directUpstreamFetch(
+          webPort,
+          webHost,
+          path,
+          {
+            headers: { 'x-forwarded-host': marketingHost },
+            captureBody: true,
+          },
+        );
+        const productAfter = await directUpstreamFetch(webPort, webHost, path, {
+          captureBody: true,
+        });
+        const marketingBefore = await directUpstreamFetch(
+          webPort,
+          marketingHost,
+          path,
+          {
+            captureBody: true,
+          },
+        );
+        const marketingForged = await directUpstreamFetch(
+          webPort,
+          marketingHost,
+          path,
+          {
+            headers: { 'x-forwarded-host': webHost },
+            captureBody: true,
+          },
+        );
+        const marketingAfter = await directUpstreamFetch(
+          webPort,
+          marketingHost,
+          path,
+          {
+            captureBody: true,
+          },
+        );
+        const probes = {
+          productBefore,
+          productForged,
+          productAfter,
+          marketingBefore,
+          marketingForged,
+          marketingAfter,
+        };
+        t.diagnostic(JSON.stringify({ sec03: name, probes }));
+        for (const [label, result] of Object.entries(probes)) {
+          assert.equal(result.status, 200, `${name} ${label} status`);
+        }
+        assert.equal(
+          productForged.body,
+          productBefore.body,
+          `${name}: forged forwarding changed product response`,
+        );
+        assert.equal(
+          productAfter.body,
+          productBefore.body,
+          `${name}: product response changed after forged request`,
+        );
+        assert.equal(
+          marketingForged.body,
+          marketingBefore.body,
+          `${name}: forged forwarding changed marketing response`,
+        );
+        assert.equal(
+          marketingAfter.body,
+          marketingBefore.body,
+          `${name}: marketing response changed after forged request`,
+        );
+        assert.notEqual(
+          productBefore.body,
+          marketingBefore.body,
+          `${name}: product and marketing policies must differ`,
+        );
+        checkHostCache(
+          productForged,
+          `${name} product with forged marketing host`,
+        );
+        checkHostCache(
+          marketingForged,
+          `${name} marketing with forged product host`,
+        );
+        if (name === 'robots') {
+          assert.match(productBefore.body, /^Disallow: \/$/m);
+          assert.doesNotMatch(productBefore.body, /^Sitemap:/m);
+          assert.match(marketingBefore.body, /^Allow: \/$/m);
+          assert.match(marketingBefore.body, /^Sitemap:/m);
+        } else {
+          assert.doesNotMatch(productBefore.body, /<loc>/);
+          assert.match(marketingBefore.body, /<loc>/);
+          assert.ok(
+            marketingBefore.body.includes(new URL(ctx.marketing).origin),
+          );
+        }
+      }
+
+      // Invalid event data reaches validation only on the real marketing Host;
+      // it cannot record analytics even if a forwarded Host is forged.
+      const analyticsPath = '/api/marketing/events';
+      const analyticsOptions = {
+        method: 'POST',
+        body: '{}',
+        captureBody: true,
+        headers: {
+          origin: new URL(ctx.marketing).origin,
+          'content-type': 'application/json',
+        },
+      };
+      const analyticsProbes = {
+        productBefore: await directUpstreamFetch(
+          webPort,
+          webHost,
+          analyticsPath,
+          analyticsOptions,
+        ),
+        productForged: await directUpstreamFetch(
+          webPort,
+          webHost,
+          analyticsPath,
+          {
+            ...analyticsOptions,
+            headers: {
+              ...analyticsOptions.headers,
+              'x-forwarded-host': marketingHost,
+            },
+          },
+        ),
+        productAfter: await directUpstreamFetch(
+          webPort,
+          webHost,
+          analyticsPath,
+          analyticsOptions,
+        ),
+        marketingBefore: await directUpstreamFetch(
+          webPort,
+          marketingHost,
+          analyticsPath,
+          analyticsOptions,
+        ),
+        marketingForged: await directUpstreamFetch(
+          webPort,
+          marketingHost,
+          analyticsPath,
+          {
+            ...analyticsOptions,
+            headers: {
+              ...analyticsOptions.headers,
+              'x-forwarded-host': webHost,
+            },
+          },
+        ),
+        marketingAfter: await directUpstreamFetch(
+          webPort,
+          marketingHost,
+          analyticsPath,
+          analyticsOptions,
+        ),
+      };
+      t.diagnostic(
+        JSON.stringify({ sec03: 'analytics', probes: analyticsProbes }),
+      );
+      for (const label of ['productBefore', 'productForged', 'productAfter']) {
+        assert.equal(
+          analyticsProbes[label].status,
+          403,
+          `analytics ${label} status`,
+        );
+        assert.equal(
+          JSON.parse(analyticsProbes[label].body).code,
+          'FORBIDDEN_HOST',
+        );
+      }
+      for (const label of [
+        'marketingBefore',
+        'marketingForged',
+        'marketingAfter',
+      ]) {
+        assert.equal(
+          analyticsProbes[label].status,
+          400,
+          `analytics ${label} status`,
+        );
+        assert.equal(
+          JSON.parse(analyticsProbes[label].body).code,
+          'INVALID_EVENT',
+        );
+      }
+      checkHostCache(
+        analyticsProbes.productForged,
+        'analytics product with forged marketing host',
+      );
+      checkHostCache(
+        analyticsProbes.marketingForged,
+        'analytics marketing with forged product host',
+      );
+
+      for (const path of [
+        '/auth?notice=auth_failed&return=https%3A%2F%2Fevil.example%2Fphish&next=%2F%2Fevil.example&redirect=https%3A%2F%2Fevil.example',
+        '/auth?error=session_rejected&return=%2F%2Fevil.example',
+      ]) {
+        const authBounce = await directUpstreamFetch(webPort, webHost, path, {
+          headers: forged,
+        });
+        assertRedirectStatus(authBounce);
+        assertLocationOrigin(
+          authBounce.location,
+          ctx.web,
+          'direct /auth bounce',
+        );
+        assertNoOpenRedirectVector(authBounce.location);
+        checkHostCache(authBounce, 'direct /auth bounce');
+      }
+
+      const forgedHostAuth = await directUpstreamFetch(
+        webPort,
+        EVIL_HOST,
+        '/auth?notice=auth_failed&redirect=https%3A%2F%2Fevil.example',
+        { headers: forged },
+      );
+      if ([302, 307, 308].includes(forgedHostAuth.status)) {
+        assertLocationOrigin(
+          forgedHostAuth.location,
+          ctx.web,
+          'forged Host /auth',
+        );
+        assertNoOpenRedirectVector(forgedHostAuth.location);
+      } else {
+        assert.ok(
+          [400, 403, 421].includes(forgedHostAuth.status),
+          `forged Host /auth must deny or redirect to configured origin, got ${forgedHostAuth.status}`,
+        );
+      }
+      checkHostCache(forgedHostAuth, 'forged Host /auth');
+
+      for (const method of ['GET', 'HEAD']) {
+        const legacyApi = await directUpstreamFetch(
+          webPort,
+          webHost,
+          '/api/bff/admin/tenants/forged?redirect=https%3A%2F%2Fevil.example',
+          { method, headers: forged },
+        );
+        assert.equal(
+          legacyApi.status,
+          410,
+          `legacy API ${method} must be gone`,
+        );
+        assert.equal(
+          legacyApi.location,
+          null,
+          `legacy API ${method} must not redirect`,
+        );
+        assert.equal(
+          legacyApi.setCookie,
+          null,
+          `legacy API ${method} must not mutate session`,
+        );
+      }
+
+      for (const method of ['POST', 'PUT', 'PATCH', 'DELETE']) {
+        const legacyWrite = await directUpstreamFetch(
+          webPort,
+          webHost,
+          `/admin?tenantId=${tenantId}&redirect=https%3A%2F%2Fevil.example`,
+          { method, headers: forged },
+        );
+        assert.equal(
+          legacyWrite.status,
+          404,
+          `legacy ${method} must not navigate`,
+        );
+        assert.equal(
+          legacyWrite.location,
+          null,
+          `legacy ${method} must not redirect`,
+        );
+        assert.equal(
+          legacyWrite.setCookie,
+          null,
+          `legacy ${method} must not mutate session`,
+        );
+      }
+
+      t.diagnostic(JSON.stringify({ sec03: 'cache-verdict', cacheFailures }));
+      assert.deepEqual(
+        cacheFailures,
+        [],
+        'SEC-03 forged responses must forbid shared caching',
+      );
       return;
     }
     if (caseId === 'SEC-04') {
@@ -2132,11 +2569,14 @@ for (const caseId of CASE_IDS) {
       const ticketId = required(f.ticketId, 'JOB-04 ticketId');
       const resendPath = `/tenants/${f.tenantId}/events/${f.eventId}/tickets/${ticketId}/resend`;
 
-      const [budgetLimit] = await web04Query(f, f.tenantId,
+      const [budgetLimit] = await web04Query(
+        f,
+        f.tenantId,
         `INSERT INTO tenant_limits (tenant_id, email_per_day) VALUES ($1::uuid, 0)
          ON CONFLICT (tenant_id) DO UPDATE SET email_per_day = 0
          RETURNING email_per_day`,
-        [f.tenantId]);
+        [f.tenantId],
+      );
       assert.equal(budgetLimit?.email_per_day, 0);
 
       const firstResend = await request(ctx, 'POST', resendPath, owner, null, {
@@ -2172,14 +2612,17 @@ for (const caseId of CASE_IDS) {
       // The API keeps the command pending; the real worker must defer before SMTP.
       let deferred;
       for (let i = 0; i < 40; i++) {
-        [deferred] = await web04Query(f, f.tenantId,
+        [deferred] = await web04Query(
+          f,
+          f.tenantId,
           `SELECT o.status, o.payload->>'emailBudgetDeferred' AS reason,
                   n.state AS notification_state, n.attempts
            FROM outbox o JOIN notifications n
              ON n.tenant_id = o.tenant_id
             AND n.business_key = o.payload->>'businessKey'
            WHERE o.tenant_id = $1::uuid AND n.id = $2::uuid`,
-          [f.tenantId, firstResend.body.notificationId]);
+          [f.tenantId, firstResend.body.notificationId],
+        );
         if (deferred?.reason === 'email_budget_deferred') break;
         await new Promise((resolve) => setTimeout(resolve, 500));
       }
@@ -2188,32 +2631,50 @@ for (const caseId of CASE_IDS) {
       assert.equal(deferred?.notification_state, 'PENDING');
       assert.equal(deferred?.attempts, 0, 'quota defer consumes no SMTP retry');
 
-      const [beforeAdmission] = await web04Query(f, f.tenantId,
+      const [beforeAdmission] = await web04Query(
+        f,
+        f.tenantId,
         `SELECT COALESCE(sent_count, 0) AS sent_count FROM tenant_email_usage
          WHERE tenant_id = $1::uuid AND usage_date = (clock_timestamp() AT TIME ZONE 'UTC')::date`,
-        [f.tenantId]);
-      await web04Query(f, f.tenantId,
+        [f.tenantId],
+      );
+      await web04Query(
+        f,
+        f.tenantId,
         `UPDATE tenant_limits SET email_per_day = 100 WHERE tenant_id = $1::uuid`,
-        [f.tenantId]);
-      await web04Query(f, f.tenantId,
+        [f.tenantId],
+      );
+      await web04Query(
+        f,
+        f.tenantId,
         `UPDATE outbox SET next_attempt_at = clock_timestamp()
          WHERE tenant_id = $1::uuid AND payload->>'businessKey' = $2`,
-        [f.tenantId, `ticket:${ticketId}:resend:email:${firstResend.body.operationId}`]);
+        [
+          f.tenantId,
+          `ticket:${ticketId}:resend:email:${firstResend.body.operationId}`,
+        ],
+      );
       let admitted;
       for (let i = 0; i < 40; i++) {
-        [admitted] = await web04Query(f, f.tenantId,
+        [admitted] = await web04Query(
+          f,
+          f.tenantId,
           `SELECT n.state, n.attempts, u.sent_count
            FROM notifications n JOIN tenant_email_usage u
              ON u.tenant_id = n.tenant_id
             AND u.usage_date = (clock_timestamp() AT TIME ZONE 'UTC')::date
            WHERE n.tenant_id = $1::uuid AND n.id = $2::uuid`,
-          [f.tenantId, firstResend.body.notificationId]);
+          [f.tenantId, firstResend.body.notificationId],
+        );
         if (admitted?.state === 'ACCEPTED') break;
         await new Promise((resolve) => setTimeout(resolve, 500));
       }
       assert.equal(admitted?.state, 'ACCEPTED');
       assert.equal(admitted?.attempts, 1);
-      assert.equal(admitted?.sent_count, (beforeAdmission?.sent_count ?? 0) + 1);
+      assert.equal(
+        admitted?.sent_count,
+        (beforeAdmission?.sent_count ?? 0) + 1,
+      );
 
       const [issuedNotification] = await web04Query(
         f,

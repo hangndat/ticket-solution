@@ -21,7 +21,7 @@
     "tests": ["H:tests/e2e/http/live.test.mjs#[SEC-03]"],
     "layers": ["H"],
     "status": "blocked",
-    "reason": "H live PASS run mvsf7i40-c3b9ff: HTTPS + direct upstream (runtime.upstreamPorts) login/refresh/admin fail-closed, marketing host bounce→web origin, portal staff/platform OIDC→auth, legacy GET|HEAD /admin→portal, POST /admin không nav-redirect, API health không redirect. E2E TLS proxy vẫn ghi đè X-Forwarded-Host (direct path bù). Marketing 302 có thể giữ query adversarial tới app host — chưa assert Cache-Control poison; mọi BFF return/next chưa phủ."
+    "reason": "F01 Web fix 289e5200 + H direct-upstream clean run mvxz652h-b3984a trên 233b9673: robots/sitemap product và marketing đúng policy, không đổi trước/giả/sau khi forged X-Forwarded-Host; analytics product luôn 403 FORBIDDEN_HOST, marketing luôn 400 INVALID_EVENT. F02 H vẫn FAIL: robots/sitemap Cache-Control public,max-age=0,must-revalidate; analytics và nhiều redirect thiếu Cache-Control (17 cache assertions); H bypass shared edge nên chưa chứng minh edge không lưu hoặc dùng cache key theo Host. Source provenance commitStable và evidenceExactShaEligible true. Full SEC-03 BLOCKED chờ bằng chứng edge/cache hoặc fix runtime/header trong scope owner rồi H/reviewer độc lập trên SHA mới."
   },
   {
     "caseId": "SEC-04",
