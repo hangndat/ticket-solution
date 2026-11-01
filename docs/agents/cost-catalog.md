@@ -22,17 +22,18 @@ Sau khi refresh: cập nhật bảng **Pinned** bên dưới + `Pinned at` nếu
 
 ## Coding — chỉ định user 02/11/2026
 
-Khi giao **code**, thay Composer 2.5 bằng hai model **OpenCode Go** dưới đây. Đây là lựa chọn cho worker coding; coordinator vẫn Codex và reviewer độc lập giữ route được giao. Code đơn giản không dùng Codex. Các route cũ còn trong catalog phục vụ task khác hoặc chỉ định riêng; không tự fallback coding sang Cursor/Codex khi OpenCode chưa chạy được.
+Khi giao **code**, thay Composer 2.5 bằng hai model **OpenCode Go** dưới đây. Đây là lựa chọn cho worker coding; coordinator vẫn Codex và reviewer độc lập giữ route được giao. Code đơn giản không dùng Codex. Các route cũ còn trong catalog phục vụ task khác hoặc chỉ định riêng; khi OpenCode lỗi, dùng ngoại lệ Codex Luna bên dưới; không đổi Cursor ngầm.
 
 | Loại coding | Cost tier | `--agent` | `--model` | `--effort` |
 | --- | --- | --- | --- | --- |
 | Nhanh, đơn giản, nhiều request | `cheap`, `standard` | `opencode` | `opencode-go/deepseek-v4.1-flash` | Không truyền |
 | Cần reasoning hoặc context lớn | `focused`, `advanced`, `high` theo rủi ro | `opencode` | `opencode-go/deepseek-v4-pro` | Không truyền |
 | Fallback khi OpenCode Go báo limit/quota | Giữ tier Task hiện tại (`cheap`–`high`) | `opencode` | `opencode-go/beam-free` | Không truyền |
+| OpenCode lỗi runtime hoặc Beam cũng lỗi | Giữ tier Task hiện tại | `codex` | `gpt-6-luna` | `low` cheap/standard/focused; `medium` advanced; `high` high |
 
 Pin đã được xác minh bằng `opencode models` trên host ngày 02/11/2026; Orca có active account OpenCode Zen-Go. OpenCode không hỗ trợ `--effort` qua Orca: tier vẫn là metadata về scope/rủi ro, `high` vẫn bắt buộc `--tier-reason`. Start qua wrapper với `--employee`, trên worktree hiện có và kiểm requested/effective trong receipt. Không suy quota hoặc mức giá/off-peak từ tên model hay từ quota Codex; giữ số lượng quota unknown khi provider không cung cấp.
 
-**Fallback user duyệt 02/11/2026:** khi provider OpenCode Go báo limit/quota thật, dùng đúng pin `opencode-go/beam-free` (đã xác minh qua `opencode models`), giữ employee, Task, Cost tier và review/fix budget. Checkpoint và xác minh attempt cũ đã dừng trước `--retry-of`; không bật Extra Usage hoặc tự đổi provider. Flash/Pro vẫn là primary. Chi tiết: [opencode-limit-fallback.mdc](../../.cursor/rules/opencode-limit-fallback.mdc).
+**Fallback user duyệt 02/11/2026:** khi provider OpenCode Go báo limit/quota thật, dùng đúng pin `opencode-go/beam-free` (đã xác minh qua `opencode models`), giữ employee, Task, Cost tier và review/fix budget. Checkpoint và xác minh attempt cũ đã dừng trước `--retry-of`; không bật Extra Usage; OpenCode/Beam lỗi được chuyển Codex Luna theo chỉ định user mới. Flash/Pro vẫn là primary. Chi tiết: [opencode-limit-fallback.mdc](../../.cursor/rules/opencode-limit-fallback.mdc).
 
 ## Pinned (Cursor host hangndat · 2026-10-19; Codex/Claude · 2026-10-24)
 
@@ -238,3 +239,7 @@ Claude/Codex recovery (tier `focused|advanced|high`): `scripts/agent-provider-re
 ## Chỉ định Terra — 2026-10-31
 
 User yêu cầu ngừng spawn Cursor khi hết usage và dùng ChatGPT Terra cho đợt tích hợp/phát hành. Host catalog có `gpt-6.1-terra`, effort low/medium/high. Đăng ký Codex Terra cho standard/focused low, advanced medium và high high; giữ quota bucket `codex`, dự phòng và caps. Chỉ định user ưu tiên hơn route mặc định trong đợt này; không tự suy entitlement hoặc quota riêng từ tên model.
+
+### Fallback Codex tiết kiệm khi OpenCode lỗi — user duyệt 02/11/2026
+
+Pin `gpt-6-luna` và effort low/medium/high đã đối chiếu host `agent-model-catalog.json`. Đây là route coding fallback, không đổi primary hoặc reviewer mặc định. Giữ tier/scope/employee/Task/findings/fix budget; effort theo bảng coding trên. Chưa có phép đo giá/quota thực tế để hứa mức tiết kiệm. Trước retry phải chứng minh attempt cũ đã dừng, checkpoint WIP và dùng cùng Task với --retry-of qua wrapper. Codex vẫn kiểm allowance đúng tài khoản, reserve20%, cap hiện hành; không loop/nâng model/billing nếu route này lỗi.
