@@ -27,13 +27,13 @@ const {
   createFailingEmailAdapter,
   createNoopEmailAdapter,
   openStaffSession,
-  reserveCheckin,
   confirmCheckin,
   undoCheckin,
   unwrapReserveOutcome,
   unwrapConfirmOutcome,
   GATE_ERROR_CODES,
 } = require('../dist');
+const { reserveCheckin } = require('./gate-test-credentials.cjs');
 
 const docker = (...args) =>
   execFileSync('docker', args, {

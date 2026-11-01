@@ -7,6 +7,7 @@ export const IMPORT_UPLOAD_BODY_LIMIT_BYTES = 11 * 1024 * 1024;
 export const API_RATE_BUCKETS = {
   redeem: 'api.redeem',
   gateReserve: 'api.gate.reserve',
+  gateManualLookup: 'api.gate.manual-lookup',
   gateConfirm: 'api.gate.confirm',
   gateOfflineSync: 'api.gate.offline-sync',
   /** GET receipt lookup (#859) — separate counter from POST replay budget. */
@@ -22,6 +23,7 @@ export const API_RATE_BUCKETS = {
 export const API_RATE_LIMITS = {
   redeemPerUser: 120,
   gateReservePerUser: 240,
+  gateManualLookupPerUser: 60,
   gateConfirmPerUser: 240,
   gateOfflineSyncPerUser: 60,
   /** Hourly GET receipt reads per user (does not consume POST offline-sync budget). */

@@ -5128,6 +5128,71 @@
           "gate"
         ]
       }
+    },
+    "/v1/gate/events/{eventId}/manual-lookup": {
+      "post": {
+        "operationId": "GateController_manualLookup",
+        "parameters": [
+          {
+            "name": "eventId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualLookupBodyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManualLookupResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "gate"
+        ]
+      }
     }
   },
   "info": {
@@ -5707,6 +5772,30 @@
           "credentialVersion": {
             "type": "number"
           },
+          "gateCredential": {
+            "type": "object",
+            "properties": {
+              "v": {
+                "type": "number",
+                "enum": [
+                  1
+                ]
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "ticket.gate_credential"
+                ]
+              },
+              "jws": {
+                "type": "string"
+              }
+            }
+          },
+          "manualEntryCode": {
+            "type": "string",
+            "nullable": true
+          },
           "createdAt": {
             "type": "string"
           },
@@ -5722,6 +5811,8 @@
           "sourceId",
           "state",
           "credentialVersion",
+          "gateCredential",
+          "manualEntryCode",
           "createdAt"
         ]
       },
@@ -5875,19 +5966,45 @@
             "type": "string",
             "format": "uuid"
           },
-          "ticketId": {
-            "type": "string",
-            "format": "uuid"
-          },
           "staffSessionId": {
             "type": "string",
             "format": "uuid"
+          },
+          "presented": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "enum": [
+                      "qr"
+                    ]
+                  },
+                  "jws": {
+                    "type": "string"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "enum": [
+                      "manual"
+                    ]
+                  },
+                  "proofToken": {
+                    "type": "string"
+                  }
+                }
+              }
+            ]
           }
         },
         "required": [
           "tenantId",
-          "ticketId",
-          "staffSessionId"
+          "staffSessionId",
+          "presented"
         ]
       },
       "ReserveResponseDto": {
@@ -8571,6 +8688,49 @@
           "ticketId",
           "credentialVersion",
           "replayed"
+        ]
+      },
+      "ManualLookupBodyDto": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "staffSessionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 12
+          }
+        },
+        "required": [
+          "tenantId",
+          "staffSessionId",
+          "code"
+        ]
+      },
+      "ManualLookupResponseDto": {
+        "type": "object",
+        "properties": {
+          "ticketId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "proofToken": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "ticketId",
+          "proofToken",
+          "expiresAt"
         ]
       }
     }

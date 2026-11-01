@@ -8,7 +8,7 @@
     "build": "pnpm generate && tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src",
-    "test": "pnpm build && node --test test/env.test.cjs test/oidc.test.cjs test/membership-unit.test.cjs test/issue-unit.test.cjs test/csv-guard.test.cjs test/apns-unit.test.cjs test/notification-unit.test.cjs test/web-links-unit.test.cjs test/qr-ticket-link-unit.test.cjs test/form-validate.test.cjs test/platform-unit.test.cjs test/demo-seed-unit.test.cjs test/prod-seed-unit.test.cjs test/prod-media-manifest.test.cjs test/offline-sync-unit.test.cjs test/branding-unit.test.cjs test/code-routing.test.cjs test/keycloak-erasure-http.test.cjs",
+    "test": "pnpm build && node --test test/env.test.cjs test/oidc.test.cjs test/membership-unit.test.cjs test/issue-unit.test.cjs test/gate-credential.test.cjs test/csv-guard.test.cjs test/apns-unit.test.cjs test/notification-unit.test.cjs test/web-links-unit.test.cjs test/qr-ticket-link-unit.test.cjs test/form-validate.test.cjs test/platform-unit.test.cjs test/demo-seed-unit.test.cjs test/prod-seed-unit.test.cjs test/prod-media-manifest.test.cjs test/offline-sync-unit.test.cjs test/branding-unit.test.cjs test/code-routing.test.cjs test/keycloak-erasure-http.test.cjs",
     "generate": "prisma generate",
     "test:offline-receipt": "pnpm --filter @ticket/contracts build && pnpm build && node --test test/offline-sync-receipt.test.cjs test/offline-sync-unit.test.cjs",
     "test:architecture-recovery": "pnpm --filter @ticket/contracts build && pnpm build && node --test test/apns-atleast-once.test.cjs test/apns-env-fallback.test.cjs test/outbox-fence.test.cjs",

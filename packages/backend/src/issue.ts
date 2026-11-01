@@ -34,6 +34,8 @@ import { withActor, withTenant } from './tenant-context';
 import { lockIssuanceQuotas } from './quota-lock';
 import { isRetryableTransactionConflict } from './transaction-conflict';
 import type { PrismaClient } from './generated/prisma/client';
+import { assignManualEntryCode } from './gate';
+import { readGateManualCodePepper } from './gate-credential';
 
 export const REDEEM_COMMAND = 'redemption.redeem' as const;
 export const APPROVAL_PENDING = 'APPROVAL_PENDING' as const;
@@ -56,6 +58,8 @@ export type RedeemInput = {
   resolveToken?: string;
   resolveTokenSecret?: string;
   routingPeppers?: CodeHmacConfig[];
+  /** Internal API configuration; never accepted from a public request body. */
+  manualCodePepper?: CodeHmacConfig;
 };
 
 export type IssuedTicketResult = {
@@ -641,6 +645,13 @@ async function runIssueBusiness(
       'ACTIVE', 1, ${JSON.stringify(entitlement)}::jsonb, now(), now()
     )
   `;
+  await assignManualEntryCode(tx, {
+    tenantId: input.tenantId,
+    eventId: input.eventId,
+    ticketId,
+    manualCodePepper: input.manualCodePepper ?? readGateManualCodePepper(process.env),
+    credentialKeyMaterial,
+  });
 
   const rawToken = randomBytes(32).toString('base64url');
   const sealed = sealCredentialToken(rawToken, credentialKeyMaterial);
@@ -917,6 +928,8 @@ export type ListedTicket = {
   sourceId: string;
   state: string;
   credentialVersion: number;
+  /** Internal only: the API service decrypts this for the authenticated owner. */
+  manualEntryCodeSealed: string | null;
   createdAt: Date;
   eventName?: string;
 };
@@ -928,6 +941,7 @@ type OwnerTicketListRow = {
   source_id: string;
   state: string;
   credential_version: number;
+  manual_entry_code_sealed: string | null;
   created_at: Date;
   event_name: string | null;
 };
@@ -940,6 +954,7 @@ function mapOwnerTicketListRow(row: OwnerTicketListRow): ListedTicket {
     sourceId: row.source_id,
     state: row.state,
     credentialVersion: row.credential_version,
+    manualEntryCodeSealed: row.manual_entry_code_sealed,
     createdAt: row.created_at,
     ...(row.event_name != null ? { eventName: row.event_name } : {}),
   };
@@ -955,7 +970,7 @@ export async function listTicketsForOwner(
 ): Promise<ListedTicket[]> {
   const rows = await tx.$queryRaw<OwnerTicketListRow[]>`
     SELECT t.id, t.event_id, t.ticket_type_id, t.source_id, t.state,
-           t.credential_version, t.created_at, e.name AS event_name
+            t.credential_version, t.manual_entry_code_sealed, t.created_at, e.name AS event_name
     FROM tickets t
     LEFT JOIN events e
       ON e.tenant_id = t.tenant_id AND e.id = t.event_id
@@ -983,11 +998,12 @@ export async function listAllTicketsForOwner(
       source_id: string;
       state: string;
       credential_version: number;
+      manual_entry_code_sealed: string | null;
       created_at: Date;
     }[]
   >`
     SELECT tenant_id, id, event_id, ticket_type_id, source_id, state,
-           credential_version, created_at
+            credential_version, manual_entry_code_sealed, created_at
     FROM tickets
     WHERE owner_user_id = ${ownerUserId}::uuid
     ORDER BY created_at DESC
@@ -1000,6 +1016,7 @@ export async function listAllTicketsForOwner(
     sourceId: row.source_id,
     state: row.state,
     credentialVersion: row.credential_version,
+    manualEntryCodeSealed: row.manual_entry_code_sealed,
     createdAt: row.created_at,
   }));
 }
@@ -1067,11 +1084,12 @@ export async function getTicketForOwner(
       source_id: string;
       state: string;
       credential_version: number;
+      manual_entry_code_sealed: string | null;
       created_at: Date;
     }[]
   >`
     SELECT id, event_id, ticket_type_id, source_id, state,
-           credential_version, created_at
+            credential_version, manual_entry_code_sealed, created_at
     FROM tickets
     WHERE tenant_id = ${tenantId}::uuid
       AND owner_user_id = ${ownerUserId}::uuid
@@ -1091,6 +1109,7 @@ export async function getTicketForOwner(
     sourceId: row.source_id,
     state: row.state,
     credentialVersion: row.credential_version,
+      manualEntryCodeSealed: row.manual_entry_code_sealed,
     createdAt: row.created_at,
   };
 }
