@@ -73,7 +73,7 @@
     "tests": ["H:tests/e2e/http/live.test.mjs#[GATE-01]"],
     "layers": ["H"],
     "status": "blocked",
-    "reason": "Đã viết H list/create/duplicate/permission/session nullable/foreign-gate FK/cross-event; chờ runtime. Chưa phủ mở lại cùng gate và actor có assignment cả hai event."
+    "reason": "H list/create/duplicate/permission/session nullable, mở lại cùng gate và foreign-gate/cross-event deny; có đối soát PG số gate/session sau deny. Chưa phủ actor có assignment cả hai event và full D/H; xem evidence exact SHA ở PR."
   },
   {
     "caseId": "GATE-03",

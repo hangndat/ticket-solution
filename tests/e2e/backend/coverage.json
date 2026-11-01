@@ -219,7 +219,7 @@
     "tests": ["D:packages/backend/test/gate.test.cjs#gate: one confirm wins"],
     "layers": ["D"],
     "status": "blocked",
-    "reason": "D reserve conflict; thiếu H retry/cancel/expiry matrix."
+    "reason": "D reserve conflict và cùng holder refresh token; token cũ không confirm hoặc tạo check-in. Thiếu H retry/cancel/expiry matrix."
   },
   {
     "caseId": "GATE-03",
@@ -233,7 +233,7 @@
     "tests": ["D:packages/backend/test/gate.test.cjs#gate: one confirm wins"],
     "layers": ["D"],
     "status": "blocked",
-    "reason": "D concurrent confirm; thiếu wrong holder/token, revoke/session race và H retry."
+    "reason": "D concurrent confirm và token cũ sau refresh bị từ chối; thiếu full wrong holder/token, revoke/session race và H retry."
   },
   {
     "caseId": "GATE-05",

@@ -199,7 +199,7 @@ test(
       const other = await withTenant(db, tenantId, (tx) =>
         openStaffSession(tx, { tenantId, eventId, userId: staffB.userId }),
       );
-      const hold = unwrapReserveOutcome(
+      let hold = unwrapReserveOutcome(
         await withTenant(db, tenantId, (tx) =>
           reserveCheckin(tx, {
             tenantId,
@@ -210,6 +210,31 @@ test(
           }),
         ),
       );
+      const originalHold = hold;
+      hold = unwrapReserveOutcome(await withTenant(db, tenantId, (tx) =>
+        reserveCheckin(tx, {
+          tenantId, eventId, ticketId: issued.ticketId,
+          staffSessionId: session.sessionId, actorUserId: staff.userId,
+        }),
+      ));
+      assert.equal(hold.reservationId, originalHold.reservationId);
+      assert.notEqual(hold.token, originalHold.token);
+      const staleToken = await withTenant(db, tenantId, (tx) =>
+        confirmCheckin(tx, {
+          tenantId, eventId, reservationId: hold.reservationId,
+          token: originalHold.token, staffSessionId: session.sessionId,
+          actorUserId: staff.userId,
+        }),
+      );
+      assert.equal(staleToken.ok, false);
+      assert.equal(staleToken.code, GATE_ERROR_CODES.RESERVATION_TOKEN_MISMATCH);
+      const beforeConfirm = await withTenant(db, tenantId, async (tx) => {
+        const reservations = await tx.$queryRaw`SELECT status FROM checkin_reservations WHERE ticket_id = ${issued.ticketId}::uuid`;
+        const checkins = await tx.$queryRaw`SELECT count(*)::int AS n FROM checkins WHERE ticket_id = ${issued.ticketId}::uuid`;
+        return { reservations, checkins };
+      });
+      assert.deepEqual(beforeConfirm.reservations, [{ status: 'HELD' }]);
+      assert.equal(beforeConfirm.checkins[0].n, 0);
       const reissueKey = randomUUID();
       const reissueInput = {
         tenantId, eventId, ticketId: issued.ticketId,

@@ -1,5 +1,7 @@
 # Backend E2E regression — kết quả tại baseline `022cb80fd159dad2a7ebd0eeeea07fd64391f90a`
 
+GATE-02/04 bổ sung D: cùng holder refresh giữ nguyên reservation, xoay token; token cũ bị từ chối và không tạo check-in. Các AC còn thiếu giữ `blocked` trong coverage; selector con không chứng minh toàn bộ ID.
+
 ## Cập nhật sau sửa product
 
 `pnpm test:integration:local --suite D` đã chạy lại trên PostgreSQL cô lập: **38/38 selector PASS**, exit 0. Riêng POL-01 xác nhận metric `account_deletion_idp_sla_overdue` đếm 1 theo fixture quá 30 ngày. Sửa ở `packages/backend/src/account-deletion.ts` và migration `202610280003_account_deletion_sla_metric`; migration phải áp dụng trước runtime. Kết quả baseline 37/38 bên dưới là lịch sử trước sửa, không phải trạng thái hiện tại. Full 46 ID acceptance vẫn chưa được chứng minh vì các nhánh H/R và gap nêu cuối báo cáo.
