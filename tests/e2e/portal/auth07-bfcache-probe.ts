@@ -1,25 +1,105 @@
-import { expect, type Page, type TestInfo } from 'playwright/test';
+import {
+  expect,
+  type BrowserContext,
+  type Page,
+  type TestInfo,
+} from 'playwright/test';
+
+export type Auth07BfcacheEvent = {
+  kind: 'pageshow' | 'pagehide';
+  persisted: boolean;
+  url: string;
+};
+
+const AUTH07_BFCACHE_EVENT_BINDING = '__auth07BfcacheEvent';
 
 /** Installed via addInitScript before the audit history stack is built. */
 export function auth07BfcacheProbeInit(): void {
-  const w = window as Window & {
+  type ProbeWindow = Window & {
     __auth07Restored?: boolean;
     __auth07Bfcache?: {
       forwardPageshowPersisted: boolean | null;
       lastPageshowPersisted: boolean | null;
+      lastPagehidePersisted: boolean | null;
     };
+    __auth07BfcacheEvent?: (event: Auth07BfcacheEvent) => unknown;
   };
+  const w = window as ProbeWindow;
   w.__auth07Restored = false;
   w.__auth07Bfcache = {
     forwardPageshowPersisted: null,
     lastPageshowPersisted: null,
+    lastPagehidePersisted: null,
   };
-  window.addEventListener('pageshow', (event) => {
+  const record = (kind: 'pageshow' | 'pagehide', event: PageTransitionEvent) => {
     const probe = w.__auth07Bfcache!;
-    probe.lastPageshowPersisted = event.persisted;
-    if (event.persisted) w.__auth07Restored = true;
+    if (kind === 'pageshow') {
+      probe.lastPageshowPersisted = event.persisted;
+      if (event.persisted) w.__auth07Restored = true;
+    } else {
+      probe.lastPagehidePersisted = event.persisted;
+    }
+    // Spec-installed binding; optional so the probe still works without it.
+    // Inline literal: Playwright serializes this function without module scope.
+    const report = w['__auth07BfcacheEvent'];
+    if (typeof report === 'function') {
+      void Promise.resolve(
+        report({ kind, persisted: event.persisted, url: location.href }),
+      ).catch(() => undefined);
+    }
+  };
+  window.addEventListener('pageshow', (event) => record('pageshow', event));
+  window.addEventListener('pagehide', (event) => record('pagehide', event));
+}
+
+export type Auth07BfcacheTimeline = {
+  mark(): number;
+  since(mark: number): Auth07BfcacheEvent[];
+};
+
+/** Records pageshow/pagehide from every probe document for post-run evidence. */
+export async function installAuth07BfcacheTimeline(
+  context: BrowserContext,
+): Promise<Auth07BfcacheTimeline> {
+  const events: Auth07BfcacheEvent[] = [];
+  await context.exposeBinding(
+    AUTH07_BFCACHE_EVENT_BINDING,
+    (_source, event: Auth07BfcacheEvent) => {
+      if (events.length < 200) events.push(event);
+    },
+  );
+  return { mark: () => events.length, since: (mark) => events.slice(mark) };
+}
+
+export type Auth07NavigationObservation = {
+  path: string;
+  pageshowPersisted: boolean | null;
+  pagehidePersisted: boolean | null;
+};
+
+export async function readAuth07NavigationObservation(
+  page: Page,
+): Promise<Auth07NavigationObservation> {
+  return page.evaluate(() => {
+    const w = window as Window & {
+      __auth07Bfcache?: {
+        lastPageshowPersisted: boolean | null;
+        lastPagehidePersisted: boolean | null;
+      };
+    };
+    return {
+      path: `${location.pathname}${location.search}`,
+      pageshowPersisted: w.__auth07Bfcache?.lastPageshowPersisted ?? null,
+      pagehidePersisted: w.__auth07Bfcache?.lastPagehidePersisted ?? null,
+    };
   });
 }
+
+type NotRestoredReasonsNode = {
+  reason?: string;
+  reasons?: Array<{ reason?: string }>;
+  children?: NotRestoredReasonsNode[] | null;
+};
 
 export type Auth07BfcacheEvidence = {
   restoredFlag: boolean;
@@ -33,8 +113,16 @@ export type Auth07BfcacheEvidence = {
 
 export async function resetAuth07PageshowObservation(page: Page): Promise<void> {
   await page.evaluate(() => {
-    const w = window as Window & { __auth07Bfcache?: { lastPageshowPersisted: boolean | null } };
-    if (w.__auth07Bfcache) w.__auth07Bfcache.lastPageshowPersisted = null;
+    const w = window as Window & {
+      __auth07Bfcache?: {
+        lastPageshowPersisted: boolean | null;
+        lastPagehidePersisted: boolean | null;
+      };
+    };
+    if (w.__auth07Bfcache) {
+      w.__auth07Bfcache.lastPageshowPersisted = null;
+      w.__auth07Bfcache.lastPagehidePersisted = null;
+    }
   });
 }
 
@@ -42,6 +130,61 @@ export async function readForwardPageshowPersisted(page: Page): Promise<boolean 
   return page.evaluate(() => {
     const w = window as Window & { __auth07Bfcache?: { lastPageshowPersisted: boolean | null } };
     return w.__auth07Bfcache?.lastPageshowPersisted ?? null;
+  });
+}
+
+const persistedLabel = (value: boolean | null): string =>
+  value === null ? 'unobserved' : value ? 'true' : 'false';
+
+/** Evidence for each goBack/goForward hop, read before the next reset. */
+export function annotateAuth07BfcacheDirection(
+  testInfo: TestInfo,
+  phase: 'control' | 'post-switch',
+  direction: 'back' | 'forward',
+  observation: Auth07NavigationObservation,
+): void {
+  testInfo.annotations.push({
+    type: `auth07-${phase}-${direction}`,
+    description: `${observation.path} pageshow=${persistedLabel(observation.pageshowPersisted)} pagehide=${persistedLabel(observation.pagehidePersisted)}`,
+  });
+}
+
+export function annotateAuth07BfcacheTimeline(
+  testInfo: TestInfo,
+  events: Auth07BfcacheEvent[],
+  phase: 'control' | 'post-switch',
+): void {
+  const description = events
+    .slice(-16)
+    .map((event) => `${event.kind}:${new URL(event.url).pathname}=${event.persisted}`)
+    .join(' ');
+  testInfo.annotations.push({
+    type: `auth07-timeline-${phase}`,
+    description: description || 'none',
+  });
+}
+
+/** Durable GAP record when the same-actor control is not actually restored. */
+export function annotateAuth07ControlGap(
+  testInfo: TestInfo,
+  context: {
+    browserVersion: string;
+    back: Auth07NavigationObservation;
+    forward: Auth07NavigationObservation;
+    notRestoredReasons: string[] | null;
+  },
+): void {
+  testInfo.annotations.push({
+    type: 'auth07-control-gap',
+    description: [
+      'control-persisted!=true',
+      `back-pageshow=${persistedLabel(context.back.pageshowPersisted)}`,
+      `forward-pageshow=${persistedLabel(context.forward.pageshowPersisted)}`,
+      `reasons=${context.notRestoredReasons?.join(',') ?? 'none'}`,
+      `chromium=${context.browserVersion}`,
+      'channel=chromium-new-headless',
+      'source=pageshow,pagehide,notRestoredReasons',
+    ].join(' '),
   });
 }
 
@@ -67,21 +210,33 @@ export async function readAuth07BfcacheEvidence(
       };
     };
     const nav = performance.getEntriesByType('navigation').at(-1) as
-      | (PerformanceNavigationTiming & { notRestoredReasons?: Array<{ reason?: string }> })
+      | (PerformanceNavigationTiming & {
+          notRestoredReasons?: NotRestoredReasonsNode | NotRestoredReasonsNode[];
+        })
       | undefined;
     const raw = nav?.notRestoredReasons;
-    const reasons =
-      Array.isArray(raw) && raw.length
-        ? raw
-            .map((entry) => {
-              const reason = entry?.reason;
-              if (typeof reason !== 'string' || !reason.trim()) return null;
-              const trimmed = reason.trim();
-              if (trimmed.length > 64 || !/^[\w.-]+$/.test(trimmed)) return null;
-              return trimmed;
-            })
-            .filter((value): value is string => value !== null)
-        : null;
+    const collected: string[] = [];
+    const pushReason = (value: unknown): void => {
+      if (typeof value !== 'string' || !value.trim()) return;
+      const trimmed = value.trim();
+      if (trimmed.length <= 64 && /^[\w.-]+$/.test(trimmed)) collected.push(trimmed);
+    };
+    const collect = (
+      node: NotRestoredReasonsNode | null | undefined,
+      depth: number,
+    ): void => {
+      if (!node || depth > 4) return;
+      pushReason(node.reason);
+      for (const entry of node.reasons ?? []) pushReason(entry?.reason);
+      for (const child of node.children ?? []) collect(child, depth + 1);
+    };
+    // Chrome exposes a tree (reasons/children); older shapes used an array.
+    if (Array.isArray(raw)) {
+      for (const entry of raw) collect(entry, 0);
+    } else {
+      collect(raw, 0);
+    }
+    const reasons = collected.length ? [...new Set(collected)].slice(0, 8) : null;
     const transferSize = typeof nav?.transferSize === 'number' ? nav.transferSize : null;
     let forwardPersisted =
       forwardFromProbe ??
