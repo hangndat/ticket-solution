@@ -118,6 +118,20 @@
     "reason": "Partial H PASS run mvum30ad-4c7c2e: PATCH owner reassignment refused (404) on CS `/tenants/.../tickets/:id`, attendee `/me/tickets/:id`, gate `/gate/events/:e/tickets/:id` with authorized cs/scanner; ticket_runtime snapshot unchanged for owner/state, credential versions, code CONSUMED+allocation, audit/outbox counts. Full DB-09 vẫn BLOCKED (GATE-03 QR credential validation, broader lifecycle H)."
   },
   {
+    "caseId": "DB-15",
+    "tests": ["H:tests/e2e/http/live.test.mjs#[DB-15] live HTTP"],
+    "layers": ["H"],
+    "status": "implemented",
+    "reason": "Keycloak/API thật: issue, confirm/reject/undo/cancel và report; kiểm checkin + undo audit trong PostgreSQL. Notification UNKNOWN/DEAD được tạo synthetic ở H, retry provider thực được kiểm ở D. Chờ SHA sạch, DoD độc lập và làm rõ câu chữ O12."
+  },
+  {
+    "caseId": "DB-16",
+    "tests": ["H:tests/e2e/http/live.test.mjs#[DB-16] live HTTP"],
+    "layers": ["H"],
+    "status": "implemented",
+    "reason": "Keycloak/API thật: Owner/Manager assignment filter, cursor/limit/asOf, foreign tenant/event và digest snapshot PostgreSQL dưới RLS không đổi sau deny. Chờ SHA sạch và reviewer độc lập."
+  },
+  {
     "caseId": "WEB-04",
     "tests": ["H:tests/e2e/http/live.test.mjs#[WEB-04]"],
     "layers": ["H"],

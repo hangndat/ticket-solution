@@ -154,27 +154,31 @@
       "H:tests/e2e/http/live.test.mjs#[DB-14] live HTTP"
     ],
     "layers": ["D", "H"],
-    "status": "pass",
+    "status": "implemented",
     "reason": "D PostgreSQL PASS: consent version/hashes on request (expected hashes from published form/terms source, v2≠v1, v1 ticket immutable after publish), allowlist rejects unsafe markup/unknown keys/non-allowlisted field types, ticket entitlement_snapshot immutable after config publish/rebrand and ticket_type mutation; stale terms on redeem rejected. H Keycloak/HTTP PASS: same hash contract on live redeem + config publish v2 + TERMS_VERSION_STALE. Chờ DoD độc lập revalidate F01 trên SHA cuối."
   },
   {
     "caseId": "DB-15",
     "tests": [
       "D:packages/backend/test/reporting.test.cjs#event report counts",
-      "D:packages/backend/test/gate.test.cjs#gate: one confirm wins"
+      "D:packages/backend/test/gate.test.cjs#gate: one confirm wins",
+      "D:packages/backend/test/db15-report-reconciliation.test.cjs#DB-15: report reconciles confirm, reject, undo history, cancellation and final delivery failure",
+      "H:tests/e2e/http/live.test.mjs#[DB-15] live HTTP"
     ],
-    "layers": ["D"],
-    "status": "blocked",
-    "reason": "D report; thiếu full undo/cancel/final notification reconciliation."
+    "layers": ["D", "H"],
+    "status": "implemented",
+    "reason": "D PostgreSQL: confirm/reject/undo, history audit, USED không thay confirm, retry tới DEAD thật và cancel event. H Keycloak/API: report đối soát các bước và DB history; notification state H được setup synthetic (worker retry thật đã chạy D). Theo review PR #242, undo đưa KPI về 0; câu chữ O12 APPLIED có thể hiểu là lũy kế, cần làm rõ riêng. Chờ evidence SHA sạch và reviewer độc lập."
   },
   {
     "caseId": "DB-16",
     "tests": [
-      "D:packages/backend/test/reporting.test.cjs#portfolio report filters"
+      "D:packages/backend/test/reporting.test.cjs#portfolio report filters",
+      "D:packages/backend/test/db16-portfolio-boundaries.test.cjs#DB-16: owner and manager portfolio respects assignment and tenant RLS",
+      "H:tests/e2e/http/live.test.mjs#[DB-16] live HTTP"
     ],
-    "layers": ["D"],
-    "status": "blocked",
-    "reason": "D assignment filter; thiếu H cursor/watermark và owner/manager boundaries."
+    "layers": ["D", "H"],
+    "status": "implemented",
+    "reason": "D PostgreSQL và H Keycloak/API: Owner/Manager chỉ thấy event có report.read assignment; paging, limit, watermark, foreign tenant và deny không mutation. Chờ evidence SHA sạch và reviewer độc lập."
   },
   {
     "caseId": "DB-17",

@@ -23,6 +23,8 @@ const cases = [
   'DB-11',
   'DB-12',
   'DB-14',
+  'DB-15',
+  'DB-16',
   'JOB-04',
   'WEB-04',
   'WEB-05',
