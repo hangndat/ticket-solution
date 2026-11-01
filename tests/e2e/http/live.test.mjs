@@ -666,6 +666,7 @@ async function rejectPlatformMfaWithWrongOtp(browser, ctx, account) {
 }
 
 async function platformGrantSnapshot(ctx, tenantIds) {
+  const ids = Array.isArray(tenantIds) ? tenantIds : [tenantIds];
   const requireApi = createRequire(
     new URL('../../../apps/api/package.json', import.meta.url),
   );
@@ -684,7 +685,7 @@ async function platformGrantSnapshot(ctx, tenantIds) {
         (SELECT count(*)::int FROM platform_audit_logs WHERE tenant_id = scoped.tenant_id) AS audit
       FROM unnest($1::uuid[]) AS scoped(tenant_id)
       ORDER BY scoped.tenant_id`,
-      [tenantIds],
+      [ids],
     );
     return Object.fromEntries(
       rows.map(({ tenant_id, ...snapshot }) => [tenant_id, snapshot]),
