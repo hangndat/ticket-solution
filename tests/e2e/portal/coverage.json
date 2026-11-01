@@ -92,14 +92,15 @@
     "caseId": "PORT-08",
     "tests": [
       "portal-core.spec.ts [PORT-08] event report shows seeded KPI, asOf and work links",
-      "portal-core.spec.ts [PORT-08] upstream report fault does not render fake zero KPIs"
+      "portal-core.spec.ts [PORT-08] upstream report fault does not render fake zero KPIs",
+      "port08-state.spec.ts [PORT-08] Gate confirm APPLIED then undo drives dashboard KPI and audit"
     ],
     "layers": [
       "B",
       "H"
     ],
-    "status": "blocked",
-    "reason": "PORT-08 B/H PASS run mvut378v-220ec0 (2/2 browser specs) on SHA 9bec814e: BFF /report matches readEventReport seed with pendingApprovalCount>0, emailNeedsCsCount>0, FINITE quota; gate asOf, KPI counts, deep-link CTAs (#pending, #cs), manual refresh GET, no resend on dashboard, no Portal scan/confirm/undo; upstream /report fault (error500) shows unknown state without fake zero KPIs. BLOCKED: O12 confirm APPLIED/undo/reject — source Gate confirmCheckin/undoCheckin + packages/backend/test/reporting.test.cjs check-in counts; DB-15/GATE E2E, not Portal dashboard."
+    "status": "covered",
+    "reason": "PORT-08 B/H PASS run mvy6cgor-c22a6e (3/3 browser specs) on clean SHA f3cfb27d, workingTreeDirty=false, evidenceExactShaEligible=true: existing portal-core specs keep seed /report snapshot (pendingApprovalCount>0, emailNeedsCsCount>0, FINITE quota), asOf, manual refresh GET, deep-link CTAs (#pending, #cs), no resend, no Portal scan/confirm/undo, and upstream error500 unknown state without fake zero KPIs. New journey uses a real Keycloak staff token (e2e-http, audience ticket-api) against real Gate HTTP: session -> reserve -> confirm state USED -> dashboard KPI 1 after manual refresh -> undo -> KPI 0 with ticket state restored; pending/quota/emailNeedsCs unchanged across confirm/undo; denials TICKET_NOT_ACTIVE and ALREADY_CHECKED_IN keep count flat and report rejectByReason matches the Gate code dictionary; audit keeps gate.confirm + gate.undo on the same checkin plus two gate.reject rows; unassigned sibling event and foreign tenant report return 403 for the same token. Residual: independent review pending; GATE-03 signed QR/scan is a different AC; this entry is selector/runtime coverage, not Issue #1035 closure."
   },
   {
     "caseId": "PORT-09",
