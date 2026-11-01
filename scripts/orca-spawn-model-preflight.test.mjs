@@ -13,6 +13,14 @@ const cases = [
   ["--cost-tier high --agent opencode --model opencode-go/deepseek-v4.1-flash --tier-reason tenant-isolation", 2],
   ["--cost-tier standard --agent opencode --model opencode-go/deepseek-v4-pro", 2],
   ["--cost-tier high --agent opencode --model opencode-go/deepseek-v4-pro --effort high --tier-reason tenant-isolation", 2],
+  ["--cost-tier cheap --agent opencode --model opencode-go/beam-free", 0],
+  ["--cost-tier standard --agent opencode --model opencode-go/beam-free", 0],
+  ["--cost-tier focused --agent opencode --model opencode-go/beam-free", 0],
+  ["--cost-tier advanced --agent opencode --model opencode-go/beam-free", 0],
+  ["--cost-tier high --agent opencode --model opencode-go/beam-free --tier-reason tenant-isolation", 0],
+  ["--cost-tier high --agent opencode --model opencode-go/beam-free", 2],
+  ["--cost-tier high --agent opencode --model opencode-go/beam-free --effort high --tier-reason tenant-isolation", 2],
+  ["--cost-tier standard --agent cursor --model opencode-go/beam-free", 2],
   ["--cost-tier focused --agent claude --model claude-sonnet-5 --effort low", 0],
   ["--cost-tier advanced --agent claude --model claude-sonnet-5 --effort medium", 0],
   ["--cost-tier high --agent claude --model claude-sonnet-5 --effort high --tier-reason tenant-isolation", 0],
@@ -68,6 +76,15 @@ for (const [args, expected] of cases) {
     assert.equal(result.status, expected, result.stderr);
   });
 }
+
+test("Beam Free fallback preserves the primary OpenCode model for each tier", () => {
+  for (const [tier, routes] of Object.entries(COST_TIER_ROUTES)) {
+    const primary = routes.find((route) => route.agent === "opencode");
+    assert.equal(primary.models[0], ["cheap", "standard"].includes(tier)
+      ? "opencode-go/deepseek-v4.1-flash"
+      : "opencode-go/deepseek-v4-pro");
+  }
+});
 
 test("one tier accepts multiple registered providers and keeps each route's effort", () => {
   const extra = { agent: "fixture-provider", models: ["fixture-model"], effort: "fixture-effort" };
