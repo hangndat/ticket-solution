@@ -6968,6 +6968,17 @@ for (const caseId of CASE_IDS) {
         const tenantId = required(f.tenantId, 'PLAT-03 tenantId');
         const eventId = required(f.eventId, 'PLAT-03 eventId');
 
+        const attendee = await bearer(ctx, 'attendee');
+        const ticketIssue = await request(
+          ctx,
+          'POST',
+          redemptionPath(f),
+          attendee,
+          redemptionBody(f, 'PLAT-03'),
+          { 'idempotency-key': randomUUID() },
+        );
+        expectStatus(ticketIssue, 201);
+
         // MFA gate sanity: token must carry acr=2 and fresh auth_time.
         const payload = tokenPayload(operatorToken);
         assert.equal(payload.acr, '2');
