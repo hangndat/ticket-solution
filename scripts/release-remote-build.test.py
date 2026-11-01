@@ -59,6 +59,9 @@ fi
             command = release.start_command(str(root))
             self.assertIn(str(runner), command)
             self.assertNotIn("./run.sh", command)
+            # A trailing `&` keeps the ssh session open until the whole build ends.
+            self.assertIn("setsid -f", command)
+            self.assertFalse(command.rstrip().endswith("&"))
             process = subprocess.Popen([str(runner)], env=env,
                                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             try:
