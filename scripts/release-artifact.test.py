@@ -438,6 +438,15 @@ class IncrementalFixture(unittest.TestCase):
             self.assertNotEqual(bad.returncode, 0)
             self.assertIn("FAILED: build web", bad.stdout)
 
+    def test_install_and_builds_split_into_separate_scripts(self):
+        builds = {name for name, _ in release.STEPS if name != "install"}
+        install = release.container_script(skip=builds)
+        self.assertIn('step "install"', install)
+        self.assertNotIn('step "build', install)
+        build = release.container_script(skip={"install"})
+        self.assertNotIn("pnpm install", build)
+        self.assertEqual(build.count('step "build'), len(builds))
+
     def test_container_script_skips_reused_builds_but_always_installs(self):
         script = release.container_script(skip={"build web", "build ui"})
         self.assertIn("pnpm install --frozen-lockfile", script)
