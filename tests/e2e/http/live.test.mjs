@@ -419,6 +419,7 @@ async function db02MutationSnapshot(f, ctx) {
 }
 
 const FORGED_FORWARDED = {
+  forwarded: 'for=127.0.0.1;host=evil.example;proto=https',
   'x-forwarded-host': EVIL_HOST,
   'x-forwarded-proto': 'https',
 };
@@ -433,6 +434,7 @@ async function navigationFetch(origin, path, options = {}) {
     status: response.status,
     location: response.headers.get('location'),
     cacheControl: response.headers.get('cache-control'),
+    setCookie: response.headers.get('set-cookie'),
   };
 }
 
@@ -455,6 +457,7 @@ function directUpstreamFetch(port, hostHeader, path, options = {}) {
           status: res.statusCode ?? 0,
           location: res.headers.location ?? null,
           cacheControl: res.headers['cache-control'] ?? null,
+          setCookie: res.headers['set-cookie'] ?? null,
         });
         res.resume();
       },
@@ -495,6 +498,13 @@ function assertNoOpenRedirectVector(location) {
     'unsafe return query in Location',
   );
   assert.ok(!location.includes('next=https'), 'unsafe next query in Location');
+}
+
+function assertUncacheableHostProbe(result, label) {
+  assert.ok(
+    !/(^|[,\s])(public|s-maxage=\d+)(\s|,|$)/i.test(result.cacheControl ?? ''),
+    `${label}: forged host response must not be shared-cacheable`,
+  );
 }
 
 async function request(ctx, method, path, token, body, headers = {}) {
@@ -1774,6 +1784,12 @@ for (const caseId of CASE_IDS) {
         'legacy admin GET',
       );
       assertNoOpenRedirectVector(adminMigrate.location);
+      assert.equal(
+        adminMigrate.setCookie,
+        null,
+        'legacy GET must not mutate session',
+      );
+      assertUncacheableHostProbe(adminMigrate, 'legacy admin GET');
 
       const adminHead = await navigationFetch(
         ctx.web,
@@ -1783,6 +1799,11 @@ for (const caseId of CASE_IDS) {
       assertRedirectStatus(adminHead);
       assertLocationOrigin(adminHead.location, ctx.portal, 'legacy admin HEAD');
       assertNoOpenRedirectVector(adminHead.location);
+      assert.equal(
+        adminHead.setCookie,
+        null,
+        'legacy HEAD must not mutate session',
+      );
 
       const adminPost = await navigationFetch(ctx.web, '/admin', {
         method: 'POST',
@@ -1834,6 +1855,7 @@ for (const caseId of CASE_IDS) {
         'direct OIDC login start',
       );
       assertNoOpenRedirectVector(directLogin.location);
+      assertUncacheableHostProbe(directLogin, 'direct OIDC login');
 
       const directRefresh = await directUpstreamFetch(
         webPort,
@@ -1848,6 +1870,7 @@ for (const caseId of CASE_IDS) {
         'direct SSR refresh fail-closed',
       );
       assertNoOpenRedirectVector(directRefresh.location);
+      assertUncacheableHostProbe(directRefresh, 'direct SSR refresh');
 
       const marketingAuth = await navigationFetch(
         ctx.marketing,
@@ -1922,6 +1945,7 @@ for (const caseId of CASE_IDS) {
         'direct portal OIDC login',
       );
       assertNoOpenRedirectVector(directPortalLogin.location);
+      assertUncacheableHostProbe(directPortalLogin, 'direct portal login');
 
       const directAdmin = await directUpstreamFetch(
         webPort,
@@ -1936,6 +1960,92 @@ for (const caseId of CASE_IDS) {
         'direct legacy admin GET',
       );
       assertNoOpenRedirectVector(directAdmin.location);
+
+      for (const path of [
+        '/auth?notice=auth_failed&return=https%3A%2F%2Fevil.example%2Fphish&next=%2F%2Fevil.example&redirect=https%3A%2F%2Fevil.example',
+        '/auth?error=session_rejected&return=%2F%2Fevil.example',
+      ]) {
+        const authBounce = await directUpstreamFetch(webPort, webHost, path, {
+          headers: forged,
+        });
+        assertRedirectStatus(authBounce);
+        assertLocationOrigin(
+          authBounce.location,
+          ctx.web,
+          'direct /auth bounce',
+        );
+        assertNoOpenRedirectVector(authBounce.location);
+        assertUncacheableHostProbe(authBounce, 'direct /auth bounce');
+      }
+
+      const forgedHostAuth = await directUpstreamFetch(
+        webPort,
+        EVIL_HOST,
+        '/auth?notice=auth_failed&redirect=https%3A%2F%2Fevil.example',
+        { headers: forged },
+      );
+      if ([302, 307, 308].includes(forgedHostAuth.status)) {
+        assertLocationOrigin(
+          forgedHostAuth.location,
+          ctx.web,
+          'forged Host /auth',
+        );
+        assertNoOpenRedirectVector(forgedHostAuth.location);
+      } else {
+        assert.ok(
+          [400, 403, 421].includes(forgedHostAuth.status),
+          `forged Host /auth must deny or redirect to configured origin, got ${forgedHostAuth.status}`,
+        );
+      }
+      assertUncacheableHostProbe(forgedHostAuth, 'forged Host /auth');
+
+      for (const method of ['GET', 'HEAD']) {
+        const legacyApi = await directUpstreamFetch(
+          webPort,
+          webHost,
+          '/api/bff/admin/tenants/forged?redirect=https%3A%2F%2Fevil.example',
+          { method, headers: forged },
+        );
+        assert.equal(
+          legacyApi.status,
+          410,
+          `legacy API ${method} must be gone`,
+        );
+        assert.equal(
+          legacyApi.location,
+          null,
+          `legacy API ${method} must not redirect`,
+        );
+        assert.equal(
+          legacyApi.setCookie,
+          null,
+          `legacy API ${method} must not mutate session`,
+        );
+      }
+
+      for (const method of ['POST', 'PUT', 'PATCH', 'DELETE']) {
+        const legacyWrite = await directUpstreamFetch(
+          webPort,
+          webHost,
+          `/admin?tenantId=${tenantId}&redirect=https%3A%2F%2Fevil.example`,
+          { method, headers: forged },
+        );
+        assert.equal(
+          legacyWrite.status,
+          404,
+          `legacy ${method} must not navigate`,
+        );
+        assert.equal(
+          legacyWrite.location,
+          null,
+          `legacy ${method} must not redirect`,
+        );
+        assert.equal(
+          legacyWrite.setCookie,
+          null,
+          `legacy ${method} must not mutate session`,
+        );
+      }
 
       return;
     }
@@ -2132,11 +2242,14 @@ for (const caseId of CASE_IDS) {
       const ticketId = required(f.ticketId, 'JOB-04 ticketId');
       const resendPath = `/tenants/${f.tenantId}/events/${f.eventId}/tickets/${ticketId}/resend`;
 
-      const [budgetLimit] = await web04Query(f, f.tenantId,
+      const [budgetLimit] = await web04Query(
+        f,
+        f.tenantId,
         `INSERT INTO tenant_limits (tenant_id, email_per_day) VALUES ($1::uuid, 0)
          ON CONFLICT (tenant_id) DO UPDATE SET email_per_day = 0
          RETURNING email_per_day`,
-        [f.tenantId]);
+        [f.tenantId],
+      );
       assert.equal(budgetLimit?.email_per_day, 0);
 
       const firstResend = await request(ctx, 'POST', resendPath, owner, null, {
@@ -2172,14 +2285,17 @@ for (const caseId of CASE_IDS) {
       // The API keeps the command pending; the real worker must defer before SMTP.
       let deferred;
       for (let i = 0; i < 40; i++) {
-        [deferred] = await web04Query(f, f.tenantId,
+        [deferred] = await web04Query(
+          f,
+          f.tenantId,
           `SELECT o.status, o.payload->>'emailBudgetDeferred' AS reason,
                   n.state AS notification_state, n.attempts
            FROM outbox o JOIN notifications n
              ON n.tenant_id = o.tenant_id
             AND n.business_key = o.payload->>'businessKey'
            WHERE o.tenant_id = $1::uuid AND n.id = $2::uuid`,
-          [f.tenantId, firstResend.body.notificationId]);
+          [f.tenantId, firstResend.body.notificationId],
+        );
         if (deferred?.reason === 'email_budget_deferred') break;
         await new Promise((resolve) => setTimeout(resolve, 500));
       }
@@ -2188,32 +2304,50 @@ for (const caseId of CASE_IDS) {
       assert.equal(deferred?.notification_state, 'PENDING');
       assert.equal(deferred?.attempts, 0, 'quota defer consumes no SMTP retry');
 
-      const [beforeAdmission] = await web04Query(f, f.tenantId,
+      const [beforeAdmission] = await web04Query(
+        f,
+        f.tenantId,
         `SELECT COALESCE(sent_count, 0) AS sent_count FROM tenant_email_usage
          WHERE tenant_id = $1::uuid AND usage_date = (clock_timestamp() AT TIME ZONE 'UTC')::date`,
-        [f.tenantId]);
-      await web04Query(f, f.tenantId,
+        [f.tenantId],
+      );
+      await web04Query(
+        f,
+        f.tenantId,
         `UPDATE tenant_limits SET email_per_day = 100 WHERE tenant_id = $1::uuid`,
-        [f.tenantId]);
-      await web04Query(f, f.tenantId,
+        [f.tenantId],
+      );
+      await web04Query(
+        f,
+        f.tenantId,
         `UPDATE outbox SET next_attempt_at = clock_timestamp()
          WHERE tenant_id = $1::uuid AND payload->>'businessKey' = $2`,
-        [f.tenantId, `ticket:${ticketId}:resend:email:${firstResend.body.operationId}`]);
+        [
+          f.tenantId,
+          `ticket:${ticketId}:resend:email:${firstResend.body.operationId}`,
+        ],
+      );
       let admitted;
       for (let i = 0; i < 40; i++) {
-        [admitted] = await web04Query(f, f.tenantId,
+        [admitted] = await web04Query(
+          f,
+          f.tenantId,
           `SELECT n.state, n.attempts, u.sent_count
            FROM notifications n JOIN tenant_email_usage u
              ON u.tenant_id = n.tenant_id
             AND u.usage_date = (clock_timestamp() AT TIME ZONE 'UTC')::date
            WHERE n.tenant_id = $1::uuid AND n.id = $2::uuid`,
-          [f.tenantId, firstResend.body.notificationId]);
+          [f.tenantId, firstResend.body.notificationId],
+        );
         if (admitted?.state === 'ACCEPTED') break;
         await new Promise((resolve) => setTimeout(resolve, 500));
       }
       assert.equal(admitted?.state, 'ACCEPTED');
       assert.equal(admitted?.attempts, 1);
-      assert.equal(admitted?.sent_count, (beforeAdmission?.sent_count ?? 0) + 1);
+      assert.equal(
+        admitted?.sent_count,
+        (beforeAdmission?.sent_count ?? 0) + 1,
+      );
 
       const [issuedNotification] = await web04Query(
         f,
