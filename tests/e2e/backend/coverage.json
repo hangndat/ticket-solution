@@ -371,6 +371,15 @@
     "reason": "OUT: không có HTTP callback/transport nhận provider event trong API hiện hành."
   },
   {
+    "caseId": "PLAT-03",
+    "tests": [
+      "D:packages/backend/test/platform.test.cjs#PLAT-03 support grant: scope/tenant/expiry/revoke/audit + no implicit PII"
+    ],
+    "layers": ["D"],
+    "status": "blocked",
+    "reason": "D PostgreSQL thật + ticket_platform_runtime/RLS PASS (node --test test/platform.test.cjs 5/5): scope chỉ cs.read (pii.read/đa scope/rỗng → INVALID_INPUT), reason bắt buộc (rỗng/khoảng trắng/>500 → INVALID_INPUT), expiry trong tương lai và ≤ max TTL 1h (quá 1h/quá khứ/sai định dạng → INVALID_INPUT), non-operator → PLATFORM_OPERATOR_REQUIRED; grant tạo + listSupportTickets masked (không leak email thô) + impersonation (operator thứ hai bị PERMISSION_DENIED) + grant expired/revoked/wrong-scope đều PERMISSION_DENIED + revoke (lý do rỗng INVALID_INPUT, revoke lần hai RESOURCE_NOT_FOUND) + audit granted/read/revoked đủ + snapshot denial (tạo bị từ chối không insert support_grants). H residual: route /v1/platform/* cần token platform MFA auth_time, password grant bị gate (đã chứng minh ở SEC-02 `platformRouteProbe` 401/403) — blocker chung với PLAT-01; H đầy đủ cần browser MFA, chưa có bằng chứng runtime."
+  },
+  {
     "caseId": "SEC-01",
     "tests": [
       "D:packages/backend/test/rls.test.cjs#PostgreSQL RLS through Prisma",
