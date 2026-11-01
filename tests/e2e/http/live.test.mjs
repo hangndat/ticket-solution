@@ -1755,6 +1755,14 @@ for (const caseId of CASE_IDS) {
     if (caseId === 'SEC-03') {
       const forged = FORGED_FORWARDED;
       const tenantId = required(f.tenantId, 'SEC-03 tenantId');
+      const cacheFailures = [];
+      function checkHostCache(result, label) {
+        try {
+          assertUncacheableHostProbe(result, label);
+        } catch (error) {
+          cacheFailures.push(error.message);
+        }
+      }
 
       const loginOpen = await navigationFetch(
         ctx.web,
@@ -1814,7 +1822,7 @@ for (const caseId of CASE_IDS) {
         null,
         'legacy GET must not mutate session',
       );
-      assertUncacheableHostProbe(adminMigrate, 'legacy admin GET');
+      checkHostCache(adminMigrate, 'legacy admin GET');
 
       const adminHead = await navigationFetch(
         ctx.web,
@@ -1880,7 +1888,7 @@ for (const caseId of CASE_IDS) {
         'direct OIDC login start',
       );
       assertNoOpenRedirectVector(directLogin.location);
-      assertUncacheableHostProbe(directLogin, 'direct OIDC login');
+      checkHostCache(directLogin, 'direct OIDC login');
 
       const directRefresh = await directUpstreamFetch(
         webPort,
@@ -1895,7 +1903,7 @@ for (const caseId of CASE_IDS) {
         'direct SSR refresh fail-closed',
       );
       assertNoOpenRedirectVector(directRefresh.location);
-      assertUncacheableHostProbe(directRefresh, 'direct SSR refresh');
+      checkHostCache(directRefresh, 'direct SSR refresh');
 
       const marketingAuth = await navigationFetch(
         ctx.marketing,
@@ -1913,7 +1921,7 @@ for (const caseId of CASE_IDS) {
         EVIL_HOST,
         'marketing bounce must not redirect to forged forwarded host',
       );
-      assertUncacheableHostProbe(marketingAuth, 'marketing /auth bounce');
+      checkHostCache(marketingAuth, 'marketing /auth bounce');
       const marketingAuthTarget = new URL(marketingAuth.location, ctx.web);
       const productAuth = await navigationFetch(
         ctx.web,
@@ -1944,7 +1952,7 @@ for (const caseId of CASE_IDS) {
         EVIL_HOST,
         'marketing admin bounce must not leave marketing with forged host',
       );
-      assertUncacheableHostProbe(marketingAdmin, 'marketing /admin bounce');
+      checkHostCache(marketingAdmin, 'marketing /admin bounce');
       const marketingAdminTarget = new URL(marketingAdmin.location, ctx.web);
       const productAdmin = await navigationFetch(
         ctx.web,
@@ -2002,7 +2010,7 @@ for (const caseId of CASE_IDS) {
         'direct portal OIDC login',
       );
       assertNoOpenRedirectVector(directPortalLogin.location);
-      assertUncacheableHostProbe(directPortalLogin, 'direct portal login');
+      checkHostCache(directPortalLogin, 'direct portal login');
 
       const directAdmin = await directUpstreamFetch(
         webPort,
@@ -2022,7 +2030,7 @@ for (const caseId of CASE_IDS) {
         null,
         'direct legacy GET must not mutate session',
       );
-      assertUncacheableHostProbe(directAdmin, 'direct legacy admin GET');
+      checkHostCache(directAdmin, 'direct legacy admin GET');
 
       const directMarketingAuth = await directUpstreamFetch(
         webPort,
@@ -2043,7 +2051,7 @@ for (const caseId of CASE_IDS) {
           `direct marketing /auth must deny or redirect to product origin, got ${directMarketingAuth.status}`,
         );
       }
-      assertUncacheableHostProbe(directMarketingAuth, 'direct marketing /auth');
+      checkHostCache(directMarketingAuth, 'direct marketing /auth');
 
       const canonicalPoison = await directUpstreamFetch(webPort, webHost, '/', {
         headers: { ...forged, 'x-forwarded-host': 'www.vemoki.com' },
@@ -2060,7 +2068,7 @@ for (const caseId of CASE_IDS) {
           `product Host with forged www forwarding must serve product or deny, got ${canonicalPoison.status}`,
         );
       }
-      assertUncacheableHostProbe(canonicalPoison, 'forged www forwarding');
+      checkHostCache(canonicalPoison, 'forged www forwarding');
 
       // Read the body as well as the cache headers: status-only probes miss a
       // product policy or marketing URL served from the wrong host's cache.
@@ -2152,11 +2160,11 @@ for (const caseId of CASE_IDS) {
           marketingBefore.body,
           `${name}: product and marketing policies must differ`,
         );
-        assertUncacheableHostProbe(
+        checkHostCache(
           productForged,
           `${name} product with forged marketing host`,
         );
-        assertUncacheableHostProbe(
+        checkHostCache(
           marketingForged,
           `${name} marketing with forged product host`,
         );
@@ -2265,11 +2273,11 @@ for (const caseId of CASE_IDS) {
           'INVALID_EVENT',
         );
       }
-      assertUncacheableHostProbe(
+      checkHostCache(
         analyticsProbes.productForged,
         'analytics product with forged marketing host',
       );
-      assertUncacheableHostProbe(
+      checkHostCache(
         analyticsProbes.marketingForged,
         'analytics marketing with forged product host',
       );
@@ -2288,7 +2296,7 @@ for (const caseId of CASE_IDS) {
           'direct /auth bounce',
         );
         assertNoOpenRedirectVector(authBounce.location);
-        assertUncacheableHostProbe(authBounce, 'direct /auth bounce');
+        checkHostCache(authBounce, 'direct /auth bounce');
       }
 
       const forgedHostAuth = await directUpstreamFetch(
@@ -2310,7 +2318,7 @@ for (const caseId of CASE_IDS) {
           `forged Host /auth must deny or redirect to configured origin, got ${forgedHostAuth.status}`,
         );
       }
-      assertUncacheableHostProbe(forgedHostAuth, 'forged Host /auth');
+      checkHostCache(forgedHostAuth, 'forged Host /auth');
 
       for (const method of ['GET', 'HEAD']) {
         const legacyApi = await directUpstreamFetch(
@@ -2360,6 +2368,12 @@ for (const caseId of CASE_IDS) {
         );
       }
 
+      t.diagnostic(JSON.stringify({ sec03: 'cache-verdict', cacheFailures }));
+      assert.deepEqual(
+        cacheFailures,
+        [],
+        'SEC-03 forged responses must forbid shared caching',
+      );
       return;
     }
     if (caseId === 'SEC-04') {
