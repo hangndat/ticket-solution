@@ -97,6 +97,17 @@ Thứ tự lock (nhất quán TD §8.2 và các hàm hiện có trong `gate.ts`)
 
 Không chạm `checkin_reservations` (khác revoke — xem mục 6).
 
+### Addendum GATE-03 (đã chốt) — rotate mã thủ công cùng transaction
+
+Khi GATE-03 migration đã tạo cột `tickets.manual_entry_code_hash`/`manual_entry_code_sealed` (xem [GATE-03-SIGNED-QR-HANDOFF](./GATE-03-SIGNED-QR-HANDOFF.md) §5.3/§9.6), `reissueTicketCredential` phải **mint cặp mã thủ công mới và ghi đè hai cột đó trong cùng transaction** — chèn **bước 10.5** ngay sau bước 10 (sau khi `tickets.credential_version` đã tăng), dùng đúng `lockTicket` FOR UPDATE đã giữ:
+
+- Mint `manual_entry_code` mới (entropy ≥50 bit, Crockford base32), ghi `manual_entry_code_hash` (HMAC, pepper `GATE_MANUAL_CODE_PEPPER`, scoped `(tenant_id, event_id, ...)`) + `manual_entry_code_sealed` (AES-sealed để hiển thị lại).
+- **Không ghi plaintext, không log.** Retry-on-conflict với `tickets_manual_code_hmac_unique` (collision bounded — F05).
+- **Mục đích:** reissue là "credential bị lộ/mất, phát lại" (PRD dòng 198) — phải vô hiệu **mọi** credential dùng để vào cổng, không riêng QR; giữ mã thủ công cũ thì kẻ có mã cũ vẫn qua `manual-lookup` sau reissue.
+- **Không áp ngược** cho vé đã reissue trước khi cột này tồn tại (không có cột để backfill — tuần tự ship, không phải lỗi).
+
+Khớp đúng chốt ở GATE-03-SIGNED-QR-HANDOFF §9.6 và `.orca-metrics/f04-gate03-freeze-plan.md` mục #6.
+
 ## 5. Credential version / hash / trạng thái vô hiệu
 
 Schema hiện tại (`202610160004_d2_issue_ticket/migration.sql:204-217`):

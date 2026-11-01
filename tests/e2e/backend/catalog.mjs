@@ -224,6 +224,10 @@ export const catalog = {
     b('account-idp-erasure', 'SEC-2 T4/T14'),
     b('account-idp-erasure', 'SEC-2 T6/T7/T8'),
     b('account-idp-erasure', 'SEC-2 T9/T11/T12/T13'),
+    b('account-idp-erasure', 'SEC-D-01'),
+    b('account-idp-erasure', 'SEC-D-05'),
+    b('account-idp-erasure', 'POL-01:'),
+    b('apns-atleast-once', 'POL-01:'),
     {
       file: 'tests/e2e/backend/retention-db.test.cjs',
       name: '[POL-01]',
