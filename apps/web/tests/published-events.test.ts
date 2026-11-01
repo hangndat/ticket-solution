@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { rateLimitCopy } from '../src/published/copy';
 import {
   formatPublishedEventDate,
   heroCopyFromSections,
@@ -26,6 +27,17 @@ const validSummary = {
     organizationName: 'MFest · Demo',
   },
 };
+
+test('429 copy and retry are available in Vietnamese and English for every state', () => {
+  const vi = rateLimitCopy('vi');
+  const en = rateLimitCopy('en');
+  assert.equal(vi.retry, 'Thử lại');
+  assert.equal(en.retry, 'Try again');
+  for (const key of ['homePartialRateLimited', 'homeRateLimited', 'detailRateLimited'] as const) {
+    assert.notEqual(vi[key].title, en[key].title);
+    assert.notEqual(vi[key].detail, en[key].detail);
+  }
+});
 
 const validDetail = {
   ...validSummary,

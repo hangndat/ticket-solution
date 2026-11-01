@@ -17,6 +17,7 @@ import {
 } from '../../src/published';
 import { SurfaceState } from '../../src/ui/surface-state';
 import { HomeCatalogGrid } from '../../src/ui/event-media';
+import { RateLimitState } from '../../src/published/rate-limit-state';
 
 /** Attendee home + auth stub notices (staff lives on portal — ADR-20). */
 export const dynamic = 'force-dynamic';
@@ -103,23 +104,11 @@ export default async function Home({ searchParams }: Props) {
       ) : null}
 
       {catalog.status === 'ok' && catalog.rateLimited ? (
-        <SurfaceState
-          kind="error"
-          title={PUBLIC_EVENT_COPY.homePartialRateLimited.title}
-          detail={PUBLIC_EVENT_COPY.homePartialRateLimited.detail}
-          testId="home-events-partial-rate-limited"
-          action={<form action="/"><Button type="submit" variant="brand">Thử lại</Button></form>}
-        />
+        <RateLimitState kind="homePartialRateLimited" retryHref="/" />
       ) : null}
 
       {catalog.status === 'rate-limited' ? (
-        <SurfaceState
-          kind="error"
-          title={PUBLIC_EVENT_COPY.homeRateLimited.title}
-          detail={PUBLIC_EVENT_COPY.homeRateLimited.detail}
-          testId="home-events-rate-limited"
-          action={<form action="/"><Button type="submit" variant="brand">Thử lại</Button></form>}
-        />
+        <RateLimitState kind="homeRateLimited" retryHref="/" />
       ) : null}
 
       {catalog.status === 'unreachable' ? (
