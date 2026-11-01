@@ -1,9 +1,6 @@
 import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
-import {
-  SESSION_COOKIES,
-  sessionCookieOptions,
-} from '@ticket/web-session';
+import { SESSION_COOKIES, sessionCookieOptions } from '@ticket/web-session';
 import {
   discoveryBase,
   isPortalOidcConfigured,
@@ -64,5 +61,7 @@ export async function GET(request: NextRequest) {
   authorize.searchParams.set('code_challenge', challenge);
   authorize.searchParams.set('code_challenge_method', 'S256');
 
-  return NextResponse.redirect(authorize.toString());
+  return NextResponse.redirect(authorize.toString(), {
+    headers: { 'Cache-Control': 'private, no-store' },
+  });
 }
