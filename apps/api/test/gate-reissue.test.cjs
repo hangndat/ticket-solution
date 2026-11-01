@@ -74,6 +74,15 @@ test('reissue HTTP requires reason and UUID idempotency key; CS is forbidden', a
     const unassigned = await send({ reason: 'replace QR' }, randomUUID());
     assert.equal(unassigned.statusCode, 403);
     assert.equal(unassigned.json().code, 'EVENT_ASSIGNMENT_REQUIRED');
+
+    const rawTicketProof = await app.inject({
+      method: 'POST',
+      url: `/v1/gate/events/${eventId}/reservations`,
+      headers: { authorization: 'Bearer fixture' },
+      payload: { tenantId, staffSessionId: randomUUID(), ticketId },
+    });
+    assert.equal(rawTicketProof.statusCode, 422);
+    assert.equal(rawTicketProof.json().code, 'CREDENTIAL_REQUIRED');
   } finally {
     await app.close();
   }
