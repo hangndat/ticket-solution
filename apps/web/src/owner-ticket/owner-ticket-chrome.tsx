@@ -17,7 +17,7 @@ import {
   attendeeTicketTitle,
 } from '../attendee-detail-surface';
 import { SurfaceState } from '../ui/surface-state';
-import { buildDisplayQrPayload } from './display-payload';
+import { gateCredentialQrValue } from './gate-credential-payload';
 import { OwnerTicketQrPanel } from './owner-ticket-qr-panel';
 import { ticketStateLabel, ticketStateTagClass } from './ticket-state';
 import {
@@ -168,13 +168,9 @@ export function OwnerTicketReady({
   const qrLabel = formatDual(OWNER_TICKET_COPY_CATALOG.qrLabel, locale, {
     id: shortTicketId(ticket.ticketId),
   });
-  const qrPayload = buildDisplayQrPayload(ticket);
-  const stateBlocked =
-    ticket.state === 'REVOKED' ||
-    ticket.state === 'CANCELLED' ||
-    ticket.state === 'EXPIRED' ||
-    ticket.state === 'USED' ||
-    ticket.state === 'CHECKED_IN';
+  const qrPayload = gateCredentialQrValue(ticket);
+  const stateBlocked = ticket.state !== 'ACTIVE';
+  const canShowCredential = qrPayload !== null;
   const stateLabel = ticketStateLabel(ticket.state, locale);
 
   return (
@@ -225,13 +221,19 @@ export function OwnerTicketReady({
             </aside>
           ) : null}
 
-          <OwnerTicketQrPanel
-            tenantId={ticket.tenantId}
-            ticketId={ticket.ticketId}
-            state={ticket.state}
-            qrPayload={qrPayload}
-            qrLabel={qrLabel}
-          />
+          {canShowCredential ? (
+            <OwnerTicketQrPanel qrPayload={qrPayload} qrLabel={qrLabel} />
+          ) : null}
+
+          {ticket.state === 'ACTIVE' && !qrPayload ? (
+            <aside
+              className={attendeeTicketNoticeError}
+              role="status"
+              data-testid="owner-ticket-credential-unavailable"
+            >
+              <p>{copy.credentialUnavailable}</p>
+            </aside>
+          ) : null}
 
           <dl className={attendeeTicketMetaList} data-testid="owner-ticket-detail">
             <div>
@@ -250,6 +252,18 @@ export function OwnerTicketReady({
               <dt>{copy.credentialVersion}</dt>
               <dd>{ticket.credentialVersion}</dd>
             </div>
+            {ticket.state === 'ACTIVE' ? (
+              <div data-testid="owner-ticket-manual-entry">
+                <dt>{copy.manualEntryCode}</dt>
+                <dd>
+                  {ticket.manualEntryCode ? (
+                    <code>{ticket.manualEntryCode}</code>
+                  ) : (
+                    <span role="status">{copy.manualEntryCodeUnavailable}</span>
+                  )}
+                </dd>
+              </div>
+            ) : null}
             <div>
               <dt>{copy.issuedAt}</dt>
               <dd>
