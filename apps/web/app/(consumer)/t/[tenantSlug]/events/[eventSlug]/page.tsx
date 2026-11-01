@@ -43,6 +43,7 @@ import {
 } from '../../../../../../src/published';
 import { publishedSectionKindLabel } from '../../../../../../src/published/section-label';
 import { SurfaceState } from '../../../../../../src/ui/surface-state';
+import { RateLimitState } from '../../../../../../src/published/rate-limit-state';
 import { eventArtTone } from '../../../../../../src/ui/event-art-tone';
 import { attendeeHomeMain } from '../../../../../../src/attendee-surface';
 
@@ -103,12 +104,9 @@ export default async function EventPage({ params }: Props) {
   if (result.status === 'rate-limited') {
     noStore();
     return (
-      <EventErrorShell
-        testId="event-rate-limited"
-        title={PUBLIC_EVENT_COPY.detailRateLimited.title}
-        detail={PUBLIC_EVENT_COPY.detailRateLimited.detail}
-        retryHref={publishedEventHref({ tenantSlug, slug: eventSlug })}
-      />
+      <ConsumerPageShell mainClassName={attendeeHomeMain}>
+        <RateLimitState kind="detailRateLimited" retryHref={publishedEventHref({ tenantSlug, slug: eventSlug })} />
+      </ConsumerPageShell>
     );
   }
 
