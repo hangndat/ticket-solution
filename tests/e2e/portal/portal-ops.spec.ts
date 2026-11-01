@@ -139,26 +139,99 @@ async function readDecisionState(tenantId: string, requestId: string) {
   const client = new Client({ connectionString: process.env.DATABASE_URL });
   await client.connect();
   try {
-    await client.query('BEGIN READ ONLY');
+    await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
     await client.query("SELECT set_config('app.tenant_id', $1, true)", [
       tenantId,
     ]);
     const tickets = await client.query(
-      'SELECT id, owner_user_id FROM tickets WHERE tenant_id=$1::uuid AND request_id=$2::uuid',
+      'SELECT id, owner_user_id, state, credential_version FROM tickets WHERE tenant_id=$1::uuid AND request_id=$2::uuid ORDER BY id',
       [tenantId, requestId],
     );
     const audits = await client.query(
-      "SELECT action, actor_user_id, reason, sanitized_diff FROM audit_logs WHERE tenant_id=$1::uuid AND resource_type='redemption_request' AND resource_id=$2::uuid ORDER BY created_at",
+      "SELECT id, action, actor_user_id, reason, sanitized_diff FROM audit_logs WHERE tenant_id=$1::uuid AND resource_type='redemption_request' AND resource_id=$2::uuid ORDER BY id",
+      [tenantId, requestId],
+    );
+    const request = await client.query(
+      'SELECT status, actor_user_id, redemption_code_id, decision_reason, decided_at, expires_at FROM redemption_requests WHERE tenant_id=$1::uuid AND id=$2::uuid',
+      [tenantId, requestId],
+    );
+    expect(request.rows).toHaveLength(1);
+    const code = await client.query(
+      'SELECT status, active_request_id, source_id, ticket_type_id FROM redemption_codes WHERE tenant_id=$1::uuid AND id=$2::uuid',
+      [tenantId, request.rows[0].redemption_code_id],
+    );
+    expect(code.rows).toHaveLength(1);
+    const quota = await client.query(
+      `SELECT id, scope, scope_id, capacity, allocated FROM quota_buckets
+       WHERE tenant_id=$1::uuid AND event_id=(SELECT event_id FROM redemption_requests WHERE tenant_id=$1::uuid AND id=$2::uuid)
+         AND ((scope='EVENT' AND scope_id IS NULL)
+           OR (scope='TICKET_TYPE' AND scope_id=$3::uuid)
+           OR (scope='ISSUANCE_SOURCE' AND scope_id=$4::uuid))
+       ORDER BY scope, id`,
+      [
+        tenantId,
+        requestId,
+        code.rows[0].ticket_type_id,
+        code.rows[0].source_id,
+      ],
+    );
+    const attendeeCounter = await client.query(
+      `SELECT c.issued_count, c.max_tickets FROM attendee_counters c
+       JOIN event_attendees a ON a.tenant_id=c.tenant_id AND a.id=c.attendee_id
+       JOIN redemption_requests r ON r.tenant_id=a.tenant_id AND r.event_id=a.event_id AND r.actor_user_id=a.user_id
+       WHERE r.tenant_id=$1::uuid AND r.id=$2::uuid`,
+      [tenantId, requestId],
+    );
+    const credentials = await client.query(
+      `SELECT c.ticket_id, c.version, c.status FROM ticket_credentials c
+       JOIN tickets t ON t.tenant_id=c.tenant_id AND t.id=c.ticket_id
+       WHERE t.tenant_id=$1::uuid AND t.request_id=$2::uuid ORDER BY c.ticket_id, c.version`,
+      [tenantId, requestId],
+    );
+    // Worker leases and delivery attempts may move; compare committed identity only.
+    const notifications = await client.query(
+      `SELECT id, business_key, kind FROM notifications
+       WHERE tenant_id=$1::uuid AND payload->>'requestId'=$2 ORDER BY id`,
+      [tenantId, requestId],
+    );
+    const outbox = await client.query(
+      `SELECT id, type, aggregate_id FROM outbox
+       WHERE tenant_id=$1::uuid AND payload->>'requestId'=$2 ORDER BY id`,
       [tenantId, requestId],
     );
     await client.query('COMMIT');
-    return { tickets: tickets.rows, audits: audits.rows };
+    return {
+      request: request.rows[0],
+      code: code.rows[0],
+      quota: quota.rows,
+      attendeeCounter: attendeeCounter.rows,
+      tickets: tickets.rows,
+      credentials: credentials.rows,
+      notifications: notifications.rows,
+      outbox: outbox.rows,
+      audits: audits.rows,
+    };
   } catch (error) {
     await client.query('ROLLBACK').catch(() => {});
     throw error;
   } finally {
     await client.end();
   }
+}
+
+function expectNoIssuanceDelta(
+  before: Awaited<ReturnType<typeof readDecisionState>>,
+  after: Awaited<ReturnType<typeof readDecisionState>>,
+) {
+  for (const key of [
+    'quota',
+    'attendeeCounter',
+    'tickets',
+    'credentials',
+    'notifications',
+    'outbox',
+  ] as const)
+    expect(after[key], key).toEqual(before[key]);
 }
 
 test('[PORT-06] Manager approves a pending request in Portal', async ({
@@ -281,6 +354,17 @@ test('[PORT-06] Manager denies a pending request with a reason and audit records
   await row.getByRole('button', { name: 'Từ chối' }).click();
   const dialog = page.getByRole('dialog');
   await dialog.getByRole('textbox').fill(reason);
+  const beforeState = await readDecisionState(f.tenantId, requestId);
+  expect(beforeState.request).toMatchObject({
+    status: 'PENDING_REVIEW',
+    decision_reason: null,
+    decided_at: null,
+  });
+  expect(beforeState.code).toMatchObject({
+    status: 'HELD',
+    active_request_id: requestId,
+  });
+  expect(beforeState.tickets).toHaveLength(0);
   const denied = page.waitForResponse(
     (response) =>
       response.url().includes(`/redemptions/${requestId}/deny`) &&
@@ -329,6 +413,26 @@ test('[PORT-06] Manager denies a pending request with a reason and audit records
   ])
     expect(entry).not.toHaveProperty(key);
   const state = await readDecisionState(f.tenantId, requestId);
+  expect(state.request).toMatchObject({
+    status: 'REJECTED',
+    decision_reason: reason,
+  });
+  expect(state.request.decided_at).not.toBeNull();
+  expect(state.code).toEqual({
+    ...beforeState.code,
+    status: 'AVAILABLE',
+    active_request_id: null,
+  });
+  expectNoIssuanceDelta(beforeState, state);
+  expect(state.audits).toHaveLength(beforeState.audits.length + 1);
+  expect(
+    state.audits.filter(
+      (item: { id: string }) =>
+        !beforeState.audits.some(
+          (prior: { id: string }) => prior.id === item.id,
+        ),
+    ),
+  ).toEqual([expect.objectContaining({ action: 'redemption.denied' })]);
   expect(state.tickets).toHaveLength(0);
   expect(
     state.audits.filter(
@@ -370,7 +474,21 @@ test('[PORT-06] Deciding an expired pending request fails closed without issuing
     .click();
   const row = pending.getByRole('row', { name: new RegExp(requestId) });
   await expect(row).toBeVisible();
+  const beforeExpiry = await readDecisionState(f.tenantId, requestId);
+  expect(beforeExpiry.request.status).toBe('PENDING_REVIEW');
+  expect(beforeExpiry.code).toMatchObject({
+    status: 'HELD',
+    active_request_id: requestId,
+  });
   await expirePendingRequest(f.tenantId, requestId);
+  const beforeDecision = await readDecisionState(f.tenantId, requestId);
+  expect(beforeDecision).toMatchObject({
+    request: { status: 'PENDING_REVIEW', decided_at: null },
+    code: { status: 'HELD', active_request_id: requestId },
+  });
+  expect(beforeDecision.request.expires_at.getTime()).toBeLessThan(Date.now());
+  expectNoIssuanceDelta(beforeExpiry, beforeDecision);
+  expect(beforeDecision.audits).toEqual(beforeExpiry.audits);
   const rejected = page.waitForResponse(
     (response) =>
       response.url().includes(`/redemptions/${requestId}/approve`) &&
@@ -396,9 +514,36 @@ test('[PORT-06] Deciding an expired pending request fails closed without issuing
       (item) => item.resourceId === requestId,
     ),
   ).toBe(false);
-  expect((await readDecisionState(f.tenantId, requestId)).tickets).toHaveLength(
-    0,
-  );
+  const afterDecision = await readDecisionState(f.tenantId, requestId);
+  expect(afterDecision.request).toMatchObject({
+    status: 'EXPIRED',
+    decision_reason: null,
+    expires_at: beforeDecision.request.expires_at,
+  });
+  expect(afterDecision.request.decided_at).not.toBeNull();
+  expect(afterDecision.code).toEqual({
+    ...beforeDecision.code,
+    status: 'AVAILABLE',
+    active_request_id: null,
+  });
+  expectNoIssuanceDelta(beforeDecision, afterDecision);
+  expect(afterDecision.audits).toHaveLength(beforeDecision.audits.length + 1);
+  expect(
+    afterDecision.audits.filter(
+      (item: { id: string }) =>
+        !beforeDecision.audits.some(
+          (prior: { id: string }) => prior.id === item.id,
+        ),
+    ),
+  ).toEqual([
+    expect.objectContaining({
+      action: 'redemption.expired',
+      actor_user_id: accountFor(m, 'PORT-06', 'manager').userId,
+      sanitized_diff: expect.objectContaining({
+        ownerUserId: accountFor(m, 'PORT-06', 'unverified').userId,
+      }),
+    }),
+  ]);
 });
 
 test('[PORT-06] Quota exhausted between request and decision blocks approval and links to quota', async ({
@@ -420,6 +565,38 @@ test('[PORT-06] Quota exhausted between request and decision blocks approval and
     .click();
   const row = pending.getByRole('row', { name: new RegExp(requestId) });
   await expect(row).toBeVisible();
+  const beforeDecision = await readDecisionState(f.tenantId, requestId);
+  expect(beforeDecision.request).toMatchObject({
+    status: 'PENDING_REVIEW',
+    decided_at: null,
+  });
+  expect(beforeDecision.code).toMatchObject({
+    status: 'HELD',
+    active_request_id: requestId,
+  });
+  const dedicatedBuckets = beforeDecision.quota.filter(
+    (row: { scope: string }) => row.scope !== 'EVENT',
+  );
+  const seeded = f.data?.quotaExhaustedState as
+    { buckets: unknown; requestStatus: string; codeStatus: string } | undefined;
+  expect(seeded).toBeDefined();
+  expect(dedicatedBuckets).toEqual(seeded?.buckets);
+  expect(beforeDecision.request.status).toBe(seeded?.requestStatus);
+  expect(beforeDecision.code.status).toBe(seeded?.codeStatus);
+  expect(dedicatedBuckets).toEqual([
+    expect.objectContaining({
+      scope: 'ISSUANCE_SOURCE',
+      scope_id: beforeDecision.code.source_id,
+      capacity: 1,
+      allocated: 1,
+    }),
+    expect.objectContaining({
+      scope: 'TICKET_TYPE',
+      scope_id: beforeDecision.code.ticket_type_id,
+      capacity: 1,
+      allocated: 1,
+    }),
+  ]);
   const rejected = page.waitForResponse(
     (response) =>
       response.url().includes(`/redemptions/${requestId}/approve`) &&
@@ -458,9 +635,11 @@ test('[PORT-06] Quota exhausted between request and decision blocks approval and
       (item) => item.resourceId === requestId,
     ),
   ).toBe(false);
-  expect((await readDecisionState(f.tenantId, requestId)).tickets).toHaveLength(
-    0,
-  );
+  const afterDecision = await readDecisionState(f.tenantId, requestId);
+  expect(afterDecision.request).toEqual(beforeDecision.request);
+  expect(afterDecision.code).toEqual(beforeDecision.code);
+  expectNoIssuanceDelta(beforeDecision, afterDecision);
+  expect(afterDecision.audits).toEqual(beforeDecision.audits);
 });
 
 test('[PORT-06] Replaying an already-decided approval is idempotent and does not double-issue', async ({
@@ -475,6 +654,12 @@ test('[PORT-06] Replaying an already-decided approval is idempotent and does not
   await login(page, m, 'PORT-06', 'manager');
   await page.goto(portalUrl(m, eventPath(f, '/guests#pending')));
   await expect(page.locator('#pending')).toBeVisible();
+  const beforeReplay = await readDecisionState(f.tenantId, requestId);
+  expect(beforeReplay.request.status).toBe('ISSUED');
+  expect(beforeReplay.code).toMatchObject({
+    status: 'CONSUMED',
+    active_request_id: requestId,
+  });
   const replay = await bffMutate(
     page,
     `${eventBff(f, '/redemptions')}/${encodeURIComponent(requestId)}/approve`,
@@ -508,6 +693,10 @@ test('[PORT-06] Replaying an already-decided approval is idempotent and does not
     resourceType: 'redemption_request',
   });
   const state = await readDecisionState(f.tenantId, requestId);
+  expect(state.request).toEqual(beforeReplay.request);
+  expect(state.code).toEqual(beforeReplay.code);
+  expectNoIssuanceDelta(beforeReplay, state);
+  expect(state.audits).toEqual(beforeReplay.audits);
   expect(state.tickets).toEqual([
     expect.objectContaining({
       id: ticketId,
@@ -522,7 +711,9 @@ test('[PORT-06] Replaying an already-decided approval is idempotent and does not
   expect(conflict.status).toBe(409);
   expect((conflict.json as { code: string }).code).toBe('DECISION_CONFLICT');
   const afterConflict = await readDecisionState(f.tenantId, requestId);
-  expect(afterConflict.tickets).toEqual(state.tickets);
+  expect(afterConflict.request).toEqual(state.request);
+  expect(afterConflict.code).toEqual(state.code);
+  expectNoIssuanceDelta(state, afterConflict);
   expect(afterConflict.audits).toEqual(state.audits);
 });
 
