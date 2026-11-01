@@ -6,6 +6,13 @@ import { COST_TIER_ROUTES, routingError } from "./lib/agent-cost-tiers.mjs";
 
 const script = fileURLToPath(new URL("./orca-spawn-model-preflight.mjs", import.meta.url));
 const cases = [
+  ["--cost-tier standard --agent opencode --model opencode-go/deepseek-v4.1-flash", 0],
+  ["--cost-tier focused --agent opencode --model opencode-go/deepseek-v4-pro", 0],
+  ["--cost-tier high --agent opencode --model opencode-go/deepseek-v4-pro --tier-reason tenant-isolation", 0],
+  ["--cost-tier high --agent opencode --model opencode-go/deepseek-v4-pro", 2],
+  ["--cost-tier high --agent opencode --model opencode-go/deepseek-v4.1-flash --tier-reason tenant-isolation", 2],
+  ["--cost-tier standard --agent opencode --model opencode-go/deepseek-v4-pro", 2],
+  ["--cost-tier high --agent opencode --model opencode-go/deepseek-v4-pro --effort high --tier-reason tenant-isolation", 2],
   ["--cost-tier focused --agent claude --model claude-sonnet-5 --effort low", 0],
   ["--cost-tier advanced --agent claude --model claude-sonnet-5 --effort medium", 0],
   ["--cost-tier high --agent claude --model claude-sonnet-5 --effort high --tier-reason tenant-isolation", 0],
