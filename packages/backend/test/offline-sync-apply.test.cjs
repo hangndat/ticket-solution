@@ -23,6 +23,7 @@ const {
   unwrapReserveOutcome,
   unwrapConfirmOutcome,
   applyOfflineSyncBatch,
+  validateOfflineSyncRequest,
   GATE_ERROR_CODES,
 } = require('../dist');
 
@@ -103,7 +104,9 @@ async function startIsolatedPostgres() {
     await admin.query(
       'CREATE ROLE migration_owner NOLOGIN NOSUPERUSER NOBYPASSRLS',
     );
-    await admin.query('GRANT CREATE, USAGE ON SCHEMA public TO migration_owner');
+    await admin.query(
+      'GRANT CREATE, USAGE ON SCHEMA public TO migration_owner',
+    );
     await admin.query('SET ROLE migration_owner');
     for (const file of MIGRATIONS) {
       await admin.query(readFileSync(file, 'utf8'));
@@ -181,7 +184,7 @@ test(
           tenantId,
           eventId,
           eventQuota: 5,
-          rawCodes: ['OFF-A', 'OFF-B', 'OFF-C'],
+          rawCodes: ['OFF-A', 'OFF-B', 'OFF-C', 'OFF-D', 'OFF-E'],
         });
         const membership = await grantMembership(tx, {
           tenantId,
@@ -198,7 +201,7 @@ test(
       });
 
       const ticketIds = [];
-      for (const code of ['OFF-A', 'OFF-B', 'OFF-C']) {
+      for (const code of ['OFF-A', 'OFF-B', 'OFF-C', 'OFF-D', 'OFF-E']) {
         const issued = unwrapRedeemOutcome(
           await withTenant(db, tenantId, (tx) =>
             redeemAndIssueTicket(tx, HMAC, CRED_KEY, {
@@ -327,8 +330,11 @@ test(
         GATE_ERROR_CODES.OFFLINE_SYNC_IDEMPOTENCY_CONFLICT,
       );
 
-      const rejectAfterPayload = await withTenant(db, tenantId, (tx) =>
-        tx.$queryRaw`
+      const rejectAfterPayload = await withTenant(
+        db,
+        tenantId,
+        (tx) =>
+          tx.$queryRaw`
           SELECT COUNT(*)::int AS n
           FROM audit_logs
           WHERE tenant_id = ${tenantId}::uuid
@@ -364,8 +370,11 @@ test(
         }),
       );
       assert.equal(conflictPayloadReplay.results[0].status, 'REJECTED');
-      const rejectAfterReplay = await withTenant(db, tenantId, (tx) =>
-        tx.$queryRaw`
+      const rejectAfterReplay = await withTenant(
+        db,
+        tenantId,
+        (tx) =>
+          tx.$queryRaw`
           SELECT COUNT(*)::int AS n
           FROM audit_logs
           WHERE tenant_id = ${tenantId}::uuid
@@ -428,8 +437,11 @@ test(
       assert.equal(lost.results[0].code, GATE_ERROR_CODES.ALREADY_CHECKED_IN);
       assert.ok(lost.results[0].winningCheckinId);
 
-      const rejectAfterConflict = await withTenant(db, tenantId, (tx) =>
-        tx.$queryRaw`
+      const rejectAfterConflict = await withTenant(
+        db,
+        tenantId,
+        (tx) =>
+          tx.$queryRaw`
           SELECT COUNT(*)::int AS n
           FROM audit_logs
           WHERE tenant_id = ${tenantId}::uuid
@@ -448,8 +460,11 @@ test(
         }),
       );
       assert.equal(lostReplay.results[0].status, 'CONFLICT');
-      const rejectAfterConflictReplay = await withTenant(db, tenantId, (tx) =>
-        tx.$queryRaw`
+      const rejectAfterConflictReplay = await withTenant(
+        db,
+        tenantId,
+        (tx) =>
+          tx.$queryRaw`
           SELECT COUNT(*)::int AS n
           FROM audit_logs
           WHERE tenant_id = ${tenantId}::uuid
@@ -459,8 +474,11 @@ test(
       );
       assert.equal(rejectAfterConflictReplay[0].n, 2);
 
-      const counts = await withTenant(db, tenantId, (tx) =>
-        tx.$queryRaw`
+      const counts = await withTenant(
+        db,
+        tenantId,
+        (tx) =>
+          tx.$queryRaw`
           SELECT
             (SELECT COUNT(*)::int FROM checkins WHERE tenant_id = ${tenantId}::uuid AND undone_at IS NULL) AS checkins,
             (SELECT COUNT(*)::int FROM offline_sync_events WHERE tenant_id = ${tenantId}::uuid) AS ledger,
@@ -470,6 +488,212 @@ test(
       assert.equal(counts[0].checkins, 3);
       assert.equal(counts[0].ledger, 2);
       assert.equal(counts[0].audits, 2);
+
+      // Two independent sessions race the same ticket. Arrival order, not an
+      // asserted global ordering of client clocks across requests, chooses the winner.
+      const secondSession = await withTenant(db, tenantId, (tx) =>
+        openStaffSession(tx, { tenantId, eventId, userId: staff.userId }),
+      );
+      const item = (ticketId, clientSeq, overrides = {}) => ({
+        clientEventId: randomUUID(),
+        type: 'CHECKIN_OFFLINE',
+        eventId,
+        ticketId,
+        clientOccurredAt: occurred,
+        clientSeq,
+        payloadVersion: 1,
+        ...overrides,
+      });
+      const runBatch = (body, actorUserId = staff.userId) =>
+        withTenant(db, tenantId, (tx) =>
+          applyOfflineSyncBatch(tx, {
+            pathEventId: eventId,
+            actorUserId,
+            serverEpochMs: now,
+            body,
+          }),
+        );
+      const makeBody = (staffSessionId, events, overrides = {}) => ({
+        tenantId,
+        staffSessionId,
+        deviceId: randomUUID(),
+        clientClockAt,
+        events,
+        ...overrides,
+      });
+      const raceBodies = [session, secondSession].map((s) =>
+        makeBody(s.sessionId, [item(ticketIds[3], 0)]),
+      );
+      const raced = await Promise.all(raceBodies.map((body) => runBatch(body)));
+      assert.deepEqual(raced.map((r) => r.results[0].status).sort(), [
+        'APPLIED',
+        'CONFLICT',
+      ]);
+      const winner = raced.find((r) => r.results[0].status === 'APPLIED')
+        .results[0];
+      const loser = raced.find((r) => r.results[0].status === 'CONFLICT')
+        .results[0];
+      assert.equal(loser.code, GATE_ERROR_CODES.OFFLINE_SYNC_CONFLICT_LOST);
+      assert.equal(loser.winningCheckinId, winner.checkinId);
+
+      const duplicateItem = {
+        ...raceBodies[raced.findIndex((r) => r.results[0].status === 'APPLIED')]
+          .events[0],
+      };
+      const mixed = makeBody(session.sessionId, [
+        item(ticketIds[4], 5),
+        item(randomUUID(), 4),
+        item(ticketIds[3], 3),
+        duplicateItem,
+      ]);
+      const mixedResult = await runBatch(mixed);
+      assert.deepEqual(
+        mixedResult.results.map((r) => r.status),
+        ['DUPLICATE', 'CONFLICT', 'REJECTED', 'APPLIED'],
+      );
+      assert.equal(mixedResult.results[1].winningCheckinId, winner.checkinId);
+      assert.equal(
+        mixedResult.results[2].code,
+        GATE_ERROR_CODES.TICKET_NOT_FOUND,
+      );
+      const auditSnapshot = () =>
+        withTenant(
+          db,
+          tenantId,
+          (tx) => tx.$queryRaw`
+        SELECT
+          (SELECT COUNT(*)::int FROM checkins WHERE tenant_id = ${tenantId}::uuid AND ticket_id = ${ticketIds[3]}::uuid AND undone_at IS NULL) AS current,
+          (SELECT COUNT(*)::int FROM offline_sync_events WHERE tenant_id = ${tenantId}::uuid) AS ledger,
+          (SELECT COUNT(*)::int FROM audit_logs WHERE tenant_id = ${tenantId}::uuid AND action = 'gate.offline_sync.apply') AS applied,
+          (SELECT COUNT(*)::int FROM audit_logs WHERE tenant_id = ${tenantId}::uuid AND action = 'gate.reject') AS rejected
+      `,
+        );
+      const beforeRetry = (await auditSnapshot())[0];
+      assert.deepEqual(beforeRetry, {
+        current: 1,
+        ledger: 4,
+        applied: 4,
+        rejected: 5,
+      });
+      const retried = await runBatch(mixed);
+      assert.deepEqual(
+        retried.results.map((r) => r.status),
+        ['DUPLICATE', 'REJECTED', 'REJECTED', 'DUPLICATE'],
+      );
+      assert.equal(
+        retried.results[1].code,
+        GATE_ERROR_CODES.OFFLINE_SYNC_REPLAY_ORDER_INVALID,
+      );
+      assert.equal(
+        retried.results[2].code,
+        GATE_ERROR_CODES.OFFLINE_SYNC_REPLAY_ORDER_INVALID,
+      );
+      const afterRetry = (await auditSnapshot())[0];
+      assert.deepEqual(afterRetry, {
+        ...beforeRetry,
+        rejected: beforeRetry.rejected + 2,
+      });
+      await assert.rejects(
+        () => runBatch(mixed, guest.userId),
+        (error) => error.code === 'MEMBERSHIP_REQUIRED',
+      );
+      await assert.rejects(
+        () => runBatch({ ...mixed, staffSessionId: randomUUID() }),
+        (error) => error.code === GATE_ERROR_CODES.SESSION_NOT_ACTIVE,
+      );
+      assert.deepEqual((await auditSnapshot())[0], afterRetry);
+
+      // Validation boundaries use a fixed server clock, avoiding timing-dependent
+      // assertions at exactly 300 seconds.
+      const valid = item(ticketIds[4], 0);
+      const body = makeBody(session.sessionId, [valid]);
+      for (const delta of [-300000, 300000]) {
+        const boundary = new Date(now + delta).toISOString();
+        validateOfflineSyncRequest(
+          eventId,
+          {
+            ...body,
+            clientClockAt: boundary,
+            events: [{ ...valid, clientOccurredAt: boundary }],
+          },
+          now,
+        );
+      }
+      for (const delta of [-300001, 300001]) {
+        const outside = new Date(now + delta).toISOString();
+        for (const invalid of [
+          { ...body, clientClockAt: outside },
+          { ...body, events: [{ ...valid, clientOccurredAt: outside }] },
+        ]) {
+          assert.throws(
+            () => validateOfflineSyncRequest(eventId, invalid, now),
+            (error) =>
+              error.code === GATE_ERROR_CODES.OFFLINE_SYNC_CLOCK_SKEW_EXCEEDED,
+          );
+        }
+      }
+      const fifty = Array.from({ length: 50 }, (_, i) => item(ticketIds[4], i));
+      assert.equal(
+        validateOfflineSyncRequest(eventId, { ...body, events: fifty }, now)
+          .events.length,
+        50,
+      );
+      assert.throws(
+        () =>
+          validateOfflineSyncRequest(
+            eventId,
+            { ...body, events: [...fifty, item(ticketIds[4], 50)] },
+            now,
+          ),
+        (error) => error.code === GATE_ERROR_CODES.OFFLINE_SYNC_BATCH_TOO_LARGE,
+      );
+      const order = [
+        item(ticketIds[4], 1, {
+          clientEventId: '22222222-2222-4222-8222-222222222222',
+        }),
+        item(ticketIds[4], 1, {
+          clientEventId: '11111111-1111-4111-8111-111111111111',
+        }),
+        item(ticketIds[4], 0),
+        item(ticketIds[4], 9, {
+          clientOccurredAt: new Date(now - 6000).toISOString(),
+        }),
+      ];
+      assert.deepEqual(
+        validateOfflineSyncRequest(
+          eventId,
+          { ...body, events: order },
+          now,
+        ).events.map((e) => e.clientEventId),
+        [order[3], order[2], order[1], order[0]].map((e) => e.clientEventId),
+      );
+      for (const [invalid, code] of [
+        [
+          { ...valid, eventId: randomUUID() },
+          GATE_ERROR_CODES.OFFLINE_SYNC_REPLAY_ORDER_INVALID,
+        ],
+        [
+          { ...valid, payloadVersion: 2 },
+          GATE_ERROR_CODES.OFFLINE_SYNC_PAYLOAD_VERSION_UNSUPPORTED,
+        ],
+        [
+          { ...valid, clientSeq: -1 },
+          GATE_ERROR_CODES.OFFLINE_SYNC_REPLAY_ORDER_INVALID,
+        ],
+      ]) {
+        assert.throws(
+          () =>
+            validateOfflineSyncRequest(
+              eventId,
+              {
+                ...body,
+                events: [valid, { ...invalid, clientEventId: randomUUID() }],
+              },
+              now,
+            ),
+          (error) => error.code === code,
+        );
+      }
     } finally {
       if (db) await db.$disconnect().catch(() => {});
       if (name) stopContainer(name);
