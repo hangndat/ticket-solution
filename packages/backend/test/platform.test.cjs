@@ -962,3 +962,355 @@ test(
     }
   },
 );
+
+test(
+  'PLAT-03 support grant: scope/tenant/expiry/revoke/audit + no implicit PII',
+  { timeout: 300000 },
+  async () => {
+    let name;
+    let db;
+    try {
+      const boot = await startIsolatedPostgres();
+      name = boot.name;
+      db = createDatabase(boot.url, 3);
+      const users = createPrismaIdentityUserRepository(db);
+      const security = readPlatformSecurityConfig({ NODE_ENV: 'test' });
+
+      const operator = await users.upsertFromVerifiedIdentity({
+        issuer: 'http://localhost/realms/ticket',
+        subject: 'op-sg-1',
+        email: 'op-sg@example.com',
+        emailVerified: true,
+      });
+      // Second active operator — must NOT be able to use the first one's grant.
+      const operator2 = await users.upsertFromVerifiedIdentity({
+        issuer: 'http://localhost/realms/ticket',
+        subject: 'op-sg-2',
+        email: 'op-sg-2@example.com',
+        emailVerified: true,
+      });
+      const owner = await users.upsertFromVerifiedIdentity({
+        issuer: 'http://localhost/realms/ticket',
+        subject: 'owner-sg-1',
+        email: 'owner-sg@example.com',
+        emailVerified: true,
+      });
+      const attendee = await users.upsertFromVerifiedIdentity({
+        issuer: 'http://localhost/realms/ticket',
+        subject: 'att-sg-1',
+        email: 'att-sg@example.com',
+        emailVerified: true,
+      });
+
+      await bootstrapPlatformOperator(db, { userId: operator.userId });
+      // Second active operator via platform runtime role (bootstrap is one-time).
+      await withPlatformRole(db, async (tx) =>
+        tx.$executeRaw`INSERT INTO platform_operators (user_id) VALUES (${operator2.userId}::uuid) ON CONFLICT (user_id) DO NOTHING`,
+      );
+
+      // Tenant + event + one issued ticket so listSupportTickets has a row.
+      const provisioned = await provisionTenant(db, security, {
+        actorUserId: operator.userId,
+        clientKey: 'sg-prov-1',
+        body: {
+          slug: 'sg-tenant',
+          name: 'Support Grant Tenant',
+          defaultTimezone: 'Asia/Ho_Chi_Minh',
+          ownerEmail: 'owner-sg@example.com',
+          limits: {
+            maxEvents: 2,
+            maxStaff: 5,
+            emailPerDay: null,
+            importRowsPerJob: null,
+          },
+          flags: { importsEnabled: true, exportsEnabled: true },
+        },
+      });
+      await acceptMembershipInvite(db, {
+        userId: owner.userId,
+        email: 'owner-sg@example.com',
+        emailVerified: true,
+        token: provisioned.rawInviteToken,
+      });
+
+      let eventId;
+      await withTenant(db, provisioned.tenantId, async (tx) => {
+        const ev = await createEvent(tx, {
+          tenantId: provisioned.tenantId,
+          actorUserId: owner.userId,
+          idempotencyKey: randomUUID(),
+          body: {
+            slug: 'sg-event',
+            name: 'Support Grant Event',
+            timezone: 'Asia/Ho_Chi_Minh',
+          },
+        });
+        eventId = ev.event.eventId;
+        await seedEventInventory(tx, HMAC, {
+          tenantId: provisioned.tenantId,
+          eventId,
+          eventQuota: 5,
+          rawCodes: ['SG-CODE-1'],
+        });
+      });
+      await withTenant(db, provisioned.tenantId, (tx) =>
+        redeemAndIssueTicket(tx, HMAC, CRED, {
+          tenantId: provisioned.tenantId,
+          eventId,
+          actorUserId: attendee.userId,
+          actorEmail: 'att-sg@example.com',
+          emailVerified: true,
+          rawCode: 'SG-CODE-1',
+          idempotencyKey: randomUUID(),
+        }),
+      );
+
+      const validGrant = () => ({
+        actorUserId: operator.userId,
+        tenantId: provisioned.tenantId,
+        eventId,
+        scopes: ['cs.read'],
+        reason: 'scoped support review',
+        expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+      });
+
+      // reason required
+      await assert.rejects(
+        () => createSupportGrant(db, security, { ...validGrant(), reason: '' }),
+        (e) => e.code === PLATFORM_ERROR_CODES.INVALID_INPUT,
+      );
+      await assert.rejects(
+        () => createSupportGrant(db, security, { ...validGrant(), reason: '   ' }),
+        (e) => e.code === PLATFORM_ERROR_CODES.INVALID_INPUT,
+      );
+      await assert.rejects(
+        () =>
+          createSupportGrant(db, security, {
+            ...validGrant(),
+            reason: 'x'.repeat(501),
+          }),
+        (e) => e.code === PLATFORM_ERROR_CODES.INVALID_INPUT,
+      );
+
+      // scope must be exactly cs.read
+      await assert.rejects(
+        () =>
+          createSupportGrant(db, security, {
+            ...validGrant(),
+            scopes: ['pii.read'],
+          }),
+        (e) => e.code === PLATFORM_ERROR_CODES.INVALID_INPUT,
+      );
+      await assert.rejects(
+        () =>
+          createSupportGrant(db, security, {
+            ...validGrant(),
+            scopes: ['cs.read', 'pii.read'],
+          }),
+        (e) => e.code === PLATFORM_ERROR_CODES.INVALID_INPUT,
+      );
+      await assert.rejects(
+        () => createSupportGrant(db, security, { ...validGrant(), scopes: [] }),
+        (e) => e.code === PLATFORM_ERROR_CODES.INVALID_INPUT,
+      );
+
+      // expiry must be valid, in the future, and within the 1h max TTL
+      await assert.rejects(
+        () =>
+          createSupportGrant(db, security, {
+            ...validGrant(),
+            expiresAt: 'not-a-date',
+          }),
+        (e) => e.code === PLATFORM_ERROR_CODES.INVALID_INPUT,
+      );
+      await assert.rejects(
+        () =>
+          createSupportGrant(db, security, {
+            ...validGrant(),
+            expiresAt: new Date(Date.now() - 1000).toISOString(),
+          }),
+        (e) => e.code === PLATFORM_ERROR_CODES.INVALID_INPUT,
+      );
+      await assert.rejects(
+        () =>
+          createSupportGrant(db, security, {
+            ...validGrant(),
+            expiresAt: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+          }),
+        (e) => e.code === PLATFORM_ERROR_CODES.INVALID_INPUT,
+      );
+
+      // non-operator cannot grant
+      await assert.rejects(
+        () =>
+          createSupportGrant(db, security, {
+            ...validGrant(),
+            actorUserId: owner.userId,
+          }),
+        (e) => e.code === PLATFORM_ERROR_CODES.PLATFORM_OPERATOR_REQUIRED,
+      );
+
+      // snapshot denial: rejected creates must not insert a grant row
+      const beforeDeny = await withPlatformRole(db, async (tx) =>
+        tx.$queryRaw`SELECT count(*)::int AS n FROM support_grants WHERE tenant_id = ${provisioned.tenantId}::uuid`,
+      );
+      await assert.rejects(
+        () =>
+          createSupportGrant(db, security, {
+            ...validGrant(),
+            expiresAt: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+          }),
+        (e) => e.code === PLATFORM_ERROR_CODES.INVALID_INPUT,
+      );
+      await assert.rejects(
+        () =>
+          createSupportGrant(db, security, {
+            ...validGrant(),
+            scopes: ['cs.read', 'pii.read'],
+          }),
+        (e) => e.code === PLATFORM_ERROR_CODES.INVALID_INPUT,
+      );
+      const afterDeny = await withPlatformRole(db, async (tx) =>
+        tx.$queryRaw`SELECT count(*)::int AS n FROM support_grants WHERE tenant_id = ${provisioned.tenantId}::uuid`,
+      );
+      assert.equal(afterDeny[0].n, beforeDeny[0].n, 'denied creates must not insert support_grants');
+
+      // successful grant → audit granted + masked read, no raw PII
+      const grant = await createSupportGrant(db, security, validGrant());
+      assert.ok(grant.grantId);
+      assert.ok(grant.expiresAt);
+      assert.ok(
+        new Date(grant.expiresAt).getTime() <= Date.now() + 60 * 60 * 1000,
+        'grant expiry must not exceed 1h max TTL',
+      );
+
+      const supportRows = await listSupportTickets(db, {
+        actorUserId: operator.userId,
+        grantId: grant.grantId,
+      });
+      assert.ok(supportRows.length >= 1, 'expected at least one masked ticket');
+      const supportJson = JSON.stringify(supportRows);
+      assert.ok(!supportJson.includes('att-sg@example.com'), 'must not leak raw PII');
+      for (const row of supportRows) {
+        assert.equal(typeof row.ticketId, 'string');
+        assert.equal(typeof row.state, 'string');
+        assert.ok(row.ownerEmailMasked === null || /^.\*\*\*@/.test(row.ownerEmailMasked));
+      }
+
+      // impersonation: second operator must not use the first operator's grant
+      await assert.rejects(
+        () =>
+          listSupportTickets(db, {
+            actorUserId: operator2.userId,
+            grantId: grant.grantId,
+          }),
+        (e) => e.code === PLATFORM_ERROR_CODES.PERMISSION_DENIED,
+      );
+
+      // seeded expired / revoked / wrong-scope grants are not live
+      const expiredId = randomUUID();
+      const revokedId = randomUUID();
+      const wrongScopeId = randomUUID();
+      await withPlatformRole(db, async (tx) => {
+        await tx.$executeRaw`
+          INSERT INTO support_grants (
+            tenant_id, id, operator_user_id, event_id, scopes, reason,
+            expires_at, created_by, created_at, updated_at
+          ) VALUES (
+            ${provisioned.tenantId}::uuid, ${expiredId}::uuid, ${operator.userId}::uuid,
+            ${eventId}::uuid, ARRAY['cs.read']::text[], 'expired fixture',
+            now() - interval '1 hour', ${operator.userId}::uuid,
+            now() - interval '2 hours', now()
+          )
+        `;
+        await tx.$executeRaw`
+          INSERT INTO support_grants (
+            tenant_id, id, operator_user_id, event_id, scopes, reason,
+            expires_at, revoked_at, created_by, created_at, updated_at
+          ) VALUES (
+            ${provisioned.tenantId}::uuid, ${revokedId}::uuid, ${operator.userId}::uuid,
+            ${eventId}::uuid, ARRAY['cs.read']::text[], 'revoked fixture',
+            now() + interval '30 minutes', now(), ${operator.userId}::uuid, now(), now()
+          )
+        `;
+        await tx.$executeRaw`
+          INSERT INTO support_grants (
+            tenant_id, id, operator_user_id, event_id, scopes, reason,
+            expires_at, created_by, created_at, updated_at
+          ) VALUES (
+            ${provisioned.tenantId}::uuid, ${wrongScopeId}::uuid, ${operator.userId}::uuid,
+            ${eventId}::uuid, ARRAY['report.read']::text[], 'wrong-scope fixture',
+            now() + interval '30 minutes', ${operator.userId}::uuid, now(), now()
+          )
+        `;
+      });
+      for (const badGrantId of [expiredId, revokedId, wrongScopeId]) {
+        await assert.rejects(
+          () =>
+            listSupportTickets(db, {
+              actorUserId: operator.userId,
+              grantId: badGrantId,
+            }),
+          (e) => e.code === PLATFORM_ERROR_CODES.PERMISSION_DENIED,
+        );
+      }
+
+      // revoke: empty reason denied, success + audit, second revoke not found
+      await assert.rejects(
+        () =>
+          revokeSupportGrant(db, {
+            actorUserId: operator.userId,
+            grantId: grant.grantId,
+            reason: '',
+          }),
+        (e) => e.code === PLATFORM_ERROR_CODES.INVALID_INPUT,
+      );
+      const revoked = await revokeSupportGrant(db, {
+        actorUserId: operator.userId,
+        grantId: grant.grantId,
+        reason: 'incident closed',
+      });
+      assert.equal(revoked.grantId, grant.grantId);
+      assert.ok(revoked.revokedAt);
+      await assert.rejects(
+        () =>
+          listSupportTickets(db, {
+            actorUserId: operator.userId,
+            grantId: grant.grantId,
+          }),
+        (e) => e.code === PLATFORM_ERROR_CODES.PERMISSION_DENIED,
+      );
+      await assert.rejects(
+        () =>
+          revokeSupportGrant(db, {
+            actorUserId: operator.userId,
+            grantId: grant.grantId,
+            reason: 'again',
+          }),
+        (e) => e.code === PLATFORM_ERROR_CODES.RESOURCE_NOT_FOUND,
+      );
+
+      // audit: granted + read + revoked actions recorded for the live grant
+      const audit = await withPlatformRole(db, async (tx) =>
+        tx.$queryRaw`
+          SELECT action FROM platform_audit_logs
+          WHERE resource_id = ${grant.grantId}::uuid
+          ORDER BY created_at
+        `,
+      );
+      const actions = audit.map((r) => r.action);
+      assert.ok(actions.includes('platform.support.granted'), 'granted audit');
+      assert.ok(actions.includes('platform.support.read'), 'read audit');
+      assert.ok(actions.includes('platform.support.revoked'), 'revoked audit');
+    } finally {
+      if (db) await db.$disconnect().catch(() => {});
+      if (name) {
+        try {
+          docker('rm', '-f', name);
+        } catch {
+          // ignore
+        }
+      }
+    }
+  },
+);
