@@ -89,3 +89,21 @@ test('empty tenant/slug is invalid without calling network', async () => {
   );
   assert.equal(called, false);
 });
+
+ test('429 is retryable and a subsequent load reaches the upstream again', async () => {
+  for (const load of [
+    (fetchImpl: typeof fetch) => loadPublishedEventList('mfest-demo', { fetchImpl }),
+    (fetchImpl: typeof fetch) => loadPublishedEventDetail('mfest-demo', 'mfest', { fetchImpl }),
+  ]) {
+    let calls = 0;
+    const fetchImpl: typeof fetch = async (input) => {
+      calls++;
+      if (calls === 1) return jsonResponse(429, { code: 'RATE_LIMITED' });
+      return jsonResponse(200, String(input).endsWith('/mfest') ? detail : { items: [summary], nextCursor: null });
+    };
+    assert.equal((await load(fetchImpl)).status, 'rate-limited');
+    assert.equal(calls, 1);
+    assert.equal((await load(fetchImpl)).status, 'ok');
+    assert.equal(calls, 2);
+  }
+});

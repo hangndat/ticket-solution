@@ -9,6 +9,18 @@ export const PUBLIC_EVENT_COPY = {
     detail:
       'Hiện chưa có sự kiện công khai. Bạn vẫn có thể đổi mã nếu đã có mã.',
   },
+  homePartialRateLimited: {
+    title: 'Danh sách sự kiện chưa đầy đủ',
+    detail: 'Một số sự kiện chưa tải được do có quá nhiều lượt truy cập. Vui lòng đợi một lát rồi thử lại.',
+  },
+  homeRateLimited: {
+    title: 'Có quá nhiều lượt tải danh sách',
+    detail: 'Vui lòng đợi một lát rồi thử lại.',
+  },
+  detailRateLimited: {
+    title: 'Có quá nhiều lượt tải sự kiện',
+    detail: 'Vui lòng đợi một lát rồi thử lại.',
+  },
   homeUnreachable: {
     title: 'Không tải được danh sách',
     detail:

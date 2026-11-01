@@ -26,14 +26,16 @@ type Props = {
 };
 
 type HomeCatalog =
-  | { status: 'ok'; items: PublishedEventSummary[] }
+  | { status: 'ok'; items: PublishedEventSummary[]; rateLimited: boolean }
   | { status: 'empty' }
+  | { status: 'rate-limited' }
   | { status: 'unreachable' }
   | { status: 'invalid' };
 
 async function loadHomeCatalog(): Promise<HomeCatalog> {
   const slugs = homeTenantSlugs();
   const items: PublishedEventSummary[] = [];
+  let sawRateLimited = false;
   let sawUnreachable = false;
   let sawInvalid = false;
 
@@ -46,11 +48,13 @@ async function loadHomeCatalog(): Promise<HomeCatalog> {
       items.push(...result.body.items);
       continue;
     }
-    if (result.status === 'unreachable') sawUnreachable = true;
+    if (result.status === 'rate-limited') sawRateLimited = true;
+    else if (result.status === 'unreachable') sawUnreachable = true;
     else sawInvalid = true;
   }
 
-  if (items.length > 0) return { status: 'ok', items };
+  if (items.length > 0) return { status: 'ok', items, rateLimited: sawRateLimited };
+  if (sawRateLimited) return { status: 'rate-limited' };
   if (sawUnreachable) return { status: 'unreachable' };
   if (sawInvalid) return { status: 'invalid' };
   return { status: 'empty' };
@@ -95,6 +99,26 @@ export default async function Home({ searchParams }: Props) {
           title={PUBLIC_EVENT_COPY.homeEmpty.title}
           detail={PUBLIC_EVENT_COPY.homeEmpty.detail}
           testId="home-events-empty"
+        />
+      ) : null}
+
+      {catalog.status === 'ok' && catalog.rateLimited ? (
+        <SurfaceState
+          kind="error"
+          title={PUBLIC_EVENT_COPY.homePartialRateLimited.title}
+          detail={PUBLIC_EVENT_COPY.homePartialRateLimited.detail}
+          testId="home-events-partial-rate-limited"
+          action={<form action="/"><Button type="submit" variant="brand">Thử lại</Button></form>}
+        />
+      ) : null}
+
+      {catalog.status === 'rate-limited' ? (
+        <SurfaceState
+          kind="error"
+          title={PUBLIC_EVENT_COPY.homeRateLimited.title}
+          detail={PUBLIC_EVENT_COPY.homeRateLimited.detail}
+          testId="home-events-rate-limited"
+          action={<form action="/"><Button type="submit" variant="brand">Thử lại</Button></form>}
         />
       ) : null}
 
