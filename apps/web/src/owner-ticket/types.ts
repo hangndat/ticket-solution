@@ -3,6 +3,7 @@
  * Mirrors TicketSummary.
  */
 import { dual, localizeCatalog } from '../i18n/dual';
+import type { GateCredentialEnvelope } from '@ticket/contracts';
 import {
   DEFAULT_ATTENDEE_LOCALE,
   type AttendeeLocale,
@@ -16,6 +17,8 @@ export type OwnerTicketDetail = {
   sourceId: string;
   state: string;
   credentialVersion: number;
+  gateCredential: GateCredentialEnvelope | null;
+  manualEntryCode: string | null;
   createdAt: string;
 };
 
@@ -29,7 +32,10 @@ export type LoadOwnerTicketResult =
   | { status: 'invalid' };
 
 /** Row for wallet grid — TicketSummary + optional event label from API. */
-export type WalletTicketRow = OwnerTicketDetail & {
+export type WalletTicketRow = Omit<
+  OwnerTicketDetail,
+  'gateCredential' | 'manualEntryCode'
+> & {
   eventName?: string;
 };
 
@@ -140,6 +146,15 @@ export const OWNER_TICKET_COPY_CATALOG = {
     'Vé đang ở trạng thái {state}. Không dùng mã này để vào cổng.',
     'This ticket is {state}. Do not use this code at the gate.',
   ),
+  credentialUnavailable: dual(
+    'Mã QR chưa sẵn sàng. Tải lại vé để lấy mã mới nhất hoặc liên hệ ban tổ chức.',
+    'The QR is not ready. Reload the ticket for the latest code or contact the organizer.',
+  ),
+  manualEntryCode: dual('Mã nhập tay', 'Manual entry code'),
+  manualEntryCodeUnavailable: dual(
+    'Mã nhập tay chưa sẵn sàng. Tải lại vé để thử lại.',
+    'The manual entry code is not ready. Reload the ticket to try again.',
+  ),
   ticketCode: dual('Mã vé', 'Ticket'),
   status: dual('Trạng thái', 'Status'),
   credentialVersion: dual('Phiên bản chứng thực', 'Credential version'),
@@ -173,10 +188,10 @@ export const OWNER_TICKET_COPY_CATALOG = {
     ),
   },
   unreachable: {
-    title: dual('Không tải được vé', 'Could not load ticket'),
+    title: dual('Không thể tải vé và mã vào cổng', 'Ticket and gate codes are unavailable'),
     detail: dual(
-      'Máy chủ vé tạm thời không phản hồi. Thử lại sau ít phút.',
-      'The ticket server did not respond. Try again in a few minutes.',
+      'Hiện chưa thể tải vé hoặc chuẩn bị mã vào cổng an toàn. Thử lại sau ít phút.',
+      'The ticket server cannot load the ticket or prepare its gate codes right now. Try again in a few minutes.',
     ),
   },
   invalid: {
