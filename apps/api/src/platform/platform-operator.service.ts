@@ -22,13 +22,27 @@ function isSupportGrantEventReferenceError(error: unknown): boolean {
   if (!error || typeof error !== 'object') return false;
   const databaseError = error as {
     code?: unknown;
-    meta?: { code?: unknown; message?: unknown };
+    meta?: {
+      code?: unknown;
+      message?: unknown;
+      driverAdapterError?: {
+        cause?: {
+          originalCode?: unknown;
+          kind?: unknown;
+          constraint?: { index?: unknown };
+        };
+      };
+    };
   };
+  const adapterCause = databaseError.meta?.driverAdapterError?.cause;
   return (
     databaseError.code === 'P2010' &&
-    databaseError.meta?.code === '23503' &&
-    typeof databaseError.meta.message === 'string' &&
-    databaseError.meta.message.includes('support_grants_event_fk')
+    ((adapterCause?.originalCode === '23503' &&
+      adapterCause.kind === 'ForeignKeyConstraintViolation' &&
+      adapterCause.constraint?.index === 'support_grants_event_fk') ||
+      (databaseError.meta?.code === '23503' &&
+        typeof databaseError.meta.message === 'string' &&
+        databaseError.meta.message.includes('support_grants_event_fk')))
   );
 }
 
