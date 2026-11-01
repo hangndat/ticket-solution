@@ -1,7 +1,8 @@
 const { generateKeyPairSync } = require('node:crypto');
-const backend = require('../dist');
 
 process.env.GATE_MANUAL_CODE_PEPPER ||= 'gate-test-only-pepper-32-byte-value';
+
+const backend = require('../dist');
 
 const pair = generateKeyPairSync('ec', { namedCurve: 'P-256' });
 const kid = 'gate-test-k1';
