@@ -5,6 +5,7 @@ const { randomBytes, randomUUID } = require('node:crypto');
 const { readdirSync, readFileSync, statSync } = require('node:fs');
 const path = require('node:path');
 const { Client } = require('pg');
+require('./gate-test-credentials.cjs');
 const {
   createDatabase,
   createPrismaIdentityUserRepository,

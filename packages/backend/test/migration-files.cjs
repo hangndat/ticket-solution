@@ -3,6 +3,10 @@
 const { readdirSync, statSync } = require('node:fs');
 const path = require('node:path');
 
+// Database tests that apply migrations also issue gate credentials. Keep the
+// required test-only pepper available without supplying or weakening runtime config.
+require('./gate-test-credentials.cjs');
+
 const MIGRATIONS_DIR = path.join(__dirname, '../prisma/migrations');
 
 /** Every migration.sql under prisma/migrations, sorted by directory name. */
