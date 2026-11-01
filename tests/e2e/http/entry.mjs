@@ -14,6 +14,8 @@ const cases = [
   'GATE-01',
   'GATE-02',
   'GATE-03',
+  'GATE-04',
+  'GATE-05',
   'DB-01',
   'DB-02',
   'DB-03',
