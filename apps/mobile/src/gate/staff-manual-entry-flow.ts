@@ -1,29 +1,14 @@
-import { parseScan, type ParsedScan } from './gate-scan.ts';
-import { shortId } from './gate-outcome-copy.ts';
 import type { StaffGateScope } from './staff-gate-events.ts';
 import { resolveGateScanFallback } from './staff-gate-scope-resolve.ts';
 
 export type ManualEntryCheckResult =
-  | { ok: true; parsed: ParsedScan; previewLine: string }
+  | { ok: true; code: string; previewLine: string }
   | { ok: false; message: string };
 
 export function buildManualEntryPreviewLine(
   scopeName: string | null | undefined,
-  parsed: ParsedScan,
 ): string {
-  const eventLabel =
-    scopeName?.trim() ||
-    parsed.displayHints?.eventName?.trim() ||
-    'Sự kiện đang chọn';
-  const parts = [eventLabel];
-  const typeLabel = parsed.displayHints?.ticketTypeLabel?.trim();
-  const guest = parsed.displayHints?.attendeeName?.trim();
-  if (typeLabel) parts.push(typeLabel);
-  if (guest) parts.push(guest);
-  if (!typeLabel && !guest) {
-    parts.push(`Mã ${shortId(parsed.ticketId, 8)}`);
-  }
-  return parts.join(' · ');
+  return `${scopeName?.trim() || 'Sự kiện đang chọn'} · Mã sẽ được kiểm tra trực tuyến`;
 }
 
 export function checkManualEntryCode(
@@ -34,17 +19,19 @@ export function checkManualEntryCode(
   if (!code) {
     return { ok: false, message: 'Nhập mã trên vé trước khi kiểm tra.' };
   }
-  const fallback = resolveGateScanFallback(gateScope);
-  const parsed = parseScan(code, fallback);
-  if (!parsed) {
+  const scope = resolveGateScanFallback(gateScope);
+  if (!scope.tenantId || !scope.eventId) {
+    return { ok: false, message: 'Chọn sự kiện và cổng trước khi kiểm tra mã.' };
+  }
+  if (!/^[a-z0-9-]{10,12}$/i.test(code) || /^[0-9a-f-]{36}$/i.test(code)) {
     return {
       ok: false,
-      message: 'Mã không đọc được. Kiểm tra lại mã trên vé.',
+      message: 'Mã nhập tay không hợp lệ. Kiểm tra lại mã trên vé.',
     };
   }
   return {
     ok: true,
-    parsed,
-    previewLine: buildManualEntryPreviewLine(gateScope?.name, parsed),
+    code,
+    previewLine: buildManualEntryPreviewLine(gateScope?.name),
   };
 }

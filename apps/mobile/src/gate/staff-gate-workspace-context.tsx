@@ -195,7 +195,7 @@ export type StaffGateWorkspaceValue = {
   /** Outcome for manual entry: prefers sticky pendingOp after toast timer. */
   persistentScanStatus: ReturnType<typeof presentGateScanStatus>;
   selectGateScope: (scope: StaffGateScope) => void;
-  submitScan: (payload: string) => Promise<void>;
+  submitScan: (payload: string, source?: 'qr' | 'manual') => Promise<void>;
   handleCameraScan: (data: string) => void;
   reconcile: () => Promise<void>;
   syncNow: () => Promise<void>;
@@ -833,7 +833,7 @@ export function StaffGateWorkspaceProvider({
     [gateScope, verifiedUserId, ops, sessionId, clearScanFeedback, saveWorkspace],
   );
 
-  const submitScan = useCallback(async (payload: string) => {
+  const submitScan = useCallback(async (payload: string, source: 'qr' | 'manual' = 'qr') => {
     const replayEpoch = session.captureEpoch();
     const startedView = viewRef.current;
     const writeGeneration = gateWorkspaceWriteGeneration(replayEpoch?.userId ?? '');
@@ -920,7 +920,8 @@ export function StaffGateWorkspaceProvider({
       if (!isCurrent()) return;
       const preferOffline = connectivity === 'offline';
       const result = await runScan({
-        raw: code,
+        raw: source === 'qr' ? code : '',
+        manualEntryCode: source === 'manual' ? code : undefined,
         bearer: auth.bearer,
         apiBase: auth.apiBase,
         ops: opsForScope(ops, gateScope),
@@ -950,7 +951,7 @@ export function StaffGateWorkspaceProvider({
         clearStaffChromeAfterAuthzDenial();
       }
 
-      if (result.networkUnavailable && result.parsed && result.staffSessionId) {
+      if (result.networkUnavailable && result.offlineQueueEligible && result.parsed && result.staffSessionId) {
         const queued = await offlineScanQueue.enqueue({
           ticketId: result.parsed.ticketId,
           tenantId: result.parsed.tenantId,
