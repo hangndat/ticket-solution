@@ -1,6 +1,6 @@
 # Kế hoạch kiểm thử local — Web, Portal và backend
 
-> Đối chiếu 01/11/2026: [ACCEPTANCE.md](ACCEPTANCE.md) gom evidence theo từng ID từ các PR đã tích hợp: **33 nhóm có nghiệm thu tại mốc lịch sử, 52 nhóm còn thiếu gate toàn phần, JOB-08 OUT**. Đây không phải full regression mới trên main hiện tại; các checkpoint ngày 30/10 bên dưới giữ nguyên SHA và phạm vi.
+> Đối chiếu 02/11/2026: [ACCEPTANCE.md](ACCEPTANCE.md) gom evidence theo từng ID từ các PR đã tích hợp: **36 nhóm có nghiệm thu tại mốc lịch sử, 49 nhóm còn thiếu gate toàn phần, JOB-08 OUT**. DB-15/16 thêm qua PR #1109, merge `569a9aad`, review DoD+Security PASS và CI main `41330364325` SUCCESS. Đây không phải full regression mới trên main hiện tại; các checkpoint ngày 30/10 bên dưới giữ nguyên SHA và phạm vi.
 
 Ngày đối chiếu: **28/10/2026**. Source baseline: `022cb80fd159dad2a7ebd0eeeea07fd64391f90a`.
 
@@ -35,7 +35,7 @@ Trên `main` `34c2d638fa974376dc21a05381eba132a1c41feb`, F04 có **10 PASS, 75 B
 
 - Người phụ trách tài liệu: Minh — `coordinator`, hồ sơ [company/employees.json](../../company/employees.json). Biên soạn trong phiên trực tiếp hiện có; không tạo worker chỉ cho tracking.
 - Architecture impact: **Không** — tài liệu không đổi kiến trúc, API, policy hoặc runtime.
-- Routing worker theo yêu cầu user mới nhất: ưu tiên **Claude** khi khả dụng, Codex fallback theo cost catalog; tier phải được phân loại theo task khi thực thi. Các lượt Codex trước đây giữ nguyên provenance trong báo cáo riêng.
+- Routing worker theo [cost catalog](../../docs/agents/cost-catalog.md) và chỉ định user hiện tại; Task Spec ghi tier, model pin và employee cố định. Giữ receipt requested/effective, reviewer độc lập và provenance của các lượt trước.
 - Phạm vi ban đầu của tài liệu là đối chiếu yêu cầu và tạo plan trong `tests/e2e`; tiến độ implementation sau đó được ghi ở `IMPLEMENTATION.md` và các issue F04 bên dưới.
 
 ## 1. Mục tiêu và cách xác định kết quả đúng

@@ -1,10 +1,10 @@
 # F04 — ma trận nghiệm thu tích hợp
 
-Ngày đối chiếu: **01/11/2026**. Source snapshot: `feefbc10e66743fb5ffd31be94ad17c1ff241d2b`. Người đối chiếu: Minh (coordinator). Architecture impact: Không; cập nhật evidence, không thay runtime/AC.
+Ngày đối chiếu: **02/11/2026**. Source snapshot: `569a9aad4fd1a1116d8f61b083d429853e64d7e1`. Người đối chiếu: Minh (coordinator). Architecture impact: Không; cập nhật evidence, không thay runtime/AC.
 
-**34 nhóm đã có nghiệm thu tích hợp trong lịch sử, 51 nhóm còn thiếu gate toàn phần, JOB-08 OUT.** Đây là tổng hợp verdict trên SHA/run ở từng PR, **không phải** một full regression toàn Epic mới chạy trên source snapshot. Web B được tái chạy theo ba stack/nhóm fixture trên SHA sạch hiện tại: WEB-01–13 đạt 47/47; chi tiết ngay dưới. Full Web 13 fixture trên một stack trước đó đạt 44/47 do bucket public read 600/600; giữ phép đo tải chung và rủi ro capacity riêng, không gọi nó PASS.
+**36 nhóm đã có nghiệm thu tích hợp trong lịch sử, 49 nhóm còn thiếu gate toàn phần, JOB-08 OUT.** Đây là tổng hợp verdict trên SHA/run ở từng PR, **không phải** một full regression toàn Epic mới chạy trên source snapshot. Thêm DB-15/16 qua PR #1109 sau review độc lập và CI main. Web B trên ba stack/nhóm fixture sạch tại `feefbc10` đạt 47/47; chi tiết ngay dưới. Full Web 13 fixture trên một stack trước đó đạt 44/47 do bucket public read 600/600; giữ phép đo tải chung và rủi ro capacity riêng, không gọi nó PASS.
 
-[PLAN.md](PLAN.md) là nguồn AC B/H/D/R. `coverage.json` chỉ là inventory selector; `implemented`/`covered` không tự chuyển thành nghiệm thu. Trạng thái công việc động lấy Issue/Project #3. Checkpoint 12 PASS trong ROADMAP/PLAN là mốc cũ, không phải tổng số PR đã nghiệm thu đến 01/11.
+[PLAN.md](PLAN.md) là nguồn AC B/H/D/R. `coverage.json` chỉ là inventory selector; `implemented`/`covered` không tự chuyển thành nghiệm thu. Trạng thái công việc động lấy Issue/Project #3. Checkpoint 12 PASS trong ROADMAP/PLAN là mốc cũ, không phải tổng số PR đã nghiệm thu đến 02/11.
 
 ## Web regression trên source snapshot
 
@@ -49,6 +49,8 @@ Mỗi dòng dẫn PR đã merge và evidence/review. SHA trong bảng là **merg
 | DB-10   | P0  | D/H    | [#1059](https://github.com/hangndat/ticket-solution/pull/1059) · `002c96cbabad37963bb6c59f6c2f6bd8e56691eb` | `mvulhgmy-f0f539` · [evidence](https://github.com/hangndat/ticket-solution/pull/1059#issuecomment-6516635276)                    |
 | DB-11   | P0  | D/H    | [#1061](https://github.com/hangndat/ticket-solution/pull/1061) · `3de19ac330efcff19ddbe3966f0675eedc74c5f0` | `mvuoefz6-2b9e25; D 2/2` · [evidence](https://github.com/hangndat/ticket-solution/pull/1061#issuecomment-6517875044)             |
 | DB-14   | P0  | D/H    | [#1063](https://github.com/hangndat/ticket-solution/pull/1063) · `553ebdf1d0e51aa0bbf117eb207409068189f648` | `mvurjvqz-abe8f0; D 3/3` · [evidence](https://github.com/hangndat/ticket-solution/pull/1063#issuecomment-6519478888)             |
+| DB-15   | P0  | D/H    | [#1109](https://github.com/hangndat/ticket-solution/pull/1109) · `569a9aad4fd1a1116d8f61b083d429853e64d7e1` | `mvxl0ywo-323403; D 3/3` trên `16e909c9` · [review](https://github.com/hangndat/ticket-solution/pull/1109#issuecomment-6561199785) |
+| DB-16   | P1  | D/H    | [#1109](https://github.com/hangndat/ticket-solution/pull/1109) · `569a9aad4fd1a1116d8f61b083d429853e64d7e1` | `mvxl0ywo-323403; D retry 2/2` trên `16e909c9` · [review](https://github.com/hangndat/ticket-solution/pull/1109#issuecomment-6561199785) |
 | JOB-01  | P0  | R/D    | [#1080](https://github.com/hangndat/ticket-solution/pull/1080) · `2105c30efa32fbdfb4bc1ebab3b529c5450f7116` | `D/R 3/3 sạch trên 50f1241d` · [evidence](https://github.com/hangndat/ticket-solution/issues/1032#issuecomment-6524280665)       |
 | JOB-02  | P0  | R/D    | [#1081](https://github.com/hangndat/ticket-solution/pull/1081) · `def73ae05f2526fe5e265f51a3dac72a15a98fd0` | `D/R 2/2 sạch trên c5ae316f` · [evidence](https://github.com/hangndat/ticket-solution/issues/1032#issuecomment-6524477477)       |
 | JOB-03  | P0  | R/D    | [#1083](https://github.com/hangndat/ticket-solution/pull/1083) · `d597079f5db1c047322429ddfc9dea083987e8dd` | `D 1/1; R 3/3 trên 7488ee6c` · [evidence](https://github.com/hangndat/ticket-solution/issues/1032#issuecomment-6525324272)       |
@@ -82,8 +84,6 @@ Các dòng này giữ BLOCKED ở mức AC; không có nghĩa tất cả đều 
 | [DB-09](https://github.com/hangndat/ticket-solution/issues/1030)   | P0  | D/H    | #1060 chỉ H một phần; signed QR GATE-03 và các quyết định trong GATE-03-SIGNED-QR-HANDOFF còn mở.                                           |
 | [DB-12](https://github.com/hangndat/ticket-solution/issues/1030)   | P0  | D/H    | #1062 partial: preview no-store, canonical cache key host/tenant/event/version/locale, publish/rollback invalidation chưa đủ.               |
 | [DB-13](https://github.com/hangndat/ticket-solution/issues/1030)   | P1  | D/H    | Thiếu H và đầy đủ lifecycle windows/timezone/deadline sau lock, clone/archive/cancel và policy vé đã cấp.                                   |
-| [DB-15](https://github.com/hangndat/ticket-solution/issues/1030)   | P0  | D/H    | Đang bổ sung D/H report/undo/reject/cancel/final notification. Giữ semantics O12 đã nghiệm thu confirm→1, undo→0.                           |
-| [DB-16](https://github.com/hangndat/ticket-solution/issues/1030)   | P1  | D/H    | Đang bổ sung D/H portfolio RLS/assignment/cursor/limit/watermark; chưa có verdict mới.                                                      |
 | [DB-17](https://github.com/hangndat/ticket-solution/issues/1030)   | P0  | D/H    | Thiếu H named presets/self-serve PENDING/operator activation, arbitrary permissions deny và limits/usage.                                   |
 | [DB-18](https://github.com/hangndat/ticket-solution/issues/1030)   | P0  | D/H    | Thiếu H account deletion/revoke/job IdP retry và bảo toàn audit/đối soát.                                                                   |
 | [DB-19](https://github.com/hangndat/ticket-solution/issues/1030)   | P1  | D/H    | Thiếu D/H rotation key/pepper version, fail-closed unsupported/revoked và bảo vệ key material.                                              |
