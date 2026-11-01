@@ -502,7 +502,9 @@ function assertNoOpenRedirectVector(location) {
 
 function assertUncacheableHostProbe(result, label) {
   assert.ok(
-    !/(^|[,\s])(public|s-maxage=\d+)(\s|,|$)/i.test(result.cacheControl ?? ''),
+    !/(^|[,\s])(public|s-maxage=\d+|max-age=[1-9]\d*)(\s|,|$)/i.test(
+      result.cacheControl ?? '',
+    ),
     `${label}: forged host response must not be shared-cacheable`,
   );
 }
@@ -2019,6 +2021,23 @@ for (const caseId of CASE_IDS) {
         );
       }
       assertUncacheableHostProbe(directMarketingAuth, 'direct marketing /auth');
+
+      const canonicalPoison = await directUpstreamFetch(webPort, webHost, '/', {
+        headers: { ...forged, 'x-forwarded-host': 'www.vemoki.com' },
+      });
+      if ([301, 302, 307, 308].includes(canonicalPoison.status)) {
+        assertLocationOrigin(
+          canonicalPoison.location,
+          ctx.web,
+          'product Host with forged www forwarding',
+        );
+      } else {
+        assert.ok(
+          [200, 400, 403, 421].includes(canonicalPoison.status),
+          `product Host with forged www forwarding must serve product or deny, got ${canonicalPoison.status}`,
+        );
+      }
+      assertUncacheableHostProbe(canonicalPoison, 'forged www forwarding');
 
       for (const path of [
         '/auth?notice=auth_failed&return=https%3A%2F%2Fevil.example%2Fphish&next=%2F%2Fevil.example&redirect=https%3A%2F%2Fevil.example',
