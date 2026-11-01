@@ -23,6 +23,11 @@ function withRuntimeCsp(response: NextResponse): NextResponse {
   return response;
 }
 
+function withNoStore(response: NextResponse): NextResponse {
+  response.headers.set('Cache-Control', 'private, no-store');
+  return response;
+}
+
 /**
  * Next.js 16 proxy — O13 host-aware marketing vs product.
  * OIDC session remains HttpOnly cookies on product host only (no Domain=.vemoki.com).
@@ -59,7 +64,7 @@ export default function proxy(request: NextRequest) {
   });
 
   if (decision.type === 'redirect') {
-    return NextResponse.redirect(decision.location, decision.status);
+    return withNoStore(NextResponse.redirect(decision.location, decision.status));
   }
 
   if (isLegacyStaffApiPath(pathname)) {
@@ -77,7 +82,7 @@ export default function proxy(request: NextRequest) {
     search,
   });
   if (portalNav.type === 'redirect') {
-    return NextResponse.redirect(portalNav.location, portalNav.status);
+    return withNoStore(NextResponse.redirect(portalNav.location, portalNav.status));
   }
   if (portalNav.type === 'not_found') {
     return new NextResponse('Not Found', {
@@ -90,7 +95,7 @@ export default function proxy(request: NextRequest) {
     const home = request.nextUrl.clone();
     home.pathname = '/';
     home.search = '';
-    return NextResponse.redirect(home, 308);
+    return withNoStore(NextResponse.redirect(home, 308));
   }
 
   if (decision.type === 'rewrite') {
