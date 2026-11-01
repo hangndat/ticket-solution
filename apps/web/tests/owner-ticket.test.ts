@@ -92,7 +92,10 @@ describe('parseOwnerTicketDetail', () => {
     assert.equal(parsed!.tenantId, TENANT_ID);
     assert.equal(parsed!.gateCredential?.jws, 'header.payload.signature');
     assert.equal(parsed!.manualEntryCode, 'ABCD2345EFGH6789');
-    assert.equal(gateCredentialQrValue(parsed!), 'header.payload.signature');
+    assert.equal(
+      gateCredentialQrValue(parsed!),
+      '{"v":1,"kind":"ticket.gate_credential","jws":"header.payload.signature"}',
+    );
   });
 
   it('fails closed when the signed QR envelope is absent or invalid', () => {
@@ -115,6 +118,18 @@ describe('parseOwnerTicketDetail', () => {
     assert.ok(invalid);
     assert.equal(invalid!.gateCredential, null);
     assert.equal(gateCredentialQrValue(invalid!), null);
+
+    const malformedJws = parseOwnerTicketDetail({
+      ...BASE_TICKET,
+      gateCredential: {
+        v: 1,
+        kind: 'ticket.gate_credential',
+        jws: 'not-a-jws',
+      },
+    });
+    assert.ok(malformedJws);
+    assert.equal(malformedJws!.gateCredential, null);
+    assert.equal(gateCredentialQrValue(malformedJws!), null);
 
     const revoked = parseOwnerTicketDetail({
       ...BASE_TICKET,
