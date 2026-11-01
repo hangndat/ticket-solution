@@ -18,6 +18,25 @@ afterEach(() => {
 });
 
 describe('contentSecurityPolicy', () => {
+  it('disables shared caching for host-dependent routes', async () => {
+    const rules = await config.headers?.();
+    for (const source of [
+      '/',
+      '/auth',
+      '/api/auth/:path*',
+      '/robots.txt',
+      '/sitemap.xml',
+      '/api/marketing/events',
+    ]) {
+      const rule = rules?.find((entry) => entry.source === source);
+      assert.equal(
+        rule?.headers.find((header) => header.key.toLowerCase() === 'cache-control')?.value,
+        'private, no-store',
+        source,
+      );
+    }
+  });
+
   it('includes frame-ancestors none and nosniff-related directives', () => {
     env.NODE_ENV = 'production';
     const csp = contentSecurityPolicy();
