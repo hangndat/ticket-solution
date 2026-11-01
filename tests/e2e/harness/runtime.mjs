@@ -113,13 +113,13 @@ function certs(state) {
   state.spki = createHash('sha256').update(der).digest('base64');
 }
 
-function account(actor, suffix) {
+function account(actor, suffix, needsTotp = actor === 'operator') {
   const value = {
     username: `${actor}.${suffix}@example.test`,
     password: randomBytes(24).toString('base64url'),
     subject: randomUUID(),
   };
-  if (actor === 'operator') {
+  if (needsTotp) {
     const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
     let bits = 0,
       buffer = 0,
@@ -162,7 +162,11 @@ function realmConfig(state, caseIds) {
   state.caseAccounts = {};
   function addAccounts(scope, target) {
     for (const actor of ACTORS) {
-      const value = account(actor, `${scope}.${state.id}`);
+      const value = account(
+        actor,
+        `${scope}.${state.id}`,
+        actor === 'operator' || (scope === 'plat-03' && actor === 'owner'),
+      );
       target[actor] = value;
       realm.users.push({
         id: value.subject,
@@ -202,7 +206,9 @@ function realmConfig(state, caseIds) {
     if (id === 'DB-04') {
       const attendee = state.caseAccounts[id].attendee;
       attendee.username = `first.last+label.db04.${state.id}@example.test`;
-      const realmUser = realm.users.find((user) => user.id === attendee.subject);
+      const realmUser = realm.users.find(
+        (user) => user.id === attendee.subject,
+      );
       realmUser.username = attendee.username;
       realmUser.email = attendee.username;
     }
@@ -229,32 +235,94 @@ function realmConfig(state, caseIds) {
     realm.clients.push(short);
   }
   const mfaFlowId = randomUUID();
+  const authFlowAlias = 'e2e-platform-auth';
+  const loa1Alias = 'e2e-platform-loa-1';
+  const loa2Alias = 'e2e-platform-loa-2';
+  realm.authenticatorConfig = [
+    ...(realm.authenticatorConfig || []),
+    {
+      alias: 'e2e-platform-loa-1-config',
+      config: { 'loa-condition-level': '1', 'loa-max-age': '3600' },
+    },
+    {
+      alias: 'e2e-platform-loa-2-config',
+      config: { 'loa-condition-level': '2', 'loa-max-age': '0' },
+    },
+  ];
+  realm.attributes = {
+    ...(realm.attributes || {}),
+    'acr.loa.map': JSON.stringify({ 1: 1, 2: 2 }),
+  };
+  const levelCondition = (priority, config) => ({
+    authenticator: 'conditional-level-of-authentication',
+    requirement: 'REQUIRED',
+    priority,
+    userSetupAllowed: false,
+    authenticatorFlow: false,
+    authenticatorConfig: config,
+  });
+  const flow = (alias, executions) => ({
+    id: randomUUID(),
+    alias,
+    providerId: 'basic-flow',
+    topLevel: false,
+    builtIn: false,
+    authenticationExecutions: executions,
+  });
   realm.authenticationFlows = [
     {
       id: mfaFlowId,
       alias: 'e2e-platform-mfa',
-      description:
-        'Real password and OTP required for the isolated Platform client',
+      description: 'LoA 1 password followed by LoA 2 TOTP step-up',
       providerId: 'basic-flow',
       topLevel: true,
       builtIn: false,
       authenticationExecutions: [
         {
-          authenticator: 'auth-username-password-form',
-          requirement: 'REQUIRED',
+          authenticatorFlow: true,
+          requirement: 'ALTERNATIVE',
           priority: 10,
+          flowAlias: authFlowAlias,
           userSetupAllowed: false,
-          authenticatorFlow: false,
-        },
-        {
-          authenticator: 'auth-otp-form',
-          requirement: 'REQUIRED',
-          priority: 20,
-          userSetupAllowed: false,
-          authenticatorFlow: false,
         },
       ],
     },
+    flow(authFlowAlias, [
+      {
+        authenticatorFlow: true,
+        requirement: 'CONDITIONAL',
+        priority: 10,
+        flowAlias: loa1Alias,
+        userSetupAllowed: false,
+      },
+      {
+        authenticatorFlow: true,
+        requirement: 'CONDITIONAL',
+        priority: 20,
+        flowAlias: loa2Alias,
+        userSetupAllowed: false,
+      },
+    ]),
+    flow(loa1Alias, [
+      levelCondition(10, 'e2e-platform-loa-1-config'),
+      {
+        authenticator: 'auth-username-password-form',
+        requirement: 'REQUIRED',
+        priority: 20,
+        userSetupAllowed: false,
+        authenticatorFlow: false,
+      },
+    ]),
+    flow(loa2Alias, [
+      levelCondition(10, 'e2e-platform-loa-2-config'),
+      {
+        authenticator: 'auth-otp-form',
+        requirement: 'REQUIRED',
+        priority: 20,
+        userSetupAllowed: false,
+        authenticatorFlow: false,
+      },
+    ]),
   ];
   for (const client of realm.clients) {
     const isPlatform = client.clientId === 'ticket-platform-web';
@@ -301,20 +369,19 @@ function realmConfig(state, caseIds) {
             ]),
             'basic',
           ]),
-        ].filter((x) => x !== 'acr');
+        ];
         client.protocolMappers = [
           ...(client.protocolMappers || []).filter(
-            (x) => x.protocolMapper !== 'oidc-acr-mapper',
+            (x) =>
+              x.protocolMapper !== 'oidc-acr-mapper' &&
+              x.name !== 'e2e-required-mfa-acr',
           ),
           {
-            name: 'e2e-required-mfa-acr',
+            name: 'e2e-achieved-loa-acr',
             protocol: 'openid-connect',
-            protocolMapper: 'oidc-hardcoded-claim-mapper',
+            protocolMapper: 'oidc-acr-mapper',
             consentRequired: false,
             config: {
-              'claim.name': 'acr',
-              'claim.value': '2',
-              'jsonType.label': 'String',
               'id.token.claim': 'true',
               'access.token.claim': 'true',
             },
@@ -369,19 +436,6 @@ function realmConfig(state, caseIds) {
           'included.custom.audience': 'ticket-platform-api',
           'access.token.claim': 'true',
           'id.token.claim': 'false',
-        },
-      },
-      {
-        name: 'e2e-platform-acr',
-        protocol: 'openid-connect',
-        protocolMapper: 'oidc-hardcoded-claim-mapper',
-        consentRequired: false,
-        config: {
-          'claim.name': 'acr',
-          'claim.value': '2',
-          'jsonType.label': 'String',
-          'id.token.claim': 'true',
-          'access.token.claim': 'true',
         },
       },
       {

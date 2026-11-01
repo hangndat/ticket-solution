@@ -32,6 +32,7 @@ const CASE_IDS = [
   'DB-15',
   'DB-16',
   'JOB-04',
+  'PLAT-03',
   'WEB-04',
   'WEB-05',
 ];
@@ -91,6 +92,7 @@ function context(caseId) {
   );
   return {
     fixture,
+    accounts: manifest.accounts ?? {},
     api,
     auth,
     web,
@@ -202,7 +204,13 @@ function totpCode(secret, epochMs = Date.now()) {
   return String(binary).padStart(6, '0');
 }
 
-async function bearerWithClient(ctx, actor, clientId, clientSecret) {
+async function bearerWithClient(
+  ctx,
+  actor,
+  clientId,
+  clientSecret,
+  { includeOtp = true } = {},
+) {
   const account = required(
     ctx.fixture.accounts?.[actor],
     `cases account ${actor}`,
@@ -215,7 +223,8 @@ async function bearerWithClient(ctx, actor, clientId, clientSecret) {
     password: required(account.password, `${actor}.password`),
     scope: 'openid profile email',
   });
-  if (account.totpSecret) body.set('totp', totpCode(account.totpSecret));
+  if (includeOtp && account.totpSecret)
+    body.set('totp', totpCode(account.totpSecret));
   const response = await fetch(ctx.tokenUrl, {
     method: 'POST',
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
@@ -559,6 +568,175 @@ function deny(result) {
     `expected 403/404, got ${result.status}`,
   );
   assert.equal(typeof result.body.code, 'string');
+}
+
+function tokenPayload(token) {
+  const segment = token.split('.')[1];
+  return JSON.parse(Buffer.from(segment, 'base64url').toString('utf8'));
+}
+
+async function realPlatformMfaToken(
+  browser,
+  ctx,
+  account = ctx.fixture.accounts?.operator,
+) {
+  required(account?.totpSecret, 'real MFA TOTP account');
+  const context = await browser.newContext();
+  try {
+    const page = await context.newPage();
+    const response = await page.goto(
+      new URL('/api/auth/platform/login', ctx.portal).toString(),
+      { waitUntil: 'domcontentloaded' },
+    );
+    try {
+      await page
+        .locator('#username')
+        .waitFor({ state: 'visible', timeout: 30_000 });
+    } catch (error) {
+      throw new Error(
+        `BLOCKED: Keycloak login not visible (status=${response?.status()} url=${page.url()}): ${error.message}`,
+      );
+    }
+    await page.locator('#username').fill(account.username);
+    await page.locator('#password').fill(account.password);
+    await page.locator('#kc-login').click();
+    const otp = page.locator('#otp');
+    await otp.waitFor({ state: 'visible', timeout: 20_000 });
+    await otp.fill(totpCode(account.totpSecret, Date.now()));
+    await page.locator('#kc-login').click();
+    await page.waitForURL(
+      (url) =>
+        url.origin === new URL(ctx.portal).origin &&
+        !url.pathname.startsWith('/api/auth/'),
+      { timeout: 45_000 },
+    );
+    const cookies = await context.cookies(ctx.portal);
+    const access = cookies.find((c) => c.name === 'platform_oidc_access');
+    if (!access)
+      throw new Error('BLOCKED: platform MFA did not issue access cookie');
+    return access.value;
+  } finally {
+    await context.close();
+  }
+}
+
+async function rejectPlatformMfaWithWrongOtp(browser, ctx, account) {
+  required(account?.totpSecret, 'wrong-OTP TOTP account');
+  const context = await browser.newContext();
+  try {
+    const page = await context.newPage();
+    await page.goto(
+      new URL('/api/auth/platform/login', ctx.portal).toString(),
+      {
+        waitUntil: 'domcontentloaded',
+      },
+    );
+    await page
+      .locator('#username')
+      .waitFor({ state: 'visible', timeout: 30_000 });
+    await page.locator('#username').fill(account.username);
+    await page.locator('#password').fill(account.password);
+    await page.locator('#kc-login').click();
+    const otp = page.locator('#otp');
+    await otp.waitFor({ state: 'visible', timeout: 20_000 });
+    const wrongOtp = String(
+      (Number(totpCode(account.totpSecret, Date.now())) + 1) % 1_000_000,
+    ).padStart(6, '0');
+    await otp.fill(wrongOtp);
+    await Promise.all([
+      page.waitForNavigation({
+        waitUntil: 'domcontentloaded',
+        timeout: 15_000,
+      }),
+      page.locator('#kc-login').click(),
+    ]);
+    assert.equal(
+      new URL(page.url()).origin,
+      new URL(ctx.auth).origin,
+      'wrong OTP must remain on Keycloak and must not complete the OAuth callback',
+    );
+    const cookies = await context.cookies(ctx.portal);
+    assert.ok(
+      !cookies.some((cookie) => cookie.name === 'platform_oidc_access'),
+      'wrong OTP must not issue a platform access cookie',
+    );
+  } finally {
+    await context.close();
+  }
+}
+
+async function platformGrantSnapshot(ctx, tenantId) {
+  const requireApi = createRequire(
+    new URL('../../../apps/api/package.json', import.meta.url),
+  );
+  const { Client } = requireApi('pg');
+  const client = new Client({
+    connectionString: required(
+      ctx.fixture.data?.controlDatabaseUrl,
+      'PLAT-03 control database URL',
+    ),
+  });
+  await client.connect();
+  try {
+    const { rows } = await client.query(
+      `SELECT
+        (SELECT count(*)::int FROM support_grants WHERE tenant_id = $1::uuid) AS grants,
+        (SELECT count(*)::int FROM platform_audit_logs WHERE tenant_id = $1::uuid) AS audit`,
+      [tenantId],
+    );
+    return rows[0];
+  } finally {
+    await client.end();
+  }
+}
+
+async function seedPlatformGrantEdgeCases(ctx, operatorId, tenantId, eventId) {
+  const requireApi = createRequire(
+    new URL('../../../apps/api/package.json', import.meta.url),
+  );
+  const { Client } = requireApi('pg');
+  const client = new Client({
+    connectionString: required(
+      ctx.fixture.data?.controlDatabaseUrl,
+      'PLAT-03 control database URL',
+    ),
+  });
+  const grants = {
+    expired: randomUUID(),
+    revoked: randomUUID(),
+    wrongScope: randomUUID(),
+  };
+  await client.connect();
+  try {
+    await client.query(
+      `INSERT INTO support_grants (
+        tenant_id, id, operator_user_id, event_id, scopes, reason,
+        expires_at, created_by, created_at, updated_at
+      ) VALUES ($1::uuid, $2::uuid, $3::uuid, $4::uuid, ARRAY['cs.read']::text[],
+        'expired H fixture', now() - interval '1 hour', $3::uuid,
+        now() - interval '2 hours', now())`,
+      [tenantId, grants.expired, operatorId, eventId],
+    );
+    await client.query(
+      `INSERT INTO support_grants (
+        tenant_id, id, operator_user_id, event_id, scopes, reason,
+        expires_at, revoked_at, created_by, created_at, updated_at
+      ) VALUES ($1::uuid, $2::uuid, $3::uuid, $4::uuid, ARRAY['cs.read']::text[],
+        'revoked H fixture', now() + interval '30 minutes', now(), $3::uuid, now(), now())`,
+      [tenantId, grants.revoked, operatorId, eventId],
+    );
+    await client.query(
+      `INSERT INTO support_grants (
+        tenant_id, id, operator_user_id, event_id, scopes, reason,
+        expires_at, created_by, created_at, updated_at
+      ) VALUES ($1::uuid, $2::uuid, $3::uuid, $4::uuid, ARRAY['report.read']::text[],
+        'wrong-scope H fixture', now() + interval '30 minutes', $3::uuid, now(), now())`,
+      [tenantId, grants.wrongScope, operatorId, eventId],
+    );
+  } finally {
+    await client.end();
+  }
+  return grants;
 }
 
 /** 422 only when API returns a stable code that explicitly denies owner mutation. */
@@ -6738,6 +6916,278 @@ for (const caseId of CASE_IDS) {
       assert.equal(snap1AfterV2.termsVersion, 'terms-v1');
       assert.equal(snap1AfterV2.formDefinitionHash, expectedFormHashV1);
       assert.equal(snap1AfterV2.termsContentHash, expectedTermsHashV1);
+    }
+
+    if (caseId === 'PLAT-03') {
+      const suffix = required(process.env.E2E_HOST_SUFFIX, 'E2E_HOST_SUFFIX');
+      const trust = required(process.env.E2E_TLS_SPKI, 'E2E_TLS_SPKI');
+      const browser = await chromium.launch({
+        headless: true,
+        args: [
+          `--host-resolver-rules=MAP *.${suffix} 127.0.0.1, MAP ${suffix} 127.0.0.1`,
+          `--ignore-certificate-errors-spki-list=${trust}`,
+        ],
+      });
+      let operatorToken;
+      try {
+        const operatorAccount = required(
+          ctx.fixture.accounts?.operator,
+          'operator account',
+        );
+        await rejectPlatformMfaWithWrongOtp(browser, ctx, operatorAccount);
+
+        const directPasswordToken = await bearerWithClient(
+          ctx,
+          'attendee',
+          required(ctx.platformClientId, 'runtime.httpPlatformClientId'),
+          required(
+            ctx.platformClientSecret,
+            'runtime.httpPlatformClientSecret',
+          ),
+          { includeOtp: false },
+        );
+        const directPayload = tokenPayload(directPasswordToken);
+        assert.notEqual(
+          directPayload.acr,
+          '2',
+          'password-only direct grant must not claim platform LoA 2',
+        );
+        const directProbe = await request(
+          ctx,
+          'GET',
+          '/platform/me',
+          directPasswordToken,
+        );
+        assert.ok(
+          [401, 403].includes(directProbe.status),
+          'password-only direct grant must not pass the platform MFA gate',
+        );
+
+        operatorToken = await realPlatformMfaToken(browser, ctx);
+        const f = ctx.fixture;
+        const tenantId = required(f.tenantId, 'PLAT-03 tenantId');
+        const eventId = required(f.eventId, 'PLAT-03 eventId');
+
+        // MFA gate sanity: token must carry acr=2 and fresh auth_time.
+        const payload = tokenPayload(operatorToken);
+        assert.equal(payload.acr, '2');
+        assert.ok(Number.isFinite(payload.auth_time));
+        assert.ok(
+          Math.floor(Date.now() / 1000) - payload.auth_time <= 900,
+          'auth_time must be fresh',
+        );
+
+        // reason required / scope validation / max TTL
+        const path = '/platform/support-grants';
+        const base = {
+          tenantId,
+          eventId,
+          reason: 'E2E scoped support review',
+        };
+        const beforeDenials = await platformGrantSnapshot(ctx, tenantId);
+        const broad = await request(ctx, 'POST', path, operatorToken, {
+          ...base,
+          scopes: ['cs.read', 'pii.read'],
+          expiresAt: new Date(Date.now() + 30 * 60_000).toISOString(),
+        });
+        expectStatus(broad, 422, 'INVALID_INPUT');
+
+        const tooLong = await request(ctx, 'POST', path, operatorToken, {
+          ...base,
+          scopes: ['cs.read'],
+          expiresAt: new Date(Date.now() + 2 * 60 * 60_000).toISOString(),
+        });
+        expectStatus(tooLong, 422, 'INVALID_INPUT');
+
+        const emptyReason = await request(ctx, 'POST', path, operatorToken, {
+          ...base,
+          reason: '   ',
+          scopes: ['cs.read'],
+          expiresAt: new Date(Date.now() + 30 * 60_000).toISOString(),
+        });
+        expectStatus(emptyReason, 422, 'INVALID_INPUT');
+
+        const longReason = await request(ctx, 'POST', path, operatorToken, {
+          ...base,
+          reason: 'x'.repeat(501),
+          scopes: ['cs.read'],
+          expiresAt: new Date(Date.now() + 30 * 60_000).toISOString(),
+        });
+        expectStatus(longReason, 422, 'INVALID_INPUT');
+
+        const wrongTenant = await request(ctx, 'POST', path, operatorToken, {
+          ...base,
+          tenantId: required(f.data.foreignTenantId, 'PLAT-03 foreign tenant'),
+          scopes: ['cs.read'],
+          expiresAt: new Date(Date.now() + 30 * 60_000).toISOString(),
+        });
+        assert.ok(
+          wrongTenant.status >= 400,
+          'a tenant/event mismatch must be denied',
+        );
+
+        const nonOperatorToken = await realPlatformMfaToken(
+          browser,
+          ctx,
+          required(f.accounts?.owner, 'non-operator account'),
+        );
+        const nonOperatorGrant = await request(
+          ctx,
+          'POST',
+          path,
+          nonOperatorToken,
+          {
+            ...base,
+            scopes: ['cs.read'],
+            expiresAt: new Date(Date.now() + 30 * 60_000).toISOString(),
+          },
+        );
+        expectStatus(nonOperatorGrant, 403, 'PLATFORM_OPERATOR_REQUIRED');
+        assert.deepEqual(
+          await platformGrantSnapshot(ctx, tenantId),
+          beforeDenials,
+          'denied support requests must not insert grants or audit rows',
+        );
+
+        const granted = await request(ctx, 'POST', path, operatorToken, {
+          ...base,
+          scopes: ['cs.read'],
+          expiresAt: new Date(Date.now() + 30 * 60_000).toISOString(),
+        });
+        expectStatus(granted, 201);
+        const grant = granted.body;
+        assert.match(grant.grantId, /^[0-9a-f-]{36}$/i);
+        assert.ok(
+          Date.parse(grant.expiresAt) <= Date.now() + 60 * 60_000,
+          'grant expiry must not exceed 1h max TTL',
+        );
+
+        // same grant read masking
+        const tickets = await request(
+          ctx,
+          'GET',
+          `/platform/support-grants/${grant.grantId}/tickets`,
+          operatorToken,
+        );
+        expectStatus(tickets, 200);
+        const items = tickets.body.items;
+        assert.ok(items.length >= 1, 'expected at least one masked ticket');
+        assert.ok(
+          !JSON.stringify(items).includes(f.accounts.attendee.username),
+          'must not leak raw PII',
+        );
+        for (const row of items) {
+          assert.equal(typeof row.ticketId, 'string');
+          assert.equal(typeof row.state, 'string');
+          assert.ok(
+            row.ownerEmailMasked === null ||
+              /^.\*\*\*@/.test(row.ownerEmailMasked),
+            'owner email must be masked',
+          );
+        }
+
+        const secondOperatorToken = await realPlatformMfaToken(
+          browser,
+          ctx,
+          required(ctx.accounts?.operator, 'second operator account'),
+        );
+        const beforeImpersonation = await platformGrantSnapshot(ctx, tenantId);
+        const impersonation = await request(
+          ctx,
+          'GET',
+          `/platform/support-grants/${grant.grantId}/tickets`,
+          secondOperatorToken,
+        );
+        expectStatus(impersonation, 403, 'PERMISSION_DENIED');
+        assert.deepEqual(
+          await platformGrantSnapshot(ctx, tenantId),
+          beforeImpersonation,
+          'an operator must not read another operator grant or create audit rows',
+        );
+
+        const edgeGrants = await seedPlatformGrantEdgeCases(
+          ctx,
+          f.accounts.operator.userId,
+          tenantId,
+          eventId,
+        );
+        for (const [kind, grantId] of Object.entries(edgeGrants)) {
+          const beforeDeniedRead = await platformGrantSnapshot(ctx, tenantId);
+          const deniedRead = await request(
+            ctx,
+            'GET',
+            `/platform/support-grants/${grantId}/tickets`,
+            operatorToken,
+          );
+          expectStatus(deniedRead, 403, 'PERMISSION_DENIED');
+          assert.deepEqual(
+            await platformGrantSnapshot(ctx, tenantId),
+            beforeDeniedRead,
+            `${kind} grant denial must not create audit or grant mutations`,
+          );
+        }
+
+        const revoked = await request(
+          ctx,
+          'POST',
+          `/platform/support-grants/${grant.grantId}/revoke`,
+          operatorToken,
+          { reason: 'E2E revoke after validation' },
+        );
+        expectStatus(revoked, 201);
+        assert.ok(!Number.isNaN(Date.parse(String(revoked.body.revokedAt))));
+
+        const beforeRevokedRead = await platformGrantSnapshot(ctx, tenantId);
+        const afterRevoke = await request(
+          ctx,
+          'GET',
+          `/platform/support-grants/${grant.grantId}/tickets`,
+          operatorToken,
+        );
+        assert.ok(
+          [403, 404].includes(afterRevoke.status),
+          `expected 403/404, got ${afterRevoke.status}`,
+        );
+        assert.equal(afterRevoke.body.code, 'PERMISSION_DENIED');
+        assert.deepEqual(
+          await platformGrantSnapshot(ctx, tenantId),
+          beforeRevokedRead,
+          'revoked grant reads must not create audit or grant mutations',
+        );
+
+        // denial did not mutate: re-revoke returns 404
+        const secondRevoke = await request(
+          ctx,
+          'POST',
+          `/platform/support-grants/${grant.grantId}/revoke`,
+          operatorToken,
+          { reason: 'again' },
+        );
+        assert.equal(secondRevoke.status, 404);
+
+        // audit contains granted/read/revoked
+        const audit = await request(
+          ctx,
+          'GET',
+          `/platform/audit?tenantId=${tenantId}&limit=50`,
+          operatorToken,
+        );
+        expectStatus(audit, 200);
+        const actions = (audit.body.items ?? []).map((r) => r.action);
+        assert.ok(
+          actions.includes('platform.support.granted'),
+          'granted audit',
+        );
+        assert.ok(actions.includes('platform.support.read'), 'read audit');
+        assert.ok(
+          actions.includes('platform.support.revoked'),
+          'revoked audit',
+        );
+
+        return;
+      } finally {
+        await browser.close();
+      }
     }
   });
 }
