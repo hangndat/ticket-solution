@@ -143,3 +143,134 @@ test(
     }
   },
 );
+
+test(
+  '[POL-01] F01/F02 field matrix: PG+IdP complete ≤30d; PII scrubbed; device rows deleted; audit retained',
+  { timeout: 240000 },
+  async () => {
+    const pg = await startPostgres();
+    const db = createDatabase(pg.url, 4);
+    const admin = new Client({ connectionString: pg.adminUrl });
+    try {
+      await admin.connect();
+      const users = createPrismaIdentityUserRepository(db, { env });
+      const subject = randomUUID();
+      const user = await users.upsertFromVerifiedIdentity({
+        issuer,
+        subject,
+        email: `${subject}@example.test`,
+        emailVerified: true,
+      });
+
+      const tenantId = randomUUID();
+      const eventId = randomUUID();
+      await admin.query(
+        `INSERT INTO tenants (id, slug, name) VALUES ($1, 'pol01-t', 'POL01')`,
+        [tenantId],
+      );
+      await admin.query(
+        `INSERT INTO events (tenant_id, id, slug, name) VALUES ($1, $2, 'pol01-e', 'POL01 Event')`,
+        [tenantId, eventId],
+      );
+      await admin.query(
+        `INSERT INTO event_attendees (tenant_id, event_id, id, user_id, canonical_email)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [tenantId, eventId, randomUUID(), user.userId, `${subject}@example.test`],
+      );
+      await admin.query(
+        `INSERT INTO staff_sessions (tenant_id, event_id, id, user_id, status)
+         VALUES ($1, $2, $3, $4, 'ACTIVE')`,
+        [tenantId, eventId, randomUUID(), user.userId],
+      );
+      await admin.query(
+        `INSERT INTO device_tokens (id, user_id, token, environment, created_at, updated_at)
+         VALUES
+           ($1, $2, 'pol01-active-device-000001', 'sandbox', now(), now()),
+           ($3, $2, 'pol01-revoked-device-00002', 'production', now(), now())`,
+        [randomUUID(), user.userId, randomUUID()],
+      );
+      await admin.query(
+        `UPDATE device_tokens SET revoked_at = now()
+         WHERE user_id = $1 AND token = 'pol01-revoked-device-00002'`,
+        [user.userId],
+      );
+      const auditId = randomUUID();
+      await admin.query(
+        `INSERT INTO audit_logs (tenant_id, event_id, id, actor_user_id, action, resource_type)
+         VALUES ($1, $2, $3, $4, 'account.deletion_ack', 'account')`,
+        [tenantId, eventId, auditId, user.userId],
+      );
+
+      const ack = await createAccountDeletionRequest(db, {
+        userId: user.userId,
+        confirmation: true,
+      });
+      const idp = createFakeKeycloakErasureAdapter({
+        deleteUserBySubject: async () => ({ kind: 'DELETED' }),
+      });
+      const result = await processDueAccountAnonymizations(db, 10, {
+        env,
+        keyring: readTombstoneKeyring(env),
+        idp,
+        leaseOwner: `pol01-field-${randomUUID()}`,
+      });
+      assert.equal(result.applied, 1);
+      assert.equal(result.completed, 1);
+
+      // F01: both PG and IdP timestamps fall inside the ≤30d deadline.
+      const req = await admin.query(
+        `SELECT requested_at, pg_applied_at, idp_deleted_at, state,
+                original_issuer, original_subject, subject_tombstone_digest
+         FROM account_deletion_requests WHERE id = $1`,
+        [ack.requestId],
+      );
+      const row = req.rows[0];
+      assert.equal(row.state, 'COMPLETED');
+      const deadlineMs = row.requested_at.getTime() + 30 * 24 * 60 * 60 * 1000;
+      assert.ok(row.pg_applied_at.getTime() <= deadlineMs, 'pg_applied_at ≤ deadline');
+      assert.ok(row.idp_deleted_at.getTime() <= deadlineMs, 'idp_deleted_at ≤ deadline');
+
+      // F02: field matrix — sensitive PII gone, minimal record retained.
+      assert.equal(row.original_issuer, null);
+      assert.equal(row.original_subject, null);
+      assert.ok(row.subject_tombstone_digest, 'tombstone digest retained');
+
+      const u = await admin.query(
+        `SELECT email, email_verified, subject FROM users WHERE id = $1`,
+        [user.userId],
+      );
+      assert.equal(u.rows[0].email, null);
+      assert.equal(u.rows[0].email_verified, false);
+      assert.equal(u.rows[0].subject, `anon:${ack.requestId}`);
+
+      const devices = await admin.query(
+        `SELECT count(*)::int AS n FROM device_tokens WHERE user_id = $1`,
+        [user.userId],
+      );
+      assert.equal(devices.rows[0].n, 0, 'device registration hard-deleted');
+
+      const attendee = await admin.query(
+        `SELECT canonical_email FROM event_attendees
+         WHERE tenant_id = $1 AND user_id = $2`,
+        [tenantId, user.userId],
+      );
+      assert.equal(attendee.rows[0].canonical_email, null);
+
+      const session = await admin.query(
+        `SELECT status FROM staff_sessions WHERE tenant_id = $1 AND user_id = $2`,
+        [tenantId, user.userId],
+      );
+      assert.equal(session.rows[0].status, 'REVOKED');
+
+      const audit = await admin.query(
+        `SELECT count(*)::int AS n FROM audit_logs WHERE id = $1`,
+        [auditId],
+      );
+      assert.equal(audit.rows[0].n, 1, 'audit row retained (O06 TTL 730d)');
+    } finally {
+      await admin.end().catch(() => {});
+      await db.$disconnect().catch(() => {});
+      pg.stop();
+    }
+  },
+);
