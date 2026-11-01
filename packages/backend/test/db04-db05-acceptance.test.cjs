@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const { randomUUID } = require('node:crypto');
 const { Client } = require('pg');
 const { startPostgres } = require('../../../tests/e2e/backend/pg-fixture.cjs');
+require('./gate-test-credentials.cjs');
 const {
   createDatabase, withTenant, createPrismaIdentityUserRepository,
   seedEventInventory, redeemAndIssueTicket, readCodeHmacEnvironment,
