@@ -33,7 +33,7 @@ test('[WEB-01] only published projection is discoverable', async ({ page }) => {
   const catalog = await page.request.get(publicApi());
   expect(catalog.status()).toBe(200);
   const publicIds = (await catalog.json()).items.map(
-    (item: { eventId: string }) => item.eventId,
+    (item: { id: string }) => item.id,
   );
   expect(publicIds).toContain(f.eventId);
   expect(publicIds).not.toContain(draftId);
@@ -64,7 +64,7 @@ test('[WEB-01] only published projection is discoverable', async ({ page }) => {
     'PRD M03: UNLISTED event remains accessible by direct link',
   ).toBe(200);
   const projection = await privateApi.json();
-  expect(projection.eventId).toBe(privateId);
+  expect(projection.id).toBe(privateId);
   for (const field of [
     'tickets',
     'attendees',
