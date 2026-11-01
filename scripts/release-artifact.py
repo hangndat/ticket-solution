@@ -609,10 +609,17 @@ def build(args):
             if next_apps:
                 log(f"next build cache: {', '.join(warm) or 'none'} of {', '.join(next_apps)}")
         # Build inside Linux/Node 24. The store and every workspace link stay within stage.
-        command = container_script(skip={f"build {name}" for name in reused}, hide=hidden_during_build(stage))
-        with Timed("container install + builds"):
-            subprocess.run(["docker", "run", "--rm", "--platform", args.platform, "-v", f"{stage}:/app",
-                            "-v", f"{store}:{STORE_MOUNT}", "-w", "/app", args.image, "sh", "-ec", command], check=True)
+        builds = {name for name, _ in STEPS if name != "install"}
+        # Corepack keeps pnpm itself in the store mount: the build user cannot read the copy baked into
+        # the image (root's home), and the network-less build run must not download it again.
+        run = ["docker", "run", "--rm", "--platform", args.platform, "-v", f"{stage}:/app",
+               "-v", f"{store}:{STORE_MOUNT}", "-e", f"COREPACK_HOME={STORE_MOUNT}/corepack", "-w", "/app"]
+        with Timed("container install"):
+            subprocess.run([*run, args.image, "sh", "-ec", container_script(skip=builds)], check=True)
+        # Builds get no network: anything fetched at build time would be an input the digest cannot see.
+        command = container_script(skip={"install"} | {f"build {name}" for name in reused}, hide=hidden_during_build(stage))
+        with Timed("container builds (no network)"):
+            subprocess.run([*run, "--network", "none", args.image, "sh", "-ec", command], check=True)
         build_inputs = {name: {"digest": entry["digest"], "outputs": entry["outputs"]} for name, entry in reused.items()}
         for name in PACKAGES:
             if name not in reused:
