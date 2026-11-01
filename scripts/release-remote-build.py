@@ -2,8 +2,9 @@
 """Build an immutable release natively on the VPS (no emulation from an arm64 Mac).
 
 Wraps scripts/release-artifact.py (the committed version at --sha) without editing it:
-  1. `git bundle` of the exact SHA is streamed to a dedicated build dir (never /opt/vemoki/src).
-  2. On the VPS the bundle is cloned and release-artifact.py `build` runs there, publishing
+  1. The exact SHA is `git push`ed into a persistent bare repo on the VPS (--git-dir, never
+     /opt/vemoki/src). Only objects the VPS lacks are sent, so after the first run this is tiny.
+  2. On the VPS release-artifact.py `build` runs from that bare repo, publishing
      into --release-root (same layout as a local build; verify runs inside build).
   3. A `docker` shim on PATH adds resource limits and a unique build label to `docker run`
      and runs it under nice/ionice, so production is not starved.
@@ -12,14 +13,13 @@ Wraps scripts/release-artifact.py (the committed version at --sha) without editi
 The build never reads /opt/vemoki/.env. The remote build dir is removed on success or failure.
 """
 import argparse
+import os
 import shlex
 import subprocess
 import sys
-import tempfile
 import time
 import urllib.request
 import uuid
-from pathlib import Path
 
 HEALTH_URL = "https://api.vemoki.com/v1/health"
 
@@ -28,8 +28,13 @@ def log(message):
     print(f"[remote-build {time.strftime('%H:%M:%S')}] {message}", flush=True)
 
 
+# One multiplexed connection for every ssh/git call of a run (a handshake costs ~1s).
+SSH_OPTS = ["-o", "BatchMode=yes", "-o", "ControlMaster=auto",
+            "-o", "ControlPath=~/.ssh/cm-vemoki-%C", "-o", "ControlPersist=120"]
+
+
 def ssh(host, command, **kw):
-    return subprocess.run(["ssh", "-o", "BatchMode=yes", host, command], **kw)
+    return subprocess.run(["ssh", *SSH_OPTS, host, command], **kw)
 
 
 def health_ok():
@@ -82,19 +87,17 @@ def start_command(work):
     # an abort during git clone/show must stop the runner before cleanup.
     runner = shlex.quote(f"{work}/run.sh")
     log_path = shlex.quote(f"{work}/build.log")
-    return f"cd {shlex.quote(work)} && setsid nohup nice -n 19 ionice -c3 {runner} > {log_path} 2>&1 < /dev/null &"
+    # `setsid -f` forks before returning; a trailing `&` would keep ssh open until the build ends.
+    return f"cd {shlex.quote(work)} && setsid -f nohup nice -n 19 ionice -c3 {runner} > {log_path} 2>&1 < /dev/null"
 
 RUNNER = """#!/bin/bash
 set -u
 cd {work}
 export PATH={work}/bin:$PATH
 t() {{ echo "[vps $(date +%H:%M:%S)] $*"; }}
-t "start: git clone bundle"
-git clone -q --no-checkout {work}/src.bundle {work}/repo || {{ t "FAILED: clone"; echo EXIT=1; exit 1; }}
-cd {work}/repo
+cd {git_dir}
 git cat-file -e {sha}^{{commit}} || {{ t "FAILED: sha missing"; echo EXIT=1; exit 1; }}
 git show {sha}:scripts/release-artifact.py > {work}/release-artifact.py
-t "done: clone"
 t "start: release-artifact build (native {platform})"
 python3.9 {work}/release-artifact.py --root {root} build --sha {sha} --platform {platform} \\
   --schema-min {smin} --schema-max {smax} --migrate-input-min {imin} --migrate-input-max {imax} \\
@@ -110,6 +113,8 @@ def main():
     p.add_argument("--host", default="conanphong")
     p.add_argument("--sha", required=True)
     p.add_argument("--build-root", default="/opt/vemoki/release-build")
+    p.add_argument("--git-dir", default="/opt/vemoki/release-git", help="persistent bare repo on the host")
+    p.add_argument("--poll-seconds", type=int, default=5)
     p.add_argument("--release-root", default="/opt/vemoki/releases")
     p.add_argument("--platform", default="linux/amd64")
     p.add_argument("--cpus", type=int, default=4)
@@ -128,34 +133,25 @@ def main():
     ok = False
     cleanup_allowed = True
     try:
+        git_dir = shlex.quote(a.git_dir)
+        ssh(a.host, f"rm -rf {work} && mkdir -p {work}/bin && chmod 700 {a.build_root} && "
+                    f"{{ [ -d {git_dir} ] || git init -q --bare {git_dir}; }} && chmod 700 {git_dir}", check=True)
         t0 = time.monotonic()
-        with tempfile.TemporaryDirectory() as tmp:
-            bundle = Path(tmp) / "src.bundle"
-            ref = "refs/release-tmp/" + a.sha[:12] + "-" + token[:8]
-            subprocess.run(["git", "update-ref", ref, a.sha], check=True)
-            try:
-                subprocess.run(["git", "bundle", "create", str(bundle), ref], check=True, capture_output=True)
-            finally:
-                subprocess.run(["git", "update-ref", "-d", ref])
-            log(f"bundle {bundle.stat().st_size >> 20} MB created ({time.monotonic() - t0:.0f}s)")
-            ssh(a.host, f"rm -rf {work} && mkdir -p {work}/bin && chmod 700 {a.build_root}", check=True)
-            t0 = time.monotonic()
-            subprocess.run(["scp", "-q", str(bundle), f"{a.host}:{work}/src.bundle"], check=True)
-            log(f"bundle uploaded ({time.monotonic() - t0:.0f}s)")
+        subprocess.run(["git", "push", "-q", f"{a.host}:{a.git_dir}", f"+{a.sha}:refs/builds/{a.sha}"], check=True,
+                       env={**os.environ, "GIT_SSH_COMMAND": shlex.join(["ssh", *SSH_OPTS])})
+        log(f"source pushed ({time.monotonic() - t0:.0f}s)")
         shim = SHIM.format(cpus=a.cpus, mem=a.memory_mb, token=token)
-        runner = RUNNER.format(work=work, sha=a.sha, platform=a.platform, root=a.release_root,
+        runner = RUNNER.format(work=work, git_dir=git_dir, sha=a.sha, platform=a.platform, root=a.release_root,
                                smin=a.schema_min, smax=a.schema_max, imin=a.migrate_input_min,
                                imax=a.migrate_input_max, target=a.migrate_target)
-        subprocess.run(["ssh", a.host, f"cat > {work}/bin/docker && chmod 755 {work}/bin/docker"],
-                       input=shim, text=True, check=True)
-        subprocess.run(["ssh", a.host, f"cat > {work}/run.sh && chmod 755 {work}/run.sh"],
-                       input=runner, text=True, check=True)
+        ssh(a.host, f"cat > {work}/bin/docker && chmod 755 {work}/bin/docker", input=shim, text=True, check=True)
+        ssh(a.host, f"cat > {work}/run.sh && chmod 755 {work}/run.sh", input=runner, text=True, check=True)
         cleanup_allowed = False
         ssh(a.host, start_command(work), check=True)
         log(f"remote build started (log {work}/build.log, cpus={a.cpus}, mem={a.memory_mb}m)")
         offset, bad_health = 0, 0
         while True:
-            time.sleep(20)
+            time.sleep(a.poll_seconds)
             out = ssh(a.host, f"tail -c +{offset + 1} {work}/build.log", capture_output=True, text=True).stdout
             offset += len(out.encode())
             for line in out.replace("\r", "\n").splitlines():

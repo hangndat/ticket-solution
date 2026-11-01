@@ -239,5 +239,63 @@ class BuildCacheHelpers(unittest.TestCase):
             self.assertTrue(store.is_dir())
 
 
+class StripFixture(unittest.TestCase):
+    def test_strip_removes_noise_but_keeps_typescript_and_runtime_files(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            stage = Path(tmp)
+            pkg, ts = stage / "node_modules/.pnpm/lib@1/node_modules/lib", stage / "node_modules/.pnpm/typescript@5/node_modules/typescript"
+            for d in (pkg, ts, stage / "packages/ui/dist"):
+                d.mkdir(parents=True)
+            for f in (pkg / "index.js", pkg / "index.js.map", pkg / "README.md", pkg / "index.d.ts", pkg / "types.d.mts",
+                      pkg / "LICENSE", ts / "lib.d.ts", stage / "packages/ui/dist/index.d.ts"):
+                f.write_text("x")
+            self.assertEqual(release.strip_runtime_noise(stage)[0], 4)
+            self.assertEqual(sorted(p.name for p in pkg.iterdir()), ["LICENSE", "index.js"])
+            self.assertTrue((ts / "lib.d.ts").exists())
+            self.assertTrue((stage / "packages/ui/dist/index.d.ts").exists())
+
+
+class DedupeFixture(unittest.TestCase):
+    def test_identical_files_are_hardlinked_and_cleanup_keeps_survivor_readonly(self):
+        import os, stat
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            old = root / ("a" * 40 + "-" + "a" * 12)
+            stage = root / ".build-x"
+            for base in (old, stage):
+                (base / "sub").mkdir(parents=True)
+            (old / "sub" / "dep.js").write_text("same")
+            (old / "sub" / "diff.js").write_text("old")
+            (stage / "sub" / "dep.js").write_text("same")
+            (stage / "sub" / "diff.js").write_text("new")
+            for path in (old / "sub" / "dep.js", old / "sub" / "diff.js"):
+                os.chmod(path, 0o444)
+            for path in (stage / "sub" / "dep.js", stage / "sub" / "diff.js"):
+                os.chmod(path, 0o644)
+            digests = lambda base: {str(f.relative_to(base)): release.digest(f) for f in base.rglob("*.js")}
+            (old / "release-manifest.json").write_text(json.dumps({"files": digests(old)}))
+            linked, saved = release.dedupe_against_releases(stage, root, digests(stage))
+            self.assertEqual((linked, saved), (1, 4))
+            self.assertTrue((stage / "sub" / "dep.js").samefile(old / "sub" / "dep.js"))
+            self.assertFalse((stage / "sub" / "diff.js").samefile(old / "sub" / "diff.js"))
+            self.assertFalse(list(stage.rglob("*.dedupe-tmp")))
+            new = root / ("b" * 40 + "-" + "b" * 12)
+            os.rename(stage, new)
+            pins = root / "pins.env"
+            pins.write_text(f"RELEASE_API_DIR={old}\n")
+            original = release.verify, release.subprocess.check_output
+            release.verify = lambda path: None
+            release.subprocess.check_output = lambda *a, **k: ""
+            try:
+                for p in [*new.rglob("*"), new]:
+                    os.chmod(p, p.stat().st_mode & ~0o222)
+                release.cleanup(SimpleNamespace(root=root, releases=[new.name], pins=pins, active=None, execute=True))
+            finally:
+                release.verify, release.subprocess.check_output = original
+            self.assertFalse(new.exists())
+            survivor = old / "sub" / "dep.js"
+            self.assertFalse(survivor.stat().st_mode & stat.S_IWUSR)
+
+
 if __name__ == "__main__":
     unittest.main()
