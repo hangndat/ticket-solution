@@ -146,6 +146,40 @@ describe('marketing analytics request guard', () => {
       'FORBIDDEN_ORIGIN',
     );
   });
+
+  it('rejects product Host despite forged marketing forwarded host and allowed Origin', () => {
+    const env = { NODE_ENV: 'production', MARKETING_ORIGIN: 'https://vemoki.com' };
+    const request = analyticsRequest({
+      url: 'https://app.vemoki.com/api/marketing/events',
+      headers: {
+        host: 'app.vemoki.com',
+        'x-forwarded-host': 'vemoki.com',
+        origin: 'https://vemoki.com',
+      },
+    });
+    assert.deepEqual(checkMarketingAnalyticsRequest(request, env), {
+      code: 'FORBIDDEN_HOST',
+      status: 403,
+    });
+  });
+
+  it('accepts marketing Host despite forged product forwarded host', () => {
+    const request = analyticsRequest({
+      url: 'https://vemoki.com/api/marketing/events',
+      headers: {
+        host: 'vemoki.com',
+        'x-forwarded-host': 'app.vemoki.com',
+        origin: 'https://vemoki.com',
+      },
+    });
+    assert.equal(
+      checkMarketingAnalyticsRequest(request, {
+        NODE_ENV: 'production',
+        MARKETING_ORIGIN: 'https://vemoki.com',
+      }),
+      null,
+    );
+  });
 });
 
 describe('trusted client IP for rate limit', () => {
