@@ -17,6 +17,7 @@ import {
 } from '../../src/published';
 import { SurfaceState } from '../../src/ui/surface-state';
 import { HomeCatalogGrid } from '../../src/ui/event-media';
+import { RateLimitState } from '../../src/published/rate-limit-state';
 
 /** Attendee home + auth stub notices (staff lives on portal — ADR-20). */
 export const dynamic = 'force-dynamic';
@@ -26,14 +27,16 @@ type Props = {
 };
 
 type HomeCatalog =
-  | { status: 'ok'; items: PublishedEventSummary[] }
+  | { status: 'ok'; items: PublishedEventSummary[]; rateLimited: boolean }
   | { status: 'empty' }
+  | { status: 'rate-limited' }
   | { status: 'unreachable' }
   | { status: 'invalid' };
 
 async function loadHomeCatalog(): Promise<HomeCatalog> {
   const slugs = homeTenantSlugs();
   const items: PublishedEventSummary[] = [];
+  let sawRateLimited = false;
   let sawUnreachable = false;
   let sawInvalid = false;
 
@@ -46,11 +49,13 @@ async function loadHomeCatalog(): Promise<HomeCatalog> {
       items.push(...result.body.items);
       continue;
     }
-    if (result.status === 'unreachable') sawUnreachable = true;
+    if (result.status === 'rate-limited') sawRateLimited = true;
+    else if (result.status === 'unreachable') sawUnreachable = true;
     else sawInvalid = true;
   }
 
-  if (items.length > 0) return { status: 'ok', items };
+  if (items.length > 0) return { status: 'ok', items, rateLimited: sawRateLimited };
+  if (sawRateLimited) return { status: 'rate-limited' };
   if (sawUnreachable) return { status: 'unreachable' };
   if (sawInvalid) return { status: 'invalid' };
   return { status: 'empty' };
@@ -96,6 +101,14 @@ export default async function Home({ searchParams }: Props) {
           detail={PUBLIC_EVENT_COPY.homeEmpty.detail}
           testId="home-events-empty"
         />
+      ) : null}
+
+      {catalog.status === 'ok' && catalog.rateLimited ? (
+        <RateLimitState kind="homePartialRateLimited" retryHref="/" />
+      ) : null}
+
+      {catalog.status === 'rate-limited' ? (
+        <RateLimitState kind="homeRateLimited" retryHref="/" />
       ) : null}
 
       {catalog.status === 'unreachable' ? (

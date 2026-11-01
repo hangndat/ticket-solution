@@ -1,3 +1,4 @@
+import { unstable_noStore as noStore } from 'next/cache';
 import type { Metadata } from 'next';
 import type { CSSProperties } from 'react';
 import { Button } from '@ticket/ui';
@@ -37,10 +38,12 @@ import {
   formatPublishedEventDate,
   heroCopyFromSections,
   loadPublishedEventDetail,
+  publishedEventHref,
   visiblePublishedSections,
 } from '../../../../../../src/published';
 import { publishedSectionKindLabel } from '../../../../../../src/published/section-label';
 import { SurfaceState } from '../../../../../../src/ui/surface-state';
+import { RateLimitState } from '../../../../../../src/published/rate-limit-state';
 import { eventArtTone } from '../../../../../../src/ui/event-art-tone';
 import { attendeeHomeMain } from '../../../../../../src/attendee-surface';
 
@@ -68,10 +71,12 @@ function EventErrorShell({
   testId,
   title,
   detail,
+  retryHref,
 }: {
   testId: string;
   title: string;
   detail: string;
+  retryHref?: string;
 }) {
   return (
     <ConsumerPageShell mainClassName={attendeeHomeMain}>
@@ -82,7 +87,7 @@ function EventErrorShell({
         testId={testId}
         action={
           <Button asChild variant="brand">
-            <Link href="/">Về trang chủ</Link>
+            <a href={retryHref ?? "/"}>{retryHref ? "Thử lại" : "Về trang chủ"}</a>
           </Button>
         }
       />
@@ -95,6 +100,15 @@ export default async function EventPage({ params }: Props) {
   const result = await loadPublishedEventDetail(tenantSlug, eventSlug);
 
   if (result.status === 'not-found') notFound();
+
+  if (result.status === 'rate-limited') {
+    noStore();
+    return (
+      <ConsumerPageShell mainClassName={attendeeHomeMain}>
+        <RateLimitState kind="detailRateLimited" retryHref={publishedEventHref({ tenantSlug, slug: eventSlug })} />
+      </ConsumerPageShell>
+    );
+  }
 
   if (result.status === 'unreachable') {
     return (
