@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
   GATE_UNKNOWN_MESSAGE,
+  applyConfirm,
   classifyScan,
   parseScan,
   recoverOps,
@@ -13,15 +14,11 @@ import {
 const ticketId = '11111111-1111-4111-8111-111111111111';
 const tenantId = '22222222-2222-4222-8222-222222222222';
 const eventId = '33333333-3333-4333-8333-333333333333';
-const qr = JSON.stringify({
-  v: 1,
-  kind: 'ticket.display',
-  ticketId,
-  tenantId,
-  eventId,
-  credentialVersion: 1,
-  state: 'ACTIVE',
-});
+const base64url = (value: unknown) => Buffer.from(JSON.stringify(value)).toString('base64url');
+const jws = `${base64url({ alg: 'ES256', kid: 'test' })}.${base64url({
+  tid: tenantId, eid: eventId, tkt: ticketId, ver: 1,
+})}.signature`;
+const qr = JSON.stringify({ v: 1, kind: 'ticket.gate_credential', jws });
 
 test('logout while reservation response is pending prevents a later confirm admission', async () => {
   let release!: () => void;
@@ -69,29 +66,61 @@ function jsonResponse(status: number, body: unknown): Response {
   });
 }
 
-test('parse display QR reads optional display hints from JSON', () => {
-  const withHints = JSON.stringify({
-    v: 1,
-    kind: 'ticket.display',
-    ticketId,
-    tenantId,
-    eventId,
-    ticketTypeLabel: 'Vé VIP',
-    attendeeName: 'Lan Hương',
-  });
-  const parsed = parseScan(withHints);
-  assert.equal(parsed?.displayHints?.ticketTypeLabel, 'Vé VIP');
-  assert.equal(parsed?.displayHints?.attendeeName, 'Lan Hương');
-});
-
-test('parse display QR and reject a bare id without event scope', () => {
+test('parse signed Gate QR envelope and retain JWS for the reserve request', () => {
   const parsed = parseScan(qr);
   assert.equal(parsed?.ticketId, ticketId);
+  assert.deepEqual(parsed?.presented, { kind: 'qr', jws });
+});
+
+test('reject unsigned ticket.display QR and bare UUID even with event scope', () => {
+  const parsed = parseScan(qr);
+  assert.equal(parsed?.ticketId, ticketId);
+  const legacy = JSON.stringify({ v: 1, kind: 'ticket.display', ticketId, tenantId, eventId });
+  assert.equal(parseScan(legacy), null);
   assert.equal(parseScan(ticketId), null);
-  assert.equal(
-    parseScan(ticketId, { tenantId, eventId })?.eventId,
-    eventId,
-  );
+});
+
+test('reserve sends the selected workspace context and signed JWS only', async () => {
+  const reserveBodies: Record<string, unknown>[] = [];
+  const fetchImpl: typeof fetch = async (input, init) => {
+    const url = String(input);
+    if (url.endsWith('/reservations')) {
+      reserveBodies.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
+      return jsonResponse(200, { reservationId: 'reservation', token: 'hold-token' });
+    }
+    return jsonResponse(200, { state: 'USED', checkinId: 'checkin' });
+  };
+  const result = await runScan({
+    raw: qr, bearer: 'token', apiBase: 'http://127.0.0.1:3001',
+    ops: [], staffSessionId: 'session', fallback: { tenantId, eventId },
+    fetchImpl, createId: () => 'qr-op',
+  });
+  assert.equal(result.current?.phase, 'admitted');
+  assert.deepEqual(reserveBodies[0]?.presented, { kind: 'qr', jws });
+  assert.equal('ticketId' in (reserveBodies[0] ?? {}), false);
+  assert.doesNotMatch(JSON.stringify(result.ops), /"presented"|\.signature/);
+});
+
+test('expired proofs and stale/revoked tickets are denied with Vietnamese copy; used remains explicit', () => {
+  const op: GateOp = {
+    id: 'op', ticketId, tenantId, eventId, staffSessionId: 'session',
+    phase: 'holding', message: '',
+  };
+  const cases = [
+    ['MANUAL_PROOF_INVALID', /hết hạn/i],
+    ['CREDENTIAL_VERSION_STALE', /được cấp lại/i],
+    ['TICKET_NOT_ACTIVE', /thu hồi/i],
+  ] as const;
+  for (const [code, message] of cases) {
+    const denied = applyConfirm(op, { status: 409, json: { code }, networkError: false });
+    assert.equal(denied.phase, 'denied');
+    assert.match(denied.message, message);
+  }
+  const used = applyConfirm(op, {
+    status: 409, json: { code: 'ALREADY_CHECKED_IN', checkinId: 'checkin' }, networkError: false,
+  });
+  assert.equal(used.phase, 'admitted');
+  assert.equal(used.admissionKind, 'already');
 });
 
 test('duplicate scan does not confirm twice', async () => {
@@ -250,6 +279,68 @@ test('preferOfflineQueue skips online reserve when session exists', async () => 
   assert.equal(calls, 0);
   assert.equal(scanned.networkUnavailable, true);
   assert.equal(scanned.parsed?.ticketId, ticketId);
+});
+
+test('manual code is looked up online and reserve receives only the session-bound proof', async () => {
+  const code = 'ABCD-EFGH-JK';
+  const lookupBodies: Record<string, unknown>[] = [];
+  const reserveBodies: Record<string, unknown>[] = [];
+  const fetchImpl: typeof fetch = async (input, init) => {
+    const url = String(input);
+    const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+    if (url.endsWith('/manual-lookup')) {
+      lookupBodies.push(body);
+      return jsonResponse(200, { ticketId, proofToken: 'short-lived-proof' });
+    }
+    if (url.endsWith('/reservations')) {
+      reserveBodies.push(body);
+      return jsonResponse(200, { reservationId: 'reservation', token: 'hold-token' });
+    }
+    return jsonResponse(200, { state: 'USED', checkinId: 'checkin' });
+  };
+  const result = await runScan({
+    raw: '', manualEntryCode: code, fallback: { tenantId, eventId },
+    bearer: 'token', apiBase: 'http://127.0.0.1:3001', ops: [],
+    staffSessionId: 'session', fetchImpl, createId: () => 'manual-op',
+  });
+  assert.equal(result.current?.phase, 'admitted');
+  assert.equal(lookupBodies[0]?.code, code);
+  assert.equal(lookupBodies[0]?.staffSessionId, 'session');
+  assert.deepEqual(reserveBodies[0]?.presented, { kind: 'manual', proofToken: 'short-lived-proof' });
+  assert.equal('ticketId' in (reserveBodies[0] ?? {}), false);
+  assert.doesNotMatch(JSON.stringify(result.ops), new RegExp(code));
+  assert.doesNotMatch(JSON.stringify(result.ops), /short-lived-proof/);
+});
+
+test('invalid manual code is denied without reserving or retaining the code', async () => {
+  const code = 'ABCD-EFGH-JK';
+  let reserveCalls = 0;
+  const result = await runScan({
+    raw: '', manualEntryCode: code, fallback: { tenantId, eventId },
+    bearer: 'token', apiBase: 'http://127.0.0.1:3001', ops: [],
+    staffSessionId: 'session', createId: () => 'manual-invalid',
+    fetchImpl: async (input) => String(input).endsWith('/manual-lookup')
+      ? jsonResponse(404, { code: 'MANUAL_CODE_INVALID' })
+      : (reserveCalls += 1, jsonResponse(200, {})),
+  });
+  assert.equal(result.current?.phase, 'denied');
+  assert.match(result.current?.message ?? '', /không đúng hoặc không còn hiệu lực/i);
+  assert.equal(reserveCalls, 0);
+  assert.doesNotMatch(JSON.stringify(result.ops), new RegExp(code));
+});
+
+test('manual code cannot use the offline queue', async () => {
+  let calls = 0;
+  const result = await runScan({
+    raw: '', manualEntryCode: 'ABCD-EFGH-JK', fallback: { tenantId, eventId },
+    bearer: 'token', apiBase: 'http://127.0.0.1:3001', ops: [],
+    staffSessionId: 'session', preferOfflineQueue: true,
+    fetchImpl: async () => { calls += 1; throw new TypeError('offline'); },
+  });
+  assert.equal(calls, 0);
+  assert.equal(result.current?.phase, 'denied');
+  assert.equal(result.offlineQueueEligible, undefined);
+  assert.match(result.current?.message ?? '', /cần được kiểm tra trực tuyến/i);
 });
 
 test('MEMBERSHIP_REVOKED on open session sets membershipAuthzDenied', async () => {
