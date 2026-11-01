@@ -87,7 +87,12 @@ test('[WEB-01] only published projection is discoverable', async ({ page }) => {
   expect(missing.status()).toBe(404);
   await page.goto(webUrl(manifest, `/t/${f.tenantSlug}/events/${missingSlug}`));
   await expect(page.getByTestId('event-published')).toHaveCount(0);
-  await expect(page.getByRole('heading', { name: '404' })).toBeVisible();
+  await expect(page.getByTestId('route-not-found')).toBeVisible();
+  await expect(
+    page
+      .getByTestId('route-not-found')
+      .getByRole('link', { name: 'Về trang chủ' }),
+  ).toHaveAttribute('href', '/');
 });
 
 test('[WEB-09] multi-tenant owner wallet and private detail/QR/request/operation', async ({
