@@ -1963,6 +1963,9 @@ export async function seedRuntime(state, caseIds) {
         if (!pendingHoldCodeId) {
           throw new Error('PORT-08 seed missing pendingHoldCodeId');
         }
+        if (!fixture.ticketId) {
+          throw new Error('PORT-08 seed missing ticketId for confirm/undo');
+        }
         await backend.withTenant(db, tenantId, async (tx) => {
           await backend.holdCodeForReview(tx, {
             tenantId,
@@ -1988,6 +1991,46 @@ export async function seedRuntime(state, caseIds) {
             )
           `;
         });
+        // PORT-08 boundary fixtures: a sibling event in the same tenant with no
+        // owner assignment, and a foreign tenant/event. Real rows only — the
+        // staff token must be denied by API authz, never by a mocked check.
+        const unassignedEventId = randomUUID();
+        const foreignTenantId = randomUUID();
+        const foreignEventId = randomUUID();
+        await backend.withTenant(db, tenantId, async (tx) => {
+          await tx.event.create({
+            data: {
+              tenantId,
+              id: unassignedEventId,
+              slug: `unassigned-${state.id}`,
+              name: `Unassigned ${caseId}`,
+              status: 'PUBLISHED',
+              visibility: 'PUBLIC',
+            },
+          });
+        });
+        await backend.withTenant(db, foreignTenantId, async (tx) => {
+          await tx.tenant.create({
+            data: {
+              id: foreignTenantId,
+              slug: `foreign-${slug}`,
+              name: `Foreign Tenant ${caseId}`,
+            },
+          });
+          await tx.event.create({
+            data: {
+              tenantId: foreignTenantId,
+              id: foreignEventId,
+              slug: 'event',
+              name: `Foreign Event ${caseId}`,
+              status: 'PUBLISHED',
+              visibility: 'PUBLIC',
+            },
+          });
+        });
+        fixture.data.unassignedEventId = unassignedEventId;
+        fixture.data.foreignTenantId = foreignTenantId;
+        fixture.data.foreignEventId = foreignEventId;
         fixture.data.report = await backend.withTenant(db, tenantId, (tx) =>
           backend.readEventReport(tx, {
             tenantId,
