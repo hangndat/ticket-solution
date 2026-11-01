@@ -42,8 +42,9 @@ export default function proxy(request: NextRequest) {
     });
   }
 
-  const hostHeader =
-    request.headers.get('x-forwarded-host') ?? request.headers.get('host');
+  // The edge preserves Host and overwrites X-Forwarded-Host. Direct upstream
+  // requests can forge the latter, so it must not select the public surface.
+  const hostHeader = request.headers.get('host');
   const { pathname, search } = request.nextUrl;
 
   // O13: marketing host + product path → absolute PRODUCT_ORIGIN first.
