@@ -331,6 +331,7 @@ if (mode === 'list' || args.includes('--list')) {
         phaseFile: resolve(state.dir, 'public-read-phase.txt'),
         stopFile: resolve(state.dir, 'public-read-first-429.txt'),
         output: resolve(state.dir, 'public-read-observed.json'),
+        webOutput: resolve(state.dir, 'public-read-web-observed.json'),
       };
       writeFileSync(diagnostic.phaseFile, 'readiness', { mode: 0o600 });
       diagnostic.beforeApi = await publicReadSnapshot(state, diagnostic.salt);
@@ -406,6 +407,15 @@ if (mode === 'list' || args.includes('--list')) {
         PLATFORM_OIDC_CLIENT_SECRET: state.clientSecrets['ticket-platform-web'],
         PLATFORM_OIDC_REDIRECT_URI: `${state.origins.portal}/api/auth/platform/callback`,
         PLATFORM_OIDC_REQUIRED_ACR: '2',
+        ...(diagnostic && name === 'web'
+          ? {
+              NODE_OPTIONS: `${common.NODE_OPTIONS} --require ${resolve(E2E, 'harness/web-read-observer.cjs')}`,
+              E2E_WEB_READ_DIAGNOSTIC: '1',
+              E2E_WEB_READ_OUTPUT: diagnostic.webOutput,
+              E2E_WEB_READ_PHASE: diagnostic.phaseFile,
+              E2E_WEB_READ_ROLE: 'web',
+            }
+          : {}),
       });
       for (const name of ['web', 'portal']) {
         startProcess(
@@ -520,6 +530,9 @@ if (mode === 'list' || args.includes('--list')) {
           afterBrowser: diagnostic.afterBrowser,
           stoppedAt429: diagnostic.stoppedAt429,
           observed: JSON.parse(readFileSync(diagnostic.output, 'utf8')),
+          webObserved: existsSync(diagnostic.webOutput)
+            ? JSON.parse(readFileSync(diagnostic.webOutput, 'utf8'))
+            : { role: 'web', observed: 0, counts: [], note: 'no web observer output' },
         });
       }
       if (mode === 'regression') {
