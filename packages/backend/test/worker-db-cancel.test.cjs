@@ -159,6 +159,8 @@ test('PG lock cancels reconcile, next due row expires, shutdown and reclaim stay
         NODE_ENV: 'test',
         MINIO_ENDPOINT: `http://127.0.0.1:${objectServer.address().port}`,
         MINIO_ACCESS_KEY: 'fixture', MINIO_SECRET_KEY: 'fixture',
+        MINIO_EXPORTS_ACCESS_KEY: "synthetic-job06-export-access",
+        MINIO_EXPORTS_SECRET_KEY: "synthetic-job06-export-secret",
         MINIO_BUCKET_EXPORTS: 'fixture',
         PUBLIC_WEB_BASE_URL: 'https://fixture.example.test',
       };
