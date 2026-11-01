@@ -1,8 +1,8 @@
 # F04 — ma trận nghiệm thu tích hợp
 
-Ngày đối chiếu: **01/11/2026**. Source snapshot: `eaa21abf9cef00d34cd944e6b44faf5591d419b6`. Người đối chiếu: Minh (coordinator). Architecture impact: Không; cập nhật evidence, không thay runtime/AC.
+Ngày đối chiếu: **01/11/2026**. Source snapshot: `105ee3c29ec8a01cff8b63a8e95c21cf753bcd19`. Người đối chiếu: Minh (coordinator). Architecture impact: Không; cập nhật evidence, không thay runtime/AC.
 
-**33 nhóm đã có nghiệm thu tích hợp trong lịch sử, 52 nhóm còn thiếu gate toàn phần, JOB-08 OUT.** Đây là tổng hợp verdict trên SHA/run ở từng PR, **không phải** một full regression mới chạy trên source snapshot. Không kế thừa verdict cũ thành PASS runtime hiện tại sau các thay đổi UI/auth/harness.
+**34 nhóm đã có nghiệm thu tích hợp trong lịch sử, 51 nhóm còn thiếu gate toàn phần, JOB-08 OUT.** Đây là tổng hợp verdict trên SHA/run ở từng PR, **không phải** một full regression mới chạy trên source snapshot. Full Web B `mvxlnnby-e35f78` tại `c9a2876c` đạt 44/47; WEB-03 và WEB-11 có ba FAIL `event-invalid` trong full run; targeted retry `mvxm7hgg-e4565d` PASS 3/3 tại cùng source tree, chưa xác định nguyên nhân không ổn định. Không kế thừa verdict cũ thành PASS runtime hiện tại sau các thay đổi UI/auth/harness.
 
 [PLAN.md](PLAN.md) là nguồn AC B/H/D/R. `coverage.json` chỉ là inventory selector; `implemented`/`covered` không tự chuyển thành nghiệm thu. Trạng thái công việc động lấy Issue/Project #3. Checkpoint 12 PASS trong ROADMAP/PLAN là mốc cũ, không phải tổng số PR đã nghiệm thu đến 01/11.
 
@@ -17,6 +17,7 @@ Mỗi dòng dẫn PR đã merge và evidence/review. SHA trong bảng là **merg
 | AUTH-03 | P0  | B/H    | [#1044](https://github.com/hangndat/ticket-solution/pull/1044) · `34c2d638fa974376dc21a05381eba132a1c41feb` | `mvuhg384-8f05be; mvuhub6j-16fbd0` · [evidence](https://github.com/hangndat/ticket-solution/issues/1029#issuecomment-6515411311) |
 | AUTH-04 | P0  | B/H    | [#1044](https://github.com/hangndat/ticket-solution/pull/1044) · `34c2d638fa974376dc21a05381eba132a1c41feb` | `mvuhg384-8f05be; mvuhub6j-16fbd0` · [evidence](https://github.com/hangndat/ticket-solution/issues/1029#issuecomment-6515411311) |
 | AUTH-05 | P0  | B/H    | [#1044](https://github.com/hangndat/ticket-solution/pull/1044) · `34c2d638fa974376dc21a05381eba132a1c41feb` | `mvuhg384-8f05be; mvuhub6j-16fbd0` · [evidence](https://github.com/hangndat/ticket-solution/issues/1029#issuecomment-6515411311) |
+| WEB-01  | P0  | B/H    | [#1111](https://github.com/hangndat/ticket-solution/pull/1111) · `105ee3c29ec8a01cff8b63a8e95c21cf753bcd19` | `mvxlnnby-e35f78` WEB-01 PASS; [review](https://github.com/hangndat/ticket-solution/pull/1111#issuecomment-6555901115) |
 | WEB-02  | P0  | B      | [#1077](https://github.com/hangndat/ticket-solution/pull/1077) · `21a0b8ab0f6978d792556bff2bb6d045947c9727` | `mvuxsq31-d9f462` · [evidence](https://github.com/hangndat/ticket-solution/pull/1077#issuecomment-6522759425)                    |
 | WEB-03  | P0  | B/H    | [#1077](https://github.com/hangndat/ticket-solution/pull/1077) · `21a0b8ab0f6978d792556bff2bb6d045947c9727` | `mvuxsq31-d9f462` · [evidence](https://github.com/hangndat/ticket-solution/pull/1077#issuecomment-6522759425)                    |
 | WEB-04  | P0  | B/H    | [#1082](https://github.com/hangndat/ticket-solution/pull/1082) · `a51fd895bf8b4da5f2397193ed9ef3b16a21e670` | `mvv0kmxn-5038d2; mvv0lz1j-b30c15` · [evidence](https://github.com/hangndat/ticket-solution/issues/1037#issuecomment-6524355066) |
@@ -55,7 +56,6 @@ Các dòng này giữ BLOCKED ở mức AC; không có nghĩa tất cả đều 
 | [AUTH-06](https://github.com/hangndat/ticket-solution/issues/1029) | P0  | B/H    | Thiếu nhánh revoke/session-expiry đầy đủ và feedback UI sau mất quyền; không yêu cầu scan trên Portal (O23).                                |
 | [AUTH-07](https://github.com/hangndat/ticket-solution/issues/1029) | P0  | B/H    | Web #1048 + Portal #1055 đã merge; owner chấp nhận gap bfcache. Chưa đối chiếu gate toàn ID sau tích hợp; không gọi persisted=true đã kiểm. |
 | [AUTH-08](https://github.com/hangndat/ticket-solution/issues/1029) | P0  | B/H/D  | Thiếu full B/H/D cho consent, attempt key/retry unknown, một open request và revoke/erasure.                                                |
-| [WEB-01](https://github.com/hangndat/ticket-solution/issues/1037)  | P0  | B/H    | Thiếu full B/H public/private/UNLISTED matrix trên SHA sạch; không lấy comment baseline lỗi cũ làm trạng thái runtime mới.                  |
 | [PORT-01](https://github.com/hangndat/ticket-solution/issues/1035) | P0  | B      | #1070 partial: wizard thiếu quota configuration; public projection 404 sau publish cần đối chiếu product/contract.                          |
 | [PORT-02](https://github.com/hangndat/ticket-solution/issues/1035) | P0  | B/H    | #1072 partial: chưa chứng minh Web publish/rollback delta; liên quan public projection/cache.                                               |
 | [PORT-03](https://github.com/hangndat/ticket-solution/issues/1035) | P1  | B/H    | Thiếu full B clone/archive/cancel và isolation business records/notification policy.                                                        |
@@ -90,9 +90,9 @@ Các dòng này giữ BLOCKED ở mức AC; không có nghĩa tất cả đều 
 | [GATE-07](https://github.com/hangndat/ticket-solution/issues/1031) | P0  | H/D    | Thiếu full H/D và verdict độc lập theo PLAN; đối chiếu test hiện có trước bổ sung, không dùng D/U thay H/B/R.                               |
 | [GATE-08](https://github.com/hangndat/ticket-solution/issues/1031) | P0  | H/D    | Thiếu full H/D và verdict độc lập theo PLAN; đối chiếu test hiện có trước bổ sung, không dùng D/U thay H/B/R.                               |
 | [GATE-09](https://github.com/hangndat/ticket-solution/issues/1031) | P0  | H/D    | Thiếu full H/D và verdict độc lập theo PLAN; đối chiếu test hiện có trước bổ sung, không dùng D/U thay H/B/R.                               |
-| [JOB-04](https://github.com/hangndat/ticket-solution/issues/1032)  | P0  | D/H    | #1088 đã merge partial; tenant-wide resend/delivery budget chưa có contract wiring. Giữ 2/2 + ngoại lệ 1/1 + B1.                            |
+| [JOB-04](https://github.com/hangndat/ticket-solution/issues/1032)  | P0  | D/H    | #1088 đã merge partial; tenant email budget runtime đã có `reserveEmailBudget` từ `47bc7b18`; còn thiếu full D/H resend/delivery budget matrix. Giữ 2/2 + ngoại lệ 1/1 + B1.                            |
 | [JOB-05](https://github.com/hangndat/ticket-solution/issues/1032)  | P1  | B/H/D  | Thiếu runtime R template/reminder schedule và validation theo PLAN.                                                                         |
-| [JOB-06](https://github.com/hangndat/ticket-solution/issues/1032)  | P0  | D/R    | Thiếu D/R cap/overlap/budget/backpressure matrix; liên quan tenant email budget chưa duyệt.                                                 |
+| [JOB-06](https://github.com/hangndat/ticket-solution/issues/1032)  | P0  | D/R    | Tenant email budget runtime đã có `reserveEmailBudget` từ `47bc7b18`; còn thiếu D/R cap/overlap/budget/backpressure matrix.                                                 |
 | [JOB-07](https://github.com/hangndat/ticket-solution/issues/1032)  | P0  | H/D    | Thiếu H/R signed URL scope/expiry, export worker và recovery theo PLAN.                                                                     |
 | [SEC-01](https://github.com/hangndat/ticket-solution/issues/1036)  | P0  | B/H    | Thiếu full B/H và verdict độc lập theo PLAN; đối chiếu test hiện có trước bổ sung, không dùng D/U thay H/B/R.                               |
 | [SEC-02](https://github.com/hangndat/ticket-solution/issues/1036)  | P0  | B/H    | Thiếu full B/H và verdict độc lập theo PLAN; đối chiếu test hiện có trước bổ sung, không dùng D/U thay H/B/R.                               |
@@ -115,5 +115,5 @@ Các dòng này giữ BLOCKED ở mức AC; không có nghĩa tất cả đều 
 - AUTH-07: quyết định owner chấp nhận gap bfcache để merge #1055 vẫn giữ nguyên; không ghi đã chạy được persisted=true.
 - PORT-09 giữ lịch sử 2/2 + ngoại lệ 1/1 + B1 đã hoàn tất. PORT-13 chỉ nghiệm thu phần pagination/filter/locale/saved views, không sort.
 - DB-15: hai review O12 (`docs/reviews/D11-EVENTREPORT-O12-DOD.md:27`, `D11-PR-242-EVENTREPORT-O12-DOD.md:25`) nghiệm thu confirm→1, undo→0, giữ lịch sử; bổ sung test không tự đổi sang metric tích lũy.
-- Ưu tiên nhóm test/evidence đã có contract; product gaps DB-06/09/12, PORT-01/04/11/13, JOB-04/06 cần quyết định tương ứng trước sửa runtime. Không mở feature mới từ inventory này.
+- Ưu tiên nhóm test/evidence đã có contract; product gaps DB-06/09/12, PORT-01/04/11/13 cần quyết định tương ứng trước sửa runtime; JOB-04/06 còn thiếu full AC evidence trên budget đã triển khai. Không mở feature mới từ inventory này.
 - F04 không chứng minh native camera/APNs, benchmark tải/SLO, production restore hoặc pilot GO; các gate đó theo roadmap riêng.
