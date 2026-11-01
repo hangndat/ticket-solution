@@ -60,6 +60,7 @@ test('PG lock cancels reconcile, next due row expires, shutdown and reclaim stay
       const type = randomUUID(), source = randomUUID(), code = randomUUID(), request = randomUUID();
       const outbox = randomUUID();
       await admin.query('INSERT INTO tenants(id,slug,name) VALUES($1,$2,$3)', [tenant,'cancel-fixture','Cancel fixture']);
+      await admin.query('INSERT INTO tenant_limits(tenant_id,email_per_day) VALUES($1,NULL)', [tenant]);
       await admin.query('INSERT INTO events(tenant_id,id,slug,name) VALUES($1,$2,$3,$4)', [tenant,event,'event','Event']);
       await admin.query('INSERT INTO users(id,issuer,subject,email) VALUES($1,$2,$3,$4)', [user,'fixture','user','fixture@example.test']);
       await admin.query('INSERT INTO ticket_types(tenant_id,event_id,id,label) VALUES($1,$2,$3,$4)', [tenant,event,type,'Entry']);
@@ -193,6 +194,10 @@ test('PG lock cancels reconcile, next due row expires, shutdown and reclaim stay
       await loadRelay.onModuleDestroy();
       loadRelay = null;
       const exported = await admin.query("SELECT count(*)::int n, min(row_count)::int min_rows FROM exports WHERE status='READY'");
+      if (!complete) {
+        const failureStates = await admin.query("SELECT 'exports' kind, status, count(*)::int n, NULL::boolean deferred FROM exports GROUP BY status UNION ALL SELECT 'outbox', status, count(*)::int, next_attempt_at > clock_timestamp() FROM outbox GROUP BY status, next_attempt_at > clock_timestamp() UNION ALL SELECT 'redemption_requests', status, count(*)::int, NULL::boolean FROM redemption_requests GROUP BY status ORDER BY kind, status, deferred");
+        console.info(JSON.stringify({ event: 'worker_combined_fault_failure_states', states: failureStates.rows }));
+      }
       assert.equal(complete, true, 'all real due jobs must settle under combined load');
       assert.equal(exported.rows[0].n, 5);
       assert.equal(exported.rows[0].min_rows, 20000);
