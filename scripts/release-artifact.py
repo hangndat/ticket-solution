@@ -60,9 +60,19 @@ def files_for(root):
             yield path
 
 
-def inventory(root):
-    return {str(p.relative_to(root)): ("link:" + os.readlink(p) if p.is_symlink() else digest(p)) for p in files_for(root)
-            if p.name != "release-manifest.json"}
+def inventory(root, hint=None):
+    """Checksum every file. `hint(rel, path)` may return a known digest to skip re-reading a file;
+    the final `verify` always re-hashes everything, so a wrong hint fails the build."""
+    result = {}
+    for p in files_for(root):
+        if p.name == "release-manifest.json":
+            continue
+        rel = str(p.relative_to(root))
+        if p.is_symlink():
+            result[rel] = "link:" + os.readlink(p)
+        else:
+            result[rel] = (hint and hint(rel, p)) or digest(p)
+    return result
 
 
 def validate_root(root):
@@ -211,16 +221,31 @@ def prepare_store(path):
     return path
 
 
-def container_script():
-    """Shell run in the builder; the store is the external mount, never under /app."""
+HIDDEN = ".build-hidden"
+
+
+def container_script(skip=(), hide=None):
+    """Shell run in the builder; the store is the external mount, never under /app.
+    `skip` names build steps whose outputs were reused from an older release. `hide` maps a step
+    name to workspace dirs moved out of the tree while that step runs, so a build that reads a
+    package it does not declare as a dependency fails instead of silently depending on it."""
+    hide = hide or {}
     lines = [
         'step() { n="$1"; shift; s=$(date +%s); echo "[container $(date +%H:%M:%S)] start: $n"; '
         'if "$@"; then echo "[container $(date +%H:%M:%S)] done: $n ($(( $(date +%s) - s ))s)"; '
         'else echo "[container $(date +%H:%M:%S)] FAILED: $n ($(( $(date +%s) - s ))s)"; return 1; fi; }',
+        f'hide() {{ for d in "$@"; do mkdir -p "{HIDDEN}/$(dirname "$d")"; mv "$d" "{HIDDEN}/$d"; done; }}',
+        f'unhide() {{ for d in "$@"; do mv "{HIDDEN}/$d" "$d"; done; rm -rf "{HIDDEN}"; }}',
         f"pnpm config set store-dir {STORE_MOUNT}",
         "pnpm config set package-import-method copy",
     ]
-    lines += [f'step "{name}" {cmd}' for name, cmd in STEPS]
+    for name, cmd in STEPS:
+        if name in skip:
+            continue
+        dirs = " ".join(hide.get(name, ()))
+        lines += [f"hide {dirs}"] if dirs else []
+        lines.append(f'step "{name}" {cmd}')
+        lines += [f"unhide {dirs}"] if dirs else []
     return "\n".join(lines)
 
 
@@ -244,6 +269,212 @@ def remove_tree(path):
         except OSError:
             pass
     shutil.rmtree(path)
+
+
+# Incremental build. A package is rebuilt only when its build inputs change: its own tracked files,
+# the inputs of every @ticket/* package it depends on, and the global inputs (root config, lockfile,
+# brand/, builder image, platform, build commands). Otherwise its outputs (whatever its build wrote
+# outside node_modules, recorded per release) are copied from the newest release with the same digest.
+PACKAGES = {"contracts": "packages/contracts", "backend": "packages/backend", "ui": "packages/ui",
+            "web-session": "packages/web-session", "api": "apps/api", "worker": "apps/worker",
+            "web": "apps/web", "portal": "apps/portal"}
+
+
+def copy_tree(src, dst):
+    """Copy preserving mtimes; on XFS/btrfs `--reflink=auto` makes it copy-on-write (near instant)."""
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    if subprocess.run(["cp", "-a", "--reflink=auto", str(src), str(dst)], capture_output=True).returncode != 0:
+        if dst.exists() or dst.is_symlink():
+            remove_tree(dst) if dst.is_dir() and not dst.is_symlink() else dst.unlink()
+        if src.is_dir() and not src.is_symlink():
+            shutil.copytree(src, dst, symlinks=True)
+        else:
+            shutil.copy2(src, dst, follow_symlinks=False)
+    # Only touch entries that lack the bits: a chmod dirties the inode even when the mode is
+    # unchanged, and tens of thousands of those flood a slow disk right before the build.
+    for p in [dst, *(dst.rglob("*") if dst.is_dir() and not dst.is_symlink() else [])]:
+        if p.is_symlink():
+            continue
+        mode = p.lstat().st_mode
+        want = mode | 0o200 | (0o100 if stat.S_ISDIR(mode) else 0)
+        if want != mode:
+            os.chmod(p, want)
+
+
+def tree_digest(base, rels):
+    h = hashlib.sha256()
+    for rel in sorted(rels):
+        h.update(rel.encode() + b"\0" + digest(base / rel).encode() + b"\n")
+    return h.hexdigest()
+
+
+def source_files(stage, top):
+    path = stage / top
+    if path.is_file():
+        return [top]
+    return [str(p.relative_to(stage)) for p in path.rglob("*")
+            if p.is_file() and not p.is_symlink() and "node_modules" not in p.relative_to(stage).parts]
+
+
+def package_deps(stage, name):
+    data = json.loads((stage / PACKAGES[name] / "package.json").read_text())
+    names = {**data.get("dependencies", {}), **data.get("devDependencies", {})}
+    return sorted(k[len("@ticket/"):] for k in names if k.startswith("@ticket/") and k[len("@ticket/"):] in PACKAGES)
+
+
+def build_input_digests(stage, image_id, platform):
+    """Call right after extraction, while the stage holds only tracked source files."""
+    shared = [rel for top in SOURCE_PATHS if not top.startswith(("apps/", "packages/"))
+              for rel in source_files(stage, top)]
+    # This script decides what a build output is; any change to it invalidates every reuse.
+    global_digest = hashlib.sha256(json.dumps([digest(Path(__file__)), image_id, platform, STEPS,
+                                               tree_digest(stage, shared)]).encode()).hexdigest()
+    own = {name: tree_digest(stage, source_files(stage, path)) for name, path in PACKAGES.items()}
+    result = {}
+
+    def resolve(name, seen=()):
+        if name in seen:
+            fail(f"workspace dependency cycle at {name}")
+        if name not in result:
+            deps = [resolve(dep, seen + (name,)) for dep in package_deps(stage, name)]
+            result[name] = hashlib.sha256(json.dumps([global_digest, own[name], deps]).encode()).hexdigest()
+        return result[name]
+    for name in PACKAGES:
+        resolve(name)
+    return result
+
+
+def hidden_during_build(stage):
+    """For each build step, the workspace package dirs outside that package's dependency closure."""
+    closure = {}
+
+    def deps(name):
+        if name not in closure:
+            closure[name] = set()
+            for dep in package_deps(stage, name):
+                closure[name] |= {dep} | deps(dep)
+        return closure[name]
+    return {f"build {name}": [PACKAGES[other] for other in PACKAGES if other != name and other not in deps(name)]
+            for name in PACKAGES}
+
+
+NEXT_APPS = ("web", "portal")
+
+
+def next_cache_entry(cache, name):
+    return cache / f"next-{name}"
+
+
+def seed_next_cache(stage, cache, names):
+    """Give `next build` the previous build's .next/cache (Next validates it itself); it never ships."""
+    seeded = []
+    for name in names:
+        entry = next_cache_entry(cache, name)
+        if entry.is_dir():
+            copy_tree(entry, stage / PACKAGES[name] / ".next" / "cache")
+            seeded.append(name)
+    return seeded
+
+
+def save_next_cache(stage, cache, names):
+    for name in names:
+        source = stage / PACKAGES[name] / ".next" / "cache"
+        if not source.is_dir():
+            continue
+        entry, temp = next_cache_entry(cache, name), cache / f".next-{name}-{os.getpid()}"
+        if temp.exists():
+            remove_tree(temp)
+        copy_tree(source, temp)
+        if entry.exists():
+            remove_tree(entry)
+        os.rename(temp, entry)
+
+
+def snapshot(stage):
+    """mtime of every path under the package dirs (node_modules excluded), to detect build outputs."""
+    result = {}
+    for path in PACKAGES.values():
+        for p in (stage / path).rglob("*"):
+            if "node_modules" not in p.relative_to(stage).parts:
+                result[str(p.relative_to(stage))] = p.lstat().st_mtime_ns
+    return result
+
+
+def output_roots(stage, before, name):
+    """Highest new path (or modified file) under one package dir after its build."""
+    roots = set()
+    pkg = stage / PACKAGES[name]
+    for p in pkg.rglob("*"):
+        rel = p.relative_to(stage)
+        if ("node_modules" in rel.parts or p.is_dir() and not p.is_symlink()
+                or ".next" in rel.parts and "cache" in rel.parts[rel.parts.index(".next") + 1:][:1]):
+            continue
+        key = str(rel)
+        if key in before and before[key] == p.lstat().st_mtime_ns:
+            continue
+        root = rel
+        while root.parent != pkg.relative_to(stage) and str(root.parent) not in before:
+            root = root.parent
+        roots.add(str(root))
+    return sorted(roots)
+
+
+def reuse_outputs(stage, bases, digests):
+    """Copy outputs of unchanged packages from the newest release built from the same inputs."""
+    reused = {}
+    for name, want in digests.items():
+        for base, manifest in bases:
+            entry = manifest.get("buildInputs", {}).get(name)
+            if not entry or entry.get("digest") != want:
+                continue
+            roots = entry.get("outputs") or []
+            if not roots or not all((base / rel).exists() for rel in roots):
+                continue
+            try:
+                for rel in roots:
+                    target = stage / rel
+                    if target.is_dir() and not target.is_symlink():
+                        remove_tree(target)
+                    elif target.exists() or target.is_symlink():
+                        target.unlink()
+                    copy_tree(base / rel, target)
+            except (OSError, shutil.Error) as error:
+                log(f"could not reuse {name} from {base.name}: {error}; rebuilding")
+                continue
+            reused[name] = {"digest": want, "outputs": roots, "from": base.name}
+            break
+    return reused
+
+
+def release_bases(root, limit=3):
+    bases = []
+    for base in sorted((p for p in root.iterdir() if RELEASE_ID.fullmatch(p.name) and p.is_dir() and not p.is_symlink()),
+                       key=lambda p: p.stat().st_mtime, reverse=True):
+        try:
+            bases.append((base, json.loads((base / "release-manifest.json").read_text())))
+        except (OSError, ValueError):
+            continue
+        if len(bases) == limit:
+            break
+    return bases
+
+
+def digest_hint(bases):
+    """Reuse an older manifest digest for a file with the same path, size and mtime (copies keep mtime)."""
+    def hint(rel, path):
+        info = path.lstat()
+        for base, manifest in bases:
+            sha = manifest.get("files", {}).get(rel)
+            if not sha or sha.startswith("link:"):
+                continue
+            try:
+                other = (base / rel).lstat()
+            except OSError:
+                continue
+            if other.st_size == info.st_size and other.st_mtime_ns == info.st_mtime_ns:
+                return sha
+        return None
+    return hint
 
 
 NOISE_SUFFIXES = (".map", ".md", ".markdown", ".d.ts", ".d.mts", ".d.cts")
@@ -271,7 +502,7 @@ def strip_runtime_noise(stage):
     return removed, freed
 
 
-def dedupe_against_releases(stage, root, files):
+def dedupe_against_releases(stage, bases, files):
     """Hardlink stage files that an older release's manifest says are identical.
 
     Releases stay complete, read-only trees (manifest and verify only see content), but unchanged
@@ -279,13 +510,7 @@ def dedupe_against_releases(stage, root, files):
     verify re-hashes the published tree, so a lying manifest fails the build instead of shipping.
     Any link failure (other owner, other filesystem, link limit) just leaves the copy in place.
     """
-    bases = []
-    for base in sorted((p for p in root.iterdir() if RELEASE_ID.fullmatch(p.name) and p.is_dir() and not p.is_symlink()),
-                       key=lambda p: p.stat().st_mtime, reverse=True):
-        try:
-            bases.append((base, json.loads((base / "release-manifest.json").read_text())["files"]))
-        except (OSError, ValueError, KeyError):
-            continue
+    bases = [(base, manifest.get("files", {})) for base, manifest in bases]
     linked = saved = 0
     for rel, sha in files.items():
         if sha.startswith("link:"):
@@ -357,8 +582,6 @@ def build(args):
             if candidate.is_file() and (candidate.name == ".env" or candidate.name.startswith(".env.")):
                 candidate.unlink()
         archive_timer.__exit__(None)
-        # Build inside Linux/Node 24. The store and every workspace link stay within stage.
-        command = container_script()
         with Timed("docker platform check"):
             platform = subprocess.check_output(["docker", "run", "--rm", "--platform", args.platform, args.image, "node", "-p",
                 "process.platform + '/' + process.arch + '/' + process.versions.node"], text=True).strip()
@@ -373,9 +596,41 @@ def build(args):
             fail(f"builder must be Linux Node 24: {platform}")
         image_id = subprocess.check_output(["docker", "image", "inspect", args.image,
             "--format", "{{.Id}}"], text=True).strip()
-        with Timed("container install + builds"):
-            subprocess.run(["docker", "run", "--rm", "--platform", args.platform, "-v", f"{stage}:/app",
-                            "-v", f"{store}:{STORE_MOUNT}", "-w", "/app", args.image, "sh", "-ec", command], check=True)
+        cache = (args.cache_dir or root.parent / "release-cache").absolute()
+        bases = release_bases(root)
+        with Timed("incremental plan"):
+            inputs = build_input_digests(stage, image_id, args.platform)
+            reused = {} if args.full else reuse_outputs(stage, bases, inputs)
+            summary = ", ".join("%s (from %s)" % (name, entry["from"][:12]) for name, entry in reused.items()) or "none"
+            log(f"reused outputs: {summary}{' (--full)' if args.full else ''}")
+            before = snapshot(stage)
+            next_apps = [name for name in NEXT_APPS if name not in reused]
+            warm = [] if args.full else seed_next_cache(stage, cache, next_apps)
+            if next_apps:
+                log(f"next build cache: {', '.join(warm) or 'none'} of {', '.join(next_apps)}")
+        # Build inside Linux/Node 24. The store and every workspace link stay within stage.
+        builds = {name for name, _ in STEPS if name != "install"}
+        # Corepack keeps pnpm itself in the store mount: the build user cannot read the copy baked into
+        # the image (root's home), and the network-less build run must not download it again.
+        run = ["docker", "run", "--rm", "--platform", args.platform, "-v", f"{stage}:/app",
+               "-v", f"{store}:{STORE_MOUNT}", "-e", f"COREPACK_HOME={STORE_MOUNT}/corepack", "-w", "/app"]
+        with Timed("container install"):
+            subprocess.run([*run, args.image, "sh", "-ec", container_script(skip=builds)], check=True)
+        # Builds get no network: anything fetched at build time would be an input the digest cannot see.
+        command = container_script(skip={"install"} | {f"build {name}" for name in reused}, hide=hidden_during_build(stage))
+        with Timed("container builds (no network)"):
+            subprocess.run([*run, "--network", "none", args.image, "sh", "-ec", command], check=True)
+        build_inputs = {name: {"digest": entry["digest"], "outputs": entry["outputs"]} for name, entry in reused.items()}
+        for name in PACKAGES:
+            if name not in reused:
+                build_inputs[name] = {"digest": inputs[name], "outputs": output_roots(stage, before, name)}
+        if next_apps and not args.full:
+            with Timed("save next build cache"):
+                try:
+                    cache.mkdir(parents=True, exist_ok=True)
+                    save_next_cache(stage, cache, next_apps)
+                except (OSError, shutil.Error) as error:
+                    log(f"could not save next build cache: {error}")
         with Timed("strip runtime noise"):
             removed, freed = strip_runtime_noise(stage)
             log(f"removed {removed} source map/markdown/type-declaration files ({freed / 1024 / 1024:.0f} MiB)")
@@ -392,12 +647,13 @@ def build(args):
         (stage / "apps" / "web" / ".data").mkdir(parents=True, exist_ok=True)
         manifest_timer = Timed("inventory + manifest")
         manifest_timer.__enter__()
-        all_files = inventory(stage)
+        hint = None if args.full else digest_hint(bases)
+        all_files = inventory(stage, hint)
         source = {"format": 2, "sourceSha": args.sha,
                   "buildId": hashlib.sha256(json.dumps(all_files, sort_keys=True).encode()).hexdigest()[:12],
                   "lockfileSha256": digest(stage / "pnpm-lock.yaml"),
                   "builder": {"image": args.image, "imageId": image_id, "runtime": platform},
-                  "services": {}, "files": all_files}
+                  "services": {}, "files": all_files, "buildInputs": build_inputs}
         for service, paths in ARTIFACTS.items():
             package = stage / ("packages/backend/package.json" if service == "migrate" else f"apps/{service}/package.json")
             source["services"][service] = {"paths": list(paths),
@@ -415,10 +671,10 @@ def build(args):
         name = f"{args.sha}-{source['buildId']}"
         (stage / "release-manifest.json").write_text(json.dumps(source, indent=2, sort_keys=True) + "\n")
         # Verify generated bytes before the atomic publish.
-        if inventory(stage) != source["files"]:
+        if inventory(stage, hint) != source["files"]:
             fail("staging checksums changed")
         with Timed("hardlink dedupe"):
-            linked, saved = dedupe_against_releases(stage, root, source["files"])
+            linked, saved = dedupe_against_releases(stage, bases, source["files"])
             log(f"hardlinked {linked} files from older releases (~{saved / 1024 / 1024:.0f} MiB not duplicated)")
         for p in [stage, *stage.rglob("*")]:
             if not p.is_symlink():
@@ -505,6 +761,8 @@ def main():
     b.add_argument("--platform", choices=("linux/amd64", "linux/arm64"), default="linux/amd64")
     b.add_argument("--pnpm-store", type=Path, default=Path(os.environ["VEMOKI_PNPM_STORE"]) if os.environ.get("VEMOKI_PNPM_STORE") else None,
                    help="persistent host pnpm store (default ~/.cache/vemoki-release/pnpm-store-<platform>, env VEMOKI_PNPM_STORE); cache only, safe to delete")
+    b.add_argument("--full", action="store_true", help="ignore older releases and the Next build cache; build everything")
+    b.add_argument("--cache-dir", type=Path, help="Next build cache, same filesystem as --root for reflink (default <root>/../release-cache)")
     b.add_argument("--clean-stale", action="store_true", help="remove .build-* dirs in --root older than --stale-min-age-minutes")
     b.add_argument("--stale-min-age-minutes", type=int, default=60)
     b.add_argument("--schema-min", type=int, required=True)
