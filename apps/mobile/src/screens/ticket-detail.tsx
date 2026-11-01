@@ -459,6 +459,20 @@ export function TicketDetailScreen() {
               />
             </View>
           ) : null}
+          {!used ? (
+            <View style={{ alignItems: 'center', gap: space.xs }}>
+              <Text style={{ ...typography.caption, color: colors.secondary }}>
+                Mã nhập tay
+              </Text>
+              <Text
+                selectable
+                accessibilityLabel="Mã nhập tay trên vé"
+                style={{ ...typography.sectionTitleBold, color: brand.ink }}
+              >
+                {ticket.manualEntryCode ?? 'Chưa có mã nhập tay'}
+              </Text>
+            </View>
+          ) : null}
           <Text
             selectable
             style={{
