@@ -101,7 +101,7 @@
     "tests": ["H:tests/e2e/http/live.test.mjs#[GATE-05]"],
     "layers": ["H"],
     "status": "blocked",
-    "reason": "Partial: Scanner deny, lý do, undo và lịch sử/retry; chưa có operation idempotency và concurrent scan/revoke. Chờ runtime exact SHA và review."
+    "reason": "Partial: H Scanner deny, lý do, undo và lịch sử/retry; operation idempotency chưa có và ordering race cần thêm evidence. Chờ runtime exact SHA và review."
   },
   {
     "caseId": "DB-01",

@@ -277,7 +277,7 @@ export const notes = {
   'GATE-04':
     'D confirm đồng thời, sai holder/token, expiry sau lock và retry không tạo thêm; thiếu operation replay và ordering permission/session revoke.',
   'GATE-05':
-    'D undo quyền/lý do, Scanner deny, retry không thêm và lịch sử; thiếu operation idempotency và concurrent scan/revoke.',
+    'D undo quyền/lý do, Scanner deny, lịch sử và race reserve/revoke; thiếu operation idempotency và ép từng ordering.',
   'GATE-06':
     'D replay và U validation; thiếu H batch boundary, skew ±300s và mixed items.',
   'GATE-07':

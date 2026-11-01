@@ -157,7 +157,7 @@ test(
           tenantId,
           eventId,
           eventQuota: 5,
-          rawCodes: ['GATE-CODE', 'GATE-REVOKE', 'GATE-REISSUE-RACE'],
+          rawCodes: ['GATE-CODE', 'GATE-REVOKE', 'GATE-REISSUE-RACE', 'GATE-UNDO-REVOKE'],
         });
         for (const userId of [staff.userId, staffB.userId]) {
           const membership = await grantMembership(tx, {
@@ -443,16 +443,18 @@ test(
         SELECT undone_at FROM checkins WHERE id = ${wins[0].checkinId}::uuid`);
       assert.equal(beforeUndo[0].undone_at, null);
 
-      const undone = await withTenant(db, tenantId, (tx) =>
-        undoCheckin(tx, {
-          tenantId,
-          eventId,
-          checkinId: wins[0].checkinId,
-          actorUserId: staff.userId,
-          reason: 'khách vào nhầm cổng',
-        }),
-      );
+      const [undone, scanDuringUndo] = await Promise.all([
+        withTenant(db, tenantId, (tx) => undoCheckin(tx, {
+          tenantId, eventId, checkinId: wins[0].checkinId,
+          actorUserId: staff.userId, reason: 'khách vào nhầm cổng',
+        })),
+        withTenant(db2, tenantId, (tx) => reserveCheckin(tx, {
+          tenantId, eventId, ticketId: issued.ticketId,
+          staffSessionId: session.sessionId, actorUserId: staff.userId,
+        })),
+      ]);
       assert.equal(undone.state, 'ACTIVE');
+      if (!scanDuringUndo.ok) assert.equal(scanDuringUndo.code, GATE_ERROR_CODES.TICKET_NOT_ACTIVE);
       await assert.rejects(() => withTenant(db2, tenantId, (tx) => undoCheckin(tx, {
         tenantId, eventId, checkinId: wins[0].checkinId,
         actorUserId: staff.userId, reason: 'khách vào nhầm cổng',
@@ -503,6 +505,31 @@ test(
       const expired = await pendingConfirm;
       assert.equal(expired.ok, false);
       assert.equal(expired.code, GATE_ERROR_CODES.RESERVATION_EXPIRED);
+
+      const undoRevokeTicket = unwrapRedeemOutcome(await withTenant(db, tenantId, (tx) =>
+        redeemAndIssueTicket(tx, HMAC, 'd3-cred-key', {
+          tenantId, eventId, actorUserId: guest.userId, actorEmail: guest.email,
+          emailVerified: true, rawCode: 'GATE-UNDO-REVOKE', idempotencyKey: randomUUID(),
+        })));
+      const undoRevokeHold = unwrapReserveOutcome(await withTenant(db, tenantId, (tx) =>
+        reserveCheckin(tx, { tenantId, eventId, ticketId: undoRevokeTicket.ticketId,
+          staffSessionId: session.sessionId, actorUserId: staff.userId })));
+      const undoRevokeCheckin = unwrapConfirmOutcome(await withTenant(db, tenantId, (tx) =>
+        confirmCheckin(tx, { tenantId, eventId, reservationId: undoRevokeHold.reservationId,
+          token: undoRevokeHold.token, staffSessionId: session.sessionId, actorUserId: staff.userId })));
+      await Promise.all([
+        withTenant(db, tenantId, (tx) => undoCheckin(tx, { tenantId, eventId,
+          checkinId: undoRevokeCheckin.checkinId, actorUserId: staff.userId, reason: 'undo race' })),
+        withTenant(db2, tenantId, (tx) => revokeTicket(tx, { tenantId, eventId,
+          ticketId: undoRevokeTicket.ticketId, actorUserId: staffB.userId, reason: 'revoke race' })),
+      ]);
+      const undoRevokeState = await withTenant(db, tenantId, async (tx) => ({
+        ticket: await tx.$queryRaw`SELECT state FROM tickets WHERE id = ${undoRevokeTicket.ticketId}::uuid`,
+        checkins: await tx.$queryRaw`SELECT undone_at FROM checkins WHERE ticket_id = ${undoRevokeTicket.ticketId}::uuid`,
+      }));
+      assert.equal(undoRevokeState.ticket[0].state, 'REVOKED');
+      assert.equal(undoRevokeState.checkins.length, 1);
+      assert.ok(undoRevokeState.checkins[0].undone_at);
 
       const second = unwrapRedeemOutcome(
         await withTenant(db, tenantId, (tx) =>

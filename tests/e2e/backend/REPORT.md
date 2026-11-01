@@ -12,7 +12,7 @@
 | Mất response/retry operation | D/H retry sau commit không thêm check-in; API không có operation key hoặc replay response nên chưa đạt clause operation replay. |
 | Undo quyền/lý do/lịch sử, Scanner | D/H deny Scanner, reason trống, undo và kiểm lịch sử; D kiểm audit. |
 | Undo idempotency | Retry trả CHECKIN_ALREADY_UNDONE và không nhân bản; chưa có operation idempotency/replay. |
-| Undo vs scan/revoke | Chưa có race xác định ordering. Không dùng SQL giả lập product operation. |
+| Undo vs scan/revoke | D chạy đồng thời undo với reserve và undo với revoke; kiểm outcome hợp lệ và trạng thái cuối, chưa ép từng ordering. Không dùng SQL giả lập product operation. |
 | O05 | D xác nhận một current; undo giữ lịch sử. Không suy diễn policy re-entry mới. |
 
 Hai ID vẫn BLOCKED; selector xanh không là acceptance hoặc review độc lập. Evidence exact SHA và run do worker bàn giao qua coordinator; F01–F03 PR #1113 vẫn mở, không tính lượt sửa finding.
