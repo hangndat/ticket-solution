@@ -97,8 +97,14 @@ export const catalog = {
   'DB-15': [
     b('reporting', 'event report counts'),
     b('gate', 'gate: one confirm wins'),
+    b('db15-report-reconciliation', 'DB-15: report reconciles confirm, reject, undo history, cancellation and final delivery failure'),
+    { file: 'tests/e2e/http/live.test.mjs', name: '[DB-15] live HTTP', layer: 'H' },
   ],
-  'DB-16': [b('reporting', 'portfolio report filters')],
+  'DB-16': [
+    b('reporting', 'portfolio report filters'),
+    b('db16-portfolio-boundaries', 'DB-16: owner and manager portfolio respects assignment and tenant RLS'),
+    { file: 'tests/e2e/http/live.test.mjs', name: '[DB-16] live HTTP', layer: 'H' },
+  ],
   'DB-17': [
     b('role-presets', 'P2-ROLES-PRESET'),
     b('tenant-registration', 'P2 self-serve PENDING registration'),
@@ -262,9 +268,9 @@ export const notes = {
   'DB-14':
     'D PostgreSQL PASS: form/terms version + consent hashes on request, structural allowlist rejects script/unknown keys/non-allowlisted field types, entitlement_snapshot on ticket immutable after publish/rebrand and ticket_type mutation; stale terms rejected. H Keycloak/HTTP PASS qua redeem + config-versions/publish + public projection và control DB snapshot. Chờ DoD độc lập trên SHA cuối.',
   'DB-15':
-    'D report; thiếu full undo/cancel/final notification reconciliation.',
+    'D/H: report confirm/reject/undo/cancel, history và terminal notification; O12 literal cần làm rõ, semantics theo review PR #242.',
   'DB-16':
-    'D assignment filter; thiếu H cursor/watermark và owner/manager boundaries.',
+    'D/H portfolio tenant RLS, assignment, cursor/limit/watermark và owner/manager deny-by-default; chờ reviewer độc lập.',
   'DB-17':
     'D presets/onboarding; thiếu H usage/mutation limit và arbitrary permissions matrix.',
   'DB-18':

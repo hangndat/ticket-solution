@@ -1,5 +1,11 @@
 # Backend E2E regression — kết quả tại baseline `022cb80fd159dad2a7ebd0eeeea07fd64391f90a`
 
+## DB-15 / DB-16 (Issue #1030)
+
+Đã bổ sung test PostgreSQL cô lập cho DB-15: đối soát confirm, reject, undo và audit history; `USED` đơn lẻ không làm tăng check-in; retry SMTP lỗi qua relay thật đi từ chưa terminal tới DEAD; cancel event giữ các số report. Test DB-16 kiểm Owner/Manager, event chưa assignment, tenant khác, cursor, clamp limit, watermark và transaction RLS. Hai selector D cũ cùng selector mới đã PASS trong lượt phát triển; cần chạy lại trên SHA sạch cuối và review độc lập.
+
+H Keycloak/API thật đã PASS diagnostic run `mvxkyku6-2a175b` (worktree chưa commit, không phải evidence exact SHA): DB-15 issue/confirm/reject/undo/cancel và DB history; DB-16 assignment, phân trang, giới hạn, watermark, tenant khác và digest snapshot dưới role `ticket_runtime`. H thiết lập trực tiếp notification UNKNOWN/DEAD để kiểm report; retry tới DEAD thực chạy ở D. Review O12 trước đây tại `docs/reviews/D11-EVENTREPORT-O12-DOD.md` giải nghĩa KPI là confirm chưa undo; câu chữ O12 “operation APPLIED” có thể đọc thành lũy kế và cần làm rõ riêng, không đổi runtime trong task này. Kết quả chạy sạch và SHA sẽ được báo trên PR; James cần review độc lập.
+
 ## Cập nhật sau sửa product
 
 `pnpm test:integration:local --suite D` đã chạy lại trên PostgreSQL cô lập: **38/38 selector PASS**, exit 0. Riêng POL-01 xác nhận metric `account_deletion_idp_sla_overdue` đếm 1 theo fixture quá 30 ngày. Sửa ở `packages/backend/src/account-deletion.ts` và migration `202610280003_account_deletion_sla_metric`; migration phải áp dụng trước runtime. Kết quả baseline 37/38 bên dưới là lịch sử trước sửa, không phải trạng thái hiện tại. Full 46 ID acceptance vẫn chưa được chứng minh vì các nhánh H/R và gap nêu cuối báo cáo.
