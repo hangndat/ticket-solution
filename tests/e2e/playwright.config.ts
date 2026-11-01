@@ -36,6 +36,9 @@ export default defineConfig({
   use: {
     browserName: 'chromium',
     headless: true,
+    // AUTH-07 needs the full Chromium binary in new headless mode: the default
+    // chromium-headless-shell is not a bfcache oracle for this diagnostic.
+    channel: auth07Bfcache ? 'chromium' : undefined,
     actionTimeout: 15_000,
     navigationTimeout: 30_000,
     // Raw trace/video can retain cookies and QR; reports stay private local.
