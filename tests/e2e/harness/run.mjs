@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 import { spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, writeFileSync } from 'node:fs';
+import { createHash, randomBytes } from 'node:crypto';
 import { resolve, dirname } from 'node:path';
 import {
   createRuntime,
@@ -21,6 +22,10 @@ const requireRoot = createRequire(resolve(ROOT, 'package.json'));
 const args = process.argv.slice(2);
 const mode = args.shift() || 'smoke';
 const skipBuild = args.includes('--skip-build');
+const publicReadDiagnostic = args.includes('--public-read-diagnostic');
+if (publicReadDiagnostic && (mode !== 'e2e' || !args.includes('--case=WEB-01,WEB-02,WEB-03,WEB-04,WEB-05,WEB-06,WEB-07,WEB-08,WEB-09,WEB-10,WEB-11,WEB-12,WEB-13'))) {
+  throw new Error('Public-read diagnostic requires e2e and the exact WEB-01–13 case list');
+}
 const smoke = [
   'AUTH-01',
   'AUTH-03',
@@ -109,6 +114,51 @@ async function exitCode(child) {
   });
 }
 
+async function publicReadSnapshot(state, salt) {
+  if (state.project !== `e2e-${state.id}` || !Number.isInteger(state.ports.pg)) {
+    throw new Error('BLOCKED: diagnostic requires the owned local database');
+  }
+  const requireApi = createRequire(resolve(ROOT, 'apps/api/package.json'));
+  const { Client } = requireApi('pg');
+  const client = new Client({
+    host: '127.0.0.1', port: state.ports.pg, database: 'e2e',
+    user: 'postgres', password: state.secrets.pg,
+  });
+  await client.connect();
+  try {
+    const { rows } = await client.query(
+      "SELECT tenant_id, window_started_at, count FROM notification_rate_counters WHERE bucket_key = $1 ORDER BY window_started_at, tenant_id",
+      ['api.public.read'],
+    );
+    return rows.map((row) => ({
+      scopeHash: createHash('sha256').update(salt).update(row.tenant_id).digest('hex').slice(0, 16),
+      windowStartedAt: row.window_started_at.toISOString(),
+      count: row.count,
+    }));
+  } finally {
+    await client.end();
+  }
+}
+
+async function exitAtFirst429(child, stopFile) {
+  let timer;
+  const first429 = new Promise((done) => {
+    timer = setInterval(() => {
+      if (existsSync(stopFile)) done(true);
+    }, 100);
+  });
+  const exit = exitCode(child);
+  const finished = exit.then(() => false);
+  try {
+    const stopped = await Promise.race([first429, finished]);
+    if (stopped && child.exitCode === null) process.kill(-child.pid, 'SIGTERM');
+    await exit;
+    return stopped;
+  } finally {
+    clearInterval(timer);
+  }
+}
+
 async function localPage(state, origin) {
   // Root page isn't JSON; use a child with the same trusted per-process resolver.
   const env = processEnvironment(state);
@@ -155,6 +205,7 @@ if (mode === 'list' || args.includes('--list')) {
   process.exitCode = await exitCode(child);
 } else {
   let state;
+  let diagnostic;
   let cleaning;
   const cleanup = () =>
     (cleaning ||= state ? destroyRuntime(state) : Promise.resolve());
@@ -274,6 +325,16 @@ if (mode === 'list' || args.includes('--list')) {
       E2E_RUN_DIR: state.dir,
       E2E_TLS_SPKI: state.spki,
     });
+    if (publicReadDiagnostic) {
+      diagnostic = {
+        salt: randomBytes(24).toString('hex'),
+        phaseFile: resolve(state.dir, 'public-read-phase.txt'),
+        stopFile: resolve(state.dir, 'public-read-first-429.txt'),
+        output: resolve(state.dir, 'public-read-observed.json'),
+      };
+      writeFileSync(diagnostic.phaseFile, 'readiness', { mode: 0o600 });
+      diagnostic.beforeApi = await publicReadSnapshot(state, diagnostic.salt);
+    }
     const oidc = startProcess(
       state,
       'oidc-preflight',
@@ -290,7 +351,17 @@ if (mode === 'list' || args.includes('--list')) {
       'api',
       process.execPath,
       [resolve(ROOT, 'apps/api/dist/main.js')],
-      { ...common, PORT: String(state.ports.api) },
+      {
+        ...common, PORT: String(state.ports.api),
+        ...(diagnostic ? {
+          NODE_OPTIONS: `${common.NODE_OPTIONS} --require ${resolve(E2E, 'harness/public-read-observer.cjs')}`,
+          E2E_PUBLIC_READ_DIAGNOSTIC: '1',
+          E2E_PUBLIC_READ_OUTPUT: diagnostic.output,
+          E2E_PUBLIC_READ_PHASE: diagnostic.phaseFile,
+          E2E_PUBLIC_READ_STOP: diagnostic.stopFile,
+          E2E_PUBLIC_READ_SALT: diagnostic.salt,
+        } : {}),
+      },
     );
     startProcess(
       state,
@@ -401,6 +472,10 @@ if (mode === 'list' || args.includes('--list')) {
     console.log(
       `E2E ${state.id}: runtime sẵn sàng; chạy ${mode}, ${caseIds.length} nhóm fixture`,
     );
+    if (diagnostic) {
+      diagnostic.afterReadiness = await publicReadSnapshot(state, diagnostic.salt);
+      if (existsSync(diagnostic.stopFile)) throw new Error('BLOCKED: first public 429 during readiness');
+    }
     const results = [];
     const selectedHttp =
       mode === 'http' ? caseIds : caseIds.filter((id) => id === 'SEC-01');
@@ -424,6 +499,7 @@ if (mode === 'list' || args.includes('--list')) {
       }
     }
     if (mode !== 'http') {
+      if (diagnostic) writeFileSync(diagnostic.phaseFile, 'browser', { mode: 0o600 });
       const child = startProcess(
         state,
         'browser-tests',
@@ -431,7 +507,21 @@ if (mode === 'list' || args.includes('--list')) {
         browserArgs(caseIds),
         { ...common, ...(caseIds.includes('AUTH-07') ? { E2E_AUTH07_BFCACHE: '1' } : {}) },
       );
-      results.push({ layer: 'browser', exitCode: await exitCode(child) });
+      const stoppedAt429 = diagnostic
+        ? await exitAtFirst429(child, diagnostic.stopFile)
+        : false;
+      results.push({ layer: 'browser', exitCode: diagnostic ? (child.exitCode ?? 1) : await exitCode(child) });
+      if (diagnostic) {
+        diagnostic.afterBrowser = await publicReadSnapshot(state, diagnostic.salt);
+        diagnostic.stoppedAt429 = stoppedAt429 || existsSync(diagnostic.stopFile);
+        privateJson(resolve(state.dir, 'public-read-diagnostic.json'), {
+          beforeApi: diagnostic.beforeApi,
+          afterReadiness: diagnostic.afterReadiness,
+          afterBrowser: diagnostic.afterBrowser,
+          stoppedAt429: diagnostic.stoppedAt429,
+          observed: JSON.parse(readFileSync(diagnostic.output, 'utf8')),
+        });
+      }
       if (mode === 'regression') {
         const domain = startProcess(
           state,
@@ -450,7 +540,9 @@ if (mode === 'list' || args.includes('--list')) {
       ROOT,
       state.sourceProvenance,
     );
-    const status = results.some((result) => result.exitCode) ? 'FAIL' : 'PASS';
+    const status = diagnostic?.stoppedAt429
+      ? 'ABORTED_429'
+      : results.some((result) => result.exitCode) ? 'FAIL' : 'PASS';
     privateJson(resolve(state.dir, 'summary.json'), {
       runId: state.id,
       mode,
