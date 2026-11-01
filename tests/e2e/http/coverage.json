@@ -21,7 +21,7 @@
     "tests": ["H:tests/e2e/http/live.test.mjs#[SEC-03]"],
     "layers": ["H"],
     "status": "blocked",
-    "reason": "H clean PASS mvxy28yc-c1c51d trên 381ea2b3: HTTPS/direct upstream login/refresh/auth, marketing 2-hop, portal staff/platform OIDC, legacy GET|HEAD không set cookie và legacy write/API không nav-redirect. H clean FAIL mvxy4ps3-1bcb72 trên 9262850d: direct product Host + X-Forwarded-Host=www.vemoki.com redirect về marketing apex; TLS proxy local ghi đè header này, nên external reachability chưa chứng minh. Full SEC-03 BLOCKED chờ quyết định trust boundary/runtime và reviewer độc lập."
+    "reason": "F01 Web fix 289e5200 + H direct-upstream clean run mvxz652h-b3984a trên 233b9673: robots/sitemap product và marketing đúng policy, không đổi trước/giả/sau khi forged X-Forwarded-Host; analytics product luôn 403 FORBIDDEN_HOST, marketing luôn 400 INVALID_EVENT. F02 H vẫn FAIL: robots/sitemap Cache-Control public,max-age=0,must-revalidate; analytics và nhiều redirect thiếu Cache-Control (17 cache assertions); H bypass shared edge nên chưa chứng minh edge không lưu hoặc dùng cache key theo Host. Source provenance commitStable và evidenceExactShaEligible true. Full SEC-03 BLOCKED chờ bằng chứng edge/cache hoặc fix runtime/header trong scope owner rồi H/reviewer độc lập trên SHA mới."
   },
   {
     "caseId": "SEC-04",
