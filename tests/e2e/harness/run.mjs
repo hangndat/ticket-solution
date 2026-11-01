@@ -302,6 +302,19 @@ if (mode === 'list' || args.includes('--list')) {
       requiredCaseIds: caseIds,
       runDir: state.dir,
     });
+    const homeCatalogSlugs = [
+      ...new Set(
+        ['WEB-01', 'WEB-10', 'AUTH-07']
+          .map((id) => rawManifest.cases[id]?.tenantSlug)
+          .filter(Boolean),
+      ),
+    ];
+    if (homeCatalogSlugs.length === 0) {
+      const seedSlug = Object.values(rawManifest.cases).find(
+        (fixture) => fixture.tenantSlug,
+      )?.tenantSlug;
+      if (seedSlug) homeCatalogSlugs.push(seedSlug);
+    }
     const common = processEnvironment(state, {
       ...Object.fromEntries(
         Object.entries(process.env).filter(([key]) =>
@@ -319,9 +332,7 @@ if (mode === 'list' || args.includes('--list')) {
       MINIO_REGION: 'us-east-1',
       API_BASE_URL: state.origins.api,
       MARKETING_HOSTS: state.suffix,
-      PUBLIC_HOME_TENANT_SLUGS: Object.values(rawManifest.cases)
-        .map((fixture) => fixture.tenantSlug)
-        .join(','),
+      PUBLIC_HOME_TENANT_SLUGS: homeCatalogSlugs.join(','),
       E2E_MANIFEST: state.manifestPath,
       E2E_RUN_DIR: state.dir,
       E2E_TLS_SPKI: state.spki,
