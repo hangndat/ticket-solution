@@ -45,7 +45,7 @@ test('presentGateScanStatus filled check only for fresh admission', () => {
   assert.equal(view.symbol, 'checkmark.circle.fill');
 });
 
-test('presentGateScanStatus outline check for already-used ticket', () => {
+test('presentGateScanStatus denies an already-used ticket', () => {
   const view = presentGateScanStatus({
     busy: false,
     op: {
@@ -56,7 +56,9 @@ test('presentGateScanStatus outline check for already-used ticket', () => {
     canReconcile: false,
   });
   assert.equal(view.kind, 'already-checked-in');
-  assert.equal(view.symbol, 'checkmark.circle');
+  assert.equal(view.tone, 'deny');
+  assert.equal(view.symbol, 'xmark.circle.fill');
+  assert.match(view.hint, /không cho vào/i);
 });
 
 test('presentGateScanStatus confirming is not admitted', () => {

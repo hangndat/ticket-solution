@@ -1,5 +1,6 @@
 import { isMembershipAuthzDenial } from '../identity/staff-eligibility.ts';
 import { randomId } from '../lib/random-id.ts';
+import type { PresentedGateCredential } from '@ticket/contracts';
 
 const UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -7,44 +8,13 @@ const UUID =
 export const GATE_UNKNOWN_MESSAGE =
   'Kết quả chưa rõ. Không cho vào. Đối soát trước khi cho bất kỳ ai qua.';
 
-export type ParsedScanDisplayHints = {
-  eventName?: string;
-  ticketTypeLabel?: string;
-  attendeeName?: string;
-};
-
 export type ParsedScan = {
   ticketId: string;
   tenantId: string;
   eventId: string;
-  /** Optional labels from extended ticket.display paste — not gate proof. */
-  displayHints?: ParsedScanDisplayHints;
+  /** Server verifies this proof; decoded claims below are only local context. */
+  presented?: PresentedGateCredential;
 };
-
-function readOptionalDisplayString(
-  body: Record<string, unknown>,
-  key: string,
-): string | undefined {
-  const value = body[key];
-  if (typeof value !== 'string') return undefined;
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : undefined;
-}
-
-function displayHintsFromJson(
-  body: Record<string, unknown>,
-): ParsedScanDisplayHints | undefined {
-  const eventName = readOptionalDisplayString(body, 'eventName');
-  const ticketTypeLabel =
-    readOptionalDisplayString(body, 'ticketTypeLabel') ??
-    readOptionalDisplayString(body, 'ticketTypeName');
-  const attendeeName =
-    readOptionalDisplayString(body, 'attendeeName') ??
-    readOptionalDisplayString(body, 'holderName') ??
-    readOptionalDisplayString(body, 'guestName');
-  if (!eventName && !ticketTypeLabel && !attendeeName) return undefined;
-  return { eventName, ticketTypeLabel, attendeeName };
-}
 
 export type GatePhase =
   | 'holding'
@@ -71,8 +41,8 @@ export type GateOp = {
   /** Link to SecureStore offline queue row when phase === 'queued'. */
   clientEventId?: string;
   /**
-   * UI-only hint when phase === 'admitted'.
-   * Does not affect classifyScan / reconcile / supervisor admission class.
+   * UI hint when phase === 'admitted'; legacy `already` entries are not
+   * supervisor admissions and never authorize a new presentation.
    */
   admissionKind?: 'fresh' | 'already';
   /** Device-local history ordering; stamped via stampGateOpsRecordedAt. */
@@ -91,55 +61,51 @@ export function normalizeGatePasteInput(raw: string): string {
   return raw.replace(/[\u200B-\u200D\uFEFF]/g, '');
 }
 
-export function parseScan(
-  raw: string,
-  fallback?: { tenantId?: string | null; eventId?: string | null },
-): ParsedScan | null {
-  const text = raw.trim();
-  if (!text) return null;
-  if (text.startsWith('{')) {
-    try {
-      const body = JSON.parse(text) as Record<string, unknown>;
-      if (
-        body.kind === 'ticket.display' &&
-        typeof body.ticketId === 'string' &&
-        UUID.test(body.ticketId) &&
-        typeof body.tenantId === 'string' &&
-        UUID.test(body.tenantId) &&
-        typeof body.eventId === 'string' &&
-        UUID.test(body.eventId)
-      ) {
-        return {
-          ticketId: body.ticketId,
-          tenantId: body.tenantId,
-          eventId: body.eventId,
-          displayHints: displayHintsFromJson(body),
-        };
-      }
-    } catch {
-      return null;
-    }
+function decodeUnverifiedQrContext(jws: string):
+  | { ticketId: string; tenantId: string; eventId: string }
+  | null {
+  const parts = jws.split('.');
+  if (parts.length !== 3 || parts.some((part) => !part)) return null;
+  const decode = globalThis.atob;
+  if (typeof decode !== 'function') return null;
+  try {
+    const base64 = parts[1]!.replace(/-/g, '+').replace(/_/g, '/');
+    const claims = JSON.parse(decode(base64.padEnd(Math.ceil(base64.length / 4) * 4, '='))) as Record<string, unknown>;
+    if (
+      typeof claims.tkt !== 'string' || !UUID.test(claims.tkt) ||
+      typeof claims.tid !== 'string' || !UUID.test(claims.tid) ||
+      typeof claims.eid !== 'string' || !UUID.test(claims.eid) ||
+      typeof claims.ver !== 'number' || !Number.isInteger(claims.ver) || claims.ver < 1
+    ) return null;
+    return { ticketId: claims.tkt, tenantId: claims.tid, eventId: claims.eid };
+  } catch {
     return null;
   }
-  if (!UUID.test(text)) return null;
-  const tenantId = fallback?.tenantId?.trim() ?? '';
-  const eventId = fallback?.eventId?.trim() ?? '';
-  if (!UUID.test(tenantId) || !UUID.test(eventId)) return null;
-  return { ticketId: text, tenantId, eventId };
+}
+
+export function parseScan(raw: string): ParsedScan | null {
+  const text = raw.trim();
+  if (!text) return null;
+  try {
+    const body = JSON.parse(text) as Record<string, unknown>;
+    if (body.v !== 1 || body.kind !== 'ticket.gate_credential' || typeof body.jws !== 'string') return null;
+    const context = decodeUnverifiedQrContext(body.jws);
+    if (!context) return null;
+    return { ...context, presented: { kind: 'qr', jws: body.jws } };
+  } catch {
+    return null;
+  }
 }
 
 export function classifyScan(
   ops: readonly GateOp[],
   ticketId: string,
 ):
-  | { action: 'show'; op: GateOp }
   | { action: 'wait'; op: GateOp }
   | { action: 'start' } {
   const mine = ops.filter((op) => op.ticketId === ticketId);
-  const admitted = mine.find((op) => op.phase === 'admitted' && op.checkinId);
-  if (admitted) return { action: 'show', op: admitted };
-  const recorded = mine.find((op) => op.phase === 'recorded' && op.checkinId);
-  if (recorded) return { action: 'show', op: recorded };
+  // Completed local history is not proof for a new presentation. Every fresh
+  // QR/manual proof must reach the server before the UI can admit again.
   const queued = mine.find((op) => op.phase === 'queued');
   if (queued) return { action: 'wait', op: queued };
   const inflight = mine.find(
@@ -177,10 +143,11 @@ export type SupervisorClass = 'admission' | 'not-admission';
 
 /** Only a recorded check-in is an admission. Unknown/queued are never admissions. */
 export function classifySupervisorOp(
-  op: Pick<GateOp, 'phase' | 'checkinId'>,
+  op: Pick<GateOp, 'phase' | 'checkinId' | 'admissionKind'>,
 ): SupervisorClass {
   if (
     op.phase === 'admitted' &&
+    op.admissionKind !== 'already' &&
     typeof op.checkinId === 'string' &&
     op.checkinId.length > 0
   ) {
@@ -231,12 +198,11 @@ export function applyConfirm(op: GateOp, result: FetchResult): GateOp {
   if (result.status === 409 && body?.code === 'ALREADY_CHECKED_IN') {
     return {
       ...op,
-      phase: 'admitted',
-      admissionKind: 'already',
-      checkinId: typeof body.checkinId === 'string' ? body.checkinId : op.checkinId,
+      phase: 'denied',
+      admissionKind: undefined,
+      checkinId: undefined,
       token: undefined,
-      message:
-        'Đã check-in. Kết quả đã rõ — cho vào theo lần ghi nhận trước, không tạo lượt mới.',
+      message: 'Vé đã được check-in trước đó. Không cho vào.',
     };
   }
   return {
@@ -244,11 +210,34 @@ export function applyConfirm(op: GateOp, result: FetchResult): GateOp {
     phase: 'denied',
     admissionKind: undefined,
     token: undefined,
-    message:
-      typeof body?.message === 'string' && body.message.trim()
-        ? body.message
-        : 'Từ chối. Không cho vào.',
+    message: gateFailureMessage(body, 'Từ chối. Không cho vào.'),
   };
+}
+
+function gateFailureMessage(
+  body: Record<string, unknown> | null,
+  fallback: string,
+): string {
+  switch (body?.code) {
+    case 'MANUAL_CODE_INVALID':
+      return 'Mã nhập tay không đúng hoặc không còn hiệu lực. Không cho vào.';
+    case 'MANUAL_PROOF_INVALID':
+      return 'Mã xác minh đã hết hạn. Tra mã lại và thử lại.';
+    case 'CREDENTIAL_VERSION_STALE':
+      return 'Vé đã được cấp lại. Hãy dùng mã mới trên vé.';
+    case 'CREDENTIAL_CONTEXT_MISMATCH':
+      return 'Vé không thuộc sự kiện đang chọn. Không cho vào.';
+    case 'CREDENTIAL_SIGNATURE_INVALID':
+    case 'CREDENTIAL_REQUIRED':
+      return 'QR không hợp lệ. Mở vé trong ứng dụng và thử lại.';
+    case 'TICKET_NOT_ACTIVE':
+    case 'TICKET_REVOKED':
+      return 'Vé đã bị thu hồi hoặc không còn hiệu lực. Không cho vào.';
+    case 'ALREADY_CHECKED_IN':
+      return 'Vé đã được check-in trước đó. Không cho vào.';
+    default:
+      return fallback;
+  }
 }
 
 async function readJson(
@@ -289,6 +278,8 @@ export type RunScanResult = {
   /** True when the first network hop failed — caller may enqueue offline. */
   networkUnavailable?: boolean;
   parsed?: ParsedScan;
+  /** Manual lookup proofs are online-only; only a QR scan may use ADR-18 queueing. */
+  offlineQueueEligible?: boolean;
   /** O31: set only when this call opened the session (silent first-scan fallback). */
   openedSessionGate?: { gateId: string | null; gateName: string | null };
   /**
@@ -300,6 +291,8 @@ export type RunScanResult = {
 
 export async function runScan(input: {
   raw: string;
+  /** Manual codes are looked up online and never written to Gate history or logs. */
+  manualEntryCode?: string;
   bearer: string;
   apiBase: string;
   ops: readonly GateOp[];
@@ -319,7 +312,23 @@ export async function runScan(input: {
   // Use randomId() (expo-crypto fallback). Bare crypto.randomUUID throws AFTER
   // /sessions+/reservations succeed, wiping toast/history/sessionId (#608).
   const createId = input.createId ?? randomId;
-  const parsed = parseScan(input.raw, input.fallback);
+  const manualCode = input.manualEntryCode?.trim() ?? '';
+  const fallbackTenantId = input.fallback?.tenantId?.trim() ?? '';
+  const fallbackEventId = input.fallback?.eventId?.trim() ?? '';
+  const parsedQr = manualCode ? null : parseScan(input.raw);
+  let parsed = manualCode
+    ? UUID.test(fallbackTenantId) && UUID.test(fallbackEventId)
+      ? { ticketId: '', tenantId: fallbackTenantId, eventId: fallbackEventId }
+      : null
+    : parsedQr
+      ? {
+          ...parsedQr,
+          // Route admission through the selected staff workspace. The backend
+          // verifies that the signed claims match this tenant/event context.
+          tenantId: UUID.test(fallbackTenantId) ? fallbackTenantId : parsedQr.tenantId,
+          eventId: UUID.test(fallbackEventId) ? fallbackEventId : parsedQr.eventId,
+        }
+      : null;
   if (!parsed) {
     const current: GateOp = {
       id: createId(),
@@ -332,7 +341,9 @@ export async function runScan(input: {
     };
     return { ops: [...input.ops], staffSessionId: input.staffSessionId, current };
   }
-  const existing = classifyScan(input.ops, parsed.ticketId);
+  const existing = parsed.ticketId
+    ? classifyScan(input.ops, parsed.ticketId)
+    : { action: 'start' as const };
   if (existing.action !== 'start') {
     return {
       ops: [...input.ops],
@@ -366,11 +377,15 @@ export async function runScan(input: {
       if (opened.networkError) {
         const current: GateOp = {
           id: createId(),
-          ...parsed,
+          ticketId: parsed.ticketId,
+          tenantId: parsed.tenantId,
+          eventId: parsed.eventId,
           staffSessionId: '',
           phase: 'denied',
           message:
-            'Mất mạng và chưa có phiên nhân viên. Cần online một lần để mở phiên trước khi xếp hàng offline.',
+            manualCode
+              ? 'Mất mạng. Mã nhập tay cần được xác minh trực tuyến; không cho vào.'
+              : 'Mất mạng và chưa có phiên nhân viên. Cần online một lần để mở phiên trước khi xếp hàng offline.',
         };
         return {
           ops: [current, ...input.ops],
@@ -383,7 +398,9 @@ export async function runScan(input: {
       membershipAuthzDenied = isMembershipAuthzDenial(opened.status, opened.json);
       const current: GateOp = {
         id: createId(),
-        ...parsed,
+        ticketId: parsed.ticketId,
+        tenantId: parsed.tenantId,
+        eventId: parsed.eventId,
         staffSessionId: '',
         phase: opened.status >= 500 ? 'unknown' : 'denied',
         message:
@@ -408,14 +425,83 @@ export async function runScan(input: {
   }
 
   if (input.preferOfflineQueue) {
+    if (manualCode) {
+      const current: GateOp = {
+        id: createId(), ticketId: '', tenantId: parsed.tenantId,
+        eventId: parsed.eventId, staffSessionId,
+        phase: 'denied',
+        message: 'Mất mạng. Mã nhập tay cần được kiểm tra trực tuyến; không cho vào.',
+      };
+      return { ops: [current, ...input.ops], staffSessionId, current, networkUnavailable: true };
+    }
     return {
       ops: [...input.ops],
       staffSessionId,
       current: null,
       networkUnavailable: true,
       parsed,
+      offlineQueueEligible: true,
       openedSessionGate,
     };
+  }
+
+  let presented = parsed.presented;
+  if (manualCode) {
+    if (!staffSessionId) {
+      const current: GateOp = {
+        id: createId(), ticketId: '', tenantId: parsed.tenantId,
+        eventId: parsed.eventId, staffSessionId: '', phase: 'denied',
+        message: 'Chưa mở phiên nhân viên. Kết nối mạng để kiểm tra mã.',
+      };
+      return { ops: [current, ...input.ops], staffSessionId: null, current, networkUnavailable: true };
+    }
+    const lookup = await readJson(
+      fetchImpl,
+      `${base}/v1/gate/events/${parsed.eventId}/manual-lookup`,
+      input.bearer,
+      { tenantId: parsed.tenantId, staffSessionId, code: manualCode },
+    );
+    if (input.shouldContinue && !input.shouldContinue()) return stale();
+    const lookupBody = asRecord(lookup.json);
+    if (
+      lookup.networkError || lookup.status !== 200 ||
+      typeof lookupBody?.ticketId !== 'string' || !UUID.test(lookupBody.ticketId) ||
+      typeof lookupBody.proofToken !== 'string' || !lookupBody.proofToken
+    ) {
+      const current: GateOp = {
+        id: createId(), ticketId: '', tenantId: parsed.tenantId,
+        eventId: parsed.eventId, staffSessionId,
+        phase: lookup.networkError || lookup.status >= 500 ? 'unknown' : 'denied',
+        message: lookup.networkError || lookup.status >= 500
+          ? 'Không kết nối được máy chủ. Mã chưa được xác minh; không cho vào.'
+          : gateFailureMessage(lookupBody, 'Không xác minh được mã. Không cho vào.'),
+      };
+      membershipAuthzDenied = isMembershipAuthzDenial(lookup.status, lookup.json);
+      return {
+        ops: [current, ...input.ops], staffSessionId, current,
+        networkUnavailable: lookup.networkError || lookup.status >= 500,
+        membershipAuthzDenied: membershipAuthzDenied || undefined,
+      };
+    }
+    parsed = {
+      ticketId: lookupBody.ticketId,
+      tenantId: parsed.tenantId,
+      eventId: parsed.eventId,
+    };
+    presented = { kind: 'manual', proofToken: lookupBody.proofToken };
+    const existingAfterLookup = classifyScan(input.ops, parsed.ticketId);
+    if (existingAfterLookup.action !== 'start') {
+      return { ops: [...input.ops], staffSessionId, current: existingAfterLookup.op };
+    }
+  }
+
+  if (!presented) {
+    const current: GateOp = {
+      id: createId(), ticketId: parsed.ticketId,
+      tenantId: parsed.tenantId, eventId: parsed.eventId, staffSessionId,
+      phase: 'denied', message: 'QR không hợp lệ. Không cho vào.',
+    };
+    return { ops: [current, ...input.ops], staffSessionId, current };
   }
 
   if (input.shouldContinue && !input.shouldContinue()) return stale();
@@ -426,8 +512,8 @@ export async function runScan(input: {
     input.bearer,
     {
       tenantId: parsed.tenantId,
-      ticketId: parsed.ticketId,
       staffSessionId,
+      presented,
     },
   );
   if (input.shouldContinue && !input.shouldContinue()) return stale();
@@ -439,12 +525,25 @@ export async function runScan(input: {
     typeof hold.token !== 'string'
   ) {
     if (reserved.networkError && staffSessionId) {
+      if (manualCode) {
+        const current: GateOp = {
+          id: createId(), ticketId: parsed.ticketId,
+          tenantId: parsed.tenantId, eventId: parsed.eventId,
+          staffSessionId, phase: 'unknown',
+          message: 'Mất kết nối sau khi tra mã. Chưa xác nhận vào cổng; không cho vào.',
+        };
+        return {
+          ops: [current, ...input.ops], staffSessionId, current,
+          networkUnavailable: true, offlineQueueEligible: false,
+        };
+      }
       return {
         ops: [...input.ops],
         staffSessionId,
         current: null,
         networkUnavailable: true,
         parsed,
+        offlineQueueEligible: !manualCode,
       };
     }
     membershipAuthzDenied =
@@ -453,7 +552,9 @@ export async function runScan(input: {
     const failed = applyConfirm(
       {
         id: createId(),
-        ...parsed,
+        ticketId: parsed.ticketId,
+        tenantId: parsed.tenantId,
+        eventId: parsed.eventId,
         staffSessionId,
         phase: 'holding',
         message: '',
@@ -471,7 +572,9 @@ export async function runScan(input: {
 
   const confirming: GateOp = {
     id: createId(),
-    ...parsed,
+    ticketId: parsed.ticketId,
+    tenantId: parsed.tenantId,
+    eventId: parsed.eventId,
     staffSessionId,
     reservationId: hold.reservationId,
     token: hold.token,
@@ -498,6 +601,7 @@ export async function runScan(input: {
       current: null,
       networkUnavailable: true,
       parsed,
+      offlineQueueEligible: !manualCode,
     };
   }
   membershipAuthzDenied =

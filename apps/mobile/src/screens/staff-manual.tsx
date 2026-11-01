@@ -68,7 +68,7 @@ export function StaffManualEntryScreen() {
       return;
     }
     setParseError(null);
-    setPendingCode(raw.trim());
+    setPendingCode(result.code);
     setPreviewLine(result.previewLine);
     setConfirmVisible(true);
   }, [gate.gateScope, raw]);
@@ -77,7 +77,10 @@ export function StaffManualEntryScreen() {
     const code = pendingCode.trim();
     if (!code || gate.scanDisabled) return;
     setConfirmVisible(false);
-    void gate.submitScan(code);
+    setRaw('');
+    setPendingCode('');
+    setParseError(null);
+    void gate.submitScan(code, 'manual');
   }, [gate, pendingCode]);
 
   const onCancelConfirm = useCallback(() => {
@@ -124,7 +127,7 @@ export function StaffManualEntryScreen() {
         <Text
           style={{ ...typography.footnote, color: colors.secondary, lineHeight: 20 }}
         >
-          Dùng khi không thể đọc mã QR trên vé.
+          Dùng mã nhập tay in trên vé khi không thể đọc QR. Cần kết nối để xác minh.
         </Text>
         <Input
           testID="gate-scan-input"
@@ -158,8 +161,8 @@ export function StaffManualEntryScreen() {
         <Text
           style={{ ...typography.micro, color: colors.secondary, lineHeight: 18 }}
         >
-          Kiểm tra định dạng mã trước khi gửi lên máy chủ — kết quả cổng hiện bên
-          dưới.
+          Mã chỉ được gửi khi bạn xác nhận. Máy chủ xác minh mã và trạng thái vé;
+          không thể xác minh khi mất mạng.
         </Text>
         {parseError ? (
           <Text style={{ ...typography.footnote, color: colors.deny }}>

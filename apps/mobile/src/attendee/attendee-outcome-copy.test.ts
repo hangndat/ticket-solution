@@ -19,6 +19,8 @@ const sampleTicket: TicketSummary = {
   sourceId: '44444444-4444-4444-8444-444444444444',
   state: 'ACTIVE',
   credentialVersion: 3,
+  gateCredential: { v: 1, kind: "ticket.gate_credential", jws: "header.payload.signature" } as const,
+  manualEntryCode: "ABCD-EFGH-JK",
   createdAt: '2026-10-18T00:00:00.000Z',
 };
 
