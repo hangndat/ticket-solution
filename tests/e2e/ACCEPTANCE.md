@@ -1,10 +1,16 @@
 # F04 — ma trận nghiệm thu tích hợp
 
-Ngày đối chiếu: **01/11/2026**. Source snapshot: `105ee3c29ec8a01cff8b63a8e95c21cf753bcd19`. Người đối chiếu: Minh (coordinator). Architecture impact: Không; cập nhật evidence, không thay runtime/AC.
+Ngày đối chiếu: **01/11/2026**. Source snapshot: `feefbc10e66743fb5ffd31be94ad17c1ff241d2b`. Người đối chiếu: Minh (coordinator). Architecture impact: Không; cập nhật evidence, không thay runtime/AC.
 
-**34 nhóm đã có nghiệm thu tích hợp trong lịch sử, 51 nhóm còn thiếu gate toàn phần, JOB-08 OUT.** Đây là tổng hợp verdict trên SHA/run ở từng PR, **không phải** một full regression mới chạy trên source snapshot. Full Web B `mvxlnnby-e35f78` tại `c9a2876c` đạt 44/47; WEB-03 và WEB-11 có ba FAIL `event-invalid` trong full run; targeted retry `mvxm7hgg-e4565d` PASS 3/3 tại cùng source tree, chưa xác định nguyên nhân không ổn định. Không kế thừa verdict cũ thành PASS runtime hiện tại sau các thay đổi UI/auth/harness.
+**34 nhóm đã có nghiệm thu tích hợp trong lịch sử, 51 nhóm còn thiếu gate toàn phần, JOB-08 OUT.** Đây là tổng hợp verdict trên SHA/run ở từng PR, **không phải** một full regression toàn Epic mới chạy trên source snapshot. Web B được tái chạy theo ba stack/nhóm fixture trên SHA sạch hiện tại: WEB-01–13 đạt 47/47; chi tiết ngay dưới. Full Web 13 fixture trên một stack trước đó đạt 44/47 do bucket public read 600/600; giữ phép đo tải chung và rủi ro capacity riêng, không gọi nó PASS.
 
 [PLAN.md](PLAN.md) là nguồn AC B/H/D/R. `coverage.json` chỉ là inventory selector; `implemented`/`covered` không tự chuyển thành nghiệm thu. Trạng thái công việc động lấy Issue/Project #3. Checkpoint 12 PASS trong ROADMAP/PLAN là mốc cũ, không phải tổng số PR đã nghiệm thu đến 01/11.
+
+## Web regression trên source snapshot
+
+Sau [PR #1114](https://github.com/hangndat/ticket-solution/pull/1114) xử lý đúng 429 và được reviewer độc lập xác minh tại exact head `783dff1e`, `main` tại `feefbc10` có ba smoke run tuần tự trên stack Docker riêng: `mvxomaja-f033ff` WEB-01–04 **11/11**, `mvxoo1n7-64f925` WEB-05–09 **18/18**, `mvxosf1l-6a95d0` WEB-10–13 **18/18**. Tổng **47/47 PASS**, không skip; cả ba `summary.json` có `evidenceEligible:true`, cây sạch và commit ổn định. [Issue #1037 evidence](https://github.com/hangndat/ticket-solution/issues/1037#issuecomment-6556771617) ghi run và giới hạn. Run bị cắt bởi shell hook `mvxop60t-9830a7` và run cây bẩn `mvxoimha-021778` không được tính.
+
+Nghiệm thu chức năng theo nhóm không chứng minh sức chứa của một IP chia sẻ. Full 13 fixture ở `mvxnds0g-aa8291` còn 3 FAIL do 429 trên bucket `api.public.read`; cần đo topology/traffic production trước quyết định quota/cache. Không đóng #1037 theo riêng kết quả 47/47 này.
 
 ## Các nhóm có nghiệm thu tại mốc tích hợp
 
