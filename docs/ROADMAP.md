@@ -1,6 +1,6 @@
 # Roadmap — Event Ticketing Platform
 
-> **F04 đối chiếu 01/11/2026:** [ma trận nghiệm thu](../tests/e2e/ACCEPTANCE.md) tổng hợp **33 nhóm đã có nghiệm thu tại mốc tích hợp, 52 nhóm còn thiếu gate toàn phần, JOB-08 OUT**. Các số 10/12 PASS ngày 30/10 bên dưới là checkpoint lịch sử. Không suy 33 verdict cũ thành full regression PASS trên main hiện tại; tiếp tục #1029–#1037 theo AC, source/tested SHA và các contract gap đã ghi.
+> **F04 đối chiếu 02/11/2026:** [ma trận nghiệm thu](../tests/e2e/ACCEPTANCE.md) tổng hợp **37 nhóm đã có nghiệm thu tại mốc tích hợp, 48 nhóm còn thiếu gate toàn phần, JOB-08 OUT**. DB-15/16 qua PR #1109 tại `569a9aad`, PORT-06 qua PR #1120 tại `52120d9c`; review độc lập và CI main SUCCESS. Các số 10/12 PASS ngày 30/10 bên dưới là checkpoint lịch sử. Không suy các verdict này thành full regression PASS trên main hiện tại; tiếp tục #1029–#1037 theo AC, source/tested SHA và các contract gap đã ghi.
 
 > **Mới 28/10/2026 — Pilot/UAT tách khỏi #914:** tracking Pilot ready / PROD-LAUNCH-UAT trên Epic [#1008](https://github.com/hangndat/ticket-solution/issues/1008) (Project #3 `Chưa lên lịch`; **chưa** ủy quyền chạy `launch-uat`). [#914](https://github.com/hangndat/ticket-solution/issues/914) giữ CLOSED · Hoàn thành với known gap «chưa pilot-ready» — **không** reopen #914, **không** suy pilot ready từ đóng #914. D13/store: [#301](https://github.com/hangndat/ticket-solution/issues/301) / [#310](https://github.com/hangndat/ticket-solution/issues/310).
 
