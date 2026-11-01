@@ -665,7 +665,7 @@ async function rejectPlatformMfaWithWrongOtp(browser, ctx, account) {
   }
 }
 
-async function platformGrantSnapshot(ctx, tenantId) {
+async function platformGrantSnapshot(ctx, tenantIds) {
   const requireApi = createRequire(
     new URL('../../../apps/api/package.json', import.meta.url),
   );
@@ -679,12 +679,16 @@ async function platformGrantSnapshot(ctx, tenantId) {
   await client.connect();
   try {
     const { rows } = await client.query(
-      `SELECT
-        (SELECT count(*)::int FROM support_grants WHERE tenant_id = $1::uuid) AS grants,
-        (SELECT count(*)::int FROM platform_audit_logs WHERE tenant_id = $1::uuid) AS audit`,
-      [tenantId],
+      `SELECT scoped.tenant_id::text AS tenant_id,
+        (SELECT count(*)::int FROM support_grants WHERE tenant_id = scoped.tenant_id) AS grants,
+        (SELECT count(*)::int FROM platform_audit_logs WHERE tenant_id = scoped.tenant_id) AS audit
+      FROM unnest($1::uuid[]) AS scoped(tenant_id)
+      ORDER BY scoped.tenant_id`,
+      [tenantIds],
     );
-    return rows[0];
+    return Object.fromEntries(
+      rows.map(({ tenant_id, ...snapshot }) => [tenant_id, snapshot]),
+    );
   } finally {
     await client.end();
   }
@@ -6952,21 +6956,30 @@ for (const caseId of CASE_IDS) {
           '2',
           'password-only direct grant must not claim platform LoA 2',
         );
-        const directProbe = await request(
-          ctx,
-          'GET',
-          '/platform/me',
-          directPasswordToken,
-        );
-        assert.ok(
-          [401, 403].includes(directProbe.status),
-          'password-only direct grant must not pass the platform MFA gate',
-        );
-
         operatorToken = await realPlatformMfaToken(browser, ctx);
         const f = ctx.fixture;
         const tenantId = required(f.tenantId, 'PLAT-03 tenantId');
         const eventId = required(f.eventId, 'PLAT-03 eventId');
+        const foreignTenantId = required(
+          f.data.foreignTenantId,
+          'PLAT-03 foreign tenant',
+        );
+        const tenantIds = [tenantId, foreignTenantId];
+
+        const directProbe = await request(
+          ctx,
+          'POST',
+          '/platform/support-grants',
+          directPasswordToken,
+          {
+            tenantId,
+            eventId,
+            scopes: ['cs.read'],
+            reason: 'E2E password-only MFA control',
+            expiresAt: new Date(Date.now() + 30 * 60_000).toISOString(),
+          },
+        );
+        expectStatus(directProbe, 401, 'MFA_REQUIRED');
 
         const attendee = await bearer(ctx, 'attendee');
         const ticketIssue = await request(
@@ -6995,7 +7008,7 @@ for (const caseId of CASE_IDS) {
           eventId,
           reason: 'E2E scoped support review',
         };
-        const beforeDenials = await platformGrantSnapshot(ctx, tenantId);
+        const beforeDenials = await platformGrantSnapshot(ctx, tenantIds);
         const broad = await request(ctx, 'POST', path, operatorToken, {
           ...base,
           scopes: ['cs.read', 'pii.read'],
@@ -7032,9 +7045,11 @@ for (const caseId of CASE_IDS) {
           scopes: ['cs.read'],
           expiresAt: new Date(Date.now() + 30 * 60_000).toISOString(),
         });
-        assert.ok(
-          wrongTenant.status >= 400,
-          'a tenant/event mismatch must be denied',
+        expectStatus(wrongTenant, 404, 'RESOURCE_NOT_FOUND');
+        assert.deepEqual(
+          await platformGrantSnapshot(ctx, tenantIds),
+          beforeDenials,
+          'wrong-tenant denial must not insert grants or audit rows for either tenant',
         );
 
         const nonOperatorToken = await realPlatformMfaToken(
@@ -7055,7 +7070,7 @@ for (const caseId of CASE_IDS) {
         );
         expectStatus(nonOperatorGrant, 403, 'PLATFORM_OPERATOR_REQUIRED');
         assert.deepEqual(
-          await platformGrantSnapshot(ctx, tenantId),
+          await platformGrantSnapshot(ctx, tenantIds),
           beforeDenials,
           'denied support requests must not insert grants or audit rows',
         );
