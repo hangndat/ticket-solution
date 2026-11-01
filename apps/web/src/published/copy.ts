@@ -3,23 +3,27 @@
  * Aligned with PD `docs/design/event-server-source/ui-states.md` (Epic #254).
  */
 
+import type { AttendeeLocale } from '../i18n/locale';
+
+export function rateLimitCopy(locale: AttendeeLocale) {
+  return locale === 'en' ? {
+    homePartialRateLimited: { title: 'The event list is incomplete', detail: 'Some events could not be loaded because of high traffic. Please wait a moment and try again.' },
+    homeRateLimited: { title: 'Too many requests for the event list', detail: 'Please wait a moment and try again.' },
+    detailRateLimited: { title: 'Too many requests for this event', detail: 'Please wait a moment and try again.' },
+    retry: 'Try again',
+  } : {
+    homePartialRateLimited: { title: 'Danh sách sự kiện chưa đầy đủ', detail: 'Một số sự kiện chưa tải được do có quá nhiều lượt truy cập. Vui lòng đợi một lát rồi thử lại.' },
+    homeRateLimited: { title: 'Có quá nhiều lượt tải danh sách', detail: 'Vui lòng đợi một lát rồi thử lại.' },
+    detailRateLimited: { title: 'Có quá nhiều lượt tải sự kiện', detail: 'Vui lòng đợi một lát rồi thử lại.' },
+    retry: 'Thử lại',
+  };
+}
+
 export const PUBLIC_EVENT_COPY = {
   homeEmpty: {
     title: 'Chưa có sự kiện đang mở',
     detail:
       'Hiện chưa có sự kiện công khai. Bạn vẫn có thể đổi mã nếu đã có mã.',
-  },
-  homePartialRateLimited: {
-    title: 'Danh sách sự kiện chưa đầy đủ',
-    detail: 'Một số sự kiện chưa tải được do có quá nhiều lượt truy cập. Vui lòng đợi một lát rồi thử lại.',
-  },
-  homeRateLimited: {
-    title: 'Có quá nhiều lượt tải danh sách',
-    detail: 'Vui lòng đợi một lát rồi thử lại.',
-  },
-  detailRateLimited: {
-    title: 'Có quá nhiều lượt tải sự kiện',
-    detail: 'Vui lòng đợi một lát rồi thử lại.',
   },
   homeUnreachable: {
     title: 'Không tải được danh sách',
