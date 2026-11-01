@@ -18,6 +18,7 @@ const CASE_IDS = [
   'AUTH-03',
   'AUTH-06',
   'GATE-01',
+  'GATE-02',
   'GATE-03',
   'DB-01',
   'DB-02',
@@ -3569,6 +3570,14 @@ for (const caseId of CASE_IDS) {
       const before = await request(ctx, 'GET', listPath, scanner);
       expectStatus(before, 200);
       assert.ok(Array.isArray(before.body.gates));
+      assert.equal(before.body.gates.length, 0);
+      const noGate = await request(ctx, 'POST', gatePath(f, 'sessions'), scanner, { tenantId: f.tenantId });
+      expectStatus(noGate, 200);
+      assert.ok(noGate.body.sessionId);
+      assert.equal(noGate.body.gateId, null);
+      assert.equal(noGate.body.gateName, null);
+      const attendee = await bearer(ctx, 'attendee');
+      expectStatus(await request(ctx, 'GET', listPath, attendee), 403);
       const name = required(f.data?.gateName, 'GATE-01 gateName');
       assert.ok(!before.body.gates.some((gate) => gate.name === name));
       const beforeDeniedCreate = await snapshot();
@@ -3660,6 +3669,53 @@ for (const caseId of CASE_IDS) {
         ),
       );
       assert.deepEqual(await snapshot(), beforeDeniedSession, 'foreign event denials must not mutate tenant gates or sessions');
+      return;
+    }
+    if (caseId === 'GATE-02') {
+      const scanner = await bearer(ctx, 'scanner');
+      const supervisor = await bearer(ctx, 'supervisor');
+      const attendee = await bearer(ctx, 'attendee');
+      const issued = await request(ctx, 'POST', redemptionPath(f), attendee,
+        { code: required(f.code, 'GATE-02 code'), formVersion: 'form-v1',
+          termsVersion: 'terms-v1', answers: required(f.data?.answers, 'GATE-02 answers'),
+          termsAccepted: true }, { 'idempotency-key': randomUUID() });
+      expectStatus(issued, 201);
+      const ticketId = required(issued.body.ticketId, 'GATE-02 ticketId');
+      const sessions = gatePath(f, 'sessions');
+      const first = await request(ctx, 'POST', sessions, scanner, { tenantId: f.tenantId });
+      const second = await request(ctx, 'POST', sessions, supervisor, { tenantId: f.tenantId });
+      expectStatus(first, 200);
+      expectStatus(second, 200);
+      const path = gatePath(f, 'reservations');
+      const reserve = (actor, sessionId) => request(ctx, 'POST', path, actor,
+        { tenantId: f.tenantId, staffSessionId: sessionId, ticketId });
+      const held = await reserve(scanner, first.body.sessionId);
+      expectStatus(held, 200);
+      assert.ok(held.body.reservationId && held.body.token);
+      const retry = await reserve(scanner, first.body.sessionId);
+      expectStatus(retry, 200);
+      assert.equal(retry.body.reservationId, held.body.reservationId);
+      assert.notEqual(retry.body.token, held.body.token);
+      const blocked = await reserve(supervisor, second.body.sessionId);
+      expectStatus(blocked, 409, 'HELD_BY_OTHER_SESSION');
+      const dbFixture = { ...f, data: { ...f.data, controlDatabaseUrl: required(process.env.DATABASE_URL, 'run-owned DATABASE_URL') } };
+      const state = () => web04Query(dbFixture, f.tenantId,
+        `SELECT (SELECT count(*)::int FROM checkins WHERE tenant_id=$1::uuid AND ticket_id=$2::uuid) AS checkins,
+                (SELECT count(*)::int FROM checkin_reservations WHERE tenant_id=$1::uuid AND ticket_id=$2::uuid AND status='HELD') AS held`,
+        [f.tenantId, ticketId]);
+      assert.deepEqual(await state(), [{ checkins: 0, held: 1 }]);
+      const expired = await web04Query(dbFixture, f.tenantId,
+        `UPDATE checkin_reservations SET expires_at=clock_timestamp()-interval '1 second' WHERE tenant_id=$1::uuid AND id=$2::uuid RETURNING id`,
+        [f.tenantId, held.body.reservationId]);
+      assert.equal(expired.length, 1);
+      const replacement = await reserve(supervisor, second.body.sessionId);
+      expectStatus(replacement, 200);
+      assert.notEqual(replacement.body.reservationId, held.body.reservationId);
+      assert.deepEqual(await state(), [{ checkins: 0, held: 1 }]);
+      const rows = await web04Query(dbFixture, f.tenantId,
+        `SELECT id,status FROM checkin_reservations WHERE tenant_id=$1::uuid AND ticket_id=$2::uuid`, [f.tenantId, ticketId]);
+      assert.equal(rows.find((row) => row.id === held.body.reservationId)?.status, 'EXPIRED');
+      assert.equal(rows.find((row) => row.id === replacement.body.reservationId)?.status, 'HELD');
       return;
     }
     if (caseId === 'GATE-03') {
