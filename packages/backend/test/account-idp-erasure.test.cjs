@@ -17,6 +17,8 @@ const {
   createPrismaIdentityUserRepository,
   createAccountDeletionRequest,
   processDueAccountAnonymizations,
+  registerDeviceToken,
+  listActiveDeviceTokensForUser,
   createFakeKeycloakErasureAdapter,
   readTombstoneKeyring,
   createOidcVerifier,
@@ -771,6 +773,374 @@ test(
       });
       assert.ok(allowed.userId);
       assert.notEqual(allowed.userId, user.userId);
+    } finally {
+      if (db) await db.$disconnect().catch(() => {});
+      if (name) docker('rm', '-f', name);
+    }
+  },
+);
+
+test(
+  'SEC-D-01: provider fault >48h pre-terminal keeps digest; denylist blocks after terminal; purge at terminal+48h',
+  { timeout: 240000 },
+  async () => {
+    let name;
+    let db;
+    try {
+      const boot = await startIsolatedPostgres();
+      name = boot.name;
+      db = createDatabase(boot.url, 4);
+      const sub = randomUUID();
+      const user = await seedUser(db, sub);
+      const del = await createAccountDeletionRequest(db, {
+        userId: user.userId,
+        confirmation: true,
+      });
+
+      // PG scrub succeeds; IdP keeps failing (provider fault).
+      const first = await processDueAccountAnonymizations(
+        db,
+        50,
+        opts(async () => ({
+          kind: 'FAILED',
+          errorCode: IDP_ERROR_CODES.IDP_RETRYABLE,
+          retryable: true,
+        })),
+      );
+      assert.equal(first.applied, 1);
+      assert.equal(first.completed, 0);
+
+      const admin = new Client({ connectionString: boot.adminUrl });
+      await admin.connect();
+
+      // Simulate >48h of provider fault: the tentative expiry lapses.
+      await admin.query(
+        `UPDATE account_deletion_requests
+         SET subject_tombstone_expires_at = clock_timestamp() - interval '1 minute'
+         WHERE id = $1`,
+        [del.requestId],
+      );
+
+      // Still REQUESTED → open-request guard blocks upsert after >48h.
+      await assert.rejects(
+        () =>
+          createPrismaIdentityUserRepository(db, {
+            env: tombstoneEnv(),
+          }).upsertFromVerifiedIdentity({
+            issuer: ISSUER,
+            subject: sub,
+            email: 'again@example.com',
+            emailVerified: true,
+          }),
+        (e) =>
+          e instanceof IdentityError &&
+          e.code === IDENTITY_ERROR_CODES.UNAUTHENTICATED,
+      );
+
+      // Hourly purge while still REQUESTED must NOT null the digest.
+      const purgedEarly = await db.$queryRaw`
+        SELECT purge_expired_account_deletion_tombstones() AS n
+      `;
+      assert.equal(
+        Number(purgedEarly[0].n),
+        0,
+        'REQUESTED digest must survive purge',
+      );
+      const digestRow = await admin.query(
+        `SELECT subject_tombstone_digest IS NOT NULL AS has_digest,
+                subject_tombstone_key_id IS NOT NULL AS has_key
+         FROM account_deletion_requests WHERE id = $1`,
+        [del.requestId],
+      );
+      assert.equal(
+        digestRow.rows[0].has_digest,
+        true,
+        'digest preserved during provider fault >48h',
+      );
+      assert.equal(digestRow.rows[0].has_key, true);
+
+      // IdP recovers after >48h → terminal DELETED.
+      await admin.query(
+        `UPDATE account_deletion_requests
+         SET idp_next_attempt_at = clock_timestamp() - interval '1 second'
+         WHERE id = $1`,
+        [del.requestId],
+      );
+      const second = await processDueAccountAnonymizations(
+        db,
+        50,
+        opts(async () => ({ kind: 'DELETED' })),
+      );
+      assert.equal(second.completed, 1);
+
+      // After COMPLETED the open-request guard is gone; the tombstone digest
+      // must still block recreate within idp_deleted_at + 48h.
+      const dig = await admin.query(
+        `SELECT subject_tombstone_digest AS d FROM account_deletion_requests
+         WHERE id = $1`,
+        [del.requestId],
+      );
+      assert.ok(dig.rows[0].d, 'digest must still be present after terminal');
+      const blocks = await db.$queryRaw`
+        SELECT account_deletion_tombstone_blocks(
+          ${ISSUER}::text,
+          ${dig.rows[0].d}::bytea
+        ) AS b
+      `;
+      assert.equal(blocks[0].b, true, 'tombstone blocks in post-terminal window');
+      await assert.rejects(
+        () =>
+          createPrismaIdentityUserRepository(db, {
+            env: tombstoneEnv(),
+          }).upsertFromVerifiedIdentity({
+            issuer: ISSUER,
+            subject: sub,
+            email: 'again@example.com',
+            emailVerified: true,
+          }),
+        (e) =>
+          e instanceof IdentityError &&
+          e.code === IDENTITY_ERROR_CODES.UNAUTHENTICATED,
+      );
+
+      // 48h after terminal → digest purged → upsert allowed (new identity).
+      await admin.query(
+        `UPDATE account_deletion_requests
+         SET subject_tombstone_expires_at = clock_timestamp() - interval '1 minute'
+         WHERE id = $1`,
+        [del.requestId],
+      );
+      const purgedLate = await db.$queryRaw`
+        SELECT purge_expired_account_deletion_tombstones() AS n
+      `;
+      assert.equal(
+        Number(purgedLate[0].n),
+        1,
+        'terminal expired digest is purged',
+      );
+      const again = await createPrismaIdentityUserRepository(db, {
+        env: tombstoneEnv(),
+      }).upsertFromVerifiedIdentity({
+        issuer: ISSUER,
+        subject: sub,
+        email: 'again@example.com',
+        emailVerified: true,
+      });
+      assert.notEqual(again.userId, user.userId);
+      await admin.end();
+    } finally {
+      if (db) await db.$disconnect().catch(() => {});
+      if (name) docker('rm', '-f', name);
+    }
+  },
+);
+
+test(
+  'SEC-D-05: finalize fenced — expired lease / wrong owner never completes',
+  { timeout: 240000 },
+  async () => {
+    let name;
+    let db;
+    try {
+      const boot = await startIsolatedPostgres();
+      name = boot.name;
+      db = createDatabase(boot.url, 4);
+      const user = await seedUser(db, randomUUID());
+      const del = await createAccountDeletionRequest(db, {
+        userId: user.userId,
+        confirmation: true,
+      });
+      const env = tombstoneEnv();
+      await processDueAccountAnonymizations(db, 50, {
+        env,
+        leaseOwner: 'no-idp',
+        keyring: readTombstoneKeyring(env),
+        idp: null,
+      });
+
+      // No lease held → any owner fails.
+      let r = await db.$queryRaw`
+        SELECT finalize_account_deletion_idp(
+          ${del.requestId}::uuid, 'ownerA'::text, 'DELETED'::text
+        ) AS ok
+      `;
+      assert.equal(r[0].ok, false);
+
+      const admin = new Client({ connectionString: boot.adminUrl });
+      await admin.connect();
+
+      // Expired lease (owner matches but past expiry) → no COMPLETED.
+      await admin.query(
+        `UPDATE account_deletion_requests
+         SET idp_lease_owner = 'ownerA',
+             idp_lease_expires_at = clock_timestamp() - interval '1 second'
+         WHERE id = $1`,
+        [del.requestId],
+      );
+      r = await db.$queryRaw`
+        SELECT finalize_account_deletion_idp(
+          ${del.requestId}::uuid, 'ownerA'::text, 'DELETED'::text
+        ) AS ok
+      `;
+      assert.equal(r[0].ok, false);
+
+      // Live lease owned by ownerA, but ownerB tries → no COMPLETED.
+      await admin.query(
+        `UPDATE account_deletion_requests
+         SET idp_lease_owner = 'ownerA',
+             idp_lease_expires_at = clock_timestamp() + interval '60 seconds'
+         WHERE id = $1`,
+        [del.requestId],
+      );
+      r = await db.$queryRaw`
+        SELECT finalize_account_deletion_idp(
+          ${del.requestId}::uuid, 'ownerB'::text, 'DELETED'::text
+        ) AS ok
+      `;
+      assert.equal(r[0].ok, false);
+      let row = await db.$queryRaw`
+        SELECT out_state AS state FROM get_account_deletion_idp_row(${del.requestId}::uuid)
+      `;
+      assert.equal(row[0].state, 'REQUESTED');
+
+      // Correct owner + live lease → COMPLETED.
+      r = await db.$queryRaw`
+        SELECT finalize_account_deletion_idp(
+          ${del.requestId}::uuid, 'ownerA'::text, 'DELETED'::text
+        ) AS ok
+      `;
+      assert.equal(r[0].ok, true);
+      row = await db.$queryRaw`
+        SELECT out_state AS state FROM get_account_deletion_idp_row(${del.requestId}::uuid)
+      `;
+      assert.equal(row[0].state, 'COMPLETED');
+
+      // Double-finalize is a no-op (no false re-completion).
+      r = await db.$queryRaw`
+        SELECT finalize_account_deletion_idp(
+          ${del.requestId}::uuid, 'ownerA'::text, 'DELETED'::text
+        ) AS ok
+      `;
+      assert.equal(r[0].ok, false);
+      await admin.end();
+    } finally {
+      if (db) await db.$disconnect().catch(() => {});
+      if (name) docker('rm', '-f', name);
+    }
+  },
+);
+
+test(
+  'POL-01: PG scrub hard-deletes every device registration (active + revoked)',
+  { timeout: 240000 },
+  async () => {
+    let name;
+    let db;
+    try {
+      const boot = await startIsolatedPostgres();
+      name = boot.name;
+      db = createDatabase(boot.url, 4);
+      const user = await seedUser(db, randomUUID());
+
+      const admin = new Client({ connectionString: boot.adminUrl });
+      await admin.connect();
+      // Active and already-revoked registrations for the same user.
+      await admin.query(
+        `INSERT INTO device_tokens (id, user_id, token, environment, created_at, updated_at)
+         VALUES
+           ($1::uuid, $2::uuid, 'device-token-active-0000001', 'sandbox', now(), now()),
+           ($3::uuid, $2::uuid, 'device-token-revoked-000002', 'production', now(), now())`,
+        [randomUUID(), user.userId, randomUUID()],
+      );
+      await admin.query(
+        `UPDATE device_tokens SET revoked_at = now()
+         WHERE user_id = $1 AND token = 'device-token-revoked-000002'`,
+        [user.userId],
+      );
+      const before = await admin.query(
+        `SELECT count(*)::int AS n FROM device_tokens WHERE user_id = $1`,
+        [user.userId],
+      );
+      assert.equal(before.rows[0].n, 2);
+
+      const del = await createAccountDeletionRequest(db, {
+        userId: user.userId,
+        confirmation: true,
+      });
+      const processed = await processDueAccountAnonymizations(
+        db,
+        50,
+        opts(async () => ({ kind: 'DELETED' })),
+      );
+      assert.equal(processed.applied, 1);
+      assert.equal(processed.completed, 1);
+
+      const after = await admin.query(
+        `SELECT count(*)::int AS n FROM device_tokens WHERE user_id = $1`,
+        [user.userId],
+      );
+      assert.equal(
+        after.rows[0].n,
+        0,
+        'no device registration (active or revoked) may remain after scrub',
+      );
+      await admin.end();
+    } finally {
+      if (db) await db.$disconnect().catch(() => {});
+      if (name) docker('rm', '-f', name);
+    }
+  },
+);
+
+test(
+  'POL-01: re-register same token on another account after hard-delete works',
+  { timeout: 240000 },
+  async () => {
+    let name;
+    let db;
+    try {
+      const boot = await startIsolatedPostgres();
+      name = boot.name;
+      db = createDatabase(boot.url, 4);
+      const token = 'pol01-reregister-token-0000001';
+      const userA = await seedUser(db, randomUUID());
+      const userB = await seedUser(db, randomUUID());
+
+      const regA = await registerDeviceToken(db, {
+        userId: userA.userId,
+        token,
+        environment: 'sandbox',
+      });
+      assert.ok(regA.registrationId);
+
+      // Erase user A → hard-delete removes the registration row entirely.
+      const del = await createAccountDeletionRequest(db, {
+        userId: userA.userId,
+        confirmation: true,
+      });
+      const processed = await processDueAccountAnonymizations(
+        db,
+        50,
+        opts(async () => ({ kind: 'DELETED' })),
+      );
+      assert.equal(processed.applied, 1);
+      assert.equal(processed.completed, 1);
+      assert.equal(
+        (await listActiveDeviceTokensForUser(db, userA.userId)).length,
+        0,
+      );
+
+      // Same physical token re-registered on a different account works.
+      const regB = await registerDeviceToken(db, {
+        userId: userB.userId,
+        token,
+        environment: 'production',
+      });
+      assert.ok(regB.registrationId);
+      assert.notEqual(regB.registrationId, regA.registrationId);
+      const activeB = await listActiveDeviceTokensForUser(db, userB.userId);
+      assert.equal(activeB.length, 1);
+      assert.equal(activeB[0].token, token);
     } finally {
       if (db) await db.$disconnect().catch(() => {});
       if (name) docker('rm', '-f', name);
