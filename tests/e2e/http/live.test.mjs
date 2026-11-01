@@ -18,7 +18,10 @@ const CASE_IDS = [
   'AUTH-03',
   'AUTH-06',
   'GATE-01',
+  'GATE-02',
   'GATE-03',
+  'GATE-04',
+  'GATE-05',
   'DB-01',
   'DB-02',
   'DB-03',
@@ -3556,13 +3559,30 @@ for (const caseId of CASE_IDS) {
     if (caseId === 'GATE-01') {
       const owner = await bearer(ctx, 'owner');
       const scanner = await bearer(ctx, 'scanner');
+      const dbFixture = {
+        ...f,
+        data: { ...f.data, controlDatabaseUrl: required(process.env.DATABASE_URL, 'run-owned DATABASE_URL') },
+      };
+      const snapshot = async () => web04Query(dbFixture, f.tenantId,
+        `SELECT (SELECT count(*)::int FROM gates WHERE tenant_id=$1) AS gates,
+                (SELECT count(*)::int FROM staff_sessions WHERE tenant_id=$1) AS sessions`,
+        [f.tenantId]);
       const gates = gatePath(f, 'gates');
       const listPath = `${gates}?tenantId=${f.tenantId}`;
       const before = await request(ctx, 'GET', listPath, scanner);
       expectStatus(before, 200);
       assert.ok(Array.isArray(before.body.gates));
+      assert.equal(before.body.gates.length, 0);
+      const noGate = await request(ctx, 'POST', gatePath(f, 'sessions'), scanner, { tenantId: f.tenantId });
+      expectStatus(noGate, 200);
+      assert.ok(noGate.body.sessionId);
+      assert.equal(noGate.body.gateId, null);
+      assert.equal(noGate.body.gateName, null);
+      const attendee = await bearer(ctx, 'attendee');
+      expectStatus(await request(ctx, 'GET', listPath, attendee), 403);
       const name = required(f.data?.gateName, 'GATE-01 gateName');
       assert.ok(!before.body.gates.some((gate) => gate.name === name));
+      const beforeDeniedCreate = await snapshot();
       expectStatus(
         await request(ctx, 'POST', gates, scanner, {
           tenantId: f.tenantId,
@@ -3570,6 +3590,7 @@ for (const caseId of CASE_IDS) {
         }),
         403,
       );
+      assert.deepEqual(await snapshot(), beforeDeniedCreate, 'denied create must not mutate gates or sessions');
       const created = await request(ctx, 'POST', gates, owner, {
         tenantId: f.tenantId,
         name,
@@ -3606,10 +3627,19 @@ for (const caseId of CASE_IDS) {
       expectStatus(bound, 200);
       assert.equal(bound.body.gateId, created.body.id);
       assert.equal(bound.body.gateName, name);
+      const reopened = await request(ctx, 'POST', sessions, scanner, {
+        tenantId: f.tenantId,
+        gateId: created.body.id,
+      });
+      expectStatus(reopened, 200);
+      assert.equal(reopened.body.gateId, created.body.id);
+      assert.equal(reopened.body.gateName, name);
+      assert.notEqual(reopened.body.sessionId, bound.body.sessionId);
       const foreignGateId = required(
         f.data?.foreignGateId,
         'GATE-01 foreignGateId',
       );
+      const beforeDeniedSession = await snapshot();
       expectStatus(
         await request(ctx, 'POST', sessions, scanner, {
           tenantId: f.tenantId,
@@ -3618,6 +3648,7 @@ for (const caseId of CASE_IDS) {
         404,
         'GATE_NOT_FOUND',
       );
+      assert.deepEqual(await snapshot(), beforeDeniedSession, 'foreign gate denial must not create a session');
       const foreignEventId = required(
         f.data?.foreignEventId,
         'GATE-01 foreignEventId',
@@ -3639,6 +3670,104 @@ for (const caseId of CASE_IDS) {
           { tenantId: f.tenantId, name: `${name} foreign` },
         ),
       );
+      assert.deepEqual(await snapshot(), beforeDeniedSession, 'foreign event denials must not mutate tenant gates or sessions');
+      return;
+    }
+    if (caseId === 'GATE-02') {
+      const scanner = await bearer(ctx, 'scanner');
+      const supervisor = await bearer(ctx, 'supervisor');
+      const attendee = await bearer(ctx, 'attendee');
+      const issued = await request(ctx, 'POST', redemptionPath(f), attendee,
+        { code: required(f.code, 'GATE-02 code'), formVersion: 'form-v1',
+          termsVersion: 'terms-v1', answers: required(f.data?.answers, 'GATE-02 answers'),
+          termsAccepted: true }, { 'idempotency-key': randomUUID() });
+      expectStatus(issued, 201);
+      const ticketId = required(issued.body.ticketId, 'GATE-02 ticketId');
+      const sessions = gatePath(f, 'sessions');
+      const first = await request(ctx, 'POST', sessions, scanner, { tenantId: f.tenantId });
+      const second = await request(ctx, 'POST', sessions, supervisor, { tenantId: f.tenantId });
+      expectStatus(first, 200);
+      expectStatus(second, 200);
+      const path = gatePath(f, 'reservations');
+      const reserve = (actor, sessionId) => request(ctx, 'POST', path, actor,
+        { tenantId: f.tenantId, staffSessionId: sessionId, ticketId });
+      const held = await reserve(scanner, first.body.sessionId);
+      expectStatus(held, 200);
+      assert.ok(held.body.reservationId && held.body.token);
+      const retry = await reserve(scanner, first.body.sessionId);
+      expectStatus(retry, 200);
+      assert.equal(retry.body.reservationId, held.body.reservationId);
+      assert.notEqual(retry.body.token, held.body.token);
+      const blocked = await reserve(supervisor, second.body.sessionId);
+      expectStatus(blocked, 409, 'HELD_BY_OTHER_SESSION');
+      const dbFixture = { ...f, data: { ...f.data, controlDatabaseUrl: required(process.env.DATABASE_URL, 'run-owned DATABASE_URL') } };
+      const state = () => web04Query(dbFixture, f.tenantId,
+        `SELECT (SELECT count(*)::int FROM checkins WHERE tenant_id=$1::uuid AND ticket_id=$2::uuid) AS checkins,
+                (SELECT count(*)::int FROM checkin_reservations WHERE tenant_id=$1::uuid AND ticket_id=$2::uuid AND status='HELD') AS held`,
+        [f.tenantId, ticketId]);
+      assert.deepEqual(await state(), [{ checkins: 0, held: 1 }]);
+      const expired = await web04Query(dbFixture, f.tenantId,
+        `UPDATE checkin_reservations SET expires_at=clock_timestamp()-interval '1 second' WHERE tenant_id=$1::uuid AND id=$2::uuid RETURNING id`,
+        [f.tenantId, held.body.reservationId]);
+      assert.equal(expired.length, 1);
+      const replacement = await reserve(supervisor, second.body.sessionId);
+      expectStatus(replacement, 200);
+      assert.notEqual(replacement.body.reservationId, held.body.reservationId);
+      assert.deepEqual(await state(), [{ checkins: 0, held: 1 }]);
+      const rows = await web04Query(dbFixture, f.tenantId,
+        `SELECT id,status FROM checkin_reservations WHERE tenant_id=$1::uuid AND ticket_id=$2::uuid`, [f.tenantId, ticketId]);
+      assert.equal(rows.find((row) => row.id === held.body.reservationId)?.status, 'EXPIRED');
+      assert.equal(rows.find((row) => row.id === replacement.body.reservationId)?.status, 'HELD');
+      return;
+    }
+    if (caseId === 'GATE-04' || caseId === 'GATE-05') {
+      const scanner = await bearer(ctx, 'scanner');
+      const supervisor = await bearer(ctx, 'supervisor');
+      const ticketId = required(f.ticketId, `${caseId} ticketId`);
+      const scannerSession = await request(ctx, 'POST', gatePath(f, 'sessions'), scanner, { tenantId: f.tenantId });
+      const supervisorSession = await request(ctx, 'POST', gatePath(f, 'sessions'), supervisor, { tenantId: f.tenantId });
+      expectStatus(scannerSession, 200);
+      expectStatus(supervisorSession, 200);
+      const held = await request(ctx, 'POST', gatePath(f, 'reservations'), scanner, {
+        tenantId: f.tenantId, ticketId, staffSessionId: scannerSession.body.sessionId,
+      });
+      expectStatus(held, 200);
+      const path = `${gatePath(f, 'reservations')}/${held.body.reservationId}/confirm`;
+      const body = { tenantId: f.tenantId, staffSessionId: scannerSession.body.sessionId, token: held.body.token };
+      const dbFixture = { ...f, data: { ...f.data, controlDatabaseUrl: required(process.env.DATABASE_URL, 'run-owned DATABASE_URL') } };
+      const state = () => web04Query(dbFixture, f.tenantId,
+        `SELECT id, undone_at, undo_reason, undone_by FROM checkins WHERE tenant_id=$1::uuid AND ticket_id=$2::uuid`,
+        [f.tenantId, ticketId]);
+      if (caseId === 'GATE-04') {
+        expectStatus(await request(ctx, 'POST', path, supervisor, {
+          ...body, staffSessionId: supervisorSession.body.sessionId,
+        }), 409, 'HELD_BY_OTHER_SESSION');
+        expectStatus(await request(ctx, 'POST', path, scanner, { ...body, token: 'incorrect-token' }), 409, 'RESERVATION_TOKEN_MISMATCH');
+        assert.equal((await state()).length, 0);
+      }
+      const confirmed = await request(ctx, 'POST', path, scanner, body);
+      expectStatus(confirmed, 200);
+      assert.ok(confirmed.body.checkinId);
+      if (caseId === 'GATE-04') {
+        expectStatus(await request(ctx, 'POST', path, scanner, body), 409, 'ALREADY_CHECKED_IN');
+        const rows = await state();
+        assert.equal(rows.length, 1);
+        assert.equal(rows[0].id, confirmed.body.checkinId);
+        assert.equal(rows[0].undone_at, null);
+        return;
+      }
+      const undoPath = gatePath(f, `checkins/${confirmed.body.checkinId}/undo`);
+      const undoBody = { tenantId: f.tenantId, reason: 'wrong gate' };
+      expectStatus(await request(ctx, 'POST', undoPath, scanner, undoBody), 403);
+      expectStatus(await request(ctx, 'POST', undoPath, supervisor, { ...undoBody, reason: ' ' }), 422);
+      assert.equal((await state())[0].undone_at, null);
+      expectStatus(await request(ctx, 'POST', undoPath, supervisor, undoBody), 201);
+      expectStatus(await request(ctx, 'POST', undoPath, supervisor, undoBody), 409, 'CHECKIN_ALREADY_UNDONE');
+      const history = await state();
+      assert.equal(history.length, 1);
+      assert.ok(history[0].undone_at);
+      assert.equal(history[0].undo_reason, undoBody.reason);
+      assert.equal(history[0].undone_by, f.accounts.supervisor.userId);
       return;
     }
     if (caseId === 'GATE-03') {

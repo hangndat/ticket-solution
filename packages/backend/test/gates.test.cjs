@@ -127,6 +127,12 @@ test('O31 gates: list/create/open per gate, RLS, cross-event, backward compat', 
 
     // zero gates -> empty list; open without gateId keeps legacy behaviour
     assert.deepEqual(await withTenant(db, tenantA, (tx) => listEventGates(tx, { tenantId: tenantA, eventId: ev1, userId: staff.userId })), []);
+    await assert.rejects(withTenant(db, tenantA, (tx) =>
+      listEventGates(tx, { tenantId: tenantA, eventId: ev1, userId: outsider.userId })),
+    (e) => e.code === 'MEMBERSHIP_REQUIRED');
+    await assert.rejects(withTenant(db, tenantA, (tx) =>
+      createEventGate(tx, { tenantId: tenantA, eventId: ev1, userId: outsider.userId, name: 'Forbidden' })),
+    (e) => e.code === 'MEMBERSHIP_REQUIRED');
     const legacy = await withTenant(db, tenantA, (tx) => openStaffSession(tx, { tenantId: tenantA, eventId: ev1, userId: staff.userId }));
     assert.equal(legacy.gateId, null);
     assert.equal(legacy.gateName, null);
@@ -189,6 +195,8 @@ test('O31 gates: list/create/open per gate, RLS, cross-event, backward compat', 
     const s2 = await withTenant(db, tenantA, (tx) => openStaffSession(tx, { tenantId: tenantA, eventId: ev1, userId: staff.userId, gateId: gateA.id }));
     assert.equal(s1.gateId, gateA.id);
     assert.equal(s1.gateName, 'Cổng A');
+    assert.equal(s2.gateId, gateA.id);
+    assert.equal(s2.gateName, 'Cổng A');
     assert.notEqual(s1.sessionId, s2.sessionId);
 
     // gate from another event (same tenant) rejected; unknown gate rejected

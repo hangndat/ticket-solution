@@ -1,5 +1,24 @@
 # Backend E2E regression — kết quả tại baseline `022cb80fd159dad2a7ebd0eeeea07fd64391f90a`
 
+## GATE-04/05 — ma trận clause #1031 (partial)
+
+| Clause PLAN §6.2 | Evidence / giới hạn |
+| --- | --- |
+| GATE-04 confirm đồng thời, một current | D `gate: one confirm wins`; H confirm + retry và đối soát check-in. |
+| Expiry sau chờ lock | D giữ ticket lock, quan sát waiter PostgreSQL, nhả sau expiry; confirm trả EXPIRED. |
+| Sai holder/token | D và H từ chối; không tạo check-in. |
+| Confirm vs revoke | D race hiện có kiểm trạng thái cuối nhưng chưa chứng minh đầy đủ mọi ordering và side effect. |
+| Confirm vs permission/session revoke | H AUTH-06 kiểm session revoke trước confirm; chưa có race xác định ordering. |
+| Mất response/retry operation | D/H retry sau commit không thêm check-in; API không có operation key hoặc replay response nên chưa đạt clause operation replay. |
+| Undo quyền/lý do/lịch sử, Scanner | D/H deny Scanner, reason trống, undo và kiểm lịch sử; D kiểm audit. |
+| Undo idempotency | Retry trả CHECKIN_ALREADY_UNDONE và không nhân bản; chưa có operation idempotency/replay. |
+| Undo vs scan/revoke | D chạy đồng thời undo với reserve và undo với revoke; kiểm outcome hợp lệ và trạng thái cuối, chưa ép từng ordering. Không dùng SQL giả lập product operation. |
+| O05 | D xác nhận một current; undo giữ lịch sử. Không suy diễn policy re-entry mới. |
+
+Hai ID vẫn BLOCKED; selector xanh không là acceptance hoặc review độc lập. Evidence exact SHA và run do worker bàn giao qua coordinator; F01–F03 PR #1113 vẫn mở, không tính lượt sửa finding.
+
+GATE-02/04 bổ sung D: cùng holder refresh giữ nguyên reservation, xoay token; token cũ bị từ chối và không tạo check-in. Các AC còn thiếu giữ `blocked` trong coverage; selector con không chứng minh toàn bộ ID.
+
 ## Cập nhật sau sửa product
 
 `pnpm test:integration:local --suite D` đã chạy lại trên PostgreSQL cô lập: **38/38 selector PASS**, exit 0. Riêng POL-01 xác nhận metric `account_deletion_idp_sla_overdue` đếm 1 theo fixture quá 30 ngày. Sửa ở `packages/backend/src/account-deletion.ts` và migration `202610280003_account_deletion_sla_metric`; migration phải áp dụng trước runtime. Kết quả baseline 37/38 bên dưới là lịch sử trước sửa, không phải trạng thái hiện tại. Full 46 ID acceptance vẫn chưa được chứng minh vì các nhánh H/R và gap nêu cuối báo cáo.

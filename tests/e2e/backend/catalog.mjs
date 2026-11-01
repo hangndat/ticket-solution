@@ -270,18 +270,18 @@ export const notes = {
   'DB-18':
     'D deletion/tombstone; thiếu H session/IdP end-to-end và audit retention.',
   'DB-19': 'Keyring tombstone tests không chứng minh code/QR rotation.',
-  'GATE-01': 'D gate FK/list/open; thiếu H permission và response contract.',
-  'GATE-02': 'D reserve conflict; thiếu H retry/cancel/expiry matrix.',
+  'GATE-01': 'D gate FK/list/open; H đăng ký riêng, chờ evidence exact SHA và review.',
+  'GATE-02': 'D reserve/retry/HELD/expiry; H đăng ký riêng, thiếu API cancel reservation.',
   'GATE-03':
     'Thiếu H QR audience/kid/version/hash/manual rejection và reject-audit.',
   'GATE-04':
-    'D concurrent confirm; thiếu wrong holder/token, revoke/session race và H retry.',
+    'D confirm đồng thời, sai holder/token, expiry sau lock và retry không tạo thêm; thiếu operation replay và ordering permission/session revoke.',
   'GATE-05':
-    'D undo; thiếu H permission/idempotency và concurrent scan/revoke.',
+    'D undo quyền/lý do, Scanner deny, lịch sử và race reserve/revoke; thiếu operation idempotency và ép từng ordering.',
   'GATE-06':
-    'D replay và U validation; thiếu H batch boundary, skew ±300s và mixed items.',
+    'D replay/race và validation cố định ±300s, batch 50/51, version/scope/order; thiếu H toàn phần và bằng chứng apply ở mọi biên.',
   'GATE-07':
-    'D duplicate/conflict; thiếu H authz-on-retry và mixed batch audit.',
+    'D duplicate, conflict, mixed batch, audit và authz-on-retry; thiếu H toàn phần và review độc lập.',
   'GATE-08': 'D read-only receipt; thiếu H live authz và closed gate.',
   'GATE-09':
     'D receipt matrix và H validation; thiếu H real authz/ownership/rate matrix.',

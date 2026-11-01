@@ -1516,6 +1516,8 @@ export async function seedRuntime(state, caseIds) {
           'PORT-08',
           'PORT-09',
           'GATE-03',
+          'GATE-04',
+          'GATE-05',
           'DB-09',
           'SEC-04',
           'SEC-05',

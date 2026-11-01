@@ -73,7 +73,14 @@
     "tests": ["H:tests/e2e/http/live.test.mjs#[GATE-01]"],
     "layers": ["H"],
     "status": "blocked",
-    "reason": "Đã viết H list/create/duplicate/permission/session nullable/foreign-gate FK/cross-event; chờ runtime. Chưa phủ mở lại cùng gate và actor có assignment cả hai event."
+    "reason": "H list/create/duplicate/permission/session nullable, mở lại cùng gate và foreign-gate/cross-event deny; có đối soát PG số gate/session sau deny. Chưa phủ actor có assignment cả hai event và full D/H; xem evidence exact SHA ở PR."
+  },
+  {
+    "caseId": "GATE-02",
+    "tests": ["H:tests/e2e/http/live.test.mjs#[GATE-02]"],
+    "layers": ["H"],
+    "status": "blocked",
+    "reason": "Partial: reserve, retry, HELD và expiry; chưa có API cancel reservation. Chờ evidence exact SHA và review."
   },
   {
     "caseId": "GATE-03",
@@ -81,6 +88,20 @@
     "layers": ["H"],
     "status": "blocked",
     "reason": "Đã viết H invalid ticket UUID, missing ticket, assignment deny và reject audit; chờ runtime. API Gate nhận ticketId, không có HTTP QR parser; QR audience/kid/version/hash, revoked/cancelled còn thiếu."
+  },
+  {
+    "caseId": "GATE-04",
+    "tests": ["H:tests/e2e/http/live.test.mjs#[GATE-04]"],
+    "layers": ["H"],
+    "status": "blocked",
+    "reason": "Partial: sai holder/token, confirm và retry không tạo check-in thứ hai; chưa có operation replay và ordering revoke/permission/session. Chờ runtime exact SHA và review."
+  },
+  {
+    "caseId": "GATE-05",
+    "tests": ["H:tests/e2e/http/live.test.mjs#[GATE-05]"],
+    "layers": ["H"],
+    "status": "blocked",
+    "reason": "Partial: H Scanner deny, lý do, undo và lịch sử/retry; operation idempotency chưa có và ordering race cần thêm evidence. Chờ runtime exact SHA và review."
   },
   {
     "caseId": "DB-01",

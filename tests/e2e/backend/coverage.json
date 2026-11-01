@@ -212,14 +212,14 @@
     "tests": ["D:packages/backend/test/gates.test.cjs#O31 gates:"],
     "layers": ["D"],
     "status": "blocked",
-    "reason": "D gate FK/list/open; thiếu H permission và response contract."
+    "reason": "D gate FK/list/open; H được đăng ký riêng trong http/coverage.json; chờ evidence exact SHA và review."
   },
   {
     "caseId": "GATE-02",
     "tests": ["D:packages/backend/test/gate.test.cjs#gate: one confirm wins"],
     "layers": ["D"],
     "status": "blocked",
-    "reason": "D reserve conflict; thiếu H retry/cancel/expiry matrix."
+    "reason": "D reserve/retry/HELD/expiry; H được đăng ký riêng. Partial vì chưa có API cancel reservation; chờ evidence exact SHA và review."
   },
   {
     "caseId": "GATE-03",
@@ -233,7 +233,7 @@
     "tests": ["D:packages/backend/test/gate.test.cjs#gate: one confirm wins"],
     "layers": ["D"],
     "status": "blocked",
-    "reason": "D concurrent confirm; thiếu wrong holder/token, revoke/session race và H retry."
+    "reason": "D concurrent confirm và token cũ sau refresh bị từ chối; thiếu full wrong holder/token, revoke/session race và H retry."
   },
   {
     "caseId": "GATE-05",
@@ -250,7 +250,7 @@
     ],
     "layers": ["D", "U"],
     "status": "blocked",
-    "reason": "D replay và U validation; thiếu H batch boundary, skew ±300s và mixed items."
+    "reason": "D replay/race và validation cố định ±300s, batch 50/51, version/scope/order; thiếu H toàn phần và bằng chứng apply ở mọi biên."
   },
   {
     "caseId": "GATE-07",
@@ -259,7 +259,7 @@
     ],
     "layers": ["D"],
     "status": "blocked",
-    "reason": "D duplicate/conflict; thiếu H authz-on-retry và mixed batch audit."
+    "reason": "D duplicate, conflict, mixed batch, audit và authz-on-retry; thiếu H toàn phần và review độc lập."
   },
   {
     "caseId": "GATE-08",
