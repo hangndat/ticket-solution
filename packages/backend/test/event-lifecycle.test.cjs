@@ -25,7 +25,6 @@ const {
   listTicketsForOwner,
   getTicketForOwner,
   openStaffSession,
-  reserveCheckin,
   confirmCheckin,
   unwrapReserveOutcome,
   unwrapConfirmOutcome,
@@ -38,6 +37,7 @@ const {
   GATE_ERROR_CODES,
   canEnqueueOutboxKind,
 } = require('../dist');
+const { reserveCheckin } = require('./gate-test-credentials.cjs');
 
 const docker = (...args) =>
   execFileSync('docker', args, {

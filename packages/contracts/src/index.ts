@@ -104,10 +104,25 @@ export interface TicketSummary {
   sourceId: string;
   state: string;
   credentialVersion: number;
+  /** Freshly signed for this response; clients render this envelope as QR JSON. */
+  gateCredential: import('./gate-credentials').GateCredentialEnvelope;
+  /** Stable human-readable admission code; null until a legacy ticket is backfilled. */
+  manualEntryCode: string | null;
   createdAt: string;
   /** Present when the event row still exists; omitted if deleted. */
   eventName?: string;
 }
+
+export {
+  GATE_CREDENTIAL_ENDPOINTS,
+  GATE_CREDENTIAL_ERROR_CODES,
+  type GateCredentialEnvelope,
+  type PresentedGateCredential,
+  type GateReserveRequestBody,
+  type ManualLookupRequestBody,
+  type ManualLookupResponse,
+  type TicketGateCredentialView,
+} from './gate-credentials';
 
 export interface MeTicketsResponse {
   tickets: TicketSummary[];

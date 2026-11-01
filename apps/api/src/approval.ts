@@ -33,6 +33,7 @@ import {
   type IdentityUserRepository,
   type OidcVerifier,
   type PrismaClient,
+  type GateCredentialConfig,
 } from '@ticket/backend';
 import { identityErrorHttpStatus } from './identity-http-status';
 
@@ -60,6 +61,7 @@ type Deps = {
   users: IdentityUserRepository | null;
   bootError: IdentityError | null;
   credentialKey: string | null;
+  gateCredentialConfig?: GateCredentialConfig | null;
 };
 
 function scopeError(message: string): HttpException {
@@ -123,6 +125,7 @@ export class ApprovalService {
           decision,
           idempotencyKey: idempotencyKey ?? '',
           reason: reason ?? null,
+          manualCodePepper: this.deps.gateCredentialConfig?.manualCodePepper,
         });
       });
     } catch (error) {

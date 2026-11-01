@@ -1,4 +1,4 @@
-import { createHash, randomBytes, randomUUID } from 'node:crypto';
+import { createHash, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import type { Prisma } from './generated/prisma/client';
 import { GateError, GATE_ERROR_CODES } from './gate-error';
 import { assertOpenForGate } from './event-policy';
@@ -11,6 +11,17 @@ import {
   requireIdempotencyKey,
 } from './event-operations';
 import { sealCredentialToken } from './credential-crypto';
+import type { CodeHmacConfig } from './code-hmac';
+import {
+  verifyGateCredentialJws,
+  verifyManualProofToken,
+  mintManualProofToken,
+  hashManualCode,
+  mintManualEntryCode,
+  sealManualEntryCode,
+  readGateManualCodePepper,
+  type GateVerifyKey,
+} from './gate-credential';
 import { AuthzError, AUTHZ_ERROR_CODES } from './authz-error';
 
 const PERMISSION_CONFIRM = 'gate.confirm';
@@ -580,9 +591,12 @@ export async function reserveCheckin(
   input: {
     tenantId: string;
     eventId: string;
-    ticketId: string;
     staffSessionId: string;
     actorUserId: string;
+    presented:
+      | { kind: 'qr'; jws: string }
+      | { kind: 'manual'; proofToken: string };
+    verifyKeys: GateVerifyKey[];
   },
 ): Promise<ReserveOutcome> {
   await requireTenantPermission(tx, {
@@ -599,14 +613,76 @@ export async function reserveCheckin(
     input.staffSessionId,
     input.actorUserId,
   );
+
+  // Resolve presented credential to ticketId + version (CPU-bound, no lock).
+  let ticketId: string;
+  let presentedVersion: number;
+  let presentedVia: 'qr' | 'manual';
+  if (input.presented.kind === 'qr') {
+    let claims;
+    try {
+      claims = await verifyGateCredentialJws(input.presented.jws, input.verifyKeys);
+    } catch {
+      return denyGate(tx, {
+        tenantId: input.tenantId,
+        eventId: input.eventId,
+        actorUserId: input.actorUserId,
+        code: GATE_ERROR_CODES.CREDENTIAL_SIGNATURE_INVALID,
+        message: 'Credential signature is invalid',
+        resourceType: 'ticket',
+      });
+    }
+    if (claims.tid !== input.tenantId || claims.eid !== input.eventId) {
+      return denyGate(tx, {
+        tenantId: input.tenantId,
+        eventId: input.eventId,
+        actorUserId: input.actorUserId,
+        code: GATE_ERROR_CODES.CREDENTIAL_CONTEXT_MISMATCH,
+        message: 'Credential context mismatch',
+        resourceType: 'ticket',
+        resourceId: claims.tkt,
+      });
+    }
+    ticketId = claims.tkt;
+    presentedVersion = claims.ver;
+    presentedVia = 'qr';
+  } else {
+    let claims;
+    try {
+      claims = await verifyManualProofToken(
+        input.presented.proofToken,
+        input.verifyKeys,
+        input.staffSessionId,
+      );
+    } catch {
+      return denyGate(tx, {
+        tenantId: input.tenantId,
+        eventId: input.eventId,
+        actorUserId: input.actorUserId,
+        code: GATE_ERROR_CODES.MANUAL_PROOF_INVALID,
+        message: 'Manual proof is invalid',
+        resourceType: 'ticket',
+      });
+    }
+    if (claims.tid !== input.tenantId || claims.eid !== input.eventId) {
+      return denyGate(tx, {
+        tenantId: input.tenantId,
+        eventId: input.eventId,
+        actorUserId: input.actorUserId,
+        code: GATE_ERROR_CODES.CREDENTIAL_CONTEXT_MISMATCH,
+        message: 'Credential context mismatch',
+        resourceType: 'ticket',
+        resourceId: claims.tkt,
+      });
+    }
+    ticketId = claims.tkt;
+    presentedVersion = claims.ver;
+    presentedVia = 'manual';
+  }
+
   let ticket: TicketLock;
   try {
-    ticket = await lockTicket(
-      tx,
-      input.tenantId,
-      input.eventId,
-      input.ticketId,
-    );
+    ticket = await lockTicket(tx, input.tenantId, input.eventId, ticketId);
   } catch (err) {
     if (
       err instanceof GateError &&
@@ -619,10 +695,21 @@ export async function reserveCheckin(
         code: GATE_ERROR_CODES.TICKET_NOT_FOUND,
         message: err.message,
         resourceType: 'ticket',
-        resourceId: input.ticketId,
+        resourceId: ticketId,
       });
     }
     throw err;
+  }
+  if (ticket.credential_version !== presentedVersion) {
+    return denyGate(tx, {
+      tenantId: input.tenantId,
+      eventId: input.eventId,
+      actorUserId: input.actorUserId,
+      code: GATE_ERROR_CODES.CREDENTIAL_VERSION_STALE,
+      message: 'Credential version is stale',
+      resourceType: 'ticket',
+      resourceId: ticketId,
+    });
   }
   if (ticket.state !== 'ACTIVE') {
     return denyGate(tx, {
@@ -632,10 +719,10 @@ export async function reserveCheckin(
       code: GATE_ERROR_CODES.TICKET_NOT_ACTIVE,
       message: 'Ticket is not active',
       resourceType: 'ticket',
-      resourceId: input.ticketId,
+      resourceId: ticketId,
     });
   }
-  if (await currentCheckinId(tx, input.tenantId, input.ticketId)) {
+  if (await currentCheckinId(tx, input.tenantId, ticketId)) {
     return denyGate(tx, {
       tenantId: input.tenantId,
       eventId: input.eventId,
@@ -643,11 +730,11 @@ export async function reserveCheckin(
       code: GATE_ERROR_CODES.ALREADY_CHECKED_IN,
       message: 'Ticket already has a current check-in',
       resourceType: 'ticket',
-      resourceId: input.ticketId,
+      resourceId: ticketId,
     });
   }
-  await expireHeld(tx, input.tenantId, input.ticketId);
-  const held = await currentHold(tx, input.tenantId, input.ticketId);
+  await expireHeld(tx, input.tenantId, ticketId);
+  const held = await currentHold(tx, input.tenantId, ticketId);
   if (held && held.staff_session_id !== input.staffSessionId) {
     return denyGate(tx, {
       tenantId: input.tenantId,
@@ -656,7 +743,7 @@ export async function reserveCheckin(
       code: GATE_ERROR_CODES.HELD_BY_OTHER_SESSION,
       message: 'Ticket is held by another staff session',
       resourceType: 'ticket',
-      resourceId: input.ticketId,
+      resourceId: ticketId,
     });
   }
 
@@ -666,7 +753,9 @@ export async function reserveCheckin(
     await tx.$executeRaw`
       UPDATE checkin_reservations
       SET token_hash = ${hash},
-          expires_at = clock_timestamp() + interval '30 seconds'
+          expires_at = clock_timestamp() + interval '30 seconds',
+          presented_via = ${presentedVia},
+          presented_credential_version = ${presentedVersion}::integer
       WHERE tenant_id = ${input.tenantId}::uuid
         AND id = ${held.id}::uuid
     `;
@@ -686,23 +775,26 @@ export async function reserveCheckin(
       reservationId: held.id,
       token,
       expiresAt,
-      ticketId: input.ticketId,
+      ticketId,
     };
   }
 
   const reservationId = randomUUID();
   const inserted = await tx.$queryRaw<Array<{ expires_at: Date }>>`
     INSERT INTO checkin_reservations (
-      tenant_id, event_id, id, ticket_id, staff_session_id, token_hash, status, expires_at
+      tenant_id, event_id, id, ticket_id, staff_session_id, token_hash, status, expires_at,
+      presented_via, presented_credential_version
     ) VALUES (
       ${input.tenantId}::uuid,
       ${input.eventId}::uuid,
       ${reservationId}::uuid,
-      ${input.ticketId}::uuid,
+      ${ticketId}::uuid,
       ${input.staffSessionId}::uuid,
       ${hash},
       'HELD',
-      clock_timestamp() + interval '30 seconds'
+      clock_timestamp() + interval '30 seconds',
+      ${presentedVia},
+      ${presentedVersion}::integer
     )
     RETURNING expires_at
   `;
@@ -718,7 +810,7 @@ export async function reserveCheckin(
     reservationId,
     token,
     expiresAt,
-    ticketId: input.ticketId,
+    ticketId,
   };
 }
 
@@ -750,9 +842,9 @@ export async function confirmCheckin(
   );
 
   const peeked = await tx.$queryRaw<
-    Array<{ ticket_id: string; event_id: string }>
+    Array<{ ticket_id: string; event_id: string; presented_credential_version: number | null }>
   >`
-    SELECT ticket_id, event_id
+    SELECT ticket_id, event_id, presented_credential_version
     FROM checkin_reservations
     WHERE tenant_id = ${input.tenantId}::uuid
       AND id = ${input.reservationId}::uuid
@@ -775,8 +867,8 @@ export async function confirmCheckin(
     input.eventId,
     peekedRow.ticket_id,
   );
-  const reservations = await tx.$queryRaw<Array<{ id: string }>>`
-    SELECT id
+  const reservations = await tx.$queryRaw<Array<{ id: string; presented_credential_version: number | null }>>`
+    SELECT id, presented_credential_version
     FROM checkin_reservations
     WHERE tenant_id = ${input.tenantId}::uuid
       AND id = ${input.reservationId}::uuid
@@ -795,7 +887,7 @@ export async function confirmCheckin(
       resourceId: ticket.id,
     });
   }
-  const reservation = { id: reservationRow.id, ticket_id: ticket.id };
+  const reservation = { id: reservationRow.id, ticket_id: ticket.id, presented_credential_version: reservationRow.presented_credential_version };
   const decision = await tx.$queryRaw<
     Array<{ status: string; live: boolean; staff_session_id: string; token_hash: string }>
   >`
@@ -860,6 +952,20 @@ export async function confirmCheckin(
       actorUserId: input.actorUserId,
       code: GATE_ERROR_CODES.TICKET_NOT_ACTIVE,
       message: 'Ticket is not active',
+      resourceType: 'ticket',
+      resourceId: reservation.ticket_id,
+    });
+  }
+  if (
+    reservation.presented_credential_version != null &&
+    reservation.presented_credential_version !== ticket.credential_version
+  ) {
+    return denyGate(tx, {
+      tenantId: input.tenantId,
+      eventId: input.eventId,
+      actorUserId: input.actorUserId,
+      code: GATE_ERROR_CODES.CREDENTIAL_VERSION_STALE,
+      message: 'Credential version is stale',
       resourceType: 'ticket',
       resourceId: reservation.ticket_id,
     });
@@ -1057,6 +1163,7 @@ export async function reissueTicketCredential(
     actorUserId: string;
     reason: string;
     idempotencyKey: string | undefined;
+    manualCodePepper?: CodeHmacConfig;
   },
 ): Promise<ReissueOutcome> {
   const reason = input.reason.trim();
@@ -1176,6 +1283,17 @@ export async function reissueTicketCredential(
     SET credential_version = ${newVersion}::integer, updated_at = clock_timestamp()
     WHERE tenant_id = ${input.tenantId}::uuid AND id = ${ticket.id}::uuid
   `;
+  const rotatedManualCode = await writeManualCode(tx, {
+    tenantId: input.tenantId,
+    eventId: input.eventId,
+    ticketId: ticket.id,
+    pepper: input.manualCodePepper ?? readGateManualCodePepper(process.env),
+    credentialKeyMaterial,
+    onlyIfEmpty: false,
+  });
+  if (!rotatedManualCode) {
+    throw new GateError(GATE_ERROR_CODES.TICKET_NOT_ACTIVE, 'Ticket could not receive a replacement manual code');
+  }
 
   const auditId = randomUUID();
   await tx.$executeRaw`
@@ -1246,4 +1364,254 @@ export async function reissueTicketCredential(
   await completeOperation(tx, input.tenantId, op.id, outcome);
   metricsInc('gate_reissue_total', { result: 'ok' });
   return outcome;
+}
+const MAX_MANUAL_CODE_COLLISION_RETRIES = 5;
+
+function isManualCodeCollision(error: unknown): boolean {
+  const candidate = error as { code?: unknown; constraint?: unknown; message?: unknown; meta?: { code?: unknown; message?: unknown } };
+  const message = [candidate.message, candidate.meta?.message]
+    .filter((value): value is string => typeof value === 'string')
+    .join(' ');
+  return candidate.constraint === 'tickets_manual_code_hmac_unique' ||
+    message.includes('tickets_manual_code_hmac_unique');
+}
+
+async function writeManualCode(
+  tx: Prisma.TransactionClient,
+  input: {
+    tenantId: string;
+    eventId: string;
+    ticketId: string;
+    pepper: CodeHmacConfig;
+    credentialKeyMaterial: string;
+    onlyIfEmpty: boolean;
+  },
+): Promise<boolean> {
+  for (let attempt = 0; attempt < MAX_MANUAL_CODE_COLLISION_RETRIES; attempt++) {
+    const rawCode = mintManualEntryCode();
+    const codeHash = hashManualCode(input.pepper, input.tenantId, input.eventId, rawCode);
+    const sealed = sealManualEntryCode(rawCode, input.credentialKeyMaterial);
+    const savepoint = `gate_manual_code_${attempt}`;
+    await tx.$executeRawUnsafe(`SAVEPOINT ${savepoint}`);
+    try {
+      const result = await tx.$executeRaw`
+        UPDATE tickets
+        SET manual_entry_code_hash = ${codeHash},
+            manual_entry_code_sealed = ${sealed},
+            updated_at = clock_timestamp()
+        WHERE tenant_id = ${input.tenantId}::uuid
+          AND event_id = ${input.eventId}::uuid
+          AND id = ${input.ticketId}::uuid
+          AND state = 'ACTIVE'
+          AND (${input.onlyIfEmpty}::boolean = false OR manual_entry_code_hash IS NULL)
+      `;
+      await tx.$executeRawUnsafe(`RELEASE SAVEPOINT ${savepoint}`);
+      return Number(result) === 1;
+    } catch (error) {
+      await tx.$executeRawUnsafe(`ROLLBACK TO SAVEPOINT ${savepoint}`);
+      await tx.$executeRawUnsafe(`RELEASE SAVEPOINT ${savepoint}`);
+      if (!isManualCodeCollision(error) || attempt + 1 >= MAX_MANUAL_CODE_COLLISION_RETRIES) {
+        throw error;
+      }
+    }
+  }
+  return false;
+}
+
+export async function assignManualEntryCode(
+  tx: Prisma.TransactionClient,
+  input: {
+    tenantId: string;
+    eventId: string;
+    ticketId: string;
+    manualCodePepper: CodeHmacConfig;
+    credentialKeyMaterial: string;
+  },
+): Promise<void> {
+  const assigned = await writeManualCode(tx, {
+    ...input,
+    pepper: input.manualCodePepper,
+    onlyIfEmpty: true,
+  });
+  if (!assigned) {
+    throw new GateError(GATE_ERROR_CODES.TICKET_NOT_ACTIVE, 'Ticket could not receive a manual code');
+  }
+}
+
+export type ManualLookupResult = {
+  ticketId: string;
+  proofToken: string;
+  expiresAt: string;
+};
+
+export type ManualLookupOutcome = ManualLookupResult | GateDenyOutcome;
+
+export function unwrapManualLookupOutcome(outcome: ManualLookupOutcome): ManualLookupResult {
+  if ('ok' in outcome) {
+    throw new GateError(outcome.code, outcome.message);
+  }
+  return outcome;
+}
+
+export async function manualLookupTicket(
+  tx: Prisma.TransactionClient,
+  input: {
+    tenantId: string;
+    eventId: string;
+    staffSessionId: string;
+    actorUserId: string;
+    code: string;
+    verifyKeys: GateVerifyKey[];
+    signingKeyId: string;
+    signingPrivateKeyPem: string;
+    manualCodePepper: CodeHmacConfig;
+  },
+): Promise<ManualLookupOutcome> {
+  await requireTenantPermission(tx, {
+    tenantId: input.tenantId,
+    userId: input.actorUserId,
+    permission: PERMISSION_CONFIRM,
+    eventId: input.eventId,
+  });
+  await assertOpenForGate(tx, input.tenantId, input.eventId);
+  await assertSessionActive(
+    tx,
+    input.tenantId,
+    input.eventId,
+    input.staffSessionId,
+    input.actorUserId,
+  );
+
+  let targetHash: string;
+  try {
+    targetHash = hashManualCode(
+      input.manualCodePepper,
+      input.tenantId,
+      input.eventId,
+      input.code,
+    );
+  } catch {
+    return denyGate(tx, {
+      tenantId: input.tenantId,
+      eventId: input.eventId,
+      actorUserId: input.actorUserId,
+      code: GATE_ERROR_CODES.MANUAL_CODE_INVALID,
+      message: 'Manual code is invalid',
+      resourceType: 'ticket',
+    });
+  }
+  const rows = await tx.$queryRaw<
+    Array<{ id: string; credential_version: number; manual_entry_code_hash: string }>
+  >`
+    SELECT id, credential_version, manual_entry_code_hash
+    FROM tickets
+    WHERE tenant_id = ${input.tenantId}::uuid
+      AND event_id = ${input.eventId}::uuid
+      AND state = 'ACTIVE'
+      AND manual_entry_code_hash = ${targetHash}
+    LIMIT 1
+    FOR UPDATE
+  `;
+  const ticket = rows[0];
+  const expectedHash = Buffer.from(targetHash, 'hex');
+  const actualHash = Buffer.from(ticket?.manual_entry_code_hash ?? '0'.repeat(64), 'hex');
+  const matched = expectedHash.length === actualHash.length && timingSafeEqual(expectedHash, actualHash);
+  if (!ticket || !matched) {
+    return denyGate(tx, {
+      tenantId: input.tenantId,
+      eventId: input.eventId,
+      actorUserId: input.actorUserId,
+      code: GATE_ERROR_CODES.MANUAL_CODE_INVALID,
+      message: 'Manual code is invalid',
+      resourceType: 'ticket',
+    });
+  }
+
+  const proofToken = await mintManualProofToken({
+    tid: input.tenantId,
+    eid: input.eventId,
+    tkt: ticket.id,
+    sid: input.staffSessionId,
+    ver: ticket.credential_version,
+    ttlSeconds: 60,
+    privateKeyPem: input.signingPrivateKeyPem,
+    kid: input.signingKeyId,
+  });
+  const expiresAt = new Date(Date.now() + 60_000).toISOString();
+  return { ticketId: ticket.id, proofToken, expiresAt };
+}
+
+export type BackfillManualCodesResult = {
+  processed: number;
+  minted: number;
+  skipped: number;
+  nextCursor: string | null;
+  remaining: number;
+  complete: boolean;
+  resweepRequired: boolean;
+};
+
+export async function backfillManualEntryCodes(
+  tx: Prisma.TransactionClient,
+  input: {
+    tenantId: string;
+    manualCodePepper: CodeHmacConfig;
+    credentialKeyMaterial: string;
+    afterTicketId?: string | null;
+    batchSize?: number;
+  },
+): Promise<BackfillManualCodesResult> {
+  const batchSize = input.batchSize ?? 100;
+  if (!Number.isInteger(batchSize) || batchSize < 1 || batchSize > 1000) {
+    throw new RangeError('batchSize must be an integer between 1 and 1000');
+  }
+  const rows = await tx.$queryRaw<Array<{ id: string; event_id: string }>>`
+    SELECT id, event_id
+    FROM tickets
+    WHERE tenant_id = ${input.tenantId}::uuid
+      AND state = 'ACTIVE'
+      AND manual_entry_code_hash IS NULL
+      AND (${input.afterTicketId ?? null}::uuid IS NULL OR id > ${input.afterTicketId ?? null}::uuid)
+    ORDER BY id
+    LIMIT ${batchSize}::integer
+    FOR UPDATE SKIP LOCKED
+  `;
+  let minted = 0;
+  let skipped = 0;
+  for (const row of rows) {
+    const didMint = await writeManualCode(tx, {
+      tenantId: input.tenantId,
+      eventId: row.event_id,
+      ticketId: row.id,
+      pepper: input.manualCodePepper,
+      credentialKeyMaterial: input.credentialKeyMaterial,
+      onlyIfEmpty: true,
+    });
+    if (didMint) minted += 1;
+    else skipped += 1;
+  }
+
+  const remainingRows = await tx.$queryRaw<Array<{ id: string }>>`
+    SELECT id
+    FROM tickets
+    WHERE tenant_id = ${input.tenantId}::uuid
+      AND state = 'ACTIVE'
+      AND manual_entry_code_hash IS NULL
+    ORDER BY id
+    LIMIT 1
+  `;
+  const remaining = remainingRows.length;
+  const lastId = rows.at(-1)?.id ?? null;
+  const resweepRequired = Boolean(
+    remainingRows[0] && (!lastId || remainingRows[0].id <= (input.afterTicketId ?? lastId)),
+  );
+  return {
+    processed: rows.length,
+    minted,
+    skipped,
+    nextCursor: resweepRequired ? null : lastId,
+    remaining,
+    complete: remaining === 0,
+    resweepRequired,
+  };
 }

@@ -24,13 +24,13 @@ const {
   GateError,
   GATE_ERROR_CODES,
   openStaffSession,
-  reserveCheckin,
   createAccountDeletionRequest,
   applyAccountAnonymization,
   processDueAccountAnonymizations,
   createFakeKeycloakErasureAdapter,
   readTombstoneKeyring,
 } = require('../dist');
+const { reserveCheckin } = require('./gate-test-credentials.cjs');
 
 /** SEC-2: PG apply mints tombstone before scrub — inject synthetic keyring (same as session-revoke). */
 const ISSUER = 'http://127.0.0.1:8080/realms/ticket';
