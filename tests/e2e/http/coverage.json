@@ -90,6 +90,20 @@
     "reason": "Đã viết H invalid ticket UUID, missing ticket, assignment deny và reject audit; chờ runtime. API Gate nhận ticketId, không có HTTP QR parser; QR audience/kid/version/hash, revoked/cancelled còn thiếu."
   },
   {
+    "caseId": "GATE-04",
+    "tests": ["H:tests/e2e/http/live.test.mjs#[GATE-04]"],
+    "layers": ["H"],
+    "status": "blocked",
+    "reason": "Partial: sai holder/token, confirm và retry không tạo check-in thứ hai; chưa có operation replay và ordering revoke/permission/session. Chờ runtime exact SHA và review."
+  },
+  {
+    "caseId": "GATE-05",
+    "tests": ["H:tests/e2e/http/live.test.mjs#[GATE-05]"],
+    "layers": ["H"],
+    "status": "blocked",
+    "reason": "Partial: Scanner deny, lý do, undo và lịch sử/retry; chưa có operation idempotency và concurrent scan/revoke. Chờ runtime exact SHA và review."
+  },
+  {
     "caseId": "DB-01",
     "tests": ["H:tests/e2e/http/live.test.mjs#[DB-01]"],
     "layers": ["H"],

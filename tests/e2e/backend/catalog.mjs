@@ -275,9 +275,9 @@ export const notes = {
   'GATE-03':
     'Thiếu H QR audience/kid/version/hash/manual rejection và reject-audit.',
   'GATE-04':
-    'D concurrent confirm; thiếu wrong holder/token, revoke/session race và H retry.',
+    'D confirm đồng thời, sai holder/token, expiry sau lock và retry không tạo thêm; thiếu operation replay và ordering permission/session revoke.',
   'GATE-05':
-    'D undo; thiếu H permission/idempotency và concurrent scan/revoke.',
+    'D undo quyền/lý do, Scanner deny, retry không thêm và lịch sử; thiếu operation idempotency và concurrent scan/revoke.',
   'GATE-06':
     'D replay và U validation; thiếu H batch boundary, skew ±300s và mixed items.',
   'GATE-07':
