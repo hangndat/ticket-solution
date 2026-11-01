@@ -1888,6 +1888,20 @@ for (const caseId of CASE_IDS) {
         EVIL_HOST,
         'marketing bounce must not redirect to forged forwarded host',
       );
+      assertUncacheableHostProbe(marketingAuth, 'marketing /auth bounce');
+      const marketingAuthTarget = new URL(marketingAuth.location, ctx.web);
+      const productAuth = await navigationFetch(
+        ctx.web,
+        `${marketingAuthTarget.pathname}${marketingAuthTarget.search}`,
+        { headers: forged },
+      );
+      assertRedirectStatus(productAuth);
+      assertLocationOrigin(
+        productAuth.location,
+        ctx.web,
+        'marketing /auth next hop',
+      );
+      assertNoOpenRedirectVector(productAuth.location);
 
       const marketingAdmin = await navigationFetch(
         ctx.marketing,
@@ -1905,6 +1919,20 @@ for (const caseId of CASE_IDS) {
         EVIL_HOST,
         'marketing admin bounce must not leave marketing with forged host',
       );
+      assertUncacheableHostProbe(marketingAdmin, 'marketing /admin bounce');
+      const marketingAdminTarget = new URL(marketingAdmin.location, ctx.web);
+      const productAdmin = await navigationFetch(
+        ctx.web,
+        `${marketingAdminTarget.pathname}${marketingAdminTarget.search}`,
+        { headers: forged },
+      );
+      assertRedirectStatus(productAdmin);
+      assertLocationOrigin(
+        productAdmin.location,
+        ctx.portal,
+        'marketing /admin next hop',
+      );
+      assertNoOpenRedirectVector(productAdmin.location);
 
       const portalLogin = await navigationFetch(
         ctx.portal,
@@ -1918,6 +1946,10 @@ for (const caseId of CASE_IDS) {
         'portal staff OIDC login',
       );
       assertNoOpenRedirectVector(portalLogin.location);
+      assert.ok(
+        !String(portalLogin.setCookie).includes(EVIL_HOST),
+        'portal login must not persist external return in cookies',
+      );
 
       const portalPlatform = await navigationFetch(
         ctx.portal,
@@ -1960,6 +1992,33 @@ for (const caseId of CASE_IDS) {
         'direct legacy admin GET',
       );
       assertNoOpenRedirectVector(directAdmin.location);
+      assert.equal(
+        directAdmin.setCookie,
+        null,
+        'direct legacy GET must not mutate session',
+      );
+      assertUncacheableHostProbe(directAdmin, 'direct legacy admin GET');
+
+      const directMarketingAuth = await directUpstreamFetch(
+        webPort,
+        new URL(ctx.marketing).host,
+        '/auth?return=https%3A%2F%2Fevil.example%2Fphish',
+        { headers: forged },
+      );
+      if ([302, 307, 308].includes(directMarketingAuth.status)) {
+        assertLocationOrigin(
+          directMarketingAuth.location,
+          ctx.web,
+          'direct marketing /auth',
+        );
+        assertNoOpenRedirectVector(directMarketingAuth.location);
+      } else {
+        assert.ok(
+          [400, 403, 421].includes(directMarketingAuth.status),
+          `direct marketing /auth must deny or redirect to product origin, got ${directMarketingAuth.status}`,
+        );
+      }
+      assertUncacheableHostProbe(directMarketingAuth, 'direct marketing /auth');
 
       for (const path of [
         '/auth?notice=auth_failed&return=https%3A%2F%2Fevil.example%2Fphish&next=%2F%2Fevil.example&redirect=https%3A%2F%2Fevil.example',
