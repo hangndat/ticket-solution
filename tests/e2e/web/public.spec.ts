@@ -25,6 +25,19 @@ test('[WEB-01] only published projection is discoverable', async ({ page }) => {
   const draftId = caseData<string>(f, 'draftEventId');
   const privateSlug = caseData<string>(f, 'privateEventSlug');
   const privateId = caseData<string>(f, 'privateEventId');
+  const publicApi = (suffix = '') =>
+    new URL(
+      `/v1/public/tenants/${f.tenantSlug}/events${suffix}`,
+      manifest.origins.api,
+    ).toString();
+  const catalog = await page.request.get(publicApi());
+  expect(catalog.status()).toBe(200);
+  const publicIds = (await catalog.json()).items.map(
+    (item: { id: string }) => item.id,
+  );
+  expect(publicIds).toContain(f.eventId);
+  expect(publicIds).not.toContain(draftId);
+  expect(publicIds).not.toContain(privateId);
   await page.goto(webUrl(manifest, '/'));
   await expect(page.getByTestId(`home-event-${f.eventId}`)).toBeVisible();
   await expect(page.getByTestId(`home-event-${draftId}`)).toHaveCount(0);
@@ -50,8 +63,36 @@ test('[WEB-01] only published projection is discoverable', async ({ page }) => {
     privateApi.status(),
     'PRD M03: UNLISTED event remains accessible by direct link',
   ).toBe(200);
+  const projection = await privateApi.json();
+  expect(projection.id).toBe(privateId);
+  for (const field of [
+    'tickets',
+    'attendees',
+    'codes',
+    'ownerUserId',
+    'redemptionRequests',
+    'operations',
+  ]) {
+    expect(projection).not.toHaveProperty(field);
+  }
   await page.goto(webUrl(manifest, `/t/${f.tenantSlug}/events/${privateSlug}`));
   await expect(page.getByTestId('event-published')).toBeVisible();
+  // A discoverable UNLISTED page does not grant access to attendee resources.
+  const privateTickets = await page.request.get(
+    webUrl(manifest, `/api/bff/tickets?tenantId=${f.tenantId}`),
+  );
+  expect(privateTickets.status()).toBe(401);
+  const missingSlug = `missing-${randomUUID()}`;
+  const missing = await page.request.get(publicApi(`/${missingSlug}`));
+  expect(missing.status()).toBe(404);
+  await page.goto(webUrl(manifest, `/t/${f.tenantSlug}/events/${missingSlug}`));
+  await expect(page.getByTestId('event-published')).toHaveCount(0);
+  await expect(page.getByTestId('route-not-found')).toBeVisible();
+  await expect(
+    page
+      .getByTestId('route-not-found')
+      .getByRole('link', { name: 'Về trang chủ' }),
+  ).toHaveAttribute('href', '/');
 });
 
 test('[WEB-09] multi-tenant owner wallet and private detail/QR/request/operation', async ({
