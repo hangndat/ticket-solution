@@ -274,7 +274,7 @@ class DedupeFixture(unittest.TestCase):
                 os.chmod(path, 0o644)
             digests = lambda base: {str(f.relative_to(base)): release.digest(f) for f in base.rglob("*.js")}
             (old / "release-manifest.json").write_text(json.dumps({"files": digests(old)}))
-            linked, saved = release.dedupe_against_releases(stage, root, digests(stage))
+            linked, saved = release.dedupe_against_releases(stage, [(old, {"files": digests(old)})], digests(stage))
             self.assertEqual((linked, saved), (1, 4))
             self.assertTrue((stage / "sub" / "dep.js").samefile(old / "sub" / "dep.js"))
             self.assertFalse((stage / "sub" / "diff.js").samefile(old / "sub" / "diff.js"))
@@ -295,6 +295,120 @@ class DedupeFixture(unittest.TestCase):
             self.assertFalse(new.exists())
             survivor = old / "sub" / "dep.js"
             self.assertFalse(survivor.stat().st_mode & stat.S_IWUSR)
+
+
+class IncrementalFixture(unittest.TestCase):
+    def make_stage(self, root):
+        root.mkdir(parents=True, exist_ok=True)
+        deps = {"backend": ["contracts"], "api": ["backend", "contracts"], "worker": ["backend"],
+                "web": ["contracts", "ui", "web-session"], "portal": ["contracts", "web-session"]}
+        for name, path in release.PACKAGES.items():
+            (root / path / "src").mkdir(parents=True)
+            (root / path / "package.json").write_text(json.dumps(
+                {"name": "@ticket/" + name, "dependencies": {"@ticket/" + d: "workspace:*" for d in deps.get(name, [])}}))
+            (root / path / "src" / "index.ts").write_text(name)
+        for rel in ("package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", "tsconfig.base.json"):
+            (root / rel).write_text(rel)
+        (root / "brand").mkdir()
+        (root / "brand" / "logo.svg").write_text("logo")
+        return root
+
+    def test_input_digest_follows_workspace_dependencies(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            stage = self.make_stage(Path(tmp))
+            before = release.build_input_digests(stage, "img", "linux/amd64")
+            (stage / "packages/contracts/src/index.ts").write_text("changed")
+            after = release.build_input_digests(stage, "img", "linux/amd64")
+            changed = {name for name in before if before[name] != after[name]}
+            self.assertEqual(changed, {"contracts", "backend", "api", "worker", "web", "portal"})
+            (stage / "apps/api/src/index.ts").write_text("changed")
+            self.assertEqual({n for n in after if after[n] != release.build_input_digests(stage, "img", "linux/amd64")[n]}, {"api"})
+            (stage / "brand/logo.svg").write_text("new")
+            self.assertFalse(set(after.values()) & set(release.build_input_digests(stage, "img", "linux/amd64").values()))
+            self.assertNotEqual(after, release.build_input_digests(stage, "other-image", "linux/amd64"))
+
+    def test_output_roots_collapse_new_dirs_and_keep_modified_files(self):
+        import os
+        with tempfile.TemporaryDirectory() as tmp:
+            stage = self.make_stage(Path(tmp))
+            before = release.snapshot(stage)
+            ui = stage / "packages/ui"
+            (ui / "dist/nested").mkdir(parents=True)
+            (ui / "dist/nested/a.js").write_text("a")
+            (ui / "src/generated").mkdir()
+            (ui / "src/generated/theme.css").write_text("t")
+            (ui / "node_modules/x").mkdir(parents=True)
+            (ui / "node_modules/x/i.js").write_text("ignored")
+            os.utime(ui / "src/index.ts", ns=(1, 1))
+            self.assertEqual(release.output_roots(stage, before, "ui"),
+                             ["packages/ui/dist", "packages/ui/src/generated", "packages/ui/src/index.ts"])
+            self.assertEqual(release.output_roots(stage, before, "api"), [])
+
+    def test_reuse_outputs_copies_matching_package_and_keeps_mtime(self):
+        import os
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp) / "base"
+            (base / "packages/ui/dist").mkdir(parents=True)
+            (base / "packages/ui/dist/a.js").write_text("built")
+            os.chmod(base / "packages/ui/dist/a.js", 0o444)
+            os.chmod(base / "packages/ui/dist", 0o555)
+            stage = Path(tmp) / "stage"
+            stage.mkdir()
+            manifest = {"buildInputs": {"ui": {"digest": "d-ui", "outputs": ["packages/ui/dist"]},
+                                        "web": {"digest": "old-web", "outputs": ["apps/web/.next"]}}}
+            reused = release.reuse_outputs(stage, [(base, manifest)], {"ui": "d-ui", "web": "new-web"})
+            self.assertEqual(set(reused), {"ui"})
+            copied = stage / "packages/ui/dist/a.js"
+            self.assertEqual(copied.read_text(), "built")
+            self.assertEqual(copied.stat().st_mtime_ns, (base / "packages/ui/dist/a.js").stat().st_mtime_ns)
+            copied.write_text("writable")  # stage copies must be writable for later build steps
+            os.chmod(base / "packages/ui/dist", 0o755)
+
+    def test_digest_hint_needs_same_size_and_mtime(self):
+        import os
+        with tempfile.TemporaryDirectory() as tmp:
+            base, stage = Path(tmp) / "base", Path(tmp) / "stage"
+            for d in (base, stage):
+                d.mkdir()
+                (d / "f.js").write_text("same")
+                os.utime(d / "f.js", ns=(5, 5))
+            hint = release.digest_hint([(base, {"files": {"f.js": "sha-from-base"}})])
+            self.assertEqual(hint("f.js", stage / "f.js"), "sha-from-base")
+            os.utime(stage / "f.js", ns=(6, 6))
+            self.assertIsNone(hint("f.js", stage / "f.js"))
+
+    def test_next_cache_round_trip_and_not_an_output(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            stage, cache = self.make_stage(Path(tmp) / "stage"), Path(tmp) / "cache"
+            cache.mkdir()
+            self.assertEqual(release.seed_next_cache(stage, cache, ["web"]), [])
+            before = release.snapshot(stage)
+            web = stage / "apps/web/.next"
+            (web / "cache/turbopack").mkdir(parents=True)
+            (web / "cache/turbopack/blob").write_text("v1")
+            (web / "server").mkdir()
+            (web / "server/page.js").write_text("page")
+            self.assertEqual(release.output_roots(stage, before, "web"), ["apps/web/.next"])
+            release.save_next_cache(stage, cache, ["web"])
+            (web / "cache/turbopack/blob").write_text("v2")
+            release.save_next_cache(stage, cache, ["web"])
+            self.assertEqual((cache / "next-web/turbopack/blob").read_text(), "v2")
+            # Same order as build(): snapshot, then seed, then build. .next stays one output root.
+            fresh = self.make_stage(Path(tmp) / "fresh")
+            before = release.snapshot(fresh)
+            self.assertEqual(release.seed_next_cache(fresh, cache, ["web", "portal"]), ["web"])
+            self.assertEqual((fresh / "apps/web/.next/cache/turbopack/blob").read_text(), "v2")
+            (fresh / "apps/web/.next/server").mkdir()
+            (fresh / "apps/web/.next/server/page.js").write_text("page")
+            (fresh / "apps/web/.next/cache/turbopack/blob").write_text("v3")
+            self.assertEqual(release.output_roots(fresh, before, "web"), ["apps/web/.next"])
+
+    def test_container_script_skips_reused_builds_but_always_installs(self):
+        script = release.container_script(skip={"build web", "build ui"})
+        self.assertIn("pnpm install --frozen-lockfile", script)
+        self.assertNotIn('step "build web"', script)
+        self.assertNotIn('step "build ui"', script)
+        self.assertIn('step "build portal"', script)
 
 
 if __name__ == "__main__":
