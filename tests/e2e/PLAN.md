@@ -1,6 +1,6 @@
 # Kế hoạch kiểm thử local — Web, Portal và backend
 
-> Đối chiếu 02/11/2026: [ACCEPTANCE.md](ACCEPTANCE.md) gom evidence theo từng ID từ các PR đã tích hợp: **37 nhóm có nghiệm thu tại mốc lịch sử, 48 nhóm còn thiếu gate toàn phần, JOB-08 OUT**. DB-15/16 thêm qua PR #1109, merge `569a9aad`, CI main `41330364325` SUCCESS; PORT-06 qua PR #1120, merge `52120d9c`, CI main `41333248069` SUCCESS. Cả hai PR có review DoD+Security độc lập PASS. Đây không phải full regression mới trên main hiện tại; các checkpoint ngày 30/10 bên dưới giữ nguyên SHA và phạm vi.
+> Đối chiếu 02/11/2026: [ACCEPTANCE.md](ACCEPTANCE.md) gom evidence theo từng ID từ các PR đã tích hợp: **38 nhóm có nghiệm thu tại mốc lịch sử, 47 nhóm còn thiếu gate toàn phần, JOB-08 OUT**. DB-15/16 thêm qua PR #1109, merge `569a9aad`, CI main `41330364325` SUCCESS; PORT-06 qua PR #1120, merge `52120d9c`, CI main `41333248069` SUCCESS. PORT-08 qua PR #1127, merge `ace18977`, CI main `41339139778` SUCCESS, B/H sạch `3/3` và review DoD/Security/UX độc lập PASS. Đây không phải full regression mới trên main hiện tại; các checkpoint ngày 30/10 bên dưới giữ nguyên SHA và phạm vi.
 
 Ngày đối chiếu: **28/10/2026**. Source baseline: `022cb80fd159dad2a7ebd0eeeea07fd64391f90a`.
 
