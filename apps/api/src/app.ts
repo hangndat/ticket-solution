@@ -125,14 +125,20 @@ export async function createApp(
 
   const issueDeps = resolveIssueDeps(env);
   const credentialKey = identity.credentialKey ?? issueDeps.credentialKey;
-  const gateCredentialConfig: GateCredentialConfig | null =
-    credentialKey &&
-    (env['GATE_CREDENTIAL_CURRENT_KEY_ID'] ||
+  const hasGateCredentialConfig = Boolean(
+    env['GATE_CREDENTIAL_CURRENT_KEY_ID'] ||
       env['GATE_CREDENTIAL_SIGNING_KEY_SEALED'] ||
       env['GATE_CREDENTIAL_VERIFY_KEYS_JSON'] ||
-      env['GATE_MANUAL_CODE_PEPPER'])
-      ? await readGateCredentialConfig(env, credentialKey)
-      : null;
+      env['GATE_MANUAL_CODE_PEPPER'],
+  );
+  if (!credentialKey && hasGateCredentialConfig) {
+    throw new Error('TICKET_CREDENTIAL_KEY is required for gate credential configuration');
+  }
+  // Issuance always creates a gate credential and manual-entry code; reject an
+  // incomplete runtime config here instead of failing after a redemption starts.
+  const gateCredentialConfig: GateCredentialConfig | null = credentialKey
+    ? await readGateCredentialConfig(env, credentialKey)
+    : null;
   const ticketDeps: TicketServices = {
     db: identity.db,
     verifier: identity.verifier,
