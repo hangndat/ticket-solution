@@ -5,6 +5,7 @@ import {
   marketingHostsFromEnv,
   marketingOriginFromEnv,
   productOriginFromEnv,
+  trustedRequestHost,
 } from './src/marketing/hosts';
 import {
   decideAdminToPortalRedirect,
@@ -42,9 +43,7 @@ export default function proxy(request: NextRequest) {
     });
   }
 
-  // The edge preserves Host and overwrites X-Forwarded-Host. Direct upstream
-  // requests can forge the latter, so it must not select the public surface.
-  const hostHeader = request.headers.get('host');
+  const hostHeader = trustedRequestHost(request.headers);
   const { pathname, search } = request.nextUrl;
 
   // O13: marketing host + product path → absolute PRODUCT_ORIGIN first.
