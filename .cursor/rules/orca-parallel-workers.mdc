@@ -5,7 +5,7 @@ alwaysApply: false
 
 # Dispatch song song
 
-Mặc định coordinator spawn **mọi Story/PR ready độc lập** trong cùng wave dưới soft caps và WIP; không chờ việc không liên quan. Codex điều phối, Composer thực thi thường lệ. Fan-out giữ; planner **không** mặc định mỗi Epic — chỉ khi `orca-epic-orchestrator.mdc` đủ điều kiện. Tối ưu token bằng context gọn, reuse, không xé Task mịn.
+Mặc định coordinator spawn **mọi Story/PR ready độc lập** trong cùng wave dưới soft caps và WIP; không chờ việc không liên quan. Codex điều phối; worker coding dùng OpenCode Go Flash hoặc Pro theo routing-core, thay Composer 2.5. Đổi provider không tự tăng fan-out; giữ caps và chỉ định concurrency của user. Planner **không** mặc định mỗi Epic — chỉ khi `orca-epic-orchestrator.mdc` đủ điều kiện. Tối ưu token bằng context gọn, reuse, không xé Task mịn.
 
 | Bucket | Soft cap / Run |
 | --- | --- |
@@ -21,6 +21,6 @@ Fix CI hẹp không chiếm bucket feature; vẫn tôn scope và cost tier. User
 - Gộp việc nhỏ cùng scope/input/mục tiêu thành một PR. Không gom BE+web+iOS khi conflict slice; **có** gom docs vào PR cùng owner. Root tooling/docs: coordinator inline.
 - WIP đầy: ưu tiên review → fix → integration trước feature. Không dùng slot trống để mở backlog ngoài ủy quyền.
 - Nhiều PR độc lập: review song song dưới cap. Cùng PR/SHA: gộp DoD/security/UI phù hợp trong một session độc lập; không đối chứng hai model khi không được yêu cầu. Revalidation theo findings + diff.
-- Reuse worker đã settle khi có task ngay, cùng domain/context, model/effort phù hợp và giữ độc lập reviewer. Cheap/standard cùng Composer không tự buộc tạo session mới; không giữ session rảnh.
+- Reuse worker đã settle khi có task ngay, cùng domain/context, model/effort phù hợp và giữ độc lập reviewer. Cheap/standard coding cùng OpenCode Go Flash không tự buộc tạo session mới; không giữ session rảnh.
 - Spawn qua preflight + Persona + receipt theo routing-coordinator; sau wave ghi một dòng cost-wave theo `--run` và các `--dispatch` vừa spawn, không đo lại khi không có spawn/model thay đổi.
 - Sau settlement xét fill mọi slot còn task ready trong scope; supervise và cleanup theo mailbox. Không bỏ worker live để tiết kiệm token.
