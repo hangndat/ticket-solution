@@ -30,9 +30,11 @@ if (process.env.E2E_PUBLIC_READ_DIAGNOSTIC === '1') {
   };
   const route = (path) => {
     if (/^\/v1\/public\/tenants\/[^/]+\/events\/?$/.test(path)) return '/v1/public/tenants/:tenantSlug/events';
+    if (/^\/v1\/public\/tenants\/[^/]+\/events\/[^/]+\/assets\/[^/]+\/?$/.test(path)) return '/v1/public/tenants/:tenantSlug/events/:eventSlug/assets/:assetId';
     if (/^\/v1\/public\/tenants\/[^/]+\/events\/[^/]+\/?$/.test(path)) return '/v1/public/tenants/:tenantSlug/events/:eventSlug';
+    if (/^\/v1\/public\/tenants\/[^/]+\/assets\/[^/]+\/?$/.test(path)) return '/v1/public/tenants/:tenantSlug/assets/:assetId';
+    if (/^\/v1\/public\/tenants\/[^/]+\/branding\/?$/.test(path)) return '/v1/public/tenants/:tenantSlug/branding';
     if (/^\/v1\/public\/events\/?$/.test(path)) return '/v1/public/events';
-    if (/^\/v1\/public\//.test(path)) return '/v1/public/:other';
     return null;
   };
   const callerHint = (value) => {
