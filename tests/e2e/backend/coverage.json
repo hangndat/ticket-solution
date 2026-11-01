@@ -394,14 +394,16 @@
   {
     "caseId": "SEC-04",
     "tests": [
-      "D:apps/api/test/redemptions-resolve-rls.test.cjs#resolve rate limit",
+      "D:apps/api/test/redemptions-resolve-rls.test.cjs#resolve rate limit and API endpoint matrix",
+      "D:packages/backend/test/job04-resend-caps.test.cjs#[JOB-04] D staff resend: cooldown",
       "U:apps/api/test/import-list.test.cjs#G-09 API limits",
+      "U:apps/api/test/invitation-list.test.cjs#G-08 API requires bearer, masks q result",
       "U:apps/api/test/tenant-limits.test.cjs#G-10 API limiter",
       "H:tests/e2e/http/live.test.mjs#[SEC-04]"
     ],
     "layers": ["D", "U", "H"],
     "status": "blocked",
-    "reason": "U/H validation/rate subset; thiếu live bucket scopes và full 429 branch matrix. H: tests/e2e/http/live.test.mjs#[SEC-04] bổ sung bounded Keycloak HTTP (resolve/redeem/gate/receipt/import/resend cooldown); D/U selectors giữ nguyên."
+    "reason": "D PostgreSQL cô lập + app.inject kiểm resolve/redeem/Gate reserve/confirm/offline-sync/receipt: route bucket, 429 RATE_LIMITED retryable, counter và business state không đổi; actor B độc lập ở resolve. D resend staff/recipient cooldown/cap được map từ JOB-04; U kiểm Retry-After import/invitation/tenant limits. H còn thiếu live Keycloak/ingress admission token signature/expiry/scope, bucket identity qua HTTP và ma trận resend/429 đầy đủ; fixture H bị chặn source admission, không đọc/đổi seed."
   },
   {
     "caseId": "SEC-05",
