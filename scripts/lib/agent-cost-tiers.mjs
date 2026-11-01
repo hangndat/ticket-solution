@@ -1,21 +1,21 @@
 /** Provider-neutral tiers; coding uses the explicit OpenCode Go routes from the catalog. */
 export const COST_TIER_ROUTES = {
-  cheap: [{ agent: "opencode", models: ["opencode-go/deepseek-v4.1-flash", "opencode-go/beam-free"], effort: null }, { agent: "cursor", models: ["composer-2.5", "grok-4.7-low", "gemini-3.7-flash-low"], effort: null }],
-  standard: [{ agent: "opencode", models: ["opencode-go/deepseek-v4.1-flash", "opencode-go/beam-free"], effort: null }, { agent: "codex", models: ["gpt-6.1-terra"], effort: "low", quotaLimitIds: ["codex"] }, { agent: "cursor", models: ["composer-2.5", "grok-4.7-low", "gemini-3.7-flash-low"], effort: null }],
+  cheap: [{ agent: "opencode", models: ["opencode-go/deepseek-v4.1-flash", "opencode-go/beam-free"], effort: null }, { agent: "codex", models: ["gpt-6-luna"], effort: "low", quotaLimitIds: ["codex"] }, { agent: "cursor", models: ["composer-2.5", "grok-4.7-low", "gemini-3.7-flash-low"], effort: null }],
+  standard: [{ agent: "opencode", models: ["opencode-go/deepseek-v4.1-flash", "opencode-go/beam-free"], effort: null }, { agent: "codex", models: ["gpt-6.1-terra", "gpt-6-luna"], effort: "low", quotaLimitIds: ["codex"] }, { agent: "cursor", models: ["composer-2.5", "grok-4.7-low", "gemini-3.7-flash-low"], effort: null }],
   focused: [
     { agent: "opencode", models: ["opencode-go/deepseek-v4-pro", "opencode-go/beam-free"], effort: null },
     { agent: "claude", models: ["claude-sonnet-5"], effort: "low" },
-    { agent: "codex", models: ["gpt-6-sol", "gpt-6.1-sol", "gpt-6.1-terra"], effort: "low", quotaLimitIds: ["codex"] },
+    { agent: "codex", models: ["gpt-6-sol", "gpt-6.1-sol", "gpt-6.1-terra", "gpt-6-luna"], effort: "low", quotaLimitIds: ["codex"] },
   ],
   advanced: [
     { agent: "opencode", models: ["opencode-go/deepseek-v4-pro", "opencode-go/beam-free"], effort: null },
     { agent: "claude", models: ["claude-sonnet-5"], effort: "medium" },
-    { agent: "codex", models: ["gpt-6-sol", "gpt-6.1-terra"], effort: "medium", quotaLimitIds: ["codex"] },
+    { agent: "codex", models: ["gpt-6-sol", "gpt-6.1-terra", "gpt-6-luna"], effort: "medium", quotaLimitIds: ["codex"] },
   ],
   high: [
     { agent: "opencode", models: ["opencode-go/deepseek-v4-pro", "opencode-go/beam-free"], effort: null },
     { agent: "claude", models: ["claude-sonnet-5"], effort: "high" },
-    { agent: "codex", models: ["gpt-6-sol", "gpt-6.1-terra"], effort: "high", quotaLimitIds: ["codex"] },
+    { agent: "codex", models: ["gpt-6-sol", "gpt-6.1-terra", "gpt-6-luna"], effort: "high", quotaLimitIds: ["codex"] },
   ],
 };
 
