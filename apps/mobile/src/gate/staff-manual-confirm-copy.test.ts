@@ -9,6 +9,6 @@ import {
 test('manual preview copy does not claim server-valid ticket', () => {
   assert.match(MANUAL_PREVIEW_HEADER, /chưa xác minh/i);
   assert.doesNotMatch(MANUAL_PREVIEW_HEADER, /hợp lệ/i);
-  assert.match(MANUAL_PREVIEW_DISCLAIMER, /APPLIED/i);
+  assert.match(MANUAL_PREVIEW_DISCLAIMER, /check-in thành công/i);
   assert.doesNotMatch(MANUAL_SUBMIT_TO_GATE_LABEL, /Xác nhận vào cổng/);
 });

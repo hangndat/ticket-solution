@@ -64,6 +64,12 @@ test('gate verify keyring rejects private PEM and private JWK material', async (
   for (const entry of [
     { kid: pair.kid, alg: 'ES256', publicKeyPem: pair.privateKeyPem },
     { kid: pair.kid, alg: 'ES256', publicKeyJwk: privateJwk },
+    {
+      kid: pair.kid,
+      alg: 'ES256',
+      publicKeyPem: pair.publicKeyPem,
+      publicKeyJwk: privateJwk,
+    },
   ]) {
     await assert.rejects(
       backend.readGateCredentialVerifyKeys({ GATE_CREDENTIAL_VERIFY_KEYS_JSON: JSON.stringify([entry]) }),
