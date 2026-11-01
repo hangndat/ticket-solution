@@ -403,6 +403,41 @@ class IncrementalFixture(unittest.TestCase):
             (fresh / "apps/web/.next/cache/turbopack/blob").write_text("v3")
             self.assertEqual(release.output_roots(fresh, before, "web"), ["apps/web/.next"])
 
+    def test_hidden_during_build_is_everything_outside_the_dependency_closure(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            stage = self.make_stage(Path(tmp))
+            hidden = release.hidden_during_build(stage)
+            self.assertEqual(sorted(hidden["build web"]),
+                             ["apps/api", "apps/portal", "apps/worker", "packages/backend"])
+            self.assertNotIn("packages/contracts", hidden["build api"])  # transitive via backend too
+            self.assertIn("apps/web", hidden["build contracts"])
+
+    def run_script(self, stage, pnpm_body, hide):
+        import os, subprocess
+        bin_dir = stage / ".bin-stub"
+        bin_dir.mkdir()
+        (bin_dir / "pnpm").write_text("#!/bin/sh\n" + pnpm_body)
+        (bin_dir / "pnpm").chmod(0o755)
+        script = release.container_script(skip={n for n, _ in release.STEPS if n != "build web"}, hide=hide)
+        return subprocess.run(["sh", "-ec", script], cwd=stage, capture_output=True, text=True,
+                              env={**os.environ, "PATH": f"{bin_dir}:{os.environ['PATH']}"})
+
+    def test_undeclared_package_is_unreadable_during_build_and_restored_after(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            stage = self.make_stage(Path(tmp))
+            hide = release.hidden_during_build(stage)
+            # Declared dependency readable, undeclared one gone, then everything is put back.
+            ok = self.run_script(stage, 'case "$*" in *"@ticket/web build"*) '
+                                 'test -e packages/ui/package.json && ! test -e apps/portal/package.json;; esac\n', hide)
+            self.assertEqual(ok.returncode, 0, ok.stdout + ok.stderr)
+            self.assertTrue((stage / "apps/portal/package.json").exists())
+            self.assertFalse((stage / release.HIDDEN).exists())
+            # A build that reads an undeclared sibling fails loudly.
+            (stage / ".bin-stub").rename(stage / ".bin-stub-old")
+            bad = self.run_script(stage, 'case "$*" in *"@ticket/web build"*) cat apps/portal/src/index.ts;; esac\n', hide)
+            self.assertNotEqual(bad.returncode, 0)
+            self.assertIn("FAILED: build web", bad.stdout)
+
     def test_container_script_skips_reused_builds_but_always_installs(self):
         script = release.container_script(skip={"build web", "build ui"})
         self.assertIn("pnpm install --frozen-lockfile", script)
