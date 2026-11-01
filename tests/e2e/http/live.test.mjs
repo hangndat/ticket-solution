@@ -453,13 +453,34 @@ function directUpstreamFetch(port, hostHeader, path, options = {}) {
         },
       },
       (res) => {
-        resolve({
-          status: res.statusCode ?? 0,
-          location: res.headers.location ?? null,
-          cacheControl: res.headers['cache-control'] ?? null,
-          setCookie: res.headers['set-cookie'] ?? null,
-        });
-        res.resume();
+        const chunks = [];
+        if (options.captureBody) res.on('data', (chunk) => chunks.push(chunk));
+        else res.resume();
+        res.on('end', () =>
+          resolve({
+            status: res.statusCode ?? 0,
+            location: res.headers.location ?? null,
+            cacheControl: res.headers['cache-control'] ?? null,
+            setCookie: res.headers['set-cookie'] ?? null,
+            cacheHeaders: Object.fromEntries(
+              [
+                'cache-control',
+                'vary',
+                'age',
+                'etag',
+                'expires',
+                'pragma',
+                'via',
+                'x-nextjs-cache',
+                'x-vercel-cache',
+                'cf-cache-status',
+              ].map((name) => [name, res.headers[name] ?? null]),
+            ),
+            body: options.captureBody
+              ? Buffer.concat(chunks).toString('utf8')
+              : null,
+          }),
+        );
       },
     );
     req.on('error', reject);
@@ -502,10 +523,12 @@ function assertNoOpenRedirectVector(location) {
 
 function assertUncacheableHostProbe(result, label) {
   assert.ok(
-    !/(^|[,\s])(public|s-maxage=\d+|max-age=[1-9]\d*)(\s|,|$)/i.test(
-      result.cacheControl ?? '',
-    ),
-    `${label}: forged host response must not be shared-cacheable`,
+    result.cacheControl,
+    `${label}: missing Cache-Control cannot prove a forged response is uncacheable`,
+  );
+  assert.ok(
+    /(?:^|,)\s*(?:private|no-store)(?:\s*(?:,|$))/i.test(result.cacheControl),
+    `${label}: forged host response must explicitly forbid shared storage (${result.cacheControl})`,
   );
 }
 
@@ -1267,7 +1290,7 @@ async function web04AssertRejected(
 
 for (const caseId of CASE_IDS) {
   if (chosen && chosen !== caseId) continue;
-  test(`[${caseId}] live HTTP`, async () => {
+  test(`[${caseId}] live HTTP`, async (t) => {
     const ctx = context(caseId);
     const f = ctx.fixture;
     if (caseId === 'SEC-01') {
@@ -2038,6 +2061,218 @@ for (const caseId of CASE_IDS) {
         );
       }
       assertUncacheableHostProbe(canonicalPoison, 'forged www forwarding');
+
+      // Read the body as well as the cache headers: status-only probes miss a
+      // product policy or marketing URL served from the wrong host's cache.
+      const marketingHost = new URL(ctx.marketing).host;
+      const hostPairs = [
+        { name: 'robots', path: '/robots.txt' },
+        { name: 'sitemap', path: '/sitemap.xml' },
+      ];
+      for (const { name, path } of hostPairs) {
+        const productBefore = await directUpstreamFetch(
+          webPort,
+          webHost,
+          path,
+          {
+            captureBody: true,
+          },
+        );
+        const productForged = await directUpstreamFetch(
+          webPort,
+          webHost,
+          path,
+          {
+            headers: { 'x-forwarded-host': marketingHost },
+            captureBody: true,
+          },
+        );
+        const productAfter = await directUpstreamFetch(webPort, webHost, path, {
+          captureBody: true,
+        });
+        const marketingBefore = await directUpstreamFetch(
+          webPort,
+          marketingHost,
+          path,
+          {
+            captureBody: true,
+          },
+        );
+        const marketingForged = await directUpstreamFetch(
+          webPort,
+          marketingHost,
+          path,
+          {
+            headers: { 'x-forwarded-host': webHost },
+            captureBody: true,
+          },
+        );
+        const marketingAfter = await directUpstreamFetch(
+          webPort,
+          marketingHost,
+          path,
+          {
+            captureBody: true,
+          },
+        );
+        const probes = {
+          productBefore,
+          productForged,
+          productAfter,
+          marketingBefore,
+          marketingForged,
+          marketingAfter,
+        };
+        t.diagnostic(JSON.stringify({ sec03: name, probes }));
+        for (const [label, result] of Object.entries(probes)) {
+          assert.equal(result.status, 200, `${name} ${label} status`);
+        }
+        assert.equal(
+          productForged.body,
+          productBefore.body,
+          `${name}: forged forwarding changed product response`,
+        );
+        assert.equal(
+          productAfter.body,
+          productBefore.body,
+          `${name}: product response changed after forged request`,
+        );
+        assert.equal(
+          marketingForged.body,
+          marketingBefore.body,
+          `${name}: forged forwarding changed marketing response`,
+        );
+        assert.equal(
+          marketingAfter.body,
+          marketingBefore.body,
+          `${name}: marketing response changed after forged request`,
+        );
+        assert.notEqual(
+          productBefore.body,
+          marketingBefore.body,
+          `${name}: product and marketing policies must differ`,
+        );
+        assertUncacheableHostProbe(
+          productForged,
+          `${name} product with forged marketing host`,
+        );
+        assertUncacheableHostProbe(
+          marketingForged,
+          `${name} marketing with forged product host`,
+        );
+        if (name === 'robots') {
+          assert.match(productBefore.body, /^Disallow: \/$/m);
+          assert.doesNotMatch(productBefore.body, /^Sitemap:/m);
+          assert.match(marketingBefore.body, /^Allow: \/$/m);
+          assert.match(marketingBefore.body, /^Sitemap:/m);
+        } else {
+          assert.doesNotMatch(productBefore.body, /<loc>/);
+          assert.match(marketingBefore.body, /<loc>/);
+          assert.ok(
+            marketingBefore.body.includes(new URL(ctx.marketing).origin),
+          );
+        }
+      }
+
+      // Invalid event data reaches validation only on the real marketing Host;
+      // it cannot record analytics even if a forwarded Host is forged.
+      const analyticsPath = '/api/marketing/events';
+      const analyticsOptions = {
+        method: 'POST',
+        body: '{}',
+        captureBody: true,
+        headers: {
+          origin: new URL(ctx.marketing).origin,
+          'content-type': 'application/json',
+        },
+      };
+      const analyticsProbes = {
+        productBefore: await directUpstreamFetch(
+          webPort,
+          webHost,
+          analyticsPath,
+          analyticsOptions,
+        ),
+        productForged: await directUpstreamFetch(
+          webPort,
+          webHost,
+          analyticsPath,
+          {
+            ...analyticsOptions,
+            headers: {
+              ...analyticsOptions.headers,
+              'x-forwarded-host': marketingHost,
+            },
+          },
+        ),
+        productAfter: await directUpstreamFetch(
+          webPort,
+          webHost,
+          analyticsPath,
+          analyticsOptions,
+        ),
+        marketingBefore: await directUpstreamFetch(
+          webPort,
+          marketingHost,
+          analyticsPath,
+          analyticsOptions,
+        ),
+        marketingForged: await directUpstreamFetch(
+          webPort,
+          marketingHost,
+          analyticsPath,
+          {
+            ...analyticsOptions,
+            headers: {
+              ...analyticsOptions.headers,
+              'x-forwarded-host': webHost,
+            },
+          },
+        ),
+        marketingAfter: await directUpstreamFetch(
+          webPort,
+          marketingHost,
+          analyticsPath,
+          analyticsOptions,
+        ),
+      };
+      t.diagnostic(
+        JSON.stringify({ sec03: 'analytics', probes: analyticsProbes }),
+      );
+      for (const label of ['productBefore', 'productForged', 'productAfter']) {
+        assert.equal(
+          analyticsProbes[label].status,
+          403,
+          `analytics ${label} status`,
+        );
+        assert.equal(
+          JSON.parse(analyticsProbes[label].body).code,
+          'FORBIDDEN_HOST',
+        );
+      }
+      for (const label of [
+        'marketingBefore',
+        'marketingForged',
+        'marketingAfter',
+      ]) {
+        assert.equal(
+          analyticsProbes[label].status,
+          400,
+          `analytics ${label} status`,
+        );
+        assert.equal(
+          JSON.parse(analyticsProbes[label].body).code,
+          'INVALID_EVENT',
+        );
+      }
+      assertUncacheableHostProbe(
+        analyticsProbes.productForged,
+        'analytics product with forged marketing host',
+      );
+      assertUncacheableHostProbe(
+        analyticsProbes.marketingForged,
+        'analytics marketing with forged product host',
+      );
 
       for (const path of [
         '/auth?notice=auth_failed&return=https%3A%2F%2Fevil.example%2Fphish&next=%2F%2Fevil.example&redirect=https%3A%2F%2Fevil.example',
