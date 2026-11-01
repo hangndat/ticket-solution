@@ -20,6 +20,7 @@ const {
   migrationFiles,
 } = require('../../../packages/backend/test/migration-files.cjs');
 const { createApp } = require('../dist/app');
+const { API_RATE_BUCKETS, API_RATE_LIMITS } = require('../dist/http-limits');
 
 const ISSUER = 'http://127.0.0.1:8080/realms/ticket';
 const AUDIENCE = 'ticket-api';
@@ -41,8 +42,7 @@ const docker = (...args) =>
 const MIGRATIONS = migrationFiles();
 
 function isRateLimitWithoutTenantContext(err) {
-  const msg =
-    String(err?.message ?? '') + String(err?.meta?.message ?? '');
+  const msg = String(err?.message ?? '') + String(err?.meta?.message ?? '');
   const pgCode = String(err?.meta?.code ?? '');
   return (
     msg.includes('row-level security') ||
@@ -174,8 +174,55 @@ function testEnv() {
   };
 }
 
+async function saturateBucket(db, userId, bucketKey, limit) {
+  const window = new Date();
+  window.setUTCMinutes(0, 0, 0);
+  await withTenant(db, userId, async (tx) => {
+    // Cover a UTC boundary between fixture setup and the injected request.
+    for (const windowStartedAt of [
+      window,
+      new Date(window.getTime() + 3_600_000),
+    ]) {
+      await tx.notificationRateCounter.upsert({
+        where: {
+          tenantId_bucketKey_windowStartedAt: {
+            tenantId: userId,
+            bucketKey,
+            windowStartedAt,
+          },
+        },
+        create: { tenantId: userId, bucketKey, windowStartedAt, count: limit },
+        update: { count: limit },
+      });
+    }
+  });
+}
+
+async function businessState(db, tenantId) {
+  return withTenant(
+    db,
+    tenantId,
+    (tx) =>
+      tx.$queryRaw`
+      SELECT
+        (SELECT count(*)::integer FROM tickets) AS tickets,
+        (SELECT count(*)::integer FROM redemption_requests) AS requests,
+        (SELECT count(*)::integer FROM operations) AS operations,
+        (SELECT coalesce(jsonb_agg(jsonb_build_array(status, active_request_id) ORDER BY id), '[]'::jsonb) FROM redemption_codes) AS codes,
+        (SELECT count(*)::integer FROM event_attendees) AS attendees,
+        (SELECT coalesce(sum(issued_count), 0)::integer FROM attendee_counters) AS issued_count,
+        (SELECT count(*)::integer FROM checkin_reservations) AS reservations,
+        (SELECT count(*)::integer FROM checkins) AS checkins,
+        (SELECT count(*)::integer FROM offline_sync_events) AS offline_events,
+        (SELECT count(*)::integer FROM audit_logs) AS audits,
+        (SELECT count(*)::integer FROM outbox) AS outbox,
+        (SELECT coalesce(sum(allocated), 0)::integer FROM quota_buckets) AS allocated
+    `,
+  );
+}
+
 test(
-  'resolve rate limit: RLS requires tenant context; actors isolated; HTTP resolve not 500',
+  'resolve rate limit and API endpoint matrix: RLS, user buckets, 429, no business mutation',
   { timeout: 300000 },
   async () => {
     let container;
@@ -233,7 +280,9 @@ test(
             limit: 30,
           }),
         );
-        assert.fail('tryConsumeRateLimit without app.tenant_id must fail closed');
+        assert.fail(
+          'tryConsumeRateLimit without app.tenant_id must fail closed',
+        );
       } catch (err) {
         assert.ok(
           isRateLimitWithoutTenantContext(err),
@@ -307,6 +356,131 @@ test(
       assert.equal(body.tenantId, tenantId);
       assert.equal(body.eventId, eventId);
       assert.ok(body.resolveToken);
+
+      const before = await businessState(db, tenantId);
+      const auth = { authorization: 'Bearer ' + token };
+      const uuid = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+      const rateCases = [
+        {
+          name: 'global resolve',
+          bucket: RESOLVE_BUCKET,
+          limit: 30,
+          request: {
+            method: 'POST',
+            url: '/v1/redemptions/resolve',
+            payload: { code: RAW_CODE },
+          },
+        },
+        {
+          name: 'redeem',
+          bucket: API_RATE_BUCKETS.redeem,
+          limit: API_RATE_LIMITS.redeemPerUser,
+          request: {
+            method: 'POST',
+            url: `/v1/tenants/${tenantId}/events/${eventId}/redemptions`,
+            headers: { 'idempotency-key': uuid },
+            payload: {
+              code: RAW_CODE,
+              formVersion: 'v1',
+              termsVersion: 'v1',
+              answers: {},
+            },
+          },
+        },
+        {
+          name: 'Gate reserve',
+          bucket: API_RATE_BUCKETS.gateReserve,
+          limit: API_RATE_LIMITS.gateReservePerUser,
+          request: {
+            method: 'POST',
+            url: `/v1/gate/events/${eventId}/reservations`,
+            payload: { tenantId, ticketId: uuid, staffSessionId: uuid },
+          },
+        },
+        {
+          name: 'Gate confirm',
+          bucket: API_RATE_BUCKETS.gateConfirm,
+          limit: API_RATE_LIMITS.gateConfirmPerUser,
+          request: {
+            method: 'POST',
+            url: `/v1/gate/events/${eventId}/reservations/${uuid}/confirm`,
+            payload: { tenantId, staffSessionId: uuid, token: 'fixture-token' },
+          },
+        },
+        {
+          name: 'Gate offline sync',
+          bucket: API_RATE_BUCKETS.gateOfflineSync,
+          limit: API_RATE_LIMITS.gateOfflineSyncPerUser,
+          request: {
+            method: 'POST',
+            url: `/v1/gate/events/${eventId}/offline-sync`,
+            payload: {
+              tenantId,
+              staffSessionId: uuid,
+              deviceId: uuid,
+              clientClockAt: new Date().toISOString(),
+              events: [],
+            },
+          },
+        },
+        {
+          name: 'Gate receipt',
+          bucket: API_RATE_BUCKETS.gateOfflineSyncReceipt,
+          limit: API_RATE_LIMITS.gateOfflineSyncReceiptPerUser,
+          request: {
+            method: 'GET',
+            url: `/v1/gate/events/${eventId}/offline-sync/receipts/${uuid}?tenantId=${tenantId}`,
+          },
+        },
+      ];
+      for (const { name, bucket, limit, request } of rateCases) {
+        await saturateBucket(db, userA.userId, bucket, limit);
+        const denied = await app.inject({
+          ...request,
+          headers: { ...request.headers, ...auth },
+        });
+        assert.equal(denied.statusCode, 429, name);
+        assert.equal(denied.json().code, 'RATE_LIMITED', name);
+        assert.equal(denied.json().retryable, true, name);
+        assert.match(denied.json().requestId, /^[0-9a-f-]{36}$/i, name);
+        assert.deepEqual(
+          await businessState(db, tenantId),
+          before,
+          `${name} must not consume business state`,
+        );
+        const counters = await withTenant(db, userA.userId, (tx) =>
+          tx.notificationRateCounter.findMany({
+            where: { tenantId: userA.userId, bucketKey: bucket },
+          }),
+        );
+        assert.equal(counters.length, 2, name);
+        assert.ok(
+          counters.every((counter) => counter.count === limit),
+          `${name} must not advance a rejected bucket`,
+        );
+        if (bucket !== RESOLVE_BUCKET) {
+          await withTenant(db, userA.userId, (tx) =>
+            tx.notificationRateCounter.updateMany({
+              where: { tenantId: userA.userId, bucketKey: bucket },
+              data: { count: 0 },
+            }),
+          );
+        }
+      }
+
+      const tokenB = await sign(privateKey, 'fe715-actor-b');
+      const otherActor = await app.inject({
+        method: 'POST',
+        url: '/v1/redemptions/resolve',
+        headers: { authorization: 'Bearer ' + tokenB },
+        payload: { code: RAW_CODE },
+      });
+      assert.equal(
+        otherActor.statusCode,
+        201,
+        'another user keeps an independent resolve bucket',
+      );
+      assert.deepEqual(await businessState(db, tenantId), before);
 
       await app.close();
     } finally {
