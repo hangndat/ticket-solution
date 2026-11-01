@@ -24,13 +24,13 @@ const {
   GateError,
   GATE_ERROR_CODES,
   openStaffSession,
-  reserveCheckin,
   createAccountDeletionRequest,
   processDueAccountAnonymizations,
   applyAccountAnonymization,
   createFakeKeycloakErasureAdapter,
   readTombstoneKeyring,
 } = require('../dist');
+const { reserveCheckin } = require('./gate-test-credentials.cjs');
 
 const ISSUER = 'http://127.0.0.1:8080/realms/ticket';
 const TOMBSTONE_ENV = {

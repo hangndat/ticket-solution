@@ -26,6 +26,8 @@ import {
   OFFLINE_SYNC_MAX_CLOCK_SKEW_SECONDS,
   OFFLINE_SYNC_PAYLOAD_VERSION,
   type ApiError,
+  type GateReserveRequestBody,
+  type ManualLookupResponse,
   type OfflineSyncReceiptResponse,
   type OfflineSyncResponse,
 } from '@ticket/contracts';
@@ -43,18 +45,21 @@ import {
   openStaffSession,
   listEventGates,
   createEventGate,
+  manualLookupTicket,
   reserveCheckin,
   reissueTicketCredential,
   revokeStaffSession,
   revokeTicket,
   undoCheckin,
   unwrapConfirmOutcome,
+  unwrapManualLookupOutcome,
   unwrapReserveOutcome,
   unwrapReissueOutcome,
   withTenant,
   type IdentityUserRepository,
   type OidcVerifier,
   type PrismaClient,
+  type GateCredentialConfig,
 } from '@ticket/backend';
 import { identityErrorHttpStatus } from './identity-http-status';
 import {
@@ -78,8 +83,25 @@ class TenantBodyDto {
 }
 
 class ReserveBodyDto extends TenantBodyDto {
-  @ApiProperty({ format: 'uuid' }) ticketId!: string;
   @ApiProperty({ format: 'uuid' }) staffSessionId!: string;
+  @ApiProperty({
+    oneOf: [
+      { type: 'object', properties: { kind: { enum: ['qr'] }, jws: { type: 'string' } } },
+      { type: 'object', properties: { kind: { enum: ['manual'] }, proofToken: { type: 'string' } } },
+    ],
+  })
+  presented!: GateReserveRequestBody['presented'];
+}
+
+class ManualLookupBodyDto extends TenantBodyDto {
+  @ApiProperty({ format: 'uuid' }) staffSessionId!: string;
+  @ApiProperty({ minLength: 10, maxLength: 12 }) code!: string;
+}
+
+class ManualLookupResponseDto implements ManualLookupResponse {
+  @ApiProperty({ format: 'uuid' }) ticketId!: string;
+  @ApiProperty() proofToken!: string;
+  @ApiProperty() expiresAt!: string;
 }
 
 class ConfirmBodyDto extends TenantBodyDto {
@@ -222,6 +244,7 @@ type GateDeps = {
   users: IdentityUserRepository | null;
   bootError: IdentityError | null;
   credentialKey?: string | null;
+  gateCredentialConfig?: GateCredentialConfig | null;
 };
 
 function scopeError(message: string): HttpException {
@@ -229,6 +252,18 @@ function scopeError(message: string): HttpException {
     {
       code: 'SCOPE_REQUIRED',
       message,
+      requestId: randomUUID(),
+      retryable: false,
+    } satisfies ApiError,
+    422,
+  );
+}
+
+function credentialRequiredError(): HttpException {
+  return new HttpException(
+    {
+      code: GATE_ERROR_CODES.CREDENTIAL_REQUIRED,
+      message: 'A signed QR credential or manual proof is required',
       requestId: randomUUID(),
       retryable: false,
     } satisfies ApiError,
@@ -256,6 +291,18 @@ function gateHttpException(error: GateError): HttpException {
     error.code === GATE_ERROR_CODES.OFFLINE_SYNC_RECEIPT_NOT_FOUND
   ) {
     return new HttpException(body, 404);
+  }
+  if (error.code === GATE_ERROR_CODES.MANUAL_CODE_INVALID) {
+    return new HttpException(body, 404);
+  }
+  if (error.code === GATE_ERROR_CODES.CREDENTIAL_REQUIRED) {
+    return new HttpException(body, 422);
+  }
+  if (
+    error.code === GATE_ERROR_CODES.CREDENTIAL_SIGNATURE_INVALID ||
+    error.code === GATE_ERROR_CODES.MANUAL_PROOF_INVALID
+  ) {
+    return new HttpException(body, 403);
   }
   if (
     error.code === GATE_ERROR_CODES.OFFLINE_SYNC_BATCH_TOO_LARGE ||
@@ -304,6 +351,17 @@ function identityHttpException(error: IdentityError): HttpException {
 @Injectable()
 export class GateService {
   constructor(private readonly deps: GateDeps) {}
+
+  private credentials(): GateCredentialConfig {
+    const config = this.deps.gateCredentialConfig;
+    if (!config) {
+      throw new IdentityError(
+        IDENTITY_ERROR_CODES.OIDC_MISCONFIGURED,
+        'Gate credential services are not configured',
+      );
+    }
+    return config;
+  }
 
   private async actor(authorization: string | undefined) {
     if (this.deps.bootError) throw this.deps.bootError;
@@ -381,6 +439,7 @@ export class GateService {
     body: ReserveBodyDto,
   ) {
     const user = await this.actor(authorization);
+    const credentials = this.credentials();
     await consumeUserRateLimit(
       this.deps.db,
       user.userId,
@@ -393,13 +452,43 @@ export class GateService {
         reserveCheckin(tx, {
           tenantId: body.tenantId,
           eventId,
-          ticketId: body.ticketId,
           staffSessionId: body.staffSessionId,
           actorUserId: user.userId,
+          presented: body.presented,
+          verifyKeys: credentials.verifyKeys,
         }),
       ),
     );
     return { ...hold, expiresAt: hold.expiresAt.toISOString() };
+  }
+
+  async manualLookup(
+    authorization: string | undefined,
+    eventId: string,
+    body: ManualLookupBodyDto,
+  ): Promise<ManualLookupResponse> {
+    const user = await this.actor(authorization);
+    const credentials = this.credentials();
+    await consumeUserRateLimit(
+      this.deps.db,
+      user.userId,
+      API_RATE_BUCKETS.gateManualLookup,
+      API_RATE_LIMITS.gateManualLookupPerUser,
+    );
+    const outcome = await withTenant(this.deps.db!, body.tenantId, (tx) =>
+      manualLookupTicket(tx, {
+        tenantId: body.tenantId,
+        eventId,
+        staffSessionId: body.staffSessionId,
+        actorUserId: user.userId,
+        code: body.code,
+        verifyKeys: credentials.verifyKeys,
+        signingKeyId: credentials.currentKeyId,
+        signingPrivateKeyPem: credentials.signingPrivateKeyPem,
+        manualCodePepper: credentials.manualCodePepper,
+      }),
+    );
+    return unwrapManualLookupOutcome(outcome);
   }
 
   async confirm(
@@ -488,6 +577,7 @@ export class GateService {
           actorUserId: user.userId,
           reason: body.reason,
           idempotencyKey,
+          manualCodePepper: this.deps.gateCredentialConfig?.manualCodePepper,
         }),
       ),
     );
@@ -666,9 +756,40 @@ export class GateController {
   ) {
     const event = requireUuid(eventId, 'eventId');
     requireUuid(body?.tenantId, 'tenantId');
-    requireUuid(body?.ticketId, 'ticketId');
     requireUuid(body?.staffSessionId, 'staffSessionId');
+    const presented = body?.presented;
+    if (
+      !presented ||
+      typeof presented !== 'object' ||
+      !(
+        (presented.kind === 'qr' && typeof presented.jws === 'string' && presented.jws.length > 0) ||
+        (presented.kind === 'manual' && typeof presented.proofToken === 'string' && presented.proofToken.length > 0)
+      )
+    ) {
+      throw credentialRequiredError();
+    }
     return this.run(() => this.gate.reserve(authorization, event, body));
+  }
+
+  @Post('gate/events/:eventId/manual-lookup')
+  @HttpCode(200)
+  @ApiBearerAuth()
+  @ApiOkResponse({ type: ManualLookupResponseDto })
+  @ApiResponse({ status: 404, type: ApiErrorDto })
+  @ApiResponse({ status: 429, type: ApiErrorDto })
+  @Header('Cache-Control', 'private, no-store')
+  manualLookup(
+    @Headers('authorization') authorization: string | undefined,
+    @Param('eventId') eventId: string,
+    @Body() body: ManualLookupBodyDto,
+  ) {
+    const event = requireUuid(eventId, 'eventId');
+    requireUuid(body?.tenantId, 'tenantId');
+    requireUuid(body?.staffSessionId, 'staffSessionId');
+    if (typeof body?.code !== 'string' || !body.code.trim()) {
+      throw scopeError('code is required');
+    }
+    return this.run(() => this.gate.manualLookup(authorization, event, body));
   }
 
   @Post('gate/events/:eventId/reservations/:reservationId/confirm')
