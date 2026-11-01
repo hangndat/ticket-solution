@@ -11,7 +11,7 @@ Context: PR #1091 review (James) opened F03 High — the two mobile LCP screensh
 - Threshold: LCP "good" <= 2.5s (Core Web Vitals).
 
 ## Viewport verification
-Each `*.report.json`'s `configSettings.screenEmulation` is `{"mobile":true,"width":390,"height":844,"deviceScaleFactor":3,"disabled":false}` and `configSettings.formFactor` is `"mobile"` — confirmed per run (see raw JSON). `experience-run1-final-screenshot.png` extracted from the report's `final-screenshot` audit has pixel ratio 230x498 ≈ 390x844 (same aspect ratio, downscaled thumbnail — Lighthouse embeds a scaled preview, not a full-res capture).
+Each report's `configSettings.screenEmulation` was `{"mobile":true,"width":390,"height":844,"deviceScaleFactor":3,"disabled":false}` and `configSettings.formFactor` was `"mobile"` — confirmed per run. The run 1 final screenshot had pixel ratio 230x498 ≈ 390x844 (same aspect ratio, downscaled thumbnail). One raw sample is retained below; the other reports and screenshot remain in the Git history of PR #1091.
 
 ## Results (LCP, ms)
 
@@ -23,10 +23,8 @@ Each `*.report.json`'s `configSettings.screenEmulation` is `{"mobile":true,"widt
 Both medians are **~3x the 2.5s "good" threshold** and nowhere near the 76ms/72ms previously reported. The earlier figures were not valid mobile measurements.
 
 ## Files
-- `experience-run{1,2,3}.report.json` / `.report.html` — raw Lighthouse reports, VI page.
-- `en-experience-run{1,2,3}.report.json` / `.report.html` — raw Lighthouse reports, EN page.
-- `experience-run1-final-screenshot.png` — thumbnail extracted from run1 report, aspect-ratio-verified 390x844.
-- `*.stderr.log` — Lighthouse CLI stderr per run (non-fatal warnings only).
+- `experience-run2.report.json` — one retained Lighthouse sample for the VI median.
+- The results table above records all six runs; other raw reports remain available in the Git history of PR #1091.
 
 ## Status
 LCP exceeds the acceptable threshold on both locales. Per task instructions, work stops here — no source changes made — and the coordinator has been notified for a decision on next steps (investigate regression vs. accept finding as-is).
