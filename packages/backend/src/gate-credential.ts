@@ -89,6 +89,16 @@ export async function readGateCredentialVerifyKeys(
     let key: jose.KeyLike;
     try {
       if (typeof e.publicKeyPem === 'string' && e.publicKeyPem.trim()) {
+        // `createPublicKey` accepts private PEMs too, so reject private input
+        // before deriving its public half for the verification keyring.
+        let containsPrivateKey = false;
+        try {
+          createPrivateKey(e.publicKeyPem);
+          containsPrivateKey = true;
+        } catch {
+          // Public PEMs are expected to fail private-key parsing.
+        }
+        if (containsPrivateKey) throw new Error('private PEM is not allowed');
         key = createPublicKey(e.publicKeyPem) as unknown as jose.KeyLike;
       } else if (e.publicKeyJwk && typeof e.publicKeyJwk === 'object' && !Array.isArray(e.publicKeyJwk)) {
         const jwk = e.publicKeyJwk as jose.JWK;
@@ -100,8 +110,10 @@ export async function readGateCredentialVerifyKeys(
         throw new Error('public key is missing');
       }
       // Validate key type/curve at startup, before accepting credentials.
-      const exported = createPublicKey(key as never).export({ format: 'jwk' });
-      if (exported.kty !== 'EC' || exported.crv !== 'P-256') throw new Error('key is not P-256');
+      const exported = await jose.exportJWK(key);
+      if (exported.d || exported.kty !== 'EC' || exported.crv !== 'P-256') {
+        throw new Error('key must be a public P-256 key');
+      }
     } catch {
       throw invalidConfig(`Verification key ${kid} is invalid`);
     }
@@ -169,7 +181,7 @@ export async function readGateCredentialConfig(
   const signingPrivateKeyPem = unsealSigningKey(sealed, credentialKeyMaterial);
   const privateKey = createPrivateKey(signingPrivateKeyPem);
   const publicKey = createPublicKey(privateKey).export({ format: 'jwk' });
-  const expected = createPublicKey(current.key as never).export({ format: 'jwk' });
+  const expected = await jose.exportJWK(current.key);
   if (publicKey.x !== expected.x || publicKey.y !== expected.y || publicKey.crv !== expected.crv) {
     throw invalidConfig('Current signing private key does not match public verification key');
   }
