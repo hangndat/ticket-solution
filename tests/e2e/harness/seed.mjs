@@ -2469,6 +2469,18 @@ export async function seedRuntime(state, caseIds) {
             API_RATE_BUCKETS.importJobsList,
             API_RATE_LIMITS.importJobsListPerUser,
           );
+          await primeUserRateCounter(
+            prime,
+            accounts.owner.userId,
+            API_RATE_BUCKETS.invitationsList,
+            API_RATE_LIMITS.invitationsListPerUser,
+          );
+          await primeUserRateCounter(
+            prime,
+            accounts.owner.userId,
+            API_RATE_BUCKETS.tenantLimitsRead,
+            API_RATE_LIMITS.tenantLimitsReadPerUser,
+          );
         } finally {
           await prime.end();
         }
@@ -2507,7 +2519,41 @@ export async function seedRuntime(state, caseIds) {
         fixture.data.foreignEventId = foreignEventId;
       }
       if (caseId === 'SEC-06') {
+        fixture.data.controlDatabaseUrl = state.databaseUrl;
         await backend.withTenant(db, tenantId, async (tx) => {
+          const csMembership = await tx.membership.findFirstOrThrow({
+            where: { tenantId, userId: accounts.cs.userId },
+          });
+          const csAssignment = await tx.eventAssignment.findFirstOrThrow({
+            where: {
+              tenantId,
+              eventId,
+              membershipId: csMembership.id,
+            },
+          });
+          fixture.data.csAssignmentId = csAssignment.id;
+          const csTicket = backend.unwrapRedeemOutcome(
+            await backend.redeemAndIssueTicket(
+              tx,
+              hmac,
+              state.secrets.credential,
+              {
+                tenantId,
+                eventId,
+                actorUserId: accounts.attendee.userId,
+                actorEmail: accounts.attendee.username,
+                emailVerified: true,
+                rawCode: codes[0],
+                idempotencyKey: randomUUID(),
+                formVersion: 'form-v1',
+                termsVersion: 'terms-v1',
+                termsAccepted: true,
+                answers: formAnswers(accounts.attendee.username),
+              },
+            ),
+          );
+          fixture.ticketId = csTicket.ticketId;
+          fixture.data.csTicketId = csTicket.ticketId;
           const bulkCodes = Array.from(
             { length: 110 },
             (_, i) => `E2E-${state.id}-${caseId}-BULK-${i}`,
