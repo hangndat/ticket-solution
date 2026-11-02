@@ -477,6 +477,7 @@ test(
           budget.rows[0]?.state === 'HELD' &&
           sawTimeout &&
           sawOverlapFence &&
+          stalledSmtp.connections === 1 &&
           requestState?.status === 'EXPIRED'
         )
           break;
