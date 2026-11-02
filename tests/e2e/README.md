@@ -41,7 +41,9 @@ E2E_LANES=3 pnpm test:e2e:smoke --lane
 
 Lane `N` dùng hostname `*.e2e-lane<N>.test`, cổng TLS `44300+N`, Compose project `e2e-lane<N>` và realm `e2e-lane<N>`. Container của lane sống qua nhiều run; mỗi run vẫn có database riêng tạo từ template đã migrate, realm import lại qua admin API, bucket/user/policy MinIO riêng và hộp thư Mailpit được xoá đầu run. Cleanup cuối run xoá đúng các tài nguyên đó và giữ container.
 
-Một lane chỉ phục vụ một run tại một thời điểm: `tests/e2e/.lanes/lane<N>/lane.lock` ép tuần tự, lock của process đã chết mới bị thu hồi. Hai run song song luôn nằm ở hai lane, tức hai hostname khác nhau, nên cách ly cookie giữ nguyên. Build được dùng lại khi git commit, fingerprint working tree và origin của lane không đổi; `--rebuild` buộc build lại, `--skip-build` giữ nguyên ý nghĩa cũ.
+Một lane chỉ phục vụ một run tại một thời điểm. State và lock của lane nằm ở `~/.cache/vemoki-e2e-lanes/lane<N>/` (đổi bằng `E2E_LANES_DIR`) vì container, cổng và realm là tài nguyên của cả máy; nhờ vậy nhiều worktree cùng tranh một pool lane đúng cách. Lock của process đã chết mới bị thu hồi. Hai run song song luôn nằm ở hai lane, tức hai hostname khác nhau, nên cách ly cookie giữ nguyên.
+
+`.next` chỉ có một bản trong mỗi checkout, nên **hai run cần frontend trong cùng một checkout bị `tests/e2e/.artifacts/frontend.lock` ép tuần tự**; chạy song song thật cần mỗi run một worktree. Build được dùng lại khi git commit, fingerprint working tree và origin của lane đều khớp marker `tests/e2e/.artifacts/frontend-build.json`; marker bị xoá trước mọi lần build frontend (kể cả run không lane). `--rebuild` buộc build lại, `--skip-build` giữ nguyên ý nghĩa cũ. Số đo thực tế: [PLAN.md §16.8](PLAN.md).
 
 Mỗi lane là năm container và Keycloak chiếm nhiều RAM nhất: bắt đầu với 2–3 lane rồi đo trước khi tăng. `pnpm test:e2e:lane down all` trả lại toàn bộ tài nguyên. Kế hoạch và phần còn lại: [PLAN.md §16](PLAN.md).
 

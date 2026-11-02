@@ -16,9 +16,12 @@ import {
   E2E,
 } from './runtime.mjs';
 import {
+  acquireFrontend,
   acquireLane,
   buildKey,
+  clearBuildMarker,
   readBuildMarker,
+  releaseFrontend,
   releaseLane,
   writeBuildMarker,
 } from './lane.mjs';
@@ -118,6 +121,12 @@ const caseIds = match
     : mode === 'smoke'
       ? smoke
       : allBrowserCases;
+// Khớp điều kiện `httpNeedsFrontend` bên dưới: HTTP thuần không đụng `.next`.
+const laneNeedsFrontend =
+  mode !== 'http' ||
+  caseIds.some((id) =>
+    ['AUTH-03', 'SEC-02', 'SEC-03', 'SEC-05', 'PLAT-03'].includes(id),
+  );
 if (
   !['smoke', 'e2e', 'http', 'regression', 'list'].includes(mode) ||
   caseIds.some((id) => !/^(AUTH|WEB|PORT|PLAT|SEC|DB|GATE|JOB)-\d{2}$/.test(id))
@@ -234,12 +243,14 @@ if (mode === 'list' || args.includes('--list')) {
   let diagnostic;
   let cleaning;
   let laneHeld = null;
-  // Lane lock chỉ được nhả sau khi tài nguyên của run đã bị xoá.
+  let frontendHeld = null;
+  // Lock chỉ được nhả sau khi tài nguyên của run đã bị xoá.
   const cleanup = () =>
     (cleaning ||= (async () => {
       try {
         if (state) await destroyRuntime(state);
       } finally {
+        if (frontendHeld) releaseFrontend(frontendHeld);
         if (laneHeld) releaseLane(laneHeld);
       }
     })());
@@ -259,6 +270,14 @@ if (mode === 'list' || args.includes('--list')) {
           console.log(`E2E: chờ lane rảnh (${names.join(', ')})`),
       });
       console.log(`E2E: lane ${laneHeld.name} đã khoá cho run này`);
+      // `.next` chỉ có một bản mỗi checkout: run cần frontend phải độc quyền nó.
+      if (laneNeedsFrontend) {
+        frontendHeld = await acquireFrontend({
+          runId: laneRunToken,
+          onWait: () =>
+            console.log('E2E: chờ run khác trong checkout nhả .next'),
+        });
+      }
     }
     state = await createRuntime(caseIds, { lane: laneHeld });
     // Build chỉ dùng lại được khi source và origin không đổi; origin bị
@@ -269,7 +288,7 @@ if (mode === 'list' || args.includes('--list')) {
     const reuseLaneBuild =
       Boolean(laneBuildKey) &&
       !forceRebuild &&
-      readBuildMarker(laneHeld)?.key === laneBuildKey;
+      readBuildMarker()?.key === laneBuildKey;
     if (reuseLaneBuild)
       console.log(`E2E: dùng lại build của lane ${laneHeld.name}`);
     const needsBuild = !skipBuild && !reuseLaneBuild;
@@ -434,6 +453,8 @@ if (mode === 'list' || args.includes('--list')) {
       caseIds.some((id) => ['AUTH-03', 'SEC-02', 'SEC-03', 'SEC-05', 'PLAT-03'].includes(id));
     if (mode !== 'http' || httpNeedsFrontend) {
       if (needsBuild) {
+        // `.next` sắp bị ghi đè: marker cũ không còn mô tả đúng nó nữa.
+        clearBuildMarker();
         console.log('E2E: build Web/Portal production');
         const builds = ['web', 'portal'].map((name) =>
           startProcess(
@@ -447,7 +468,7 @@ if (mode === 'list' || args.includes('--list')) {
         if ((await Promise.all(builds.map(exitCode))).some(Boolean))
           throw new Error('BLOCKED: frontend build thất bại; xem *-build.log');
         if (laneBuildKey)
-          writeBuildMarker(laneHeld, laneBuildKey, {
+          writeBuildMarker(laneBuildKey, {
             gitCommit: state.sourceProvenance.gitCommit,
           });
       }

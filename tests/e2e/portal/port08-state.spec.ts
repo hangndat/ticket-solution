@@ -103,7 +103,7 @@ async function mintStaffToken(
   );
   const response = await fetch(
     new URL(
-      `/realms/e2e-${m.runId}/protocol/openid-connect/token`,
+      `/realms/${(m.runtime?.realm as string | undefined) ?? `e2e-${m.runId}`}/protocol/openid-connect/token`,
       m.origins.auth,
     ),
     {
