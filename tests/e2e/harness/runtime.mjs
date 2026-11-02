@@ -202,7 +202,9 @@ function realmConfig(state, caseIds) {
     if (id === 'DB-04') {
       const attendee = state.caseAccounts[id].attendee;
       attendee.username = `first.last+label.db04.${state.id}@example.test`;
-      const realmUser = realm.users.find((user) => user.id === attendee.subject);
+      const realmUser = realm.users.find(
+        (user) => user.id === attendee.subject,
+      );
       realmUser.username = attendee.username;
       realmUser.email = attendee.username;
     }
@@ -802,6 +804,17 @@ export function processEnvironment(state, extra = {}) {
     CODE_HMAC_PEPPER: state.secrets.hmac,
     CODE_HMAC_VERSION: '1',
     TICKET_CREDENTIAL_KEY: state.secrets.credential,
+    ...(state.secrets.gateCredentialCurrentKeyId
+      ? {
+          GATE_CREDENTIAL_CURRENT_KEY_ID:
+            state.secrets.gateCredentialCurrentKeyId,
+          GATE_CREDENTIAL_SIGNING_KEY_SEALED:
+            state.secrets.gateCredentialSigningKeySealed,
+          GATE_CREDENTIAL_VERIFY_KEYS_JSON:
+            state.secrets.gateCredentialVerifyKeysJson,
+          GATE_MANUAL_CODE_PEPPER: state.secrets.gateManualCodePepper,
+        }
+      : {}),
     ACCOUNT_DELETION_TOMBSTONE_CURRENT_KEY_ID: 'e2e',
     ACCOUNT_DELETION_TOMBSTONE_KEYRING_JSON: JSON.stringify([
       {
