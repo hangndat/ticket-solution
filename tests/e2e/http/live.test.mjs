@@ -6725,6 +6725,24 @@ for (const caseId of CASE_IDS) {
         before,
         'denied redemption cannot create business rows',
       );
+      const scanner = await bearer(ctx, 'scanner');
+      const session = await request(ctx, 'POST', gatePath(f, 'sessions'), scanner,
+        { tenantId: f.tenantId });
+      expectStatus(session, 200);
+      const hold = await request(ctx, 'POST', gatePath(f, 'reservations'), scanner, {
+        tenantId: f.tenantId,
+        ticketId: issued.body.ticketId,
+        staffSessionId: session.body.sessionId,
+      });
+      expectStatus(hold, 200);
+      const confirmed = await request(ctx, 'POST',
+        gatePath(f, `reservations/${hold.body.reservationId}/confirm`), scanner, {
+          tenantId: f.tenantId,
+          staffSessionId: session.body.sessionId,
+          token: hold.body.token,
+        });
+      expectStatus(confirmed, 200);
+      assert.ok(confirmed.body.checkinId, 'issued ticket remains usable at Gate after redeem closes');
       const clone = await request(
         ctx,
         'POST',
