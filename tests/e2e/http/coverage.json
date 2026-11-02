@@ -146,6 +146,13 @@
     "reason": "DB-18 live Keycloak Admin DELETE + bearer HTTP harness implemented; exact-SHA run and IdP retry branch remain required before H verdict."
   },
   {
+    "caseId": "DB-19",
+    "tests": ["H:tests/e2e/http/live.test.mjs#[DB-19]"],
+    "layers": ["H"],
+    "status": "blocked",
+    "reason": "Live Keycloak/HTTP v1 code được API v2+legacy ring cấp vé, v2 code mới cũng cấp vé; version không hỗ trợ và hai digest v1/v2 cùng raw code bị CODE_INVALID, đối soát không mutation. QR credential keyring vẫn là product gap; chờ run sạch exact SHA."
+  },
+  {
     "caseId": "DB-15",
     "tests": ["H:tests/e2e/http/live.test.mjs#[DB-15] live HTTP"],
     "layers": ["H"],

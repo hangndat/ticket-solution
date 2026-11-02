@@ -925,7 +925,14 @@ export function processEnvironment(state, extra = {}) {
     OIDC_AUDIENCE: 'ticket-api',
     OIDC_JWKS_URL: `${issuer}/protocol/openid-connect/certs`,
     CODE_HMAC_PEPPER: state.secrets.hmac,
-    CODE_HMAC_VERSION: '1',
+    CODE_HMAC_VERSION: state.caseIds.includes('DB-19') ? '2' : '1',
+    ...(state.caseIds.includes('DB-19')
+      ? {
+          CODE_HMAC_LEGACY_PEPPERS: JSON.stringify({
+            1: state.secrets.hmacLegacy,
+          }),
+        }
+      : {}),
     TICKET_CREDENTIAL_KEY: state.secrets.credential,
     ACCOUNT_DELETION_TOMBSTONE_CURRENT_KEY_ID: 'e2e',
     ACCOUNT_DELETION_TOMBSTONE_KEYRING_JSON: JSON.stringify([
@@ -1132,6 +1139,7 @@ export async function createRuntime(caseIds, options = {}) {
   const id = `${Date.now().toString(36)}-${randomBytes(3).toString('hex')}`;
   const state = {
     id,
+    caseIds,
     lane: lane
       ? {
           name: lane.name,
@@ -1152,6 +1160,7 @@ export async function createRuntime(caseIds, options = {}) {
       kc: laneValues ? laneValues.kc : randomBytes(24).toString('hex'),
       minio: laneValues ? laneValues.minio : randomBytes(24).toString('hex'),
       hmac: randomBytes(32).toString('hex'),
+      hmacLegacy: randomBytes(32).toString('hex'),
       credential: randomBytes(24).toString('hex'),
     },
   };

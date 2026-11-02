@@ -34,6 +34,7 @@ const CASE_IDS = [
   'DB-13',
   'DB-14',
   'DB-18',
+  'DB-19',
   'DB-15',
   'DB-16',
   'JOB-04',
@@ -1448,6 +1449,119 @@ for (const caseId of CASE_IDS) {
   test(`[${caseId}] live HTTP`, async () => {
     const ctx = context(caseId);
     const f = ctx.fixture;
+    if (caseId === 'DB-19') {
+      const attendee = await bearer(ctx, 'attendee');
+      const owner = await bearer(ctx, 'owner');
+      const path = redemptionPath(f);
+      const body = redemptionBody(f, caseId);
+      const state = async () => {
+        const [codes, tickets, outbox] = await Promise.all([
+          db03Query(
+            f,
+            'SELECT id, status, code_hmac, code_pepper_version FROM redemption_codes WHERE tenant_id=$1::uuid AND event_id=$2::uuid ORDER BY id',
+            [f.tenantId, f.eventId],
+          ),
+          db03Query(
+            f,
+            'SELECT id FROM tickets WHERE tenant_id=$1::uuid AND event_id=$2::uuid ORDER BY id',
+            [f.tenantId, f.eventId],
+          ),
+          db03Query(
+            f,
+            "SELECT id FROM outbox WHERE tenant_id=$1::uuid AND type='TicketIssued' ORDER BY id",
+            [f.tenantId],
+          ),
+        ]);
+        const report = await request(ctx, 'GET', reportPath(f), owner);
+        expectStatus(report, 200);
+        return {
+          codes,
+          tickets,
+          outbox,
+          allocated: report.body.quota.allocated,
+        };
+      };
+      const before = await state();
+      assert.deepEqual(
+        before.codes.map((c) => Number(c.code_pepper_version)).sort(),
+        [1, 1, 2, 2, 3],
+      );
+      for (const code of before.codes) {
+        assert.ok(
+          ![f.code, f.data.unsupportedCode, f.data.ambiguousCode, f.data.currentCode].includes(
+            code.code_hmac,
+          ),
+        );
+      }
+      const issued = await request(ctx, 'POST', path, attendee, body, {
+        'idempotency-key': randomUUID(),
+      });
+      expectStatus(issued, 201);
+      assert.equal(issued.body.state, 'ACTIVE');
+      const afterIssue = await state();
+      assert.equal(afterIssue.tickets.length, before.tickets.length + 1);
+      assert.equal(afterIssue.outbox.length, before.outbox.length + 1);
+      assert.equal(afterIssue.allocated, before.allocated + 1);
+      const current = await request(
+        ctx,
+        'POST',
+        path,
+        await bearer(ctx, 'otherAttendee'),
+        {
+          ...body,
+          code: f.data.currentCode,
+          answers: f.data.manualAnswers,
+        },
+        { 'idempotency-key': randomUUID() },
+      );
+      expectStatus(current, 201);
+      assert.equal(current.body.state, 'ACTIVE');
+      const afterBoth = await state();
+      assert.equal(afterBoth.tickets.length, before.tickets.length + 2);
+      assert.equal(afterBoth.outbox.length, before.outbox.length + 2);
+      assert.equal(afterBoth.allocated, before.allocated + 2);
+      for (const [code, label] of [
+        [f.data.unsupportedCode, 'unsupported version'],
+        [f.data.ambiguousCode, 'ambiguous v1/v2 rows'],
+      ]) {
+        expectStatus(
+          await request(
+            ctx,
+            'POST',
+            path,
+            attendee,
+            { ...body, code },
+            { 'idempotency-key': randomUUID() },
+          ),
+          422,
+          'CODE_INVALID',
+        );
+        assert.deepEqual(
+          await state(),
+          afterBoth,
+          `${label} must fail without mutation`,
+        );
+      }
+      expectStatus(
+        await request(ctx, 'POST', path, attendee, body, {
+          'idempotency-key': randomUUID(),
+        }),
+        409,
+        'CODE_CONSUMED',
+      );
+      assert.deepEqual(
+        await state(),
+        afterBoth,
+        'rotation must not resurrect consumed code',
+      );
+      const runDir = required(process.env.E2E_RUN_DIR, 'DB-19 E2E_RUN_DIR');
+      const privateState = JSON.parse(readFileSync(`${runDir}/seed-state.json`, 'utf8'));
+      const exposed = JSON.stringify([issued.body, current.body]) + readFileSync(`${runDir}/api.log`, 'utf8');
+      for (const material of [privateState.secrets.hmacLegacy, privateState.secrets.hmac, privateState.secrets.credential]) {
+        assert.ok(!exposed.includes(material), 'DB-19 API response/log must not reveal key material');
+      }
+      return;
+    }
     if (caseId === 'DB-18') {
       const requireBackend = createRequire(
         new URL('../../../packages/backend/package.json', import.meta.url),
