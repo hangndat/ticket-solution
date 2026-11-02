@@ -26,11 +26,14 @@ const {
   hashCredentialToken,
   sealCredentialToken,
   deriveGateSigningSealKey,
+  readGateCredentialVerifyKeys,
+  verifyGateCredentialJws,
   tryConsumeRateLimit,
   retryNotificationDelivery,
   NotificationError,
   NOTIFICATION_ERROR_CODES,
 } = require('../dist');
+const { prepareZXingModule, readBarcodes } = require('zxing-wasm/reader');
 
 const docker = (...args) =>
   execFileSync('docker', args, {
@@ -205,6 +208,53 @@ async function mailpitMessage(apiBase, id) {
   const res = await fetch(apiBase + '/api/v1/message/' + id);
   assert.equal(res.status, 200);
   return res.json();
+}
+
+async function decodeMailpitQrPng(rawMime) {
+  const boundaries = [...rawMime.matchAll(/boundary="?([^";\r\n]+)"?/gi)].map(
+    (match) => match[1],
+  );
+  let pngBytes;
+  for (const boundary of boundaries) {
+    const imagePart = rawMime
+      .split('--' + boundary)
+      .find((part) => {
+        const [headers] = part.split(/\r?\n\r?\n/, 2);
+        return (
+          /(?:^|\r?\n)Content-Type:\s*image\/png/i.test(headers) &&
+          /(?:^|\r?\n)Content-ID:\s*<ticket-qr@vemoki>/i.test(headers)
+        );
+      });
+    if (!imagePart) continue;
+    const [headers, body] = imagePart.split(/\r?\n\r?\n/, 2);
+    assert.match(headers, /Content-Transfer-Encoding:\s*base64/i);
+    pngBytes = Buffer.from(body.replace(/\s/g, ''), 'base64');
+    break;
+  }
+  assert.ok(pngBytes?.length > 8, 'Mailpit MIME must contain the inline QR PNG bytes');
+  assert.deepEqual(
+    pngBytes.subarray(0, 8),
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    'inline QR attachment must be a PNG',
+  );
+
+  const modulePath = require.resolve('zxing-wasm/reader');
+  const wasm = readFileSync(
+    path.resolve(path.dirname(modulePath), '../../reader/zxing_reader.wasm'),
+  );
+  await prepareZXingModule({
+    overrides: {
+      wasmBinary: wasm.buffer.slice(wasm.byteOffset, wasm.byteOffset + wasm.byteLength),
+    },
+    fireImmediately: true,
+  });
+  const [decoded] = await readBarcodes(new Uint8Array(pngBytes), {
+    formats: ['QRCode'],
+    tryHarder: true,
+    maxNumberOfSymbols: 1,
+  });
+  assert.ok(decoded?.text, 'Mailpit QR PNG must decode to a credential payload');
+  return decoded.text;
 }
 
 test(
@@ -433,6 +483,29 @@ test(
       assert.match(rawMime, /Content-Type:\s*image\/png/i);
       assert.match(rawMime, /ticket-qr@vemoki/);
       assert.match(rawMime, /Content-Type:\s*multipart\//i);
+      const qrPayload = await decodeMailpitQrPng(rawMime);
+      let qrEnvelope;
+      assert.doesNotThrow(() => {
+        qrEnvelope = JSON.parse(qrPayload);
+      }, 'decoded QR must contain the credential envelope JSON');
+      assert.deepEqual(Object.keys(qrEnvelope).sort(), ['jws', 'kind', 'v']);
+      assert.equal(qrEnvelope.v, 1);
+      assert.equal(qrEnvelope.kind, 'ticket.gate_credential');
+      assert.equal(typeof qrEnvelope.jws, 'string');
+      assert.equal(qrEnvelope.jws.split('.').length, 3, 'credential must be compact JWS, not a legacy AES token');
+      assert.notEqual(qrPayload, tokenBefore, 'QR payload must not expose the legacy AES credential token');
+      const [protectedHeader] = qrEnvelope.jws.split('.');
+      assert.deepEqual(JSON.parse(Buffer.from(protectedHeader, 'base64url').toString('utf8')), {
+        alg: 'ES256',
+        kid: GATE_KID,
+        typ: 'JWT',
+      });
+      const verifyKeys = await readGateCredentialVerifyKeys(RELAY_OPTS.env);
+      const qrClaims = await verifyGateCredentialJws(qrEnvelope.jws, verifyKeys);
+      assert.equal(qrClaims.tid, tenantId);
+      assert.equal(qrClaims.eid, eventId);
+      assert.equal(qrClaims.tkt, issued.ticketId);
+      assert.equal(qrClaims.ver, credBefore.version);
       void msg;
 
       const note = await withTenant(db, tenantId, async (tx) => {
