@@ -139,11 +139,13 @@
   {
     "caseId": "DB-13",
     "tests": [
-      "D:packages/backend/test/event-lifecycle.test.cjs#C-E event lifecycle"
+      "D:packages/backend/test/event-lifecycle.test.cjs#C-E event lifecycle",
+      "D:packages/backend/test/db13-event-windows.test.cjs#DB-13: isWindowOpen is half-open with null bounds unbounded",
+      "D:packages/backend/test/db13-event-windows.test.cjs#DB-13: two IANA timezones stored independently; invalid timezone/window rejected"
     ],
     "layers": ["D"],
     "status": "blocked",
-    "reason": "D lifecycle; thiếu UTC/IANA/deadline sau lock và archived ticket policy."
+    "reason": "D lifecycle + db13-event-windows (hai IANA timezone độc lập, isWindowOpen half-open, invalid timezone/window bị từ chối). Thiếu H Keycloak/HTTP theo ACCEPTANCE."
   },
   {
     "caseId": "DB-14",
@@ -184,11 +186,13 @@
     "caseId": "DB-17",
     "tests": [
       "D:packages/backend/test/role-presets.test.cjs#P2-ROLES-PRESET",
-      "D:packages/backend/test/tenant-registration.test.cjs#P2 self-serve PENDING registration"
+      "D:packages/backend/test/tenant-registration.test.cjs#P2 self-serve PENDING registration",
+      "D:packages/backend/test/event-quota-suspended.test.cjs#632 concurrent createEvent at max_events — one winner, one TENANT_LIMIT_REACHED",
+      "D:packages/backend/test/tenant-limits-usage.test.cjs#G-10 runtime role reads only authorized tenant counters and UTC day"
     ],
     "layers": ["D"],
     "status": "blocked",
-    "reason": "D presets/onboarding; thiếu H usage/mutation limit và arbitrary permissions matrix."
+    "reason": "D presets/onboarding + tenant limit mutation/usage (event-quota-suspended #632 race, tenant-limits-usage). Thiếu H Keycloak/HTTP; escalation bằng preset của Manager chưa có assertion rõ (cần owner quyết định policy)."
   },
   {
     "caseId": "DB-18",
@@ -199,17 +203,19 @@
     ],
     "layers": ["D"],
     "status": "blocked",
-    "reason": "D deletion/tombstone; thiếu H session/IdP end-to-end và audit retention."
+    "reason": "D deletion/tombstone + session revoke + audit kept (account-session-revoke khẳng định audit_logs không hard-delete). Thiếu H session/IdP end-to-end theo ACCEPTANCE."
   },
   {
     "caseId": "DB-19",
     "tests": [
       "D:packages/backend/test/account-idp-erasure.test.cjs#SEC-2 B1:",
-      "U:packages/backend/test/issue-unit.test.cjs#CODE_HMAC_PEPPER"
+      "U:packages/backend/test/issue-unit.test.cjs#CODE_HMAC_PEPPER",
+      "D:packages/backend/test/db19-code-pepper-rotation.test.cjs#DB-19: code issued under v1 keeps resolving after v2 rotation; removed v1 fails closed; no plaintext",
+      "D:packages/backend/test/db19-code-pepper-rotation.test.cjs#DB-19: consumed code cannot be re-issued after pepper rotation (fail-closed)"
     ],
     "layers": ["D", "U"],
     "status": "blocked",
-    "reason": "Keyring tombstone tests không chứng minh code/QR rotation."
+    "reason": "D code pepper rotation (v1 alias giữ sau rotate v2, removed v1 fail-closed, không lộ plaintext; consumed code không cấp lại sau rotation, mutation-verified). QR credential rotation (credential-crypto key đơn, kid local-v1) chưa có versioned keyring — product gap cần owner. H chưa có."
   },
   {
     "caseId": "GATE-01",
