@@ -27,6 +27,24 @@ node tests/e2e/coverage.mjs
 
 Các runner stack build API/worker/shared packages, rồi Web/Portal production khi cần browser. `--skip-build` phục vụ debug sau khi đã build đúng checkout và frontend bật `NEXT_PUBLIC_SINGLE_CODE_RESOLVE=1`; trang prerender có thể giữ origin lúc build nên dùng build mặc định khi lấy bằng chứng toàn suite. `test:e2e:http --case=DB-03` chọn ca HTTP; backend dùng cú pháp riêng `--case DB-03`. Integration runner mặc định dừng ở selector lỗi đầu tiên.
 
+## Lane — chạy song song và dùng lại stack
+
+Mặc định mỗi run dựng stack Docker riêng và build lại Web/Portal, vì origin của run (`e2e-<runId>.test` cộng cổng TLS ngẫu nhiên) bị nướng vào trang prerender. Lane cố định origin theo lane nên build còn hiệu lực giữa các run, và nhiều lane chạy song song.
+
+```sh
+pnpm test:e2e:smoke --lane            # lấy lane rảnh trong pool
+pnpm test:e2e --lane=2 --case=WEB-01,WEB-02
+pnpm test:e2e:lane status             # trạng thái pool
+pnpm test:e2e:lane down 2             # hạ stack của lane 2
+E2E_LANES=3 pnpm test:e2e:smoke --lane
+```
+
+Lane `N` dùng hostname `*.e2e-lane<N>.test`, cổng TLS `44300+N`, Compose project `e2e-lane<N>` và realm `e2e-lane<N>`. Container của lane sống qua nhiều run; mỗi run vẫn có database riêng tạo từ template đã migrate, realm import lại qua admin API, bucket/user/policy MinIO riêng và hộp thư Mailpit được xoá đầu run. Cleanup cuối run xoá đúng các tài nguyên đó và giữ container.
+
+Một lane chỉ phục vụ một run tại một thời điểm: `tests/e2e/.lanes/lane<N>/lane.lock` ép tuần tự, lock của process đã chết mới bị thu hồi. Hai run song song luôn nằm ở hai lane, tức hai hostname khác nhau, nên cách ly cookie giữ nguyên. Build được dùng lại khi git commit, fingerprint working tree và origin của lane không đổi; `--rebuild` buộc build lại, `--skip-build` giữ nguyên ý nghĩa cũ.
+
+Mỗi lane là năm container và Keycloak chiếm nhiều RAM nhất: bắt đầu với 2–3 lane rồi đo trước khi tăng. `pnpm test:e2e:lane down all` trả lại toàn bộ tài nguyên. Kế hoạch và phần còn lại: [PLAN.md §16](PLAN.md).
+
 ## Cô lập và bằng chứng
 
 Mỗi run tạo Compose project, network, port loopback, realm/users, database, object bucket, mailbox và dữ liệu từng case riêng. Web/Portal dùng hostname khác nhau dưới `e2e-<run>.test`, TLS proxy local; cookie `Secure` vẫn được bật trong production. Node dùng CA/resolver riêng trong process; Chromium chỉ tin SPKI của chứng thư run. Không sửa `/etc/hosts`, trust store hệ thống hay `.env` dùng chung. Platform login dùng password + TOTP thật. HTTP dùng confidential client test và JWT ký bởi Keycloak.
