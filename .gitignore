@@ -53,6 +53,7 @@ docs/reviews/**/*.webp
 tests/e2e/.artifacts/
 .artifacts/
 
-# Bản sinh tự động cho Codex (nguồn chuẩn: .cursor/skills, .claude/settings.json)
-.agents/
+# Skills dùng chung được version control; các overlay agent khác vẫn local.
+.agents/*
+!.agents/skills/
 .codex/

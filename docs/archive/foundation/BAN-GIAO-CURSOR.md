@@ -1,7 +1,9 @@
+> **Snapshot lịch sử, lưu ngày 03/11/2026 từ working tree trước khi dọn docs.** Chỉ giữ provenance/approval/evidence tại mốc ghi trong nội dung; không cấp quyền mới, không phải trạng thái live hoặc hướng dẫn thực thi. Nguồn hiện hành: [docs index](../../README.md). Các SHA/checks bên dưới giữ nghĩa lịch sử, không được coi là đã chạy lại.
+
 # Bàn giao cho Cursor agent
 
 > **TÀI LIỆU LỊCH SỬ (2026-10-16).** Bàn giao W0 → lập roadmap/Project lần đầu.  
-> **Không** dùng làm trạng thái hiện tại. Status động: [Project #3](https://github.com/users/hangndat/projects/3). Phạm vi/gate: [ROADMAP.md](./ROADMAP.md). Kế hoạch wave: [AGENT-DEVELOPMENT-PLAN.md](./AGENT-DEVELOPMENT-PLAN.md).
+> **Không** dùng làm trạng thái hiện tại. Status động: [Project #3](https://github.com/users/hangndat/projects/3). Phạm vi/gate: [ROADMAP.md](../../ROADMAP.md). Kế hoạch wave: [AGENT-DEVELOPMENT-PLAN.md](AGENT-DEVELOPMENT-PLAN.md).
 
 Ngày: 2026-10-16. Đây là bàn giao toàn bộ quyền tiếp tục công việc, không phải task worker có coordinator giám sát. Agent cũ dừng sau khi Cursor nhận prompt. Không phát lifecycle message theo các Dispatch cũ.
 

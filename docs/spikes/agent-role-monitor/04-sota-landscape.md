@@ -13,28 +13,28 @@
 
 Từ spike README + catalog roles (`docs/agents/README.md`):
 
-| Nhu cầu | Ý nghĩa trên stack ta |
-| ------- | --------------------- |
-| Attribution theo **Role ID** | `product-ba`, `backend`, `web`, `ios`, `reviewer-dod`, … — khác “agent framework name” |
-| Attribution theo **Dispatch / Task / Run** | Orca đã có lifecycle (`taskId`, `dispatchId`, `worker-list`); chưa có token/CPU per role |
-| Token + cost | Cursor là agent vendor; transcript/API usage thường **không** nằm trong app LangChain của ta |
-| Host resource | Parallel workers → cần CPU/RAM (và leak MCP/process) theo session/worker |
-| Quality | DoD / exact-SHA / review verdict — không chỉ LLM-as-judge trên prompt |
-| Privacy / local-first | Prompt, code, credentials không nên mặc định lên SaaS |
+| Nhu cầu                                    | Ý nghĩa trên stack ta                                                                        |
+| ------------------------------------------ | -------------------------------------------------------------------------------------------- |
+| Attribution theo **Role ID**               | `product-ba`, `backend`, `web`, `ios`, `reviewer-dod`, … — khác “agent framework name”       |
+| Attribution theo **Dispatch / Task / Run** | Orca đã có lifecycle (`taskId`, `dispatchId`, `worker-list`); chưa có token/CPU per role     |
+| Token + cost                               | Cursor là agent vendor; transcript/API usage thường **không** nằm trong app LangChain của ta |
+| Host resource                              | Parallel workers → cần CPU/RAM (và leak MCP/process) theo session/worker                     |
+| Quality                                    | DoD / exact-SHA / review verdict — không chỉ LLM-as-judge trên prompt                        |
+| Privacy / local-first                      | Prompt, code, credentials không nên mặc định lên SaaS                                        |
 
-**Gap trung tâm:** hầu hết LLM observability giả định *bạn instrument app gọi model*. Stack ta là *IDE agent (Cursor) do Orca điều phối* — lớp proxy/SDK thường **không** chạm được request LLM của Cursor.
+**Gap trung tâm:** hầu hết LLM observability giả định _bạn instrument app gọi model_. Stack ta là _IDE agent (Cursor) do Orca điều phối_ — lớp proxy/SDK thường **không** chạm được request LLM của Cursor.
 
 ---
 
 ## 2. Seed links — verify
 
-| Seed (README) | Kết quả verify |
-| ------------- | -------------- |
-| [zylos — OTel AI agent observability](https://zylos.ai/research/2026-02-28-opentelemetry-ai-agent-observability/) | Tổng hợp GenAI conventions + agent spans; hữu ích làm overview, không phải spec chuẩn |
-| [base14 — agent observability](https://docs.base14.io/guides/ai-observability/agent-observability/) | Guide OTel: `gen_ai.conversation.id` + `gen_ai.agent.name` + `invoke_agent` / `execute_tool`; backend thương mại **base14 Scout** |
-| [devfloor9 — agent monitoring layers](https://devfloor9.github.io/engineering-playbook/en/docs/agentic-ai-platform/operations-mlops/observability/agent-monitoring) | Mô hình lớp: Langfuse (LLM) + vLLM + DCGM + Node Exporter — pattern hybrid rõ |
-| [Google Gemini Enterprise Agent Platform — observability](https://docs.cloud.google.com/gemini-enterprise-agent-platform/optimize/observability/overview) | Dashboard token/latency/quality + **container CPU/memory** + dual-attribution audit; gắn GCP |
-| [agent-top live view](https://agenttop.dev/live-view/) | TUI local: CPU/MEM/tokens/cost per harness; refresh ~1s |
+| Seed (README)                                                                                                                                                       | Kết quả verify                                                                                                                    |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| [zylos — OTel AI agent observability](https://zylos.ai/research/2026-02-28-opentelemetry-ai-agent-observability/)                                                   | Tổng hợp GenAI conventions + agent spans; hữu ích làm overview, không phải spec chuẩn                                             |
+| [base14 — agent observability](https://docs.base14.io/guides/ai-observability/agent-observability/)                                                                 | Guide OTel: `gen_ai.conversation.id` + `gen_ai.agent.name` + `invoke_agent` / `execute_tool`; backend thương mại **base14 Scout** |
+| [devfloor9 — agent monitoring layers](https://devfloor9.github.io/engineering-playbook/en/docs/agentic-ai-platform/operations-mlops/observability/agent-monitoring) | Mô hình lớp: Langfuse (LLM) + vLLM + DCGM + Node Exporter — pattern hybrid rõ                                                     |
+| [Google Gemini Enterprise Agent Platform — observability](https://docs.cloud.google.com/gemini-enterprise-agent-platform/optimize/observability/overview)           | Dashboard token/latency/quality + **container CPU/memory** + dual-attribution audit; gắn GCP                                      |
+| [agent-top live view](https://agenttop.dev/live-view/)                                                                                                              | TUI local: CPU/MEM/tokens/cost per harness; refresh ~1s                                                                           |
 
 **Bổ sung (mở rộng ngoài seed):** OpenTelemetry blog GenAI (2026), Langfuse Agent Graphs, LangSmith Observability, Helicone self-host/cost, Arize Phoenix self-host.
 
@@ -125,29 +125,29 @@ Từ spike README + catalog roles (`docs/agents/README.md`):
 
 Ký hiệu: ✅ có (đã document) · ◐ một phần / phụ thuộc tích hợp · ❌ không / không áp dụng stack ta · ? chưa thấy trên nguồn đã mở.
 
-| Hệ | Token | Cost | CPU/RAM host | Quality / eval | Multi-agent attribution | License / self-host | Áp dụng Cursor+Orca local |
-| -- | ----- | ---- | ------------ | -------------- | ----------------------- | ------------------- | ------------------------- |
-| **OTel GenAI conventions** | ✅ attrs/metrics | ◐ derive từ token | ❌ (cần infra metrics riêng) | ◐ eval events (tùy impl) | ✅ `agent.name` + `conversation.id` | Spec mở; backend tùy chọn | Từ điển + future emit; Copilot/Codex có OTel, Cursor chưa thấy |
-| **Langfuse** | ✅ | ✅ | ❌ | ✅ scores/evals | ✅ graphs / nesting | MIT + self-host | Self-host OK cho app instrumented; không cover Cursor LLM path |
-| **LangSmith** | ✅ | ✅ (platform usage) | ❌ | ✅ datasets/evals/feedback | ✅ nested runs | SaaS; self-host Enterprise | Buy kém fit; nặng cho local |
-| **Helicone** | ✅ (qua proxy) | ✅ (gateway accurate) | ❌ | ◐ metrics “quality” ở cấp request | ◐ sessions/properties | OSS + self-host | Proxy thường **không** gắn được vào Cursor |
-| **agent-top** | ✅ harness có transcript; **Cursor: not yet** | ✅ tương tự | ✅ process tree | ❌ (không DoD) | ◐ session/harness, không Role ID | MIT (crate agent-top) | **Cao** cho resource; token Cursor còn gap |
-| **Google Agent Platform obs.** | ✅ | ◐ (usage/token; cost cloud) | ✅ container CPU/mem | ✅ online eval widgets | ✅ topology + agent identity | GCP managed | Pattern tham khảo; không deploy stack ta |
-| **base14 Scout** | ✅ (qua OTel) | ✅ (guide) | ◐ nếu correlate infra spans | ✅ eval events | ✅ swim lanes / handoff | Commercial + OTel pattern | Pattern attribution; cần emitter |
-| **Arize Phoenix** | ✅ (OTel) | ◐ từ usage attrs | ❌ native | ✅ evals/experiments | ◐ qua instrument | ELv2 self-host free | Backend local tốt nếu có OTLP |
+| Hệ                             | Token                                         | Cost                        | CPU/RAM host                 | Quality / eval                    | Multi-agent attribution             | License / self-host        | Áp dụng Cursor+Orca local                                      |
+| ------------------------------ | --------------------------------------------- | --------------------------- | ---------------------------- | --------------------------------- | ----------------------------------- | -------------------------- | -------------------------------------------------------------- |
+| **OTel GenAI conventions**     | ✅ attrs/metrics                              | ◐ derive từ token           | ❌ (cần infra metrics riêng) | ◐ eval events (tùy impl)          | ✅ `agent.name` + `conversation.id` | Spec mở; backend tùy chọn  | Từ điển + future emit; Copilot/Codex có OTel, Cursor chưa thấy |
+| **Langfuse**                   | ✅                                            | ✅                          | ❌                           | ✅ scores/evals                   | ✅ graphs / nesting                 | MIT + self-host            | Self-host OK cho app instrumented; không cover Cursor LLM path |
+| **LangSmith**                  | ✅                                            | ✅ (platform usage)         | ❌                           | ✅ datasets/evals/feedback        | ✅ nested runs                      | SaaS; self-host Enterprise | Buy kém fit; nặng cho local                                    |
+| **Helicone**                   | ✅ (qua proxy)                                | ✅ (gateway accurate)       | ❌                           | ◐ metrics “quality” ở cấp request | ◐ sessions/properties               | OSS + self-host            | Proxy thường **không** gắn được vào Cursor                     |
+| **agent-top**                  | ✅ harness có transcript; **Cursor: not yet** | ✅ tương tự                 | ✅ process tree              | ❌ (không DoD)                    | ◐ session/harness, không Role ID    | MIT (crate agent-top)      | **Cao** cho resource; token Cursor còn gap                     |
+| **Google Agent Platform obs.** | ✅                                            | ◐ (usage/token; cost cloud) | ✅ container CPU/mem         | ✅ online eval widgets            | ✅ topology + agent identity        | GCP managed                | Pattern tham khảo; không deploy stack ta                       |
+| **base14 Scout**               | ✅ (qua OTel)                                 | ✅ (guide)                  | ◐ nếu correlate infra spans  | ✅ eval events                    | ✅ swim lanes / handoff             | Commercial + OTel pattern  | Pattern attribution; cần emitter                               |
+| **Arize Phoenix**              | ✅ (OTel)                                     | ◐ từ usage attrs            | ❌ native                    | ✅ evals/experiments              | ◐ qua instrument                    | ELv2 self-host free        | Backend local tốt nếu có OTLP                                  |
 
 ---
 
 ## 5. Map sang nhu cầu Role monitor
 
-| Nhu cầu Vemoki | Hệ gần nhất | Ghi chú BA |
-| -------------- | ----------- | ---------- |
-| Cost/token per **Role ID** | OTel attrs / Langfuse metadata / Helicone properties | Phải **gắn nhãn** từ Orca Task Spec — không vendor nào biết `reviewer-dod` sẵn |
-| Cost/token per **Dispatch** | `gen_ai.conversation.id` (OTel/Scout) hoặc session id | Map 1–1 Dispatch ↔ conversation/session |
-| CPU/RAM worker song song | **agent-top** + Node Exporter pattern (playbook) | Ưu tiên local; Cursor token vẫn thiếu |
-| Quality / DoD | Project + `docs/reviews/*` (nội bộ) | Langfuse/LangSmith/Phoenix eval = lớp phụ, **không thay** exact-SHA DoD |
-| Multi-agent Orca tree | Scout/OTel handoff model | Coordinator depth-0 + workers = conversation + agent names |
-| Không leak prompt | agent-top (local) / Phoenix-Langfuse self-host / OTel metadata-only | Cloud LangSmith/Helicone/Google = ADR privacy nếu bật content |
+| Nhu cầu Vemoki              | Hệ gần nhất                                                         | Ghi chú BA                                                                     |
+| --------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| Cost/token per **Role ID**  | OTel attrs / Langfuse metadata / Helicone properties                | Phải **gắn nhãn** từ Orca Task Spec — không vendor nào biết `reviewer-dod` sẵn |
+| Cost/token per **Dispatch** | `gen_ai.conversation.id` (OTel/Scout) hoặc session id               | Map 1–1 Dispatch ↔ conversation/session                                        |
+| CPU/RAM worker song song    | **agent-top** + Node Exporter pattern (playbook)                    | Ưu tiên local; Cursor token vẫn thiếu                                          |
+| Quality / DoD               | Project + `docs/reviews/*` (nội bộ)                                 | Langfuse/LangSmith/Phoenix eval = lớp phụ, **không thay** exact-SHA DoD        |
+| Multi-agent Orca tree       | Scout/OTel handoff model                                            | Coordinator depth-0 + workers = conversation + agent names                     |
+| Không leak prompt           | agent-top (local) / Phoenix-Langfuse self-host / OTel metadata-only | Cloud LangSmith/Helicone/Google = ADR privacy nếu bật content                  |
 
 ---
 
@@ -158,7 +158,7 @@ Landscape này **Không** chọn ADR. Các hướng sau **sẽ** buộc ADR nế
 1. **Gửi transcript/prompt Cursor lên SaaS** (LangSmith Cloud, Helicone Cloud, Scout Cloud, …).
 2. **Bắt buộc OTel collector** trong đường critical của Orca (deps, retention, PII).
 3. **Proxy LLM Cursor** qua Helicone/gateway (thường infeasible + vendor constraint).
-4. **Thay DoD Project bằng LLM-as-judge** từ Langfuse/Phoenix (xung đột `github-project-tracking.mdc`).
+4. **Thay DoD Project bằng LLM-as-judge** từ Langfuse/Phoenix (xung đột `docs/agents/policies/project.md`).
 
 ---
 
@@ -166,14 +166,14 @@ Landscape này **Không** chọn ADR. Các hướng sau **sẽ** buộc ADR nế
 
 ### Khuyến nghị: **hybrid** (không full-buy, không full-build dashboard GenAI)
 
-| Lớp | Chiến lược | Vì sao |
-| --- | ---------- | ------ |
-| **Attribution plane (Role / Task / Dispatch)** | **Build** mỏng trên Orca | Chỉ Orca biết Role ID + lifecycle; vendor không biết catalog Vemoki |
-| **Host CPU/RAM / MCP leak** | **Buy/adopt** agent-top (hoặc tương đương local) + metric OS | Đã có tín hiệu process; Cursor token chưa có nhưng CPU đã có |
-| **Token/cost Cursor** | **Build/wait** | agent-top: cursor-agent tokens *not yet*; không giả định Helicone/Langfuse cover được |
-| **Chuẩn schema** | **Adopt** OTel GenAI attribute names | Tránh invent taxonomy song song; map Role → `gen_ai.agent.name` khi emit |
-| **Trace UI / eval lab (optional)** | **Buy/self-host** Langfuse **hoặc** Phoenix | Chỉ khi có emitter (worker script / future harness OTel) — không bắt buộc MVP |
-| **LangSmith / Google Agent Platform / Helicone-as-Cursor-proxy** | **Defer / không mua** cho spike này | Fit sản phẩm hoặc path tích hợp không khớp local Cursor+Orca |
+| Lớp                                                              | Chiến lược                                                   | Vì sao                                                                                |
+| ---------------------------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
+| **Attribution plane (Role / Task / Dispatch)**                   | **Build** mỏng trên Orca                                     | Chỉ Orca biết Role ID + lifecycle; vendor không biết catalog Vemoki                   |
+| **Host CPU/RAM / MCP leak**                                      | **Buy/adopt** agent-top (hoặc tương đương local) + metric OS | Đã có tín hiệu process; Cursor token chưa có nhưng CPU đã có                          |
+| **Token/cost Cursor**                                            | **Build/wait**                                               | agent-top: cursor-agent tokens _not yet_; không giả định Helicone/Langfuse cover được |
+| **Chuẩn schema**                                                 | **Adopt** OTel GenAI attribute names                         | Tránh invent taxonomy song song; map Role → `gen_ai.agent.name` khi emit              |
+| **Trace UI / eval lab (optional)**                               | **Buy/self-host** Langfuse **hoặc** Phoenix                  | Chỉ khi có emitter (worker script / future harness OTel) — không bắt buộc MVP         |
+| **LangSmith / Google Agent Platform / Helicone-as-Cursor-proxy** | **Defer / không mua** cho spike này                          | Fit sản phẩm hoặc path tích hợp không khớp local Cursor+Orca                          |
 
 ### Không khuyến nghị
 
