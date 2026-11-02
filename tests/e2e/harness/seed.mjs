@@ -166,7 +166,9 @@ export async function seedRuntime(state, caseIds) {
   const users = backend.createPrismaIdentityUserRepository(db);
   const issuer = `${state.origins.auth}/realms/${state.realm}`;
   const hmac = backend.readCodeHmacEnvironment({
-    CODE_HMAC_PEPPER: state.secrets.hmac,
+    CODE_HMAC_PEPPER: caseIds.includes('DB-19')
+      ? state.secrets.hmacLegacy
+      : state.secrets.hmac,
     CODE_HMAC_VERSION: '1',
   });
   const roles = {
@@ -224,6 +226,13 @@ export async function seedRuntime(state, caseIds) {
       const codes = [
         `E2E-${state.id}-${caseId}-A`,
         `E2E-${state.id}-${caseId}-B`,
+        ...(caseId === 'DB-19'
+          ? [
+              `E2E-${state.id}-${caseId}-C`,
+              `E2E-${state.id}-${caseId}-D`,
+              `E2E-${state.id}-${caseId}-E`,
+            ]
+          : []),
         ...(['DB-03', 'DB-04', 'DB-07'].includes(caseId)
           ? [`E2E-${state.id}-${caseId}-C`]
           : []),
@@ -274,6 +283,7 @@ export async function seedRuntime(state, caseIds) {
           'DB-13',
           'DB-14',
           'DB-18',
+          'DB-19',
           'JOB-04',
           'PLAT-03',
           'GATE-02',
@@ -394,6 +404,28 @@ export async function seedRuntime(state, caseIds) {
             SET approval_mode='MANUAL', pending_ttl_hours=3
             WHERE tenant_id=${tenantId}::uuid AND id=${inventory.sourceId}::uuid`;
           fixture.data.pendingTtlHours = 3;
+        }
+        if (caseId === 'DB-19') {
+          fixture.data.formVersion = 'form-v1';
+          fixture.data.termsVersion = 'terms-v1';
+          fixture.data.unsupportedCode = codes[1];
+          fixture.data.ambiguousCode = codes[2];
+          fixture.data.currentCode = codes[4];
+          const unsupported = backend.hashRedemptionCode(
+            { pepper: state.secrets.hmacLegacy, version: 3 },
+            codes[1],
+          );
+          const currentDuplicate = backend.hashRedemptionCode(
+            { pepper: state.secrets.hmac, version: 2 },
+            codes[2],
+          );
+          const current = backend.hashRedemptionCode(
+            { pepper: state.secrets.hmac, version: 2 },
+            codes[4],
+          );
+          await tx.$executeRaw`UPDATE redemption_codes SET code_hmac=${unsupported}, code_pepper_version=3 WHERE tenant_id=${tenantId}::uuid AND id=${inventory.codeIds[1]}::uuid`;
+          await tx.$executeRaw`UPDATE redemption_codes SET code_hmac=${currentDuplicate}, code_pepper_version=2 WHERE tenant_id=${tenantId}::uuid AND id=${inventory.codeIds[3]}::uuid`;
+          await tx.$executeRaw`UPDATE redemption_codes SET code_hmac=${current}, code_pepper_version=2 WHERE tenant_id=${tenantId}::uuid AND id=${inventory.codeIds[4]}::uuid`;
         }
         if (caseId === 'DB-04') {
           await tx.$executeRaw`
