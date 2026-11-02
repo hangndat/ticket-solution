@@ -15,8 +15,10 @@
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------- |
 | Marketing / attendee web    | Unified concept + VD-03; [FB08 banner/loading delta](UI869-FEEDBACK/README.md) áp dụng đúng phần feedback được giao |
 | Attendee / Staff iOS        | Unified product + VD-03, rồi O25–O28/Task UX #914; Gate admission chỉ Staff iOS                                     |
-| Organizer / Platform Portal | VD-03 + O18/ADR-20; [VCX handoff](vcx/README.md) cho khách/vé/import/wizard/conflict/limit theo #914                |
+| Organizer / Platform Portal | [Ràng buộc Portal](portal-contract.md) + bổ sung O26/ADR-20; [VCX handoff](vcx/README.md) cho khách/vé/import/wizard/conflict/limit theo #914                |
 | Acceptance runtime          | Exact source/tested SHA và evidence Task/PR; prototype/review bar/fixture metrics không phải runtime                |
+
+Handoff Portal P0+P1 và bản FB08 Liv đã chuyển vào [archive](../archive/README.md). Guest flow đọc thẳng [gói refactor mobile](../plans/mobile-production-refactor/README.md); không còn pointer trung gian trong design.
 
 ## Kho tham khảo theo phiên bản
 

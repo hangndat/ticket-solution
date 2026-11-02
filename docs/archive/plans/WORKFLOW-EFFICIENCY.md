@@ -1,3 +1,5 @@
+> **Bản lưu lịch sử — chuyển ngày 03/11/2026.** Nguồn: `docs/plans/WORKFLOW-EFFICIENCY.md` tại `36a594f62eca16b3307162d3598c40cb098a1a20`. Giữ approval, SHA và kết quả gốc; các nhãn Status, run/dispatch, lệnh và model bên dưới chỉ có giá trị tại thời điểm ghi. Công việc mới đọc [bản đồ agent](../../agents/README.md). Bản lưu không xác nhận HEAD/runtime hoặc cấp quyền thực thi.
+
 # Gói siết workflow — planning, review, token
 
 Ngày đo: **27/10/2026** · Triển khai cùng ngày trên nhánh `hangndat/tooling-workflow-efficiency`. Không mở GitHub Issue/Epic.  

@@ -1,3 +1,5 @@
+> **Bản lưu lịch sử — chuyển ngày 03/11/2026.** Nguồn: `docs/plans/D6-UX-UI-PLAN.md` tại `36a594f62eca16b3307162d3598c40cb098a1a20`. Giữ approval, SHA và kết quả gốc; các nhãn Status, run/dispatch, lệnh và model bên dưới chỉ có giá trị tại thời điểm ghi. Công việc mới đọc [nguồn thiết kế hiện hành](../../design/README.md). Bản lưu không xác nhận HEAD/runtime hoặc cấp quyền thực thi.
+
 # D6 — Hoàn thiện UX/UI toàn sản phẩm (kế hoạch)
 
 **Trạng thái:** **Đợt D6 acceptance complete (2026-10-17)** — parent [#81](https://github.com/hangndat/ticket-solution/issues/81) **Hoàn thành**/closed trên Project #3; Milestone #8 closed. Coding: web PR [#92](https://github.com/hangndat/ticket-solution/pull/92) `eb0d078…` · iOS PR [#93](https://github.com/hangndat/ticket-solution/pull/93) `b93124b…`. S7 docs: PR [#94](https://github.com/hangndat/ticket-solution/pull/94) `05618b5…`. Issues #82–#85/#87–#89 closed. Plan đã duyệt user 2026-10-17.  

@@ -1,3 +1,5 @@
+> **Bản lưu lịch sử — chuyển ngày 03/11/2026.** Nguồn: `docs/plans/PRODUCTION-READINESS-RUN.md` tại `36a594f62eca16b3307162d3598c40cb098a1a20`. Giữ approval, SHA và kết quả gốc; các nhãn Status, run/dispatch, lệnh và model bên dưới chỉ có giá trị tại thời điểm ghi. Công việc mới đọc [scope/gates](../../../ROADMAP.md), [Decision Log](../../../DECISION-LOG.md), [catalog UAT](../../../plans/PROD-LAUNCH-UAT.md). Bản lưu không xác nhận HEAD/runtime hoặc cấp quyền thực thi.
+
 # Đợt nghiên cứu hoàn thiện sản phẩm để đưa production
 
 Ngày giao: 18/10/2026. User yêu cầu: “Tôi muốn hoàn thiện sản phẩm để đưa production, spawn đội nghiên cứu đi”.
@@ -28,7 +30,7 @@ Mỗi report ghi gap, nguồn/bằng chứng và SHA, rủi ro, ưu tiên P0/P1/
 
 O06 retention/vùng dữ liệu/SLA vẫn là quyết định mở, không được tự chốt số hoặc ingest dữ liệu người dùng thật chỉ vì đợt nghiên cứu này được giao.
 
-> **Errata (2026-10-18, [#373](https://github.com/hangndat/ticket-solution/issues/373)):** Đợt research trên **stale một phần**. Nguồn gap hiện hành: [`docs/reviews/GAP-AUDIT-2026-10-18-INDEX.md`](../reviews/GAP-AUDIT-2026-10-18-INDEX.md). **Đã đóng / chốt:** privacy live **HTTP 200**; Epic D11 / [#254](https://github.com/hangndat/ticket-solution/issues/254) **đóng board**; **O06 đã chốt**. **Còn mở:** Navigation O02 — [#368](https://github.com/hangndat/ticket-solution/issues/368)–[#371](https://github.com/hangndat/ticket-solution/issues/371).
+> **Errata (2026-10-18, [#373](https://github.com/hangndat/ticket-solution/issues/373)):** Đợt research trên **stale một phần**. Nguồn gap hiện hành: [`docs/reviews/GAP-AUDIT-2026-10-18-INDEX.md`](../../../reviews/GAP-AUDIT-2026-10-18-INDEX.md). **Đã đóng / chốt:** privacy live **HTTP 200**; Epic D11 / [#254](https://github.com/hangndat/ticket-solution/issues/254) **đóng board**; **O06 đã chốt**. **Còn mở:** Navigation O02 — [#368](https://github.com/hangndat/ticket-solution/issues/368)–[#371](https://github.com/hangndat/ticket-solution/issues/371).
 
 ## Trạng thái lúc giao
 
@@ -36,7 +38,7 @@ O06 retention/vùng dữ liệu/SLA vẫn là quyết định mở, không đư�
 
 ## Bàn giao cuối đợt
 
-Đủ 4 báo cáo chuyên môn và [roadmap tổng hợp](./PRODUCTION-READINESS-ROADMAP.md), đã đối chiếu trước khi nhận settlement planner. BA được reuse ngay trong follow-up `ctx_b4e0fe5f2a1b` để sửa kết luận Dashboard từ checkout cũ; security được reuse trong `ctx_c2b67ace10b0` để kiểm chứng finding trên `origin/main` `2416a94b02acb50a5186309aa619c04fec106317`. Dashboard #250/#260 đã merge; #245 cần reconcile AC/evidence/board. Gate CSRF là potential/hardening P1 sau revalidation, không phải confirmed exploit P0.
+Đủ 4 báo cáo chuyên môn và [roadmap tổng hợp](PRODUCTION-READINESS-ROADMAP.md), đã đối chiếu trước khi nhận settlement planner. BA được reuse ngay trong follow-up `ctx_b4e0fe5f2a1b` để sửa kết luận Dashboard từ checkout cũ; security được reuse trong `ctx_c2b67ace10b0` để kiểm chứng finding trên `origin/main` `2416a94b02acb50a5186309aa619c04fec106317`. Dashboard #250/#260 đã merge; #245 cần reconcile AC/evidence/board. Gate CSRF là potential/hardening P1 sau revalidation, không phải confirmed exploit P0.
 
 Kết quả nghiên cứu: chưa đủ evidence để tuyên bố production ready; cần hoàn tất D11/#254, chốt O06/privacy trước dữ liệu thật, và kiểm chứng security/UAT/restore/load/email trên bản release cùng hạ tầng tương ứng. Báo cáo không xác nhận cấu hình runtime production từ README hay sample.
 
