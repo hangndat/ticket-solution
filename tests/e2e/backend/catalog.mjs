@@ -142,6 +142,7 @@ export const catalog = {
   'GATE-07': [
     b('offline-sync-apply', 'offline sync: apply'),
     b('offline-sync-authz-retry', 'GATE-07 authz on retry'),
+    b('offline-sync-authz-retry', 'GATE-07 two sessions replay one ticket'),
   ],
   'GATE-08': [b('offline-sync-receipt', 'offline receipt lookup: matrix')],
   'GATE-09': [

@@ -129,6 +129,72 @@ test('validateOfflineSyncRequest rejects clock skew and oversized batch', () => 
   assert.equal(OFFLINE_SYNC_MAX_CLOCK_SKEW_SECONDS, 300);
 });
 
+test('validateOfflineSyncRequest skew boundary is inclusive at exactly ±300 s (GATE-06)', () => {
+  const at = (offsetSeconds) =>
+    new Date(SERVER_MS + offsetSeconds * 1000).toISOString();
+  const clockSkew = (error) =>
+    error instanceof GateError &&
+    error.code === GATE_ERROR_CODES.OFFLINE_SYNC_CLOCK_SKEW_EXCEEDED;
+  const withClock = (iso) => ({ ...baseBody([]), clientClockAt: iso });
+  const withEventTime = (iso) =>
+    baseBody([
+      event({
+        clientEventId: '55555555-5555-4555-8555-555555555555',
+        clientOccurredAt: iso,
+        clientSeq: 0,
+      }),
+    ]);
+
+  // clientClockAt: exactly 300 s either side is still accepted, 301 s is not.
+  for (const offset of [-300, 300, 299, -299]) {
+    assert.doesNotThrow(
+      () => validateOfflineSyncRequest(EVENT_ID, withClock(at(offset)), SERVER_MS),
+      `clientClockAt ${offset}s must be accepted`,
+    );
+  }
+  for (const offset of [-301, 301]) {
+    assert.throws(
+      () => validateOfflineSyncRequest(EVENT_ID, withClock(at(offset)), SERVER_MS),
+      clockSkew,
+      `clientClockAt ${offset}s must be rejected`,
+    );
+  }
+
+  // clientOccurredAt is checked against the same ±300 s window per event.
+  for (const offset of [-300, 300]) {
+    assert.doesNotThrow(
+      () => validateOfflineSyncRequest(EVENT_ID, withEventTime(at(offset)), SERVER_MS),
+      `clientOccurredAt ${offset}s must be accepted`,
+    );
+  }
+  for (const offset of [-301, 301]) {
+    assert.throws(
+      () => validateOfflineSyncRequest(EVENT_ID, withEventTime(at(offset)), SERVER_MS),
+      clockSkew,
+      `clientOccurredAt ${offset}s must be rejected`,
+    );
+  }
+
+  // The batch cap has the same shape: 50 passes, 51 is the first failure.
+  const batch = (n) =>
+    baseBody(
+      Array.from({ length: n }, (_, i) =>
+        event({
+          clientEventId: `55555555-5555-4555-8555-${String(i).padStart(12, '0')}`,
+          clientOccurredAt: '2026-11-01T09:04:30.000Z',
+          clientSeq: i,
+        }),
+      ),
+    );
+  assert.doesNotThrow(() => validateOfflineSyncRequest(EVENT_ID, batch(50), SERVER_MS));
+  assert.throws(
+    () => validateOfflineSyncRequest(EVENT_ID, batch(51), SERVER_MS),
+    (error) =>
+      error instanceof GateError &&
+      error.code === GATE_ERROR_CODES.OFFLINE_SYNC_BATCH_TOO_LARGE,
+  );
+});
+
 test('offlineSyncNotImplemented validates then throws NOT_IMPLEMENTED (legacy stub)', () => {
   assert.throws(
     () =>

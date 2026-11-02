@@ -63,7 +63,7 @@ Mỗi dòng dẫn PR đã merge và evidence/review. SHA trong bảng là **merg
 | GATE-04 | P0  | D/H | [#1150](https://github.com/hangndat/ticket-solution/pull/1150) · `ac5a871cd3b945ec5e272cb4bfb36f0b777c3984` | D 9/9 + H `mvzaqv4x-7c6ba4` trên `ac5a871c`, cây sạch; giảm AC: thu quyền giữa chừng một request đang bay chưa phủ |
 | GATE-05 | P0  | H/D | [#1150](https://github.com/hangndat/ticket-solution/pull/1150) · `ac5a871cd3b945ec5e272cb4bfb36f0b777c3984` | D 9/9 + H `mvzaqv4x-7c6ba4` trên `ac5a871c`, cây sạch; undo replay-safe, `REASON_REQUIRED`, race với scan/revoke |
 | GATE-06 | P0  | D (giảm AC) | [#1150](https://github.com/hangndat/ticket-solution/pull/1150) · `ac5a871cd3b945ec5e272cb4bfb36f0b777c3984` | D 9/9 + H `mvzaqv4x-7c6ba4` trên `ac5a871c`, cây sạch; H bị bỏ, xem bảng giảm AC |
-| GATE-07 | P0  | D (giảm AC) | [#1150](https://github.com/hangndat/ticket-solution/pull/1150) · `ac5a871cd3b945ec5e272cb4bfb36f0b777c3984` | D 9/9 + H `mvzaqv4x-7c6ba4` trên `ac5a871c`, cây sạch; authz-on-retry (#1149); H bị bỏ |
+| GATE-07 | P0  | D (giảm AC) | [#1150](https://github.com/hangndat/ticket-solution/pull/1150) · `ac5a871cd3b945ec5e272cb4bfb36f0b777c3984` | D 9/9 + H `mvzaqv4x-7c6ba4` trên `ac5a871c`, cây sạch; authz-on-retry (#1149) + hai session replay một vé (#1151); H bị bỏ, xem bảng "Giảm AC đã ghi" |
 | GATE-08 | P0  | D (giảm AC) | [#1150](https://github.com/hangndat/ticket-solution/pull/1150) · `ac5a871cd3b945ec5e272cb4bfb36f0b777c3984` | D 9/9 + H `mvzaqv4x-7c6ba4` trên `ac5a871c`, cây sạch; H bị bỏ, xem bảng giảm AC |
 | GATE-09 | P0  | D (giảm AC) | [#1150](https://github.com/hangndat/ticket-solution/pull/1150) · `ac5a871cd3b945ec5e272cb4bfb36f0b777c3984` | D 9/9 + H `mvzaqv4x-7c6ba4` trên `ac5a871c`, cây sạch; H bị bỏ, xem bảng giảm AC |
 
@@ -130,11 +130,12 @@ Owner chọn đề xuất kết hợp (viết thêm test cho logic check-in cố
 
 | ID | Phần H bị bỏ | Lý do | Rủi ro còn lại |
 | -- | ------------ | ----- | -------------- |
-| GATE-06 | Biên skew ±300 s và item hỗn hợp qua HTTP | U `validateOfflineSyncRequest` đã phủ skew và batch quá lớn; D đã phủ apply/replay | Ánh xạ HTTP (422 theo `gateHttpException`), authz và rate bucket của route chưa được chứng minh qua JWT thật |
+| GATE-06 | Biên skew ±300 s và item hỗn hợp **qua HTTP** (lớp H) | U `validateOfflineSyncRequest` phủ cận biên thật: `clientClockAt` và `clientOccurredAt` ±300 s chấp nhận, ±301 s bị `OFFLINE_SYNC_CLOCK_SKEW_EXCEEDED`; batch 50 qua, 51 bị `BATCH_TOO_LARGE` (test `skew boundary is inclusive`, bổ sung theo review #1151 F3); D phủ apply/replay | Ánh xạ HTTP (422 theo `gateHttpException`), authz và rate bucket của route chưa được chứng minh qua JWT thật |
+| GATE-07 | Lớp H (authz khi retry và hai session qua JWT thật); mixed batch trong **một** request | D `offline-sync-authz-retry`: retry DUPLICATE sau khi thu `event_assignments` hoặc revoke session bị từ chối, sổ cái không đổi; hai session/hai thiết bị/hai user replay cùng một vé (đồng thời, 4 vòng) luôn cho đúng một `APPLIED` và một `CONFLICT` (`OFFLINE_SYNC_CONFLICT_LOST` kèm `winningCheckinId`), đúng một check-in hiện hành, replay lại thì thắng là `DUPLICATE` còn thua vẫn `CONFLICT` (bổ sung theo review #1151 F4); `offline-sync-apply` phủ DUPLICATE/conflict/REJECTED và audit idempotent | Ánh xạ route, token thật và rate bucket của offline-sync chưa kiểm; batch hỗn hợp trong cùng một request chỉ có ở test apply cũ |
 | GATE-08 | Receipt qua HTTP, cổng đã đóng | D matrix đã phủ authz, trạng thái, cửa sổ đóng, read-only | Chỉ chứng minh ở tầng domain; ánh xạ route và token thật chưa kiểm |
-| GATE-09 | Ownership/authz/rate qua HTTP | D matrix + PG evidence F02-EVID-01, U 422 UUID sai, U bucket GET tách POST | Như GATE-08; 404 chung sau authz chưa kiểm qua route thật |
+| GATE-09 | Ownership/authz/rate qua HTTP | D matrix + PG evidence F02-EVID-01, U 422 UUID sai, U bucket GET tách POST. Vế "session gốc inactive nhưng session mới hợp lệ vẫn đọc historical" **đã có assertion dương tính**: `offline-sync-receipt.test.cjs` dòng ~503-528 revoke `sessionA`, mở `sessionA2`, rồi tra receipt thành công với `staffSessionId === sessionA.sessionId` và `checkinState = 'UNDONE'` (review #1151 F5 đọc nhầm đoạn A2→A3 phía sau, nơi bản ghi bị làm hỏng có chủ ý để thử ownership) | Như GATE-08; 404 chung sau authz chưa kiểm qua route thật |
 
-**GATE-07 không giảm được theo hướng này:** bỏ H thì vẫn thiếu authz-on-retry ở D. Cần thêm một assertion D (thu quyền hoặc revoke session rồi replay phải bị từ chối) trước khi xin review.
+**GATE-07 không giảm được chỉ bằng cách bỏ H:** bỏ H thì vẫn thiếu authz-on-retry ở D, nên đã thêm assertion D (đã làm ở #1149) và, sau review #1151, thêm test hai session đồng thời (F4). Các ID `D (giảm AC)` trong bảng nghiệm thu tham chiếu bảng "Giảm AC đã ghi" ngay trên đây, không phải bảng "Giảm AC bổ sung" phía dưới (bảng đó chỉ dành cho GATE-01/04).
 
 **Trạng thái sau bước này** (chưa ID nào đổi verdict; xếp theo mức sẵn sàng xin review gộp):
 

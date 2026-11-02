@@ -272,7 +272,8 @@
     "caseId": "GATE-07",
     "tests": [
       "D:packages/backend/test/offline-sync-apply.test.cjs#offline sync: apply",
-      "D:packages/backend/test/offline-sync-authz-retry.test.cjs#GATE-07 authz on retry"
+      "D:packages/backend/test/offline-sync-authz-retry.test.cjs#GATE-07 authz on retry",
+      "D:packages/backend/test/offline-sync-authz-retry.test.cjs#GATE-07 two sessions replay one ticket"
     ],
     "layers": ["D"],
     "status": "blocked",
