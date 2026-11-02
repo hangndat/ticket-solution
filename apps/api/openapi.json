@@ -8732,9 +8732,7 @@
           },
           "state": {
             "type": "string",
-            "enum": [
-              "ACTIVE"
-            ]
+            "description": "The ticket's real state after the undo: ACTIVE when it was returned to service; a ticket that already left USED (e.g. REVOKED in a race) keeps its own state"
           },
           "replayed": {
             "type": "boolean",
