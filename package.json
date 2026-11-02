@@ -54,6 +54,7 @@
     "test:e2e:list": "node tests/e2e/harness/run.mjs list",
     "test:integration:local": "node tests/e2e/backend/entry.mjs",
     "test:regression:local": "node tests/e2e/harness/run.mjs regression",
+    "test:e2e:lane": "node tests/e2e/harness/lane-cli.mjs",
     "test:e2e:guards": "node --test tests/e2e/validation/*.test.mjs"
   },
   "devDependencies": {

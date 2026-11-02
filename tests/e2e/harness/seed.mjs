@@ -122,39 +122,46 @@ function eventPayload(tenantName, eventName) {
 }
 
 export async function seedRuntime(state, caseIds) {
+  // Lane đã dựng sẵn database từ template và tạo role ở mức cluster;
+  // chỉ chế độ stack-riêng mới chạy migration ở đây.
+  const databaseName = state.databaseName || 'e2e';
   const { Client } = requireBackend('pg');
   const backend = requireBackend('./dist/index.js');
   const { migrationFiles } = requireBackend('./test/migration-files.cjs');
-  const admin = new Client({
-    connectionString: `postgresql://postgres:${state.secrets.pg}@127.0.0.1:${state.ports.pg}/e2e`,
-  });
-  await admin.connect();
-  try {
-    for (const role of [
-      'ticket_runtime',
-      'ticket_platform_runtime',
-      'migration_owner',
-    ]) {
-      await admin.query(`CREATE ROLE ${role} NOLOGIN NOSUPERUSER NOBYPASSRLS`);
+  if (!state.lane) {
+    const admin = new Client({
+      connectionString: `postgresql://postgres:${state.secrets.pg}@127.0.0.1:${state.ports.pg}/e2e`,
+    });
+    await admin.connect();
+    try {
+      for (const role of [
+        'ticket_runtime',
+        'ticket_platform_runtime',
+        'migration_owner',
+      ]) {
+        await admin.query(
+          `CREATE ROLE ${role} NOLOGIN NOSUPERUSER NOBYPASSRLS`,
+        );
+      }
+      await admin.query(
+        'GRANT CREATE, USAGE ON SCHEMA public TO migration_owner',
+      );
+      await admin.query('SET ROLE migration_owner');
+      for (const file of migrationFiles())
+        await admin.query(readFileSync(file, 'utf8'));
+      await admin.query('RESET ROLE');
+      // Generated hex password, no user input interpolation.
+      await admin.query(
+        `CREATE ROLE e2e_runtime LOGIN PASSWORD '${state.secrets.pg}' NOSUPERUSER NOBYPASSRLS INHERIT`,
+      );
+      await admin.query(
+        'GRANT ticket_runtime, ticket_platform_runtime TO e2e_runtime',
+      );
+    } finally {
+      await admin.end();
     }
-    await admin.query(
-      'GRANT CREATE, USAGE ON SCHEMA public TO migration_owner',
-    );
-    await admin.query('SET ROLE migration_owner');
-    for (const file of migrationFiles())
-      await admin.query(readFileSync(file, 'utf8'));
-    await admin.query('RESET ROLE');
-    // Generated hex password, no user input interpolation.
-    await admin.query(
-      `CREATE ROLE e2e_runtime LOGIN PASSWORD '${state.secrets.pg}' NOSUPERUSER NOBYPASSRLS INHERIT`,
-    );
-    await admin.query(
-      'GRANT ticket_runtime, ticket_platform_runtime TO e2e_runtime',
-    );
-  } finally {
-    await admin.end();
   }
-  state.databaseUrl = `postgresql://e2e_runtime:${state.secrets.pg}@127.0.0.1:${state.ports.pg}/e2e`;
+  state.databaseUrl = `postgresql://e2e_runtime:${state.secrets.pg}@127.0.0.1:${state.ports.pg}/${databaseName}`;
   const db = backend.createDatabase(state.databaseUrl, 8);
   const users = backend.createPrismaIdentityUserRepository(db);
   const issuer = `${state.origins.auth}/realms/${state.realm}`;
@@ -172,6 +179,7 @@ export async function seedRuntime(state, caseIds) {
   const manifest = {
     schemaVersion: 1,
     runId: state.id,
+    ...(state.lane ? { lane: state.lane.name } : {}),
     origins: state.origins,
     accounts: state.accounts,
     cases: {},
