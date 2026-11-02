@@ -326,6 +326,11 @@ jobs:
         env:
           E2E_LANES: '1'
         run: pnpm test:e2e:http --lane --case=DB-13
+      - name: DB-19 live pepper rotation HTTP
+        if: matrix.shard == 'account-deletion'
+        env:
+          E2E_LANES: '1'
+        run: pnpm test:e2e:http --lane --case=DB-19
 
   # D5 drills tách 3 job song song (ports/container name độc lập).
   d5-observability:
