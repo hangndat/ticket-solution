@@ -147,13 +147,39 @@ Owner trả lời "làm theo cách bạn suggestion". Gợi ý cụ thể của 
 | Mục | Xử lý | Ghi chú |
 | --- | ----- | ------- |
 | GATE-07 authz-on-retry | **Đã làm.** Thêm `packages/backend/test/offline-sync-authz-retry.test.cjs` (D) | Retry DUPLICATE trước khi thu quyền là vô hại; sau khi thu `event_assignments` thì `AuthzError`, sau khi revoke staff session thì `SESSION_NOT_ACTIVE`; `offline_sync_events` và `checkins` không đổi. Kiểm đột biến: bỏ kiểm quyền hoặc bỏ kiểm session làm test fail. CI: thêm vào shard `offline-sync-apply` |
-| GATE-02 huỷ hold chủ động | **Known gap, chờ owner** | Chưa có thao tác trong API/domain; không viết test cho thứ chưa tồn tại và không tự thêm feature. Vế "cancel" của AC giữ BLOCKED |
-| GATE-05 idempotency của undo | **Known gap, chờ owner** | Hành vi hiện tại (từ chối undo lần hai bằng 409 `CHECKIN_ALREADY_UNDONE`) đã được ghim ở D và H như *hành vi hiện tại*, không như quyết định. Đổi sang replay cần owner chốt contract |
-| GATE-05 mã lỗi lý do trống | **Known gap, chờ owner** | Test không ghim mã (`CHECKIN_NOT_FOUND` ở domain, `SCOPE_REQUIRED` ở HTTP) |
+| GATE-02 huỷ hold chủ động | **Owner chọn "cho hủy hold chủ động" — đã triển khai** | Thêm `cancelReservation` (domain) và `POST /gate/events/{e}/reservations/{id}/cancel`; chi tiết ở dưới |
+| GATE-05 idempotency của undo | **Owner chọn "cho replay" — đã triển khai** | Undo lại cùng check-in cùng lý do trả kết quả ban đầu `replayed: true`, không thêm audit; lý do khác vẫn 409 `CHECKIN_ALREADY_UNDONE` |
+| GATE-05 mã lỗi lý do trống | **Owner chọn "422" — đã triển khai** | Domain ném `REASON_REQUIRED` (trước là `CHECKIN_NOT_FOUND`), HTTP trả 422 `REASON_REQUIRED` (trước là 422 `SCOPE_REQUIRED` ở controller) |
+
+**Thay đổi hành vi sản phẩm theo quyết định của owner** (`packages/backend/src/gate.ts`, `apps/api/src/gate.ts`, `docs/TECHNICAL-DESIGN.md` §9.3a/§9.4, `apps/api/openapi.json` sinh lại):
+
+- **Cancel hold:** quyền `gate.confirm`, chỉ phiên đang giữ; phiên khác `HELD_BY_OTHER_SESSION`; `HELD`→`RELEASED` + audit `gate.cancel`, không tạo check-in; huỷ hold đã `RELEASED`/hết hạn là replay `200 replayed:true` không mutation; reservation `CONFIRMED` → `ALREADY_CHECKED_IN`; không có → `RESERVATION_NOT_FOUND`. Dùng chung bucket rate limit của confirm (không thêm bucket). Lock order giống confirm (ticket trước reservation).
+- **Undo:** phản hồi thêm trường `replayed` (chỉ thêm, client cũ không vỡ; mobile/portal không gọi undo). **Lý do trống đã thống nhất** (owner chọn "thống nhất đi"): undo, revoke và reissue đều trả 422 `REASON_REQUIRED` ở controller, và domain `revokeTicket` nay cũng kiểm lý do (trước đó chỉ controller chặn; reissue vốn đã kiểm ở domain). Cùng quy ước với các route Portal BFF đã dùng `REASON_REQUIRED`/422.
+- Test: D `gate-acceptance` thêm ca cancel và replay (vé GA-T6/T7); H GATE-02/05 cập nhật (run `mvz9g6bj-1d59a1`, 3/3 PASS, cây dirty); test contract route `apps/api/test/health.test.cjs` thêm route mới; `gate.test.cjs` cũ vẫn xanh; `@ticket/api test` 52/52. Đột biến: cancel bỏ kiểm holder → D fail; replay bỏ so lý do → D fail (`Missing expected rejection`).
+
+**Race đã phủ** (owner: "phủ đi"; `packages/backend/test/gate-concurrency.test.cjs`, D, hai kết nối PostgreSQL thật tranh cùng một vé, mỗi ca lặp nhiều vòng vì thứ tự xen kẽ không điều khiển được nên test khẳng định bất biến đúng với mọi thứ tự):
+
+| Race | Bất biến được khẳng định |
+| ---- | ------------------------ |
+| cancel vs confirm cùng một hold | Đúng một bên thắng: confirm thắng thì cancel nhận `ALREADY_CHECKED_IN`, vé `USED`, hold `CONFIRMED`, không audit `gate.cancel`; cancel thắng thì confirm nhận `RESERVATION_EXPIRED`, vé `ACTIVE`, hold `RELEASED`, một audit. Không bao giờ còn hold `HELD`, không quá một check-in hiện hành. Ba lần chạy cho các tỉ lệ thắng khác nhau (3/3, 5/1, 1/5) nên cả hai thứ tự đều được thực thi |
+| cancel vs hết hạn | Cancel hold đã hết hạn (còn đánh dấu `HELD`) không bao giờ lỗi; khi phiên khác reserve đồng thời thì cả hai đều thành công và còn đúng một hold `HELD`, chính là hold mới |
+| undo vs scan phiên khác | Undo luôn thành công, vé `ACTIVE`, không check-in hiện hành, hàng undone giữ làm lịch sử, đúng một audit `gate.undo`; scan thắng thì bị `ALREADY_CHECKED_IN` rồi scan lại được, scan thua thì có hold confirm được |
+| undo vs revoke | Không bên nào lỗi; vé luôn kết thúc `REVOKED` (undo không hồi sinh vé đã revoke, nhờ điều kiện `state = 'USED'`); một audit mỗi loại |
+
+Đột biến xác nhận test không rỗng: cho cancel giải phóng cả reservation `CONFIRMED` làm test fail; bỏ điều kiện `state = 'USED'` của undo làm test fail 3/3 lần. **Giới hạn:** thứ tự xen kẽ của hai transaction không được điều khiển nên không chứng minh *mọi* thứ tự; vế "revoke permission/membership giữa request đang bay" của GATE-04 vẫn chưa phủ.
 
 **Giới hạn của GATE-07:** vế "mixed batch audit" ghi trong catalog cũ vẫn chỉ có ở `offline-sync-apply` (REJECTED/CONFLICT có audit idempotent, không inflate `rejectByReason` khi replay); không có assertion mới cho batch hỗn hợp trong cùng một request. H không viết, theo cùng giảm AC như GATE-06/08/09, rủi ro còn lại là ánh xạ route và JWT thật cho offline-sync.
 
-**Trạng thái GATE sau bước này** (chưa ID nào đổi verdict; sẵn sàng xin review gộp): GATE-01, 04, 06, 07, 08, 09. Chờ owner: GATE-02, 05. Bị chặn sản phẩm: GATE-03.
+**Bằng chứng suite GATE trên cây sạch** (đủ điều kiện làm evidence): worktree tách riêng tại `608f3e9cc0ec1edc886c41c139d3b75bd62cfee8`, `workingTreeDirty=false`, `evidenceExactShaEligible=true`. D 9/9 selector GATE-01..09 PASS (`test:integration:local --case`, build đầy đủ không `--no-build`). H GATE-01..05 PASS, run `mvz9ycss-a4ba3b` (lane1, cây sạch, 5/5). Log D xác nhận chạy đủ `gate.test`, `gate-acceptance` và `gate-concurrency` (race confirm thắng 5, cancel thắng 1 ở lần này).
+
+**Giảm AC bổ sung** (đúng khung §15.2) để các ID còn lại có thể được review:
+
+| ID | Phần bị giảm | Lý do | Rủi ro còn lại |
+| -- | ------------ | ----- | -------------- |
+| GATE-01 | H mở lại cùng cổng; actor được gán ở cả hai event | D `gates.test.cjs` đã phủ list/create/open, FK, cross-event; H đã phủ list/create/trùng tên/quyền/session nullable/FK cổng khác event | Hành vi mở lại cùng cổng qua HTTP và tổ hợp hai assignment chỉ được chứng minh ở D |
+| GATE-04 | Thu quyền/membership **giữa chừng** một request đang bay | Thứ tự xen kẽ không điều khiển được nên không có assertion tất định; thu quyền *trước* request đã phủ (AUTH-06 H, authz-on-retry D) | Cửa sổ rất hẹp giữa lúc kiểm quyền và commit của chính một request; session revoke đồng thời đã được phủ bởi khoá `FOR SHARE` ở `assertSessionActive` |
+
+**Trạng thái GATE sau bước này.** Chưa ID nào được ghi PASS, và đây là chủ ý chứ không phải sót: theo `ROADMAP §2` và `AGENTS.md` nhánh B, một ID chỉ chuyển PASS khi có reviewer độc lập khác implementer trên đúng SHA đã merge và CI `main` xanh; tôi là implementer nên không tự xác nhận. Điều kiện đã đủ phía implementer cho **GATE-01, 02, 04, 05, 06, 07, 08, 09** (bằng chứng trên, kèm các giảm AC ghi rõ). Bị chặn sản phẩm: **GATE-03** (signed QR, API nhận `ticketId` chứ không có HTTP QR parser). Vì GATE-02/05 nay gồm thay đổi mã sản phẩm, review gộp phải theo nhánh B (reviewer độc lập, security-sensitive vì liên quan quyền check-in), không theo nhánh A như các PR chỉ thêm test.
 
 ## Các nhóm còn thiếu nghiệm thu toàn phần
 

@@ -222,11 +222,12 @@
     "caseId": "GATE-02",
     "tests": [
       "D:packages/backend/test/gate.test.cjs#gate: one confirm wins",
-      "D:packages/backend/test/gate-acceptance.test.cjs#GATE-02/04/05 acceptance"
+      "D:packages/backend/test/gate-acceptance.test.cjs#GATE-02/04/05 acceptance",
+      "D:packages/backend/test/gate-concurrency.test.cjs#GATE-02/04/05 concurrency"
     ],
     "layers": ["D"],
     "status": "blocked",
-    "reason": "D: hold không phải check-in, retry cùng holder dùng lại reservation và xoay token (token cũ bị từ chối), hold hết hạn nhả cho session khác, staff khác nhận HELD_BY_OTHER_SESSION. H xem http/coverage.json. Còn thiếu: thao tác huỷ hold chủ động — API/domain chưa có (chỉ revokeTicket đặt RELEASED), cần quyết định sản phẩm."
+    "reason": "Race (gate-concurrency, hai kết nối thật, 6 vòng mỗi ca): cancel vs confirm trên cùng hold luôn cho đúng một kết quả hợp lệ (confirm thắng thì cancel nhận ALREADY_CHECKED_IN; cancel thắng thì confirm nhận RESERVATION_EXPIRED), không hold HELD nào sống sót, không quá một check-in hiện hành; cancel hold đã hết hạn không bao giờ lỗi và không tranh được hold mới của phiên khác (đúng một hold HELD). D: hold không phải check-in, retry cùng holder dùng lại reservation và xoay token (token cũ bị từ chối), hold hết hạn nhả cho session khác, staff khác nhận HELD_BY_OTHER_SESSION. Huỷ hold chủ động (owner quyết định 02/11/2026, `cancelReservation`): chỉ holder huỷ được (phiên khác HELD_BY_OTHER_SESSION), hold chuyển RELEASED + audit gate.cancel, không tạo check-in, phiên khác reserve được ngay, confirm hold đã huỷ bị RESERVATION_EXPIRED, huỷ lại là replay (replayed=true, không thêm audit, không đụng hold mới), reservation CONFIRMED trả ALREADY_CHECKED_IN, không tồn tại trả RESERVATION_NOT_FOUND. H xem http/coverage.json."
   },
   {
     "caseId": "GATE-03",
@@ -239,21 +240,23 @@
     "caseId": "GATE-04",
     "tests": [
       "D:packages/backend/test/gate.test.cjs#gate: one confirm wins",
-      "D:packages/backend/test/gate-acceptance.test.cjs#GATE-02/04/05 acceptance"
+      "D:packages/backend/test/gate-acceptance.test.cjs#GATE-02/04/05 acceptance",
+      "D:packages/backend/test/gate-concurrency.test.cjs#GATE-02/04/05 concurrency"
     ],
     "layers": ["D"],
     "status": "blocked",
-    "reason": "D: confirm đồng thời đúng một thắng, hết hạn, confirm vs revoke ticket (gate.test.cjs); sai holder/sai token không mutation, retry confirm không thêm check-in, confirm sau khi session bị revoke bị chặn (gate-acceptance). H xem http/coverage.json. Còn thiếu: revoke permission/membership giữa chừng request đang bay."
+    "reason": "Race confirm vs cancel xem GATE-02 (gate-concurrency). D: confirm đồng thời đúng một thắng, hết hạn, confirm vs revoke ticket (gate.test.cjs); sai holder/sai token không mutation, retry confirm không thêm check-in, confirm sau khi session bị revoke bị chặn (gate-acceptance). H xem http/coverage.json. Còn thiếu: revoke permission/membership giữa chừng request đang bay."
   },
   {
     "caseId": "GATE-05",
     "tests": [
       "D:packages/backend/test/gate.test.cjs#gate: one confirm wins",
-      "D:packages/backend/test/gate-acceptance.test.cjs#GATE-02/04/05 acceptance"
+      "D:packages/backend/test/gate-acceptance.test.cjs#GATE-02/04/05 acceptance",
+      "D:packages/backend/test/gate-concurrency.test.cjs#GATE-02/04/05 concurrency"
     ],
     "layers": ["D"],
     "status": "blocked",
-    "reason": "D: Scanner không có gate.undo nên không override, lý do trống bị từ chối không mutation, undo giữ hàng check-in làm lịch sử (undone_at/undo_reason/undone_by) và đúng một audit gate.undo, undo lần hai bị CHECKIN_ALREADY_UNDONE, re-entry sau undo vẫn đúng một check-in hiện hành. Domain không replay undo (không idempotency kiểu replay); AC 'idempotency' chưa có contract. Lý do trống ném CHECKIN_NOT_FOUND thay vì REASON_REQUIRED như reissue: không ghim mã. Còn thiếu: undo đồng thời với scan/revoke."
+    "reason": "Race (gate-concurrency): undo vs scan của phiên khác — undo luôn thành công, vé về ACTIVE, không check-in hiện hành, hàng undone giữ làm lịch sử, đúng một audit gate.undo, và dù scan thắng hay thua đều dẫn tới trạng thái hợp lệ (confirm được hoặc scan lại được); undo vs revoke — không bên nào lỗi, vé luôn kết thúc REVOKED (undo không hồi sinh vé đã revoke), một audit mỗi loại. D: Scanner không có gate.undo nên không override, lý do trống bị từ chối REASON_REQUIRED không mutation, undo giữ hàng check-in làm lịch sử (undone_at/undo_reason/undone_by) và đúng một audit gate.undo. Owner quyết định 02/11/2026: undo replay-safe — gọi lại cùng lý do trả kết quả ban đầu với replayed=true, không thêm audit, không đổi ticket; lý do khác vẫn CHECKIN_ALREADY_UNDONE. Re-entry sau undo vẫn đúng một check-in hiện hành. Lý do trống thống nhất REASON_REQUIRED cho undo, revoke, reissue (domain `revokeTicket` nay cũng kiểm)."
   },
   {
     "caseId": "GATE-06",
