@@ -33,7 +33,7 @@ Mỗi run tạo Compose project, network, port loopback, realm/users, database, 
 
 AUTH-05 dùng Web/client riêng với access token 20 giây; Web thường giữ TTL 300 giây. PLAT-05 dùng Portal riêng cố ý thiếu Platform OIDC. WEB-10 bật/tắt lỗi transport ở proxy cho đúng public-detail endpoint của case, rồi kiểm phục hồi; không thay thành công API hoặc dùng Playwright route mock.
 
-Runner dọn process và Compose resources do mình tạo trong `finally`, kể cả khi test fail hoặc nhận SIGINT/SIGTERM. Không dùng tài nguyên dev/prod. Tránh build hai run browser đồng thời trong cùng checkout vì `.next` dùng chung; dùng worktree riêng nếu cần chạy song song.
+Runner dọn process và Compose resources do mình tạo trong `finally`, kể cả khi test fail hoặc nhận SIGINT/SIGTERM. Không dùng tài nguyên dev/prod. Tránh build hai run browser đồng thời trong cùng checkout vì `.next` dùng chung; dùng worktree riêng nếu cần chạy song song — pool worktree, lane cố định và kế hoạch tái sử dụng infra ở [PLAN.md §16](PLAN.md).
 
 `tests/e2e/.artifacts/<run>/summary.json` ghi kết quả chạy; `results.json` chứa kết quả browser, các lớp khác có log riêng. Artifact bị gitignore, directory private; manifest chứa credential synthetic nên không commit hoặc chia sẻ nguyên thư mục. Trace/video/screenshot mặc định tắt. `PASS` ở summary chỉ áp dụng selector đã chạy; coverage toàn nhóm vẫn phải đối chiếu plan. Setup thiếu prerequisite trả `BLOCKED`/exit 2; assertion sai trả `FAIL`/exit 1.
 
