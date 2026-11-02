@@ -136,7 +136,10 @@ export const catalog = {
     b('offline-sync-apply', 'offline sync: apply'),
     b('offline-sync-unit', 'validateOfflineSyncRequest', 'U'),
   ],
-  'GATE-07': [b('offline-sync-apply', 'offline sync: apply')],
+  'GATE-07': [
+    b('offline-sync-apply', 'offline sync: apply'),
+    b('offline-sync-authz-retry', 'GATE-07 authz on retry'),
+  ],
   'GATE-08': [b('offline-sync-receipt', 'offline receipt lookup: matrix')],
   'GATE-09': [
     b('offline-sync-receipt', 'offline receipt lookup: matrix'),
@@ -303,7 +306,7 @@ export const notes = {
   'GATE-06':
     'D replay và U validation; thiếu H batch boundary, skew ±300s và mixed items.',
   'GATE-07':
-    'D duplicate/conflict; thiếu H authz-on-retry và mixed batch audit.',
+    'D duplicate/conflict + authz-on-retry (thu quyền/revoke session rồi replay bị chặn, sổ cái không đổi); H giảm xuống D theo ACCEPTANCE.',
   'GATE-08': 'D read-only receipt; thiếu H live authz và closed gate.',
   'GATE-09':
     'D receipt matrix và H validation; thiếu H real authz/ownership/rate matrix.',
