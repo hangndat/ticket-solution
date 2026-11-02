@@ -59,6 +59,26 @@ Mỗi dòng dẫn PR đã merge và evidence/review. SHA trong bảng là **merg
 | POL-01  | P1  | D      | [#1125](https://github.com/hangndat/ticket-solution/pull/1125) · `f60e0bab398c91b185d4796c38013dce52235919` | D 8 selector/10 case trên `7218acc2` · [review](https://github.com/hangndat/ticket-solution/pull/1125#issuecomment-6562525257)           |
 | PLAT-03 | P0  | H/D    | [#1123](https://github.com/hangndat/ticket-solution/pull/1123) · `08376150f6e634fba007d1ffae000d5a0e8c04af`; [#1132](https://github.com/hangndat/ticket-solution/pull/1132) · `713580c386a2d6aad243655066be7ae27ca16925` | D 5/5 trên `fe1ffa75`; H `mvyap7sk-aaa3fb` trên `089a916c` · [review H](https://github.com/hangndat/ticket-solution/pull/1132#issuecomment-6563651529) |
 
+## Phân tầng nghiệm thu 45 nhóm còn lại — quyết định user 02/11/2026
+
+User quyết định chia 45 nhóm còn thiếu thành ba tầng thay vì giữ một gate đồng nhất, **và cho phép điều chỉnh AC khi cần** thay vì khóa cứng toàn bộ lớp/độ rộng assertion như các bản trước. Chi tiết, phần được giảm và phần đánh đổi: [PLAN.md §15](PLAN.md). Ưu tiên cao nhất kèm theo là chạy song song và tái sử dụng infra: [PLAN.md §16](PLAN.md).
+
+**Quy tắc AC sau quyết định này:** lớp bằng chứng và độ rộng assertion của từng ID được phép điều chỉnh khi chi phí không tương xứng với rủi ro. Mỗi lần điều chỉnh phải ghi đủ bốn mục: ID, phần bị giảm, lý do, rủi ro còn lại. Hai ranh giới giữ nguyên vì chúng không phải là độ cao của gate mà là tính trung thực của bằng chứng: **không đổi expected outcome để khớp một bug đã biết**, và **không ghi PASS cho lớp chưa chạy**.
+
+| Tầng | Số ID | ID | Cách nghiệm thu |
+| ---- | ----: | -- | ---------------- |
+| **1 — giữ gate B/H/R đầy đủ** | 16 | AUTH-06/07/08 · SEC-01/02/05 · PORT-02/03/10/11/12/14 · PLAT-01/02/04 · JOB-05 | Như hiện tại: run sạch theo lớp PLAN, reviewer độc lập, CI main, evidence exact SHA. Đây là các ID chỉ chứng minh được khi ghép thật — cookie/session đa host, SSR/BFF, mutation qua UI, worker process thật |
+| **2 — kiểm kê + vòng chạy gộp, AC thu gọn** | 20 | GATE-01–09 · SEC-03/04/06 · DB-13/17/18/19 · JOB-04/06/07 · POL-02 | PLAN đã chỉ yêu cầu D/H (không có lớp B) và test nền đã tồn tại. Kiểm kê assertion→ID theo PLAN §8, bổ sung phần thiếu có giá trị, rồi một vòng `test:integration:local` + `test:e2e:http` trên SHA gắn tag; verdict nhiều ID ghi một lần. Ma trận vét cạn được thu về ca đại diện theo PLAN §15, ghi rõ phần đã giảm |
+| **3 — known gap, chờ quyết định owner** | 9 | DB-06/09/12 · PORT-01/04/13 · PLAT-05 · POL-03/04 | Bị chặn bởi contract/ADR hoặc evidence ops production, không phải bởi test. Ghi known gap theo mẫu [ROADMAP §1.1](../../docs/ROADMAP.md); mở lại khi có quyết định |
+
+Tổng 16 + 20 + 9 = 45; cộng 40 nhóm đã nghiệm thu và JOB-08 OUT = 86.
+
+**Test nền có sẵn cho tầng 2** (inventory để map, chưa phải PASS — PLAN §8): `packages/backend/test/` `gate.test.cjs`, `gates.test.cjs`, `offline-sync-apply.test.cjs`, `offline-sync-receipt.test.cjs`, `db09-ticket-security-invariants.test.cjs`, `event-lifecycle.test.cjs`, `role-presets.test.cjs`, `tenant-limits-usage.test.cjs`, `account-idp-erasure.test.cjs`, `account-session-revoke.test.cjs`, `job04-resend-caps.test.cjs`, `email-budget.test.cjs`, `o06-retention-db.test.cjs`, `o06-offline-purge.test.cjs`; `apps/api/test/` `gate-create.test.cjs`, `gate-offline-sync-receipt.test.cjs`, `gate-reissue.test.cjs`, `api-hardening.test.cjs`, `http-rate-limit.test.cjs`, `export-barrier.test.cjs`, `tenant-limits.test.cjs`; `apps/worker/test/` `job06-late-completion.test.cjs`, `offline-sync-replay.test.cjs`, `worker-budget-fault.test.cjs`.
+
+**Thay đổi quy trình kèm theo:** tầng 2 bỏ mô hình một PR cho một ID; một vòng chạy gộp trên SHA gắn tag, một lần cập nhật ledger. Tầng 1 giữ nguyên nhánh B — reviewer độc lập khác implementer từng PR. Chạy song song và tái sử dụng infra theo [PLAN.md §16](PLAN.md).
+
+**Giới hạn của quyết định này:** tầng 2 không chứng minh hành vi cookie/CSRF trong browser thật hoặc dây SSR/BFF cho các ID thuộc tầng — đúng phạm vi PLAN đã ghi (GATE không kiểm native UI; SEC-03/04/06 là H/D). Tầng 3 mang known gap vào gate pilot; không suy pilot ready từ việc F04 đóng tầng 1 và 2.
+
 ## Các nhóm còn thiếu nghiệm thu toàn phần
 
 Các dòng này giữ BLOCKED ở mức AC; không có nghĩa tất cả đều đã chứng minh có bug. Có thể thiếu test, runtime evidence, review hoặc contract; không đổi expected outcome để lấy PASS.

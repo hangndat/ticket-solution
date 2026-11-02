@@ -422,3 +422,110 @@ Giữ nguyên findings F01–F07 và lịch sử lượt 1; các mục bổ sung
 | F11 — Sót số 85 trong phần mở đầu       | Đúng; sửa thành 86, không thêm hoặc xóa ca                                                                                                                                                                                                                                  | Mục mở đầu và kiểm đếm bảng                                                                                                                      |
 
 Số lượng giữ nguyên **86 nhóm ca: 70 P0, 16 P1**; smoke vẫn 10 ID. Không đổi scope sản phẩm, auth gate hoặc semantics claim để làm test pass.
+
+## 15. Phân tầng nghiệm thu và điều chỉnh AC — quyết định user 02/11/2026
+
+Sau đánh giá lại tiến độ F04 (40/85 nhóm sau 5 ngày, 85 merge mang nhãn f04, `tests/e2e` +28.792 dòng trong 218 commit), user quyết định hai việc: **chia 45 nhóm còn lại thành ba tầng**, và **bỏ ràng buộc cấm hạ AC**. Mục này thay phần tương ứng trong §3, §9, §10 và [ROADMAP §1.3](../../docs/ROADMAP.md); các bảng expected outcome ở §5–§6 vẫn là nguồn AC, chỉ độ rộng bắt buộc thay đổi theo tầng. Danh sách ID từng tầng: [ACCEPTANCE.md](ACCEPTANCE.md).
+
+### 15.1 Vì sao phân tầng
+
+Gate cũ tính một đơn vị hoàn thành = một ID × đủ lớp B/H/D/R × reviewer độc lập × CI main × cây sạch, nên throughput đo được là ~0,47 ID trên mỗi PR merge. Với 45 ID còn lại, giữ nguyên mô hình nghĩa là ~90 PR nữa. Thêm vào đó: 19/45 ID chưa từng bắt đầu (PLAT-01/02/04/05, GATE-01–09, SEC-01–06 mang cùng một câu template), và ~9 ID bị chặn bởi quyết định sản phẩm mà test không đóng được. Chi phí mỗi vòng chạy cũng cao: build production bốn service rồi dựng Compose riêng (PostgreSQL, Redis, Keycloak, MinIO, Mailpit, proxy TLS, realm/cert/hostname riêng), không song song được trong cùng checkout vì dùng chung `.next`.
+
+### 15.2 Quy tắc AC mới
+
+AC **được phép điều chỉnh** khi chi phí chứng minh không tương xứng với rủi ro. Điều chỉnh gồm: giảm lớp bằng chứng, thu ma trận vét cạn về ca đại diện, hoặc chuyển ID sang known gap. Mỗi lần điều chỉnh ghi đủ: **ID · phần bị giảm · lý do · rủi ro còn lại**, trong `ACCEPTANCE.md` hoặc comment Issue gắn SHA.
+
+Hai ranh giới giữ nguyên, vì chúng nói về tính trung thực của bằng chứng chứ không về độ cao của gate:
+
+1. Không đổi expected outcome để khớp một bug đã biết. Gặp drift giữa contract và implementation thì ghi drift và đưa owner quyết định, không viết assertion theo hành vi sai.
+2. Không ghi PASS cho lớp chưa chạy. Giảm yêu cầu từ B/H xuống H là hợp lệ và phải ghi; tuyên bố H đã PASS khi chưa chạy thì không.
+
+Agent vẫn không tự hạ AC: điều chỉnh cần quyết định owner hoặc nằm trong khung tầng đã duyệt ở mục này.
+
+### 15.3 Ba tầng
+
+**Tầng 1 — giữ nguyên gate đầy đủ (16 ID):** AUTH-06/07/08, SEC-01/02/05, PORT-02/03/10/11/12/14, PLAT-01/02/04, JOB-05. Đây là nhóm chỉ chứng minh được khi ghép thật: cookie host-only/CSRF/session boundary, SSR và BFF, mutation thực hiện qua UI, và với PORT-11/JOB-05 là worker process thật gửi Mailpit. Không thu gọn.
+
+**Tầng 2 — kiểm kê + vòng chạy gộp, AC thu gọn (20 ID):** GATE-01–09, SEC-03/04/06, DB-13/17/18/19, JOB-04/06/07, POL-02. §5–§6 đã chỉ yêu cầu D/H cho các ID này (GATE không kiểm native UI theo O23; SEC-03 là H; SEC-04/06 là H/D), và test nền đã tồn tại — xem inventory trong `ACCEPTANCE.md`. Cách làm:
+
+1. Kiểm kê theo §8: mỗi ID có test path/test name, assertion đã phủ, phần thiếu.
+2. Bổ sung assertion còn thiếu **có giá trị phát hiện lỗi**; bỏ qua phần chỉ làm đầy ma trận.
+3. Một vòng `test:integration:local` + `test:e2e:http` trên SHA gắn tag, một verdict gộp cho mọi ID vòng chạy phủ.
+
+Phần được thu gọn, ghi rõ khi nghiệm thu từng ID: ma trận 429/Retry-After của SEC-04 lấy một nhánh đại diện cho mỗi nhóm endpoint ở bảng §6.4 thay vì toàn bộ route; biên skew GATE-06 lấy đúng hai ca trong/ngoài ±300s thay vì quét; GATE-08/09 lấy một ca cho mỗi trạng thái receipt thay vì tổ hợp actor × tenant × event; DB-13 lấy hai timezone thay vì ma trận IANA; DB-19 lấy một cặp key version đang hỗ trợ/không hỗ trợ; POL-02 lấy biên trước/sau cutoff, không quét nhiều mốc.
+
+**Tầng 3 — known gap, chờ quyết định owner (9 ID):** DB-06 (quota-reduction command và retry budget), DB-09 (signed QR, phụ thuộc GATE-03 handoff), DB-12 (canonical cache key và invalidation khi publish/rollback), PORT-01 (quota trong wizard; public projection 404 sau publish), PORT-04 (mutation surface của quota), PORT-13 (contract sort UI/API), PLAT-05 (surface fail-closed khi platform/MFA lỗi), POL-03 (object write fence, restore — live ops), POL-04 (RPO/RTO — evidence ops production). Các ID này không bị chặn bởi thiếu test mà bởi quyết định chưa có hoặc evidence chỉ lấy được ngoài local. Ghi known gap theo mẫu [ROADMAP §1.1](../../docs/ROADMAP.md) và giữ trong Issue tương ứng; mở lại khi có quyết định, không mở feature mới từ đây.
+
+### 15.4 Thay đổi quy trình
+
+- Tầng 2 bỏ mô hình một PR cho một ID. Một vòng chạy gộp trên SHA gắn tag và một lần cập nhật ledger; reviewer gộp theo vòng chạy, không theo ID.
+- Tầng 1 giữ nhánh B: reviewer độc lập khác implementer cho từng PR.
+- Ledger: `ACCEPTANCE.md` là nơi ghi verdict; `PLAN.md` và `ROADMAP.md` chỉ trỏ tới, không chép lại số liệu mỗi lần nghiệm thu.
+- Chạy song song và tái sử dụng infra là đòn bẩy throughput chính, chi tiết ở §16.
+- 429 trên bucket `api.public.read` khi chạy full 13 fixture được xử lý như cấu hình harness (quota riêng mỗi run), không để treo [#1037](https://github.com/hangndat/ticket-solution/issues/1037) như câu hỏi capacity sản phẩm; đo capacity production là việc riêng của gate D5.
+
+### 15.5 Phần mất khi điều chỉnh
+
+Tầng 2 không chứng minh cookie/CSRF trong browser thật hay dây SSR/BFF cho các ID thuộc tầng, và các ma trận thu gọn để lại rủi ro ở nhánh không được chọn làm đại diện. Tầng 3 mang known gap vào gate pilot. Hoàn tất tầng 1 và 2 vẫn chỉ là **local regression evidence** trên SHA/profile đã chạy: không chứng minh pilot ready, inbox delivery, native camera/offline, production restore hay App Store.
+
+## 16. Chạy song song và tái sử dụng infra — ưu tiên user 02/11/2026
+
+User đặt ưu tiên cao nhất vào **chạy song song** và **tái sử dụng infra càng nhiều càng tốt**. Đây là đòn bẩy throughput lớn hơn việc phân tầng AC ở §15: phân tầng giảm số việc, mục này giảm thời gian mỗi việc.
+
+### 16.1 Hiện trạng — phần nào đã song song được
+
+Ba lớp sau **đã** an toàn khi chạy đồng thời, không cần sửa gì:
+
+- Published port đều ephemeral (`127.0.0.1::<inner>` trong `composeConfig`), Docker tự cấp → không đụng port giữa các run.
+- Compose project `e2e-<runId>` kèm label `vemoki.e2e.run` → container/network/volume đã tách theo run.
+- Proxy TLS là HTTPS server in-process với cert riêng của run; resolver và CA nằm trong process, Chromium chỉ tin SPKI của run → không chạm `/etc/hosts` hay trust store hệ thống.
+
+### 16.2 Thứ đang chặn: origin của run bị nướng vào build frontend
+
+`runtime.mjs` đặt `suffix = e2e-<runId>.test` và `origins.* = https://<app>.<suffix>:<tlsPort>`, trong đó `tlsPort` cũng cấp theo run. `run.mjs` build Web/Portal bằng `pnpm --filter @ticket/<name> build` với `WEB_PUBLIC_ORIGIN` là origin đó, ghi vào `apps/web/.next` và `apps/portal/.next` **trong checkout**. Hệ quả kép:
+
+1. Hai run trong cùng checkout ghi đè `.next` của nhau → phải tuần tự.
+2. Build của run A không dùng lại được cho run B: trang prerender giữ origin lúc build, nên `--skip-build` chỉ hợp lệ khi origin không đổi.
+
+Vì vậy mỗi run hiện phải build lại toàn bộ frontend production. Đây là chi phí lặp lớn nhất của bộ e2e.
+
+### 16.3 Làm được ngay, không sửa code
+
+- **Pool worktree:** N worktree cùng một SHA, mỗi worktree chạy một run. `.next` tách theo worktree nên hết xung đột — đúng cách [README](README.md) đã khuyến nghị.
+- **Shard theo case group:** ba vòng Web tuần tự `WEB-01–04` / `WEB-05–09` / `WEB-10–13` (`mvxomaja-f033ff`, `mvxoo1n7-64f925`, `mvxosf1l-6a95d0`) chạy song song trên ba worktree. Tầng 2 ở §15 chủ yếu là `test:integration:local` và `test:e2e:http` — nhẹ hơn nhiều, shard được rộng hơn.
+- **Trần tài nguyên:** mỗi run là năm container, Keycloak nặng nhất. Bắt đầu 2–3 run song song, đo RAM/CPU rồi mới tăng; không đẩy số lane vượt khả năng máy rồi quy kết quả cho flaky.
+
+### 16.4 Lane cố định — bỏ rebuild mỗi run
+
+Thay `runId` trong origin bằng `laneId` cố định:
+
+- `suffix = e2e-lane<N>.test`, `tlsPort` cố định theo lane, cert phát một lần cho mỗi lane.
+- Build Web/Portal một lần cho mỗi cặp (SHA, lane); mọi run trên lane đó chạy `--skip-build` **hợp lệ** vì origin không đổi. Chi phí build rơi từ "mỗi run" xuống "mỗi SHA × số lane", và còn tăng tiến nhờ cache turbo/Next.
+- Lane giữ lock liên tiến trình (file lock theo lane); run lấy lane rảnh và trả lại trong `finally` — đúng cơ chế §4.2 đã dự trù, chỉ áp cho nhiều lane thay vì một stack.
+- Cookie isolation giữ nguyên: hai run song song nằm ở hai host khác nhau. Run tuần tự trong cùng lane phải reset fixture do harness sở hữu trước khi release lock.
+
+### 16.5 Tái dùng container, cấp phát logic cho mỗi run
+
+Giữ stack theo lane sống lâu, tách run ở mức logic thay vì dựng container mới:
+
+- **PostgreSQL:** `CREATE DATABASE e2e_<runId> TEMPLATE e2e_seeded` — bỏ migrate và seed nền mỗi run, chỉ seed phần riêng của case.
+- **Keycloak:** import realm theo run qua admin API vào instance test của lane; §4.2 đã cho phép realm/users/clients riêng theo run trong một instance test. Không restart container.
+- **MinIO:** bucket/prefix theo run trên instance của lane.
+- **Mailpit:** lọc theo địa chỉ người nhận mang `runId`; account fixture đã có dạng `<actor>.<suffix>@example.test` nên tách sẵn.
+- **Redis:** prefix key theo run. Không `FLUSHDB`/`FLUSHALL` trên instance dùng chung — ràng buộc §4.2 giữ nguyên.
+
+Cleanup chuyển từ "compose down" sang "drop database/realm/bucket/prefix của run": vẫn chỉ xóa tài nguyên mang nhãn run, và vẫn chạy trong `finally` kể cả khi fail hoặc bị interrupt.
+
+### 16.6 Tùy chọn — bỏ phụ thuộc origin lúc build
+
+Nếu Web/Portal đọc public origin lúc chạy thay vì nướng lúc build (resolve theo `Host` header, hoặc chuyển các trang prerender có nhúng origin sang dynamic), thì **một** artifact build cho mỗi SHA phục vụ mọi lane và mọi run; lane chỉ còn là đơn vị cấp phát tài nguyên. Đây là thay đổi trong `apps/web` và `apps/portal`, không thuộc `tests/e2e`: cần contract với hai slice đó trước khi làm. Ghi ở đây là **đề xuất, chưa duyệt**.
+
+### 16.7 Thứ tự đề nghị
+
+1. Pool worktree + shard theo case group — dùng được ngay, không sửa code.
+2. Lane cố định, `--skip-build` hợp lệ theo lane.
+3. Template database + realm import theo lane, bỏ cold start container.
+4. Quota rate-limit riêng theo lane cho bucket `api.public.read`; xử lý 429 như cấu hình harness, không để treo [#1037](https://github.com/hangndat/ticket-solution/issues/1037).
+5. Cân nhắc §16.6 nếu vẫn cần thêm throughput.
+
+Mỗi bước phải đo lại wall-clock một vòng tầng 2, số run song song ổn định và tỉ lệ flake. Không tuyên bố tăng throughput khi chưa có số trước/sau.
