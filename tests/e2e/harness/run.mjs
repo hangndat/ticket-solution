@@ -126,6 +126,9 @@ const caseIds = match
     : mode === 'smoke'
       ? smoke
       : allBrowserCases;
+if (caseIds.includes('DB-19') && (mode !== 'http' || caseIds.length !== 1)) {
+  throw new Error('DB-19 rotation fixture requires isolated HTTP run: --case=DB-19');
+}
 // Khớp điều kiện `httpNeedsFrontend` bên dưới: HTTP thuần không đụng `.next`.
 const laneNeedsFrontend =
   mode !== 'http' ||
