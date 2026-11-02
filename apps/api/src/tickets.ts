@@ -633,9 +633,12 @@ export function resolveIssueDeps(env: NodeJS.ProcessEnv): {
     let resolveTokenSecret: string | null = null;
     try {
       routingPeppers = readSupportedPepperConfigs(env);
-      resolveTokenSecret = readResolveTokenSecret(env);
     } catch {
       routingPeppers = null;
+    }
+    try {
+      resolveTokenSecret = readResolveTokenSecret(env);
+    } catch {
       resolveTokenSecret = null;
     }
     return {
