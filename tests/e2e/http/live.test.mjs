@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { createHmac, randomUUID } from 'node:crypto';
 import { createRequire } from 'node:module';
 import http from 'node:http';
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import test from 'node:test';
 import { chromium } from 'playwright';
 import { web05ConfigV2Payload } from '../harness/web05-published-config.mjs';
@@ -32,6 +32,7 @@ const CASE_IDS = [
   'DB-11',
   'DB-12',
   'DB-14',
+  'DB-18',
   'DB-15',
   'DB-16',
   'JOB-04',
@@ -1446,6 +1447,122 @@ for (const caseId of CASE_IDS) {
   test(`[${caseId}] live HTTP`, async () => {
     const ctx = context(caseId);
     const f = ctx.fixture;
+    if (caseId === 'DB-18') {
+      const requireBackend = createRequire(
+        new URL('../../../packages/backend/package.json', import.meta.url),
+      );
+      const { Client } = requireBackend('pg');
+      const client = new Client({
+        connectionString: required(f.data?.controlDatabaseUrl, 'DB-18 controlDatabaseUrl'),
+      });
+      await client.connect();
+      try {
+        const actor = required(f.accounts?.owner, 'DB-18 owner');
+        const subject = required(actor.subject, 'DB-18 owner subject');
+        const access = await bearer(ctx, 'owner');
+        const erasureToken = async () => {
+          const response = await fetch(ctx.tokenUrl, {
+            method: 'POST',
+            headers: { 'content-type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+              grant_type: 'client_credentials',
+              client_id: required(ctx.runtime.erasureClientId, 'erasureClientId'),
+              client_secret: required(ctx.runtime.erasureClientSecret, 'erasureClientSecret'),
+            }),
+          });
+          assert.equal(response.status, 200, 'DB-18 real erasure service token');
+          return required((await response.json()).access_token, 'erasure access token');
+        };
+        const adminUser = async (token) => fetch(
+          new URL(`/admin/realms/${ctx.runtime.realm}/users/${subject}`, ctx.auth),
+          { headers: { authorization: `Bearer ${token}` } },
+        );
+        const adminToken = await erasureToken();
+        assert.equal((await adminUser(adminToken)).status, 200, 'DB-18 Keycloak user exists before ACK');
+        const auditCount = async () => {
+          await client.query('BEGIN');
+          try {
+            await client.query('SET LOCAL ROLE ticket_runtime');
+            await client.query("SELECT set_config('app.tenant_id', $1, true)", [f.tenantId]);
+            const result = await client.query(
+              "SELECT count(*)::int AS n FROM audit_logs WHERE actor_user_id = $1 AND action = 'db18.erasure.proof'",
+              [actor.userId],
+            );
+            await client.query('COMMIT');
+            return result.rows[0].n;
+          } catch (error) {
+            await client.query('ROLLBACK');
+            throw error;
+          }
+        };
+        const auditBefore = await auditCount();
+        assert.equal(auditBefore, 1, 'DB-18 audit proof seeded');
+        const faultControlPath = required(ctx.runtime.faultControlPath, 'DB-18 faultControlPath');
+        const faultHitPath = required(ctx.runtime.idpFaultHitPath, 'DB-18 idpFaultHitPath');
+        const fault = JSON.parse(readFileSync(faultControlPath, 'utf8'));
+        fault.idpDelete = {
+          path: `/admin/realms/${ctx.runtime.realm}/users/${subject}`,
+          mode: 'unavailable',
+        };
+        writeFileSync(faultControlPath, JSON.stringify(fault), { mode: 0o600 });
+        const accepted = await request(ctx, 'POST', '/me/account-deletion-requests', access, { confirmation: true });
+        expectStatus(accepted, 201);
+        assert.equal(accepted.body.state, 'REQUESTED');
+        assert.equal(accepted.body.policyStatus, 'RESOLVED');
+        assert.equal(accepted.body.anonymizeWithinDays, 30);
+        const requestId = required(accepted.body.requestId, 'DB-18 requestId');
+        const current = await request(ctx, 'GET', '/me/account-deletion-requests/current', access);
+        expectStatus(current, 401, 'UNAUTHENTICATED');
+        let row;
+        for (let attempt = 0; attempt < 30; attempt += 1) {
+          const result = await client.query(
+            `SELECT out_state AS state, out_idp_status AS idp_status,
+                    out_pg_applied_at IS NOT NULL AS pg_applied,
+                    out_original_subject IS NULL AS subject_cleared
+             FROM get_account_deletion_idp_row($1::uuid)`,
+            [requestId],
+          );
+          row = result.rows[0];
+          if (row?.idp_status === 'FAILED' && existsSync(faultHitPath)) break;
+          await new Promise((resolve) => setTimeout(resolve, 1_000));
+        }
+        assert.equal(existsSync(faultHitPath), true, 'DB-18 live IdP DELETE received controlled 503');
+        assert.equal(row?.state, 'REQUESTED', 'DB-18 must not complete after IdP 503');
+        assert.equal(row.idp_status, 'FAILED');
+        assert.equal(row.pg_applied, true);
+        assert.equal(row.subject_cleared, false, 'DB-18 retry retains original subject');
+        expectStatus(await request(ctx, 'GET', '/me/account-deletion-requests/current', access), 401, 'UNAUTHENTICATED');
+        assert.equal((await adminUser(adminToken)).status, 200, 'DB-18 IdP user remains after 503');
+        console.log('DB-18: live IdP DELETE 503; REQUESTED and bearer denied');
+        delete fault.idpDelete;
+        writeFileSync(faultControlPath, JSON.stringify(fault), { mode: 0o600 });
+        for (let attempt = 0; attempt < 90; attempt += 1) {
+          const result = await client.query(
+            `SELECT out_state AS state, out_idp_status AS idp_status,
+                    out_pg_applied_at IS NOT NULL AS pg_applied,
+                    out_original_subject IS NULL AS subject_cleared
+             FROM get_account_deletion_idp_row($1::uuid)`,
+            [requestId],
+          );
+          row = result.rows[0];
+          if (row?.state === 'COMPLETED') break;
+          await new Promise((resolve) => setTimeout(resolve, 1_000));
+        }
+        assert.equal(row?.state, 'COMPLETED', `DB-18 worker did not complete: ${row?.state}`);
+        assert.equal(row.idp_status, 'DELETED');
+        assert.equal(row.pg_applied, true);
+        assert.equal(row.subject_cleared, true);
+        assert.equal((await adminUser(adminToken)).status, 404, 'DB-18 Keycloak Admin DELETE removed user');
+        const user = await client.query('SELECT email, subject FROM users WHERE id = $1', [actor.userId]);
+        assert.equal(user.rows[0].email, null);
+        assert.equal(user.rows[0].subject, `anon:${requestId}`);
+        assert.equal(await auditCount(), auditBefore, 'DB-18 audit retained');
+        console.log('DB-18: retry DELETE completed; PG scrub and audit verified');
+        return;
+      } finally {
+        await client.end();
+      }
+    }
     if (caseId === 'DB-15') {
       const control = {
         ...f,
