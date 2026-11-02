@@ -334,11 +334,15 @@ test('GATE-03 R: real /me/tickets JWS + reserve/confirm + kid rotation between A
 
     // R-3: rotate the signing kid between API restarts, retaining the old key.
     const phase2 = newSigningKeypair();
-    const oldKidJws = await backend.signGateCredentialJws({
-      claims: { tid: tenantId, eid: eventId, tkt: ticket2, ver: 1 },
-      privateKeyPem: phase1.privateKeyPem,
-      kid: 'e2e',
-    });
+    const preRotate = await api(
+      state,
+      attendee,
+      'GET',
+      `/me/tickets/${ticket2}?tenantId=${tenantId}`,
+    );
+    assert.equal(preRotate.status, 200);
+    const oldKidJws = preRotate.body.gateCredential.jws;
+    assert.equal(decodeJws(oldKidJws).header.kid, 'e2e');
     const unknownKidJws = await backend.signGateCredentialJws({
       claims: { tid: tenantId, eid: eventId, tkt: ticket2, ver: 1 },
       privateKeyPem: phase1.privateKeyPem,
@@ -407,6 +411,15 @@ test('GATE-03 R: real /me/tickets JWS + reserve/confirm + kid rotation between A
     assert.equal(detail2.status, 200);
     const jws2 = detail2.body.gateCredential.jws;
     assert.equal(decodeJws(jws2).header.kid, 'e2e-2');
+    const verified2 = await jose.jwtVerify(
+      jws2,
+      createPublicKey(phase2.publicKeyPem),
+      { issuer: 'vemoki-gate', audience: 'gate', algorithms: ['ES256'] },
+    );
+    assert.equal(verified2.payload.tkt, ticket2);
+    assert.equal(verified2.payload.tid, tenantId);
+    assert.equal(verified2.payload.eid, eventId);
+    assert.equal(verified2.payload.ver, detail2.body.credentialVersion);
 
     // (c) unknown kid denied with reject-audit +1 and no mutation.
     const before = await gateSnapshot(
@@ -446,7 +459,7 @@ test('GATE-03 R: real /me/tickets JWS + reserve/confirm + kid rotation between A
       .digest('hex')
       .slice(0, 16);
     console.log(
-      `GATE-03 R PASS run ${state.id}: R-1 JWS kid=e2e verified; R-2 reserve/confirm USED; R-3 rotation kid=e2e->e2e-2 old-kid reserve OK, new-kid ${decodeJws(jws2).header.kid}, unknown-kid denied +reject-audit; configHash ${configHash}`,
+      `GATE-03 R PASS run ${state.id}: R-1 JWS kid=e2e verified; R-2 reserve/confirm USED; R-3 rotation kid=e2e->e2e-2 old-kid reserve OK (API-issued pre-restart), new-kid ${decodeJws(jws2).header.kid} ES256-verified, unknown-kid denied +reject-audit; configHash ${configHash}`,
     );
   } finally {
     if (state) await destroyRuntime(state);
