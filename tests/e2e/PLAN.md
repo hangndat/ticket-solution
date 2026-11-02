@@ -534,38 +534,42 @@ Mỗi bước phải đo lại wall-clock một vòng tầng 2, số run song so
 
 Bước 2 và 3 đã có code trong harness; chế độ mặc định (stack riêng cho mỗi run) **không đổi**, lane là opt-in.
 
-| Thành phần | Nơi triển khai |
-| ---------- | --------------- |
-| Lane pool, lock liên tiến trình, build marker | [`harness/lane.mjs`](harness/lane.mjs) |
-| Template database, realm import qua admin API, dọn mailbox/object storage theo run | [`harness/lane-infra.mjs`](harness/lane-infra.mjs) |
-| `createRuntime`/`destroyRuntime` nhận lane, compose dùng lại, cert theo lane | [`harness/runtime.mjs`](harness/runtime.mjs) |
-| Cờ `--lane[=N]`, `--rebuild`, nhả lock trong `finally`, `lane` trong summary | [`harness/run.mjs`](harness/run.mjs) |
-| Bỏ migration khi đã có template, manifest mang `lane` | [`harness/seed.mjs`](harness/seed.mjs) |
-| Chấp nhận hostname lane trong manifest | [`validation/validate.mjs`](validation/validate.mjs) |
-| `status` / `down` cho lane pool | [`harness/lane-cli.mjs`](harness/lane-cli.mjs) · `pnpm test:e2e:lane` |
-| Test logic lane (định danh, lock, build key, manifest) | [`validation/lane.test.mjs`](validation/lane.test.mjs) · `pnpm test:e2e:guards` |
+| Thành phần                                                                         | Nơi triển khai                                                                  |
+| ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| Lane pool, lock liên tiến trình, build marker                                      | [`harness/lane.mjs`](harness/lane.mjs)                                          |
+| Template database, realm import qua admin API, dọn mailbox/object storage theo run | [`harness/lane-infra.mjs`](harness/lane-infra.mjs)                              |
+| `createRuntime`/`destroyRuntime` nhận lane, compose dùng lại, cert theo lane       | [`harness/runtime.mjs`](harness/runtime.mjs)                                    |
+| Cờ `--lane[=N]`, `--rebuild`, nhả lock trong `finally`, `lane` trong summary       | [`harness/run.mjs`](harness/run.mjs)                                            |
+| Bỏ migration khi đã có template, manifest mang `lane`                              | [`harness/seed.mjs`](harness/seed.mjs)                                          |
+| Chấp nhận hostname lane trong manifest                                             | [`validation/validate.mjs`](validation/validate.mjs)                            |
+| `status` / `down` cho lane pool                                                    | [`harness/lane-cli.mjs`](harness/lane-cli.mjs) · `pnpm test:e2e:lane`           |
+| Test logic lane (định danh, lock, build key, manifest)                             | [`validation/lane.test.mjs`](validation/lane.test.mjs) · `pnpm test:e2e:guards` |
 
 Quy ước: lane `N` dùng `*.e2e-lane<N>.test`, cổng TLS `44300+N`, Compose project và realm `e2e-lane<N>`; mỗi run vẫn có database riêng (`e2e_<runId>` tạo từ `e2e_tpl_<fingerprint migration>`), realm import lại, bucket/user/policy MinIO riêng và hộp thư được xoá đầu run. Build dùng lại khi git commit, fingerprint working tree và origin của lane không đổi.
 
 **Đã đo (02/11/2026, `main` `34f6b97e` + bản sửa lane, cây dirty nên không là evidence nghiệm thu):** smoke 10 nhóm, máy 14 CPU/16 GB, các run tuần tự trên cùng checkout.
 
-| Cách chạy | Thời gian | Kết quả |
-| --------- | --------: | ------- |
-| Mặc định (stack riêng mỗi run) | 86 s | 26/27 browser + SEC-01 HTTP |
-| Lane, lần đầu (dựng lane + build) | 84 s | như trên |
-| Lane, lần hai (dùng lại stack và build) | 73 s | như trên |
+| Cách chạy                               | Thời gian | Kết quả                     |
+| --------------------------------------- | --------: | --------------------------- |
+| Mặc định (stack riêng mỗi run)          |      86 s | 26/27 browser + SEC-01 HTTP |
+| Lane, lần đầu (dựng lane + build)       |      84 s | như trên                    |
+| Lane, lần hai (dùng lại stack và build) |      73 s | như trên                    |
 
 Trong 73 s, test browser chiếm ~53 s; phần dựng stack + seed + build chỉ còn ~19 s. Vì vậy **lane tuần tự chỉ tiết kiệm ~13 s (~15%) mỗi run**: build đã rẻ nhờ cache turbo/Next và phần còn lại là chính các test. Lợi ích của lane nằm ở chạy song song. Một checkout chỉ có một `.next` nên hai lane trong cùng checkout bị lock tuần tự; song song thật cần mỗi run một worktree. Đo hai worktree (`main-2` và một worktree sạch cùng SHA), mỗi bên `--lane`, khởi động cùng lúc:
 
-| Cặp song song | Run A (lane1) | Run B (lane2) | Thời gian tường | Tuần tự tương đương | Tăng tốc |
-| ------------- | ------------: | ------------: | --------------: | ------------------: | -------: |
-| Lần đầu (lane2 và build của B còn lạnh) | 88 s | 104 s | ~104 s | ~170 s (2 × 84–86) | ~1,6× |
-| Lần hai (stack và build đã nóng) | 75 s | 76 s | ~76 s | ~146 s (2 × 73) | ~1,9× |
+| Cặp song song                           | Run A (lane1) | Run B (lane2) | Thời gian tường | Tuần tự tương đương | Tăng tốc |
+| --------------------------------------- | ------------: | ------------: | --------------: | ------------------: | -------: |
+| Lần đầu (lane2 và build của B còn lạnh) |          88 s |         104 s |          ~104 s |  ~170 s (2 × 84–86) |    ~1,6× |
+| Lần hai (stack và build đã nóng)        |          75 s |          76 s |           ~76 s |     ~146 s (2 × 73) |    ~1,9× |
 
 Hai run tự lấy hai lane khác nhau xuyên worktree (lane1/lane2), và cả hai dùng lại build trong checkout của chính nó, nên lock toàn máy và marker theo checkout hoạt động như thiết kế. Chạy hai run song song trên 14 CPU/16 GB không làm chậm đáng kể từng run (75–76 s so với 73 s tuần tự).
 
-Cả ba run đều fail đúng một test, `[AUTH-01] staff … bounces to Portal`, **kể cả run mặc định không lane** nên không do lane: từ ADR-23 Portal đặt tên cookie staff có hậu tố epoch (`staffTokenCookieName(SESSION_COOKIES.idToken, epoch)`), còn test vẫn tìm đúng tên `oidc_id_token`. Test lỗi thời, thuộc nhánh AUTH-07, chưa sửa ở đây.
+**Thời gian đi đâu** (run xanh đầu tiên sau khi sửa AUTH-01, 77 s, `mvz5zbvs-ece4a8`): dựng stack, import realm, tạo database từ template, MinIO và seed ~17 s; Playwright 54 s, trong đó **một test `[WEB-04] suspended tenant blocks redeem without leaking owner email` chiếm 31,5 s (58%)**; 26 test còn lại cộng ~22 s. 31,5 s là chờ, không phải tính toán: `assertRedeemRejectedWithoutTicket` chấp nhận `denied | error | unknown` với timeout 90 s, còn client Web poll operation tối đa `POLL_MAX_MS = 30_000` (`apps/web/src/redeem/poll-operation.ts`) trước khi hiện trạng thái không rõ. Chưa kiểm chứng panel nào thực sự hiện ra. Nếu server từ chối tenant bị suspend ngay lập tức thay vì để client poll hết 30 s thì test chỉ còn ~1 s và người dùng thật cũng không phải chờ 30 s; đó là quyết định sản phẩm, chưa thuộc F04 và chưa được quyết.
+
+Thử `E2E_WORKERS=2` (smoke, lane nóng): Playwright 54 → 48 s, tổng 77 → 75 s, tức không đáng. Playwright chia worker theo file spec và test chờ 31,5 s nằm chung `redeem.spec.ts` với các test redeem khác nên file đó vẫn là đoạn dài nhất. Không nối `E2E_WORKERS` vào harness: smoke không có WEB-10/PORT-08 nên không phản ánh rủi ro, còn full e2e có hai nhóm bật lỗi transport dùng chung ở proxy nên không an toàn khi chạy song song trong một run.
+
+Cả ba run đều fail đúng một test, `[AUTH-01] staff … bounces to Portal`, **kể cả run mặc định không lane** nên không do lane: từ ADR-23 Portal đặt tên cookie staff có hậu tố epoch (`staffTokenCookieName(SESSION_COOKIES.idToken, epoch)`), còn test vẫn tìm đúng tên `oidc_id_token`. Test lỗi thời. Đã sửa sau đó: test lấy `portal_staff_epoch` rồi tìm đúng `oidc_id_token__<epoch>` / `oidc_access_token__<epoch>` (cùng quy ước `portal/auth07.spec.ts`), nên tên cookie vẫn bị ràng buộc với epoch của phiên. Sau bản sửa, smoke trên lane đạt PASS toàn phần lần đầu (HTTP + 27/27 browser, 77 s).
 
 Bốn lỗi của chính cách triển khai lane đã lộ ra khi chạy thật và đã sửa: `composePath` thiếu trong `state.lane`; ba chỗ trong `seed.mjs` còn nối thẳng database `e2e`; sáu chỗ dựng realm từ `runId` (nay đọc `manifest.runtime.realm`); và marker build theo lane không phát hiện `.next` bị ghi đè bởi lane khác hay run không-lane. Cách sửa cuối: marker theo checkout (`tests/e2e/.artifacts/frontend-build.json`, xoá trước mỗi lần build), lock `frontend.lock` độc quyền `.next` cho run cần frontend, và state/lock của lane nằm ở `~/.cache/vemoki-e2e-lanes` (đổi bằng `E2E_LANES_DIR`) vì container, cổng và realm của lane là tài nguyên của cả máy chứ không của một checkout.
 
-**Chưa xác minh:** tính đúng của `CREATE DATABASE … TEMPLATE` mới chỉ được chứng minh gián tiếp qua các run xanh trên lane; mới thử 2 lane đồng thời, chưa đo trần số lane trên máy; có một fail `[PORT-05] foreign tenant and event cannot read owner` ở một run song song (`page.evaluate: Execution context was destroyed … navigation`, helper Portal) — 1/4 run song song và 0/5 run tuần tự, chưa đủ để kết luận do tải hay do race có sẵn của helper, cần thêm mẫu trước khi tin số song song cho gate nghiệm thu; và fingerprint working tree (nằm trong khoá build) đổi khi `company/work-events.jsonl` bị ghi giữa hai run làm mất tái dùng build. Không dùng mục này làm bằng chứng nghiệm thu cho ID nào.
+**Chưa xác minh:** tính đúng của `CREATE DATABASE … TEMPLATE` mới chỉ được chứng minh gián tiếp qua các run xanh trên lane; mới thử 2 lane đồng thời, chưa đo trần số lane trên máy; `[PORT-05] foreign tenant and event cannot read owner import jobs or files` fail với `page.evaluate: Execution context was destroyed … navigation` (helper `bffMutate`) trong 2 trong 6 run có tải chồng (một run song song hai worktree, một run `E2E_WORKERS=2`) và 0 trong 7 run tuần tự một worker. Giả thuyết, chưa kiểm chứng: `relogin` chỉ chờ cookie `portal_csrf`, trong khi trang sau đăng nhập của `otherAttendee` còn có thể đang chuyển hướng khi `bffMutate` chạy `page.evaluate`. Chưa sửa vì không có cách rẻ để tái hiện; cần ổn định hoá trước khi dùng số song song làm gate nghiệm thu; và fingerprint working tree (nằm trong khoá build) đổi khi `company/work-events.jsonl` bị ghi giữa hai run làm mất tái dùng build. Không dùng mục này làm bằng chứng nghiệm thu cho ID nào.
