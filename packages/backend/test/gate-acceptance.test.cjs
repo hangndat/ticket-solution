@@ -28,6 +28,7 @@ const {
   unwrapReserveOutcome,
   unwrapConfirmOutcome,
   undoCheckin,
+  revokeTicket,
   cancelReservation,
   unwrapCancelOutcome,
 } = require('../dist');
@@ -100,7 +101,7 @@ async function startIsolatedPostgres() {
   }
 }
 
-const TICKET_CODES = ['GA-T1', 'GA-T2', 'GA-T3', 'GA-T4', 'GA-T5', 'GA-T6', 'GA-T7'];
+const TICKET_CODES = ['GA-T1', 'GA-T2', 'GA-T3', 'GA-T4', 'GA-T5', 'GA-T6', 'GA-T7', 'GA-T8'];
 
 test(
   'GATE-02/04/05 acceptance: hold, confirm and undo contracts',
@@ -162,8 +163,8 @@ test(
             permissions,
           });
         };
-        await grant(staffA, 'Supervisor', ['gate.confirm', 'gate.undo']);
-        await grant(staffB, 'Supervisor', ['gate.confirm', 'gate.undo']);
+        await grant(staffA, 'Supervisor', ['gate.confirm', 'gate.undo', 'ticket.revoke']);
+        await grant(staffB, 'Supervisor', ['gate.confirm', 'gate.undo', 'ticket.revoke']);
         // Scanner: may reserve/confirm, must not hold gate.undo.
         await grant(scanner, 'Scanner', ['gate.confirm']);
       });
@@ -499,6 +500,63 @@ test(
         const r = await rows(t);
         assert.equal(r.current, 1);
         assert.deepEqual(r.reservations.map((x) => x.status), ['CONFIRMED']);
+      }
+
+      // ── GATE-05: undo reports the ticket's real state ────────────────────────
+      {
+        // The ticket is revoked while still checked in; the undo that follows must
+        // not claim the ticket is ACTIVE (review F1, PR #1150).
+        const t = tickets[7];
+        const hold = unwrapReserveOutcome(await reserve(t, sessB, staffB));
+        const done = unwrapConfirmOutcome(await confirm(hold, hold.token, sessB, staffB));
+        await withTenant(db, tenantId, (tx) =>
+          revokeTicket(tx, {
+            tenantId,
+            eventId,
+            ticketId: t.ticketId,
+            actorUserId: staffB.userId,
+            reason: 'revoked before undo',
+          }),
+        );
+        const undone = await undo(done.checkinId, staffB, 'undo after revoke');
+        assert.equal(undone.state, 'REVOKED', 'must report the real ticket state');
+        assert.equal(undone.replayed, false);
+        let r = await rows(t);
+        assert.equal(r.state, 'REVOKED', 'undo must not revive a revoked ticket');
+        assert.equal(r.current, 0, 'the check-in itself is still undone');
+        assert.equal(r.checkins.length, 1);
+        assert.equal(await auditCount('gate.undo', done.checkinId), 1);
+        // A replay reports the state now, not a hard-coded ACTIVE.
+        const replay = await undo(done.checkinId, staffB, 'undo after revoke');
+        assert.equal(replay.replayed, true);
+        assert.equal(replay.state, 'REVOKED');
+        assert.equal(await auditCount('gate.undo', done.checkinId), 1);
+        r = await rows(t);
+        assert.equal(r.state, 'REVOKED');
+      }
+
+      // ── authorize first, validate the body second (review F2) ────────────────
+      {
+        // A caller without gate.undo is refused with the authz error even when
+        // the reason is blank, so a blank reason does not reveal what is validated.
+        const t = tickets[4];
+        await assert.rejects(
+          () => undo(randomUUID(), scanner, '   '),
+          AuthzError,
+        );
+        await assert.rejects(
+          () =>
+            withTenant(db, tenantId, (tx) =>
+              revokeTicket(tx, {
+                tenantId,
+                eventId,
+                ticketId: t.ticketId,
+                actorUserId: scanner.userId,
+                reason: '   ',
+              }),
+            ),
+          AuthzError,
+        );
       }
     } finally {
       if (db) await db.$disconnect().catch(() => {});

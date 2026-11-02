@@ -143,7 +143,11 @@ class CancelResponseDto {
 class UndoResponseDto {
   @ApiProperty({ format: 'uuid' }) checkinId!: string;
   @ApiProperty({ format: 'uuid' }) ticketId!: string;
-  @ApiProperty({ enum: ['ACTIVE'] }) state!: 'ACTIVE';
+  @ApiProperty({
+    description:
+      "The ticket's real state after the undo: ACTIVE when it was returned to service; a ticket that already left USED (e.g. REVOKED in a race) keeps its own state",
+  })
+  state!: string;
   @ApiProperty({
     description: 'true when the same undo (same reason) was already applied',
   })

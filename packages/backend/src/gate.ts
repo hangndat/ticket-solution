@@ -105,7 +105,13 @@ export function unwrapConfirmOutcome(outcome: ConfirmOutcome): ConfirmResult {
 export type UndoResult = {
   checkinId: string;
   ticketId: string;
-  state: 'ACTIVE';
+  /**
+   * The ticket's real state after the undo. It is `ACTIVE` when the undo
+   * returned a `USED` ticket to service; a ticket that had already left `USED`
+   * (e.g. revoked in a race) keeps its own state, so the result never claims a
+   * state the row does not have.
+   */
+  state: string;
   /** True when the same undo (same check-in, same reason) was already applied. */
   replayed: boolean;
 };
@@ -953,16 +959,16 @@ export async function undoCheckin(
     reason: string;
   },
 ): Promise<UndoResult> {
-  const reason = input.reason.trim();
-  if (!reason) {
-    throw new GateError(GATE_ERROR_CODES.REASON_REQUIRED, 'Undo reason is required');
-  }
   await requireTenantPermission(tx, {
     tenantId: input.tenantId,
     userId: input.actorUserId,
     permission: PERMISSION_UNDO,
     eventId: input.eventId,
   });
+  const reason = input.reason.trim();
+  if (!reason) {
+    throw new GateError(GATE_ERROR_CODES.REASON_REQUIRED, 'Undo reason is required');
+  }
   const rows = await tx.$queryRaw<
     Array<{
       id: string;
@@ -987,10 +993,19 @@ export async function undoCheckin(
     // reason returns the original result with no second audit row; a different
     // reason is a different request and stays a conflict.
     if (checkin.undo_reason === reason) {
+      // Report the ticket's state now, not the state at the first call: it may
+      // have been re-admitted or revoked since. Same lock order as a first undo
+      // (check-in row, then ticket).
+      const current = await lockTicket(
+        tx,
+        input.tenantId,
+        input.eventId,
+        checkin.ticket_id,
+      );
       return {
         checkinId: checkin.id,
         ticketId: checkin.ticket_id,
-        state: 'ACTIVE',
+        state: current.state,
         replayed: true,
       };
     }
@@ -999,7 +1014,12 @@ export async function undoCheckin(
       'Check-in was already undone',
     );
   }
-  await lockTicket(tx, input.tenantId, input.eventId, checkin.ticket_id);
+  const ticket = await lockTicket(
+    tx,
+    input.tenantId,
+    input.eventId,
+    checkin.ticket_id,
+  );
   await tx.$executeRaw`
     UPDATE checkins
     SET undone_at = clock_timestamp(),
@@ -1026,7 +1046,9 @@ export async function undoCheckin(
   return {
     checkinId: checkin.id,
     ticketId: checkin.ticket_id,
-    state: 'ACTIVE',
+    // The UPDATE above only moves a USED ticket. Any other state (REVOKED,
+    // CANCELLED...) was left alone and is reported as it is.
+    state: ticket.state === 'USED' ? 'ACTIVE' : ticket.state,
     replayed: false,
   };
 }
@@ -1174,15 +1196,15 @@ export async function revokeTicket(
     reason: string;
   },
 ): Promise<void> {
-  if (!input.reason.trim()) {
-    throw new GateError(GATE_ERROR_CODES.REASON_REQUIRED, 'Revoke reason is required');
-  }
   await requireTenantPermission(tx, {
     tenantId: input.tenantId,
     userId: input.actorUserId,
     permission: PERMISSION_REVOKE,
     eventId: input.eventId,
   });
+  if (!input.reason.trim()) {
+    throw new GateError(GATE_ERROR_CODES.REASON_REQUIRED, 'Revoke reason is required');
+  }
   const ticket = await lockTicket(
     tx,
     input.tenantId,
@@ -1240,14 +1262,6 @@ export async function reissueTicketCredential(
     idempotencyKey: string | undefined;
   },
 ): Promise<ReissueOutcome> {
-  const reason = input.reason.trim();
-  if (!reason) {
-    throw new GateError(
-      GATE_ERROR_CODES.REASON_REQUIRED,
-      'Reissue reason is required',
-    );
-  }
-
   const { membership } = await requireTenantPermission(tx, {
     tenantId: input.tenantId,
     userId: input.actorUserId,
@@ -1258,6 +1272,15 @@ export async function reissueTicketCredential(
     throw new AuthzError(
       AUTHZ_ERROR_CODES.PERMISSION_DENIED,
       'Ticket reissue requires Owner or Supervisor role',
+    );
+  }
+  // Authorize first, then validate the body: an unauthorized caller learns
+  // nothing about what the endpoint validates.
+  const reason = input.reason.trim();
+  if (!reason) {
+    throw new GateError(
+      GATE_ERROR_CODES.REASON_REQUIRED,
+      'Reissue reason is required',
     );
   }
 
