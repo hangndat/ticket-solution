@@ -233,11 +233,12 @@
       "D:packages/backend/test/gate03-signed-qr-d.test.cjs#gate03 signed-QR D: manual proof bound to staffSessionId and current version",
       "D:packages/backend/test/gate03-signed-qr-d.test.cjs#gate03 signed-QR D: stale manual proof minted before reissue, used after",
       "D:packages/backend/test/gate03-signed-qr-d.test.cjs#gate03 signed-QR D: manual hold then reissue then confirm returns CREDENTIAL_VERSION_STALE",
-      "D:packages/backend/test/gate03-signed-qr-d.test.cjs#gate03 signed-QR D: keyring rotation — two kids verify, unknown kid denied"
+      "D:packages/backend/test/gate03-signed-qr-d.test.cjs#gate03 signed-QR D: keyring rotation — two kids verify, unknown kid denied",
+      "R:tests/e2e/backend/gate03-runtime-rotation.test.mjs#GATE-03 R: real /me/tickets JWS + reserve/confirm + kid rotation between API restarts"
     ],
-    "layers": ["D"],
+    "layers": ["D", "R"],
     "status": "blocked",
-    "reason": "D signed-QR credential matrix PASS PostgreSQL thật: reserve JWS current/old version, confirm TOCTOU sau reissue (không check-in), manual proof bound staffSessionId+version, stale proof trước/sau reissue, manual hold→reissue→confirm (CREDENTIAL_VERSION_STALE, không check-in), keyring rotation hai kid verify + unknown kid deny; mọi deny có row gate.reject audit và không mutate hold/check-in. Thiếu H QR audience/kid/version/hash/manual rejection và reject-audit qua HTTP/Keycloak thật."
+    "reason": "D signed-QR credential matrix PASS PostgreSQL thật: reserve JWS current/old version, confirm TOCTOU sau reissue (không check-in), manual proof bound staffSessionId+version, stale proof trước/sau reissue, manual hold→reissue→confirm (CREDENTIAL_VERSION_STALE, không check-in), keyring rotation hai kid verify + unknown kid deny; mọi deny có row gate.reject audit và không mutate hold/check-in. R selector (gate03-runtime-rotation.test.mjs) chứng minh process API thật: /me/tickets ký ES256 JWS envelope không PII, staff reserve/confirm qua JWS đó thành USED, và rotate kid giữa restart API giữ public key cũ — JWS kid cũ vẫn reserve, JWS mới dùng kid mới, kid lạ deny + reject-audit +1 không mutation. R selector cần apps/api đã build (run.mjs http mode build sẵn, hoặc pnpm --filter @ticket/api build). Thiếu H QR audience/kid/version/hash/manual rejection qua HTTP/Keycloak thật và camera/browser R."
   },
   {
     "caseId": "GATE-04",
