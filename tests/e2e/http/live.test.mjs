@@ -4246,6 +4246,15 @@ for (const caseId of CASE_IDS) {
         body: { ...base, presented: { kind: 'qr', jws: tampered.join('.') } },
       });
 
+      await assertGateDenyNoMutation(ctx, f, {
+        ticketId,
+        token: scanner,
+        path,
+        status: 403,
+        code: 'CREDENTIAL_SIGNATURE_INVALID',
+        body: { ...base, presented: { kind: 'qr', jws: 'not-a-compact-jws' } },
+      });
+
       const unknownKidJws = required(
         f.data?.unknownKidJws,
         'GATE-03 unknownKidJws',
@@ -4770,6 +4779,80 @@ for (const caseId of CASE_IDS) {
         body: {
           ...base,
           presented: { kind: 'manual', proofToken: tamperedProof.join('.') },
+        },
+      });
+
+      const missingVerProof = await new SignJWT({
+        tid: proofClaims.tid,
+        eid: proofClaims.eid,
+        tkt: proofClaims.tkt,
+        sid: proofClaims.sid,
+      })
+        .setProtectedHeader({ alg: 'ES256', kid: headerClaims.kid, typ: 'JWT' })
+        .setIssuer('vemoki-gate')
+        .setAudience('gate')
+        .setIssuedAt()
+        .setExpirationTime(Math.floor(Date.now() / 1000) + 60)
+        .sign(testSigningKey);
+      await assertGateDenyNoMutation(ctx, f, {
+        ticketId,
+        token: scanner,
+        path,
+        status: 403,
+        code: 'MANUAL_PROOF_INVALID',
+        body: {
+          ...base,
+          presented: { kind: 'manual', proofToken: missingVerProof },
+        },
+      });
+
+      const invalidTypeVerProof = await new SignJWT({
+        tid: proofClaims.tid,
+        eid: proofClaims.eid,
+        tkt: proofClaims.tkt,
+        sid: proofClaims.sid,
+        ver: '1',
+      })
+        .setProtectedHeader({ alg: 'ES256', kid: headerClaims.kid, typ: 'JWT' })
+        .setIssuer('vemoki-gate')
+        .setAudience('gate')
+        .setIssuedAt()
+        .setExpirationTime(Math.floor(Date.now() / 1000) + 60)
+        .sign(testSigningKey);
+      await assertGateDenyNoMutation(ctx, f, {
+        ticketId,
+        token: scanner,
+        path,
+        status: 403,
+        code: 'MANUAL_PROOF_INVALID',
+        body: {
+          ...base,
+          presented: { kind: 'manual', proofToken: invalidTypeVerProof },
+        },
+      });
+
+      const wrongVerProof = await new SignJWT({
+        tid: proofClaims.tid,
+        eid: proofClaims.eid,
+        tkt: proofClaims.tkt,
+        sid: proofClaims.sid,
+        ver: proofClaims.ver + 1,
+      })
+        .setProtectedHeader({ alg: 'ES256', kid: headerClaims.kid, typ: 'JWT' })
+        .setIssuer('vemoki-gate')
+        .setAudience('gate')
+        .setIssuedAt()
+        .setExpirationTime(Math.floor(Date.now() / 1000) + 60)
+        .sign(testSigningKey);
+      await assertGateDenyNoMutation(ctx, f, {
+        ticketId,
+        token: scanner,
+        path,
+        status: 409,
+        code: 'CREDENTIAL_VERSION_STALE',
+        body: {
+          ...base,
+          presented: { kind: 'manual', proofToken: wrongVerProof },
         },
       });
 
