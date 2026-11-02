@@ -15,6 +15,13 @@ import {
   ROOT,
   E2E,
 } from './runtime.mjs';
+import {
+  acquireLane,
+  buildKey,
+  readBuildMarker,
+  releaseLane,
+  writeBuildMarker,
+} from './lane.mjs';
 import { validateManifest } from '../validation/validate.mjs';
 import { assertSourceProvenanceStable } from './source-provenance.mjs';
 
@@ -22,6 +29,20 @@ const requireRoot = createRequire(resolve(ROOT, 'package.json'));
 const args = process.argv.slice(2);
 const mode = args.shift() || 'smoke';
 const skipBuild = args.includes('--skip-build');
+const laneArg = args.find(
+  (arg) => arg === '--lane' || arg.startsWith('--lane='),
+);
+const useLane = Boolean(laneArg);
+const laneRequested =
+  laneArg && laneArg.includes('=')
+    ? Number(laneArg.slice('--lane='.length))
+    : null;
+if (laneArg && laneArg.includes('=') && !Number.isInteger(laneRequested)) {
+  console.error('--lane=<số lane> phải là số nguyên');
+  process.exit(2);
+}
+const forceRebuild = args.includes('--rebuild');
+const laneRunToken = `pid-${process.pid}`;
 const publicReadDiagnostic = args.includes('--public-read-diagnostic');
 if (publicReadDiagnostic && (mode !== 'e2e' || !args.includes('--case=WEB-01,WEB-02,WEB-03,WEB-04,WEB-05,WEB-06,WEB-07,WEB-08,WEB-09,WEB-10,WEB-11,WEB-12,WEB-13'))) {
   throw new Error('Public-read diagnostic requires e2e and the exact WEB-01–13 case list');
@@ -102,7 +123,7 @@ if (
   caseIds.some((id) => !/^(AUTH|WEB|PORT|PLAT|SEC|DB|GATE|JOB)-\d{2}$/.test(id))
 ) {
   console.error(
-    'Usage: node tests/e2e/harness/run.mjs smoke|e2e|http|regression|list [--skip-build] [--case=WEB-02,PORT-07]',
+    'Usage: node tests/e2e/harness/run.mjs smoke|e2e|http|regression|list [--lane[=N]] [--rebuild] [--skip-build] [--case=WEB-02,PORT-07]',
   );
   process.exit(2);
 }
@@ -116,13 +137,17 @@ async function exitCode(child) {
 }
 
 async function publicReadSnapshot(state, salt) {
-  if (state.project !== `e2e-${state.id}` || !Number.isInteger(state.ports.pg)) {
+  const ownedProject = state.lane
+    ? state.project === `e2e-${state.lane.name}`
+    : state.project === `e2e-${state.id}`;
+  if (!ownedProject || !Number.isInteger(state.ports.pg)) {
     throw new Error('BLOCKED: diagnostic requires the owned local database');
   }
   const requireApi = createRequire(resolve(ROOT, 'apps/api/package.json'));
   const { Client } = requireApi('pg');
   const client = new Client({
-    host: '127.0.0.1', port: state.ports.pg, database: 'e2e',
+    host: '127.0.0.1', port: state.ports.pg,
+    database: state.databaseName || 'e2e',
     user: 'postgres', password: state.secrets.pg,
   });
   await client.connect();
@@ -208,8 +233,16 @@ if (mode === 'list' || args.includes('--list')) {
   let state;
   let diagnostic;
   let cleaning;
+  let laneHeld = null;
+  // Lane lock chỉ được nhả sau khi tài nguyên của run đã bị xoá.
   const cleanup = () =>
-    (cleaning ||= state ? destroyRuntime(state) : Promise.resolve());
+    (cleaning ||= (async () => {
+      try {
+        if (state) await destroyRuntime(state);
+      } finally {
+        if (laneHeld) releaseLane(laneHeld);
+      }
+    })());
   const interrupt = async () => {
     process.exitCode = 130;
     await cleanup();
@@ -218,8 +251,29 @@ if (mode === 'list' || args.includes('--list')) {
   process.once('SIGINT', interrupt);
   process.once('SIGTERM', interrupt);
   try {
-    state = await createRuntime(caseIds);
-    if (!skipBuild) {
+    if (useLane) {
+      laneHeld = await acquireLane({
+        lane: laneRequested ?? undefined,
+        runId: laneRunToken,
+        onWait: (names) =>
+          console.log(`E2E: chờ lane rảnh (${names.join(', ')})`),
+      });
+      console.log(`E2E: lane ${laneHeld.name} đã khoá cho run này`);
+    }
+    state = await createRuntime(caseIds, { lane: laneHeld });
+    // Build chỉ dùng lại được khi source và origin không đổi; origin bị
+    // nướng vào trang prerender nên nằm trong key.
+    const laneBuildKey = laneHeld
+      ? buildKey(state.sourceProvenance, laneHeld)
+      : null;
+    const reuseLaneBuild =
+      Boolean(laneBuildKey) &&
+      !forceRebuild &&
+      readBuildMarker(laneHeld)?.key === laneBuildKey;
+    if (reuseLaneBuild)
+      console.log(`E2E: dùng lại build của lane ${laneHeld.name}`);
+    const needsBuild = !skipBuild && !reuseLaneBuild;
+    if (needsBuild) {
       console.log('E2E: build shared packages/API/worker');
       const core = startProcess(
         state,
@@ -379,7 +433,7 @@ if (mode === 'list' || args.includes('--list')) {
       mode === 'http' &&
       caseIds.some((id) => ['AUTH-03', 'SEC-02', 'SEC-03', 'SEC-05', 'PLAT-03'].includes(id));
     if (mode !== 'http' || httpNeedsFrontend) {
-      if (!skipBuild) {
+      if (needsBuild) {
         console.log('E2E: build Web/Portal production');
         const builds = ['web', 'portal'].map((name) =>
           startProcess(
@@ -392,6 +446,10 @@ if (mode === 'list' || args.includes('--list')) {
         );
         if ((await Promise.all(builds.map(exitCode))).some(Boolean))
           throw new Error('BLOCKED: frontend build thất bại; xem *-build.log');
+        if (laneBuildKey)
+          writeBuildMarker(laneHeld, laneBuildKey, {
+            gitCommit: state.sourceProvenance.gitCommit,
+          });
       }
       const clientEnv = (name) => ({
         ...common,
@@ -559,6 +617,7 @@ if (mode === 'list' || args.includes('--list')) {
       : results.some((result) => result.exitCode) ? 'FAIL' : 'PASS';
     privateJson(resolve(state.dir, 'summary.json'), {
       runId: state.id,
+      lane: state.lane ? state.lane.name : null,
       mode,
       caseIds,
       status,
@@ -574,6 +633,7 @@ if (mode === 'list' || args.includes('--list')) {
     console.log(
       JSON.stringify({
         runId: state.id,
+        lane: state.lane ? state.lane.name : null,
         mode,
         status,
         results,
@@ -613,6 +673,7 @@ if (mode === 'list' || args.includes('--list')) {
       }
       privateJson(resolve(state.dir, 'summary.json'), {
         runId: state.id,
+        lane: state.lane ? state.lane.name : null,
         mode,
         caseIds,
         status: 'BLOCKED',
