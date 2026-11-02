@@ -29,10 +29,7 @@ test('readBrowserOffline reflects navigator.onLine', () => {
 test('OwnerTicketQrPanel renders QR figure without offline banner on SSR', () => {
   const html = renderToStaticMarkup(
     React.createElement(OwnerTicketQrPanel, {
-      tenantId: '11111111-1111-4111-8111-111111111111',
-      ticketId: '22222222-2222-4222-8222-222222222222',
-      state: 'ACTIVE',
-      qrPayload: 'display-payload',
+      qrPayload: 'header.payload.signature',
       qrLabel: 'Mã vé',
     }),
   );

@@ -55,15 +55,15 @@ export function StaffGateManualEntryModal({
               Nhập mã vé
             </Text>
             <Text style={styles.sheetHint}>
-              Dán UUID vé hoặc JSON từ QR. Bấm Gửi để kiểm tra — không tự gửi
-              khi đóng.
+              Nhập mã trên vé để xác minh trực tuyến. Mã không được xác minh
+              khi mất mạng.
             </Text>
             <Input
               ref={inputRef}
               testID="gate-scan-input"
               value={value}
               onChangeText={onChange}
-              accessibilityLabel="Nhập mã vé hoặc JSON QR"
+              accessibilityLabel="Nhập mã thủ công trên vé"
               autoCapitalize="none"
               autoCorrect={false}
               autoComplete="off"
