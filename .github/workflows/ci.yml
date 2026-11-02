@@ -311,6 +311,9 @@ jobs:
       - name: POL-01 standard D command (catalog + retention-db)
         if: matrix.shard == 'account-deletion'
         run: pnpm test:integration:local --case POL-01 --suite D --no-build
+      - name: POL-02 standard D command (catalog + retention-db)
+        if: matrix.shard == 'o06-retention'
+        run: pnpm test:integration:local --case POL-02 --suite D --no-build
 
   # D5 drills tách 3 job song song (ports/container name độc lập).
   d5-observability:

@@ -278,7 +278,7 @@ export const catalog = {
   ],
   'POL-02': [
     b('portal-audit-codes', 'H-A1/H-C1/H-P-AUDIT'),
-    b('o06-retention-db', 'O06 POL-02/03'),
+    b('o06-retention-db', 'O06 DB clocks'),
     b('o06-retention-db', 'O06 PII writer'),
   ],
   'POL-03': [
@@ -367,7 +367,7 @@ export const notes = {
   'POL-01':
     'D scrub/retry/tombstone đạt; metric slaOverdue fail 0 vs admin count 1 do runtime RLS; chưa đủ kết luận toàn bộ SLA.',
   'POL-02':
-    'D clock ends_at NULL, CANCELLED dùng cancelled_at, PII writer/sweep row lock hai thứ tự, tenant isolation và replay. Cần ops đo event lớn và restore re-sweep. Audit TTL 730 ngày là gap policy riêng, chưa có deletion job.',
+    'D biên 365 ngày, ends_at NULL, CANCELLED dùng cancelled_at, PII writer/sweep row lock hai thứ tự, tenant isolation, replay và giữ ticket/check-in/KPI input. Owner giảm AC: xóa audit vật lý 730 ngày và restore re-sweep chuyển task riêng; cần ops đo event lớn.',
   'POL-03':
     'D clock ends_at + 90 ngày kể cả CANCELLED, event fence, lease/reclaim, delete 404 và token cũ không finalize. F01 còn mở: stale PUT sau purge có thể tái tạo bytes; thiếu MinIO barrier/object-store write fence, signed URL expiry và ops restore.',
   'POL-04': 'Privacy copy và restore/RPO/RTO cần bằng chứng browser/ops riêng.',
