@@ -103,6 +103,43 @@ Mục đích: kiểm tra cách làm "kiểm kê + một vòng chạy gộp" trê
 1. **Viết thêm** ~7 test H (và vài assertion D còn thiếu cho GATE-02/04/05) vào `live.test.mjs`; trung thực nhưng là công việc thật.
 2. **Giảm AC GATE xuống D**, ghi rõ ID · phần H bị bỏ · lý do · rủi ro còn lại (authz/route chỉ được chứng minh ở tầng domain, không qua JWT Keycloak thật).
 
+### GATE: thực hiện hướng kết hợp — 02/11/2026
+
+Owner chọn đề xuất kết hợp (viết thêm test cho logic check-in cốt lõi GATE-02/04/05; giảm AC xuống D cho offline sync/receipt GATE-06–09). Bảng trên là trạng thái trước bước này.
+
+**Đã làm cho GATE-02/04/05.** Thêm `packages/backend/test/gate-acceptance.test.cjs` (D) và ba khối H trong `tests/e2e/http/live.test.mjs`, nối vào catalog/coverage. D: hold không là check-in, retry cùng holder dùng lại reservation và xoay token, hold hết hạn nhả cho session khác, sai holder/sai token không mutation, retry confirm không thêm check-in, confirm sau khi session bị revoke bị chặn, Scanner không undo được, lý do trống bị từ chối, undo giữ hàng check-in làm lịch sử với đúng một audit, re-entry sau undo vẫn đúng một check-in hiện hành. H (run `mvz7c12y-668d9f`, 3/3 PASS): cùng các nhánh qua JWT Keycloak thật, thêm hai confirm HTTP đồng thời cho đúng `[200, 409]`. Cả hai lớp đã kiểm đột biến: cho Scanner undo làm D fail (`Missing expected rejection (AuthzError)`) và H fail (`201 !== 403`, run `mvz7d7i0-fbb980`); cho phép lý do trống làm D fail. Cây dirty nên các run này chưa là evidence nghiệm thu.
+
+**Phát hiện cần owner quyết định** (không tự sửa contract, không ghim hành vi lệch):
+
+| # | Phát hiện | ID |
+| - | --------- | -- |
+| 1 | Không có thao tác huỷ hold chủ động trong API hay domain; `RELEASED` chỉ được đặt khi `revokeTicket`. AC GATE-02 nhắc "cancel" nên vế này chưa có gì để kiểm | GATE-02 |
+| 2 | Undo lần hai trả 409 `CHECKIN_ALREADY_UNDONE`, domain không replay. AC ghi "idempotency" nhưng không nói nghĩa là replay cùng kết quả hay từ chối | GATE-05 |
+| 3 | Domain ném `CHECKIN_NOT_FOUND` cho lý do trống, trong khi reissue dùng `REASON_REQUIRED`; HTTP che đi bằng 422 `SCOPE_REQUIRED` nên người dùng không thấy. Test chỉ khẳng định bị từ chối và không mutation | GATE-05 |
+| 4 | `authz được kiểm cả khi retry` (GATE-07) không có assertion ở **bất kỳ** lớp nào: D `offline-sync-apply` phủ DUPLICATE/conflict/REJECTED/CONFLICT nhưng không có ca bị thu quyền hay revoke session rồi retry | GATE-07 |
+
+**Giảm AC đã ghi** (đúng khung §15.2: ID · phần giảm · lý do · rủi ro còn lại):
+
+| ID | Phần H bị bỏ | Lý do | Rủi ro còn lại |
+| -- | ------------ | ----- | -------------- |
+| GATE-06 | Biên skew ±300 s và item hỗn hợp qua HTTP | U `validateOfflineSyncRequest` đã phủ skew và batch quá lớn; D đã phủ apply/replay | Ánh xạ HTTP (422 theo `gateHttpException`), authz và rate bucket của route chưa được chứng minh qua JWT thật |
+| GATE-08 | Receipt qua HTTP, cổng đã đóng | D matrix đã phủ authz, trạng thái, cửa sổ đóng, read-only | Chỉ chứng minh ở tầng domain; ánh xạ route và token thật chưa kiểm |
+| GATE-09 | Ownership/authz/rate qua HTTP | D matrix + PG evidence F02-EVID-01, U 422 UUID sai, U bucket GET tách POST | Như GATE-08; 404 chung sau authz chưa kiểm qua route thật |
+
+**GATE-07 không giảm được theo hướng này:** bỏ H thì vẫn thiếu authz-on-retry ở D. Cần thêm một assertion D (thu quyền hoặc revoke session rồi replay phải bị từ chối) trước khi xin review.
+
+**Trạng thái sau bước này** (chưa ID nào đổi verdict; xếp theo mức sẵn sàng xin review gộp):
+
+| ID | Trạng thái |
+| -- | ---------- |
+| GATE-01 | D + H PASS; thiếu H mở lại cùng cổng và actor gán ở hai event. Sẵn sàng xin review gộp với phần thiếu ghi là giảm |
+| GATE-04 | D + H PASS; thiếu revoke permission giữa request đang bay (race không tái hiện tất định). Sẵn sàng xin review gộp |
+| GATE-06, 08, 09 | D (+U) PASS; giảm AC xuống D như bảng trên. Sẵn sàng xin review gộp |
+| GATE-02 | D + H PASS trừ vế "cancel" chưa có implementation (phát hiện 1). Cần owner quyết định |
+| GATE-05 | D + H PASS; AC "idempotency" mơ hồ (phát hiện 2, 3). Cần owner quyết định |
+| GATE-07 | Cần thêm assertion D cho authz-on-retry (phát hiện 4) |
+| GATE-03 | Bị chặn bởi signed QR (quyết định sản phẩm) |
+
 ## Các nhóm còn thiếu nghiệm thu toàn phần
 
 Các dòng này giữ BLOCKED ở mức AC; không có nghĩa tất cả đều đã chứng minh có bug. Có thể thiếu test, runtime evidence, review hoặc contract; không đổi expected outcome để lấy PASS.
