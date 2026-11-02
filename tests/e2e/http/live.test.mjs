@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { createHmac, randomUUID } from 'node:crypto';
 import { createRequire } from 'node:module';
 import http from 'node:http';
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import test from 'node:test';
 import { chromium } from 'playwright';
 import { web05ConfigV2Payload } from '../harness/web05-published-config.mjs';
@@ -1497,6 +1497,14 @@ for (const caseId of CASE_IDS) {
         };
         const auditBefore = await auditCount();
         assert.equal(auditBefore, 1, 'DB-18 audit proof seeded');
+        const faultControlPath = required(ctx.runtime.faultControlPath, 'DB-18 faultControlPath');
+        const faultHitPath = required(ctx.runtime.idpFaultHitPath, 'DB-18 idpFaultHitPath');
+        const fault = JSON.parse(readFileSync(faultControlPath, 'utf8'));
+        fault.idpDelete = {
+          path: `/admin/realms/${ctx.runtime.realm}/users/${subject}`,
+          mode: 'unavailable',
+        };
+        writeFileSync(faultControlPath, JSON.stringify(fault), { mode: 0o600 });
         const accepted = await request(ctx, 'POST', '/me/account-deletion-requests', access, { confirmation: true });
         expectStatus(accepted, 201);
         assert.equal(accepted.body.state, 'REQUESTED');
@@ -1506,6 +1514,28 @@ for (const caseId of CASE_IDS) {
         const current = await request(ctx, 'GET', '/me/account-deletion-requests/current', access);
         expectStatus(current, 401, 'UNAUTHENTICATED');
         let row;
+        for (let attempt = 0; attempt < 30; attempt += 1) {
+          const result = await client.query(
+            `SELECT out_state AS state, out_idp_status AS idp_status,
+                    out_pg_applied_at IS NOT NULL AS pg_applied,
+                    out_original_subject IS NULL AS subject_cleared
+             FROM get_account_deletion_idp_row($1::uuid)`,
+            [requestId],
+          );
+          row = result.rows[0];
+          if (row?.idp_status === 'FAILED' && existsSync(faultHitPath)) break;
+          await new Promise((resolve) => setTimeout(resolve, 1_000));
+        }
+        assert.equal(existsSync(faultHitPath), true, 'DB-18 live IdP DELETE received controlled 503');
+        assert.equal(row?.state, 'REQUESTED', 'DB-18 must not complete after IdP 503');
+        assert.equal(row.idp_status, 'FAILED');
+        assert.equal(row.pg_applied, true);
+        assert.equal(row.subject_cleared, false, 'DB-18 retry retains original subject');
+        expectStatus(await request(ctx, 'GET', '/me/account-deletion-requests/current', access), 401, 'UNAUTHENTICATED');
+        assert.equal((await adminUser(adminToken)).status, 200, 'DB-18 IdP user remains after 503');
+        console.log('DB-18: live IdP DELETE 503; REQUESTED and bearer denied');
+        delete fault.idpDelete;
+        writeFileSync(faultControlPath, JSON.stringify(fault), { mode: 0o600 });
         for (let attempt = 0; attempt < 90; attempt += 1) {
           const result = await client.query(
             `SELECT out_state AS state, out_idp_status AS idp_status,
@@ -1527,6 +1557,7 @@ for (const caseId of CASE_IDS) {
         assert.equal(user.rows[0].email, null);
         assert.equal(user.rows[0].subject, `anon:${requestId}`);
         assert.equal(await auditCount(), auditBefore, 'DB-18 audit retained');
+        console.log('DB-18: retry DELETE completed; PG scrub and audit verified');
         return;
       } finally {
         await client.end();
