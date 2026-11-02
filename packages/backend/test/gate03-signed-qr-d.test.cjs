@@ -271,8 +271,15 @@ test(
       'stale confirm must be audited',
     );
 
-    // (3) old-version JWS → CREDENTIAL_VERSION_STALE, no new hold.
+    // (3) old-version JWS → CREDENTIAL_VERSION_STALE, no new hold, exactly one audit row.
     const heldBefore = await heldCount(db, tenantId, tA);
+    const checkinBefore = await checkinCount(db, tenantId, tA);
+    const staleReserveRejectBefore = await rejectCount(
+      db,
+      tenantId,
+      eventId,
+      'CREDENTIAL_VERSION_STALE',
+    );
     const staleReserve = await backend.withTenant(db, tenantId, (tx) =>
       backend.reserveCheckin(tx, {
         tenantId,
@@ -286,6 +293,12 @@ test(
     assert.equal(staleReserve.ok, false);
     assert.equal(staleReserve.code, backend.GATE_ERROR_CODES.CREDENTIAL_VERSION_STALE);
     assert.equal(await heldCount(db, tenantId, tA), heldBefore, 'stale reserve must not hold');
+    assert.equal(await checkinCount(db, tenantId, tA), checkinBefore, 'stale reserve must not check in');
+    assert.equal(
+      await rejectCount(db, tenantId, eventId, 'CREDENTIAL_VERSION_STALE'),
+      staleReserveRejectBefore + 1,
+      'stale reserve must write exactly one gate.reject audit row',
+    );
 
     // (4) fresh ticket: current-version (v2) JWS still holds after rotation.
     const tB = await issueTicket('GATE03-D-2');
@@ -532,6 +545,90 @@ test(
       await rejectCount(db, tenantId, eventId, 'CREDENTIAL_SIGNATURE_INVALID'),
       rejectBefore + 1,
       'unknown kid deny must be audited',
+    );
+  },
+);
+
+test(
+  'gate03 signed-QR D: manual hold then reissue then confirm returns CREDENTIAL_VERSION_STALE',
+  { timeout: 180000 },
+  async (t) => {
+    const { db, tenantId, eventId, staff, sessionA, manualPepper, issueTicket, manualCodeFor } =
+      await scenario(t);
+
+    const ticketId = await issueTicket('GATE03-D-5');
+    const manualCode = await manualCodeFor(ticketId);
+
+    // (1) manual lookup mints a proof bound to sessionA and the current version (1).
+    const lookup = backend.unwrapManualLookupOutcome(
+      await backend.withTenant(db, tenantId, (tx) =>
+        backend.manualLookupTicket(tx, {
+          tenantId,
+          eventId,
+          staffSessionId: sessionA.sessionId,
+          actorUserId: staff.userId,
+          code: manualCode,
+          verifyKeys: VERIFY_KEYS,
+          signingKeyId: K1.kid,
+          signingPrivateKeyPem: K1.privateKeyPem,
+          manualCodePepper: manualPepper,
+        }),
+      ),
+    );
+    assert.equal(
+      (await backend.verifyManualProofToken(lookup.proofToken, VERIFY_KEYS, sessionA.sessionId)).ver,
+      1,
+      'proof must bind the current credential version',
+    );
+
+    // (2) reserve with the manual proof → hold (reservation minted at ver 1).
+    const hold = backend.unwrapReserveOutcome(
+      await backend.withTenant(db, tenantId, (tx) =>
+        backend.reserveCheckin(tx, {
+          tenantId,
+          eventId,
+          staffSessionId: sessionA.sessionId,
+          actorUserId: staff.userId,
+          presented: { kind: 'manual', proofToken: lookup.proofToken },
+          verifyKeys: VERIFY_KEYS,
+        }),
+      ),
+    );
+    assert.equal(await heldCount(db, tenantId, ticketId), 1, 'manual reserve must hold');
+
+    // (3) reissue between manual hold and confirm → ver 2.
+    const rotated = await backend.withTenant(db, tenantId, (tx) =>
+      backend.reissueTicketCredential(tx, CREDENTIAL_KEY, {
+        tenantId,
+        eventId,
+        ticketId,
+        actorUserId: staff.userId,
+        reason: 'reissue between manual hold and confirm',
+        idempotencyKey: randomUUID(),
+      }),
+    );
+    assert.equal(rotated.credentialVersion, 2);
+
+    // (4) confirm the held reservation after reissue → CREDENTIAL_VERSION_STALE, no check-in.
+    const rejectBefore = await rejectCount(db, tenantId, eventId, 'CREDENTIAL_VERSION_STALE');
+    const staleConfirm = await backend.withTenant(db, tenantId, (tx) =>
+      backend.confirmCheckin(tx, {
+        tenantId,
+        eventId,
+        reservationId: hold.reservationId,
+        token: hold.token,
+        staffSessionId: sessionA.sessionId,
+        actorUserId: staff.userId,
+      }),
+    );
+    assert.equal(staleConfirm.ok, false);
+    assert.equal(staleConfirm.code, backend.GATE_ERROR_CODES.CREDENTIAL_VERSION_STALE);
+    assert.equal(await checkinCount(db, tenantId, ticketId), 0, 'manual stale confirm must not check in');
+    assert.equal(await ticketState(db, tenantId, ticketId), 'ACTIVE', 'ticket must stay ACTIVE');
+    assert.equal(
+      await rejectCount(db, tenantId, eventId, 'CREDENTIAL_VERSION_STALE'),
+      rejectBefore + 1,
+      'manual stale confirm must be audited',
     );
   },
 );
