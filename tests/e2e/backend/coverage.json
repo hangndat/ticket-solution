@@ -373,11 +373,12 @@
       "D:packages/backend/test/worker-db-cancel.test.cjs#PG lock cancels reconcile",
       "U:apps/worker/test/worker-budget-fault.test.cjs#slow SMTP/APNs",
       "U:apps/worker/test/worker-relay-tick-timeout.test.cjs#hung tick step",
-      "R:tests/e2e/backend/job-06-worker-budget.test.cjs#[JOB-06] R real worker process bounds a stuck step while reconciliation continues"
+      "R:tests/e2e/backend/job-06-worker-budget.test.cjs#[JOB-06] R real worker process bounds a stuck step while reconciliation continues",
+      "R:tests/e2e/backend/job-06-worker-budget.test.cjs#[JOB-06] R stalled SMTP after claim times out, then lease reclaim preserves finite tenant cap"
     ],
     "layers": ["D", "U", "R"],
     "status": "blocked",
-    "reason": "D PG lock cancellation and combined worker-budget fixture; U injected timeout/late-completion assertions. Added R real worker child process with measured timeout, overlap fence, concurrent reconciliation, and bounded shutdown; local working-tree R run passed, exact-SHA clean run pending. This backend runner does not use the E2E lane pool; lane=2 evidence is not claimed."
+    "reason": "D worker combined-load test now uses email_per_day=8 and asserts 8 accepted, 4 durably deferred. R covers a real SMTP stall after PROCESSING/HELD, post-claim timeout, no idle worker transaction, bounded shutdown, expired-lease reclaim, one accepted delivery, and a second job deferred at the finite tenant cap. CI worker-budget shard includes both D and R tests; exact-SHA clean run pending."
   },
   {
     "caseId": "JOB-07",
