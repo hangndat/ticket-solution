@@ -100,7 +100,7 @@ function context(caseId) {
     marketing,
     runtime: manifest.runtime ?? {},
     tokenUrl: new URL(
-      `/realms/e2e-${runId}/protocol/openid-connect/token`,
+      `/realms/${manifest.runtime?.realm ?? `e2e-${runId}`}/protocol/openid-connect/token`,
       auth,
     ),
     clientId: required(manifest.runtime?.httpClientId, 'runtime.httpClientId'),
