@@ -142,6 +142,11 @@ export const catalog = {
       'gate03-signed-qr-d',
       'gate03 signed-QR D: keyring rotation — two kids verify, unknown kid denied',
     ),
+    {
+      file: 'tests/e2e/backend/gate03-runtime-rotation.test.mjs',
+      name: 'GATE-03 R: real /me/tickets JWS + reserve/confirm + kid rotation between API restarts',
+      layer: 'R',
+    },
   ],
   'GATE-04': [b('gate', 'gate: one confirm wins')],
   'GATE-05': [b('gate', 'gate: one confirm wins')],
