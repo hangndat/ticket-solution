@@ -547,4 +547,18 @@ Bước 2 và 3 đã có code trong harness; chế độ mặc định (stack ri
 
 Quy ước: lane `N` dùng `*.e2e-lane<N>.test`, cổng TLS `44300+N`, Compose project và realm `e2e-lane<N>`; mỗi run vẫn có database riêng (`e2e_<runId>` tạo từ `e2e_tpl_<fingerprint migration>`), realm import lại, bucket/user/policy MinIO riêng và hộp thư được xoá đầu run. Build dùng lại khi git commit, fingerprint working tree và origin của lane không đổi.
 
-**Chưa xác minh:** mới chỉ chạy `pnpm test:e2e:guards` (25 test, PASS) và `pnpm test:e2e:list`. Chưa có vòng chạy thật nào trên lane, nên chưa có số wall-clock trước/sau, chưa chứng minh `CREATE DATABASE ... TEMPLATE`, realm import và cleanup hoạt động đúng trên stack Docker, và chưa đo giới hạn số lane song song trên máy. Không dùng mục này làm bằng chứng nghiệm thu cho ID nào.
+**Đã đo (02/11/2026, `main` `34f6b97e` + bản sửa lane, cây dirty nên không là evidence nghiệm thu):** smoke 10 nhóm, máy 14 CPU/16 GB, các run tuần tự trên cùng checkout.
+
+| Cách chạy | Thời gian | Kết quả |
+| --------- | --------: | ------- |
+| Mặc định (stack riêng mỗi run) | 86 s | 26/27 browser + SEC-01 HTTP |
+| Lane, lần đầu (dựng lane + build) | 84 s | như trên |
+| Lane, lần hai (dùng lại stack và build) | 73 s | như trên |
+
+Trong 73 s, test browser chiếm ~53 s; phần dựng stack + seed + build chỉ còn ~19 s. Vì vậy **lane tuần tự chỉ tiết kiệm ~13 s (~15%) mỗi run**: build đã rẻ nhờ cache turbo/Next và phần còn lại là chính các test. Lợi ích kỳ vọng của lane nằm ở chạy song song, và **chưa đo** — một checkout chỉ có một `.next` nên hai lane trong cùng checkout bị lock tuần tự (xem dưới); song song thật cần mỗi run một worktree.
+
+Cả ba run đều fail đúng một test, `[AUTH-01] staff … bounces to Portal`, **kể cả run mặc định không lane** nên không do lane: từ ADR-23 Portal đặt tên cookie staff có hậu tố epoch (`staffTokenCookieName(SESSION_COOKIES.idToken, epoch)`), còn test vẫn tìm đúng tên `oidc_id_token`. Test lỗi thời, thuộc nhánh AUTH-07, chưa sửa ở đây.
+
+Bốn lỗi của chính cách triển khai lane đã lộ ra khi chạy thật và đã sửa: `composePath` thiếu trong `state.lane`; ba chỗ trong `seed.mjs` còn nối thẳng database `e2e`; sáu chỗ dựng realm từ `runId` (nay đọc `manifest.runtime.realm`); và marker build theo lane không phát hiện `.next` bị ghi đè bởi lane khác hay run không-lane. Cách sửa cuối: marker theo checkout (`tests/e2e/.artifacts/frontend-build.json`, xoá trước mỗi lần build), lock `frontend.lock` độc quyền `.next` cho run cần frontend, và state/lock của lane nằm ở `~/.cache/vemoki-e2e-lanes` (đổi bằng `E2E_LANES_DIR`) vì container, cổng và realm của lane là tài nguyên của cả máy chứ không của một checkout.
+
+**Chưa xác minh:** tính đúng của `CREATE DATABASE … TEMPLATE` mới chỉ được chứng minh gián tiếp qua các run xanh trên lane; chưa chạy hai lane đồng thời trên hai worktree, chưa đo trần số lane song song, và fingerprint working tree (nằm trong khoá build) đổi khi `company/work-events.jsonl` bị ghi giữa hai run làm mất tái dùng build. Không dùng mục này làm bằng chứng nghiệm thu cho ID nào.

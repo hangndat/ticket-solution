@@ -14,13 +14,27 @@ import {
   unlinkSync,
   writeFileSync,
 } from 'node:fs';
+import { homedir } from 'node:os';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
 
 export const E2E = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 export const ROOT = resolve(E2E, '../..');
-export const LANES_DIR = resolve(E2E, '.lanes');
+// Container, cổng TLS, project Compose và realm của lane là tài nguyên của cả
+// máy, không của một checkout: hai worktree cùng dùng `lane1` sẽ đạp lên nhau.
+// Vì vậy state và lock của lane nằm ở vị trí toàn máy, không nằm trong repo.
+export const LANES_DIR =
+  process.env.E2E_LANES_DIR || resolve(homedir(), '.cache', 'vemoki-e2e-lanes');
+// `.next` của Web/Portal nằm trong checkout nên chỉ có một build mỗi checkout,
+// bất kể lane nào đã tạo ra nó.
+const ARTIFACTS = resolve(E2E, '.artifacts');
+const FRONTEND_MARKER = resolve(ARTIFACTS, 'frontend-build.json');
+const FRONTEND_LOCK = {
+  name: 'frontend',
+  dir: ARTIFACTS,
+  lockPath: resolve(ARTIFACTS, 'frontend.lock'),
+};
 
 const MAX_LANES = 16;
 
@@ -60,7 +74,6 @@ export function laneConfig(value) {
     certPath: resolve(dir, 'tls.crt'),
     keyPath: resolve(dir, 'tls.key'),
     opensslPath: resolve(dir, 'openssl.cnf'),
-    buildMarkerPath: resolve(dir, 'build.json'),
     logPath: resolve(dir, 'lane.log'),
   };
 }
@@ -265,18 +278,21 @@ export function buildKey(provenance, lane) {
     .digest('hex');
 }
 
-export function readBuildMarker(lane) {
+// Marker theo checkout, không theo lane: nó mô tả build đang nằm trong `.next`,
+// mà thư mục đó chỉ có một bản. Build của lane khác, hoặc của run không-lane,
+// đều phải làm marker mất hiệu lực.
+export function readBuildMarker() {
   try {
-    return JSON.parse(readFileSync(lane.buildMarkerPath, 'utf8'));
+    return JSON.parse(readFileSync(FRONTEND_MARKER, 'utf8'));
   } catch {
     return null;
   }
 }
 
-export function writeBuildMarker(lane, key, extra = {}) {
-  ensureLaneDir(lane);
+export function writeBuildMarker(key, extra = {}) {
+  mkdirSync(ARTIFACTS, { recursive: true, mode: 0o700 });
   writeFileSync(
-    lane.buildMarkerPath,
+    FRONTEND_MARKER,
     JSON.stringify(
       { key, builtAt: new Date().toISOString(), ...extra },
       null,
@@ -286,12 +302,44 @@ export function writeBuildMarker(lane, key, extra = {}) {
   );
 }
 
-export function clearBuildMarker(lane) {
+export function clearBuildMarker() {
   try {
-    unlinkSync(lane.buildMarkerPath);
+    unlinkSync(FRONTEND_MARKER);
   } catch (error) {
     if (error.code !== 'ENOENT') throw error;
   }
+}
+
+/**
+ * Hai run trong cùng checkout không được cùng giữ `.next`: một run build lại
+ * trong lúc run kia đang phục vụ từ đó sẽ làm hỏng cả hai. Song song thật cần
+ * mỗi run một worktree; lock này chỉ biến lỗi âm thầm thành chờ tuần tự.
+ */
+export async function acquireFrontend({
+  runId,
+  timeoutMs = positive(process.env.E2E_LANE_WAIT_MS, 2_700_000),
+  onWait,
+} = {}) {
+  const deadline = Date.now() + timeoutMs;
+  let notified = false;
+  for (;;) {
+    const held = tryAcquireLaneLock(FRONTEND_LOCK, runId);
+    if (held) return held;
+    if (Date.now() >= deadline) {
+      throw new Error(
+        `BLOCKED: checkout đang bị run khác giữ .next sau ${Math.round(timeoutMs / 1000)}s`,
+      );
+    }
+    if (!notified) {
+      notified = true;
+      onWait?.();
+    }
+    await delay(2000);
+  }
+}
+
+export function releaseFrontend(held) {
+  releaseLane(held);
 }
 
 export function removeLaneDir(lane) {
