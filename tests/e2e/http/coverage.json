@@ -80,7 +80,7 @@
     "tests": ["H:tests/e2e/http/live.test.mjs#[GATE-03]"],
     "layers": ["H"],
     "status": "blocked",
-    "reason": "H selector hiện được mở rộng assertion: kid lạ/alg sai/audience sai, envelope + claims tối thiểu không PII/no-exp, code manual sai, proof hết hạn và stale version, cancelled ticket, rate-limit, wrong-tenant snapshot hai tenant dưới ticket_runtime/RLS và so sánh full reservation/check-in rows cả sau confirm. Chỉ report run cũ mvyisdk6-156618 trên SHA 989e68394ac6a301f26c47a519264c05e5e105da; evidenceExactShaEligible=false vì checkout dirty ngoài scope. Runtime exact-SHA cho batch này đang chờ chạy trên checkout sạch; giữ blocked. H timing parity chưa chứng minh; D confirm TOCTOU, rotation và R app flow vẫn thiếu evidence; hash được kiểm qua mã manual/HMAC vì QR JWS contract không có claim hash riêng."
+    "reason": "H selector đã thêm fixture/assertion phân biệt: chữ ký ES256 hợp lệ với kid lạ và projection lỗi đồng nhất cho ticket tồn tại/không tồn tại; focused verifier proof cho HS256 có chữ ký hợp lệ, audience sai, manual proof hết hạn trong cùng session, ticket CANCELLED khi còn ACTIVE/chưa USED, claims không PII, stale version, manual timing parity với median/MAD và wrong-tenant snapshot hai tenant dưới ticket_runtime/RLS. Exact-SHA clean run của batch hiện tại đang chờ; giữ blocked. Full AC còn thiếu D confirm TOCTOU/rotation, ACTIVE backfill, R app flow và camera/browser; selector H không đóng các mục đó."
   },
   {
     "caseId": "DB-01",
