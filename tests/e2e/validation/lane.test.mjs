@@ -4,6 +4,7 @@ import { mkdtempSync, writeFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import {
+  ROOT,
   buildKey,
   laneConfig,
   laneLockState,
@@ -34,6 +35,14 @@ test('lane identity is stable and port-derived', () => {
   assert.equal(laneConfig(2).tlsPort - first.tlsPort, 1);
   for (const bad of [0, 17, -1, 1.5, 'x', null])
     assert.throws(() => laneConfig(bad), /BLOCKED: lane/);
+});
+
+test('lane state lives outside the checkout so worktrees share one lock', () => {
+  const { dir, lockPath } = laneConfig(1);
+  assert.equal(lockPath.startsWith(dir), true);
+  // Container, port and realm of a lane are machine-wide; a path inside the repo
+  // would give each worktree its own lock over the same resources.
+  assert.equal(dir.startsWith(ROOT), false);
 });
 
 test('run database name is a safe identifier', () => {

@@ -51,7 +51,6 @@ docs/reviews/**/*.webp
 
 # Isolated E2E runtime: fixture credentials, TLS keys, browser traces and reports
 tests/e2e/.artifacts/
-tests/e2e/.lanes/
 .artifacts/
 
 # Bản sinh tự động cho Codex (nguồn chuẩn: .cursor/skills, .claude/settings.json)
