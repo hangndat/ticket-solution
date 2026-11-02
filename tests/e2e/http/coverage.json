@@ -80,7 +80,7 @@
     "tests": ["H:tests/e2e/http/live.test.mjs#[GATE-03]"],
     "layers": ["H"],
     "status": "blocked",
-    "reason": "H selector đã thêm fixture/assertion phân biệt: chữ ký ES256 hợp lệ với kid lạ và projection lỗi đồng nhất cho ticket tồn tại/không tồn tại; focused verifier proof cho HS256 có chữ ký hợp lệ, audience sai, manual proof hết hạn trong cùng session, ticket CANCELLED khi còn ACTIVE/chưa USED, claims không PII, stale version, manual timing parity với median/MAD và wrong-tenant snapshot hai tenant dưới ticket_runtime/RLS. Exact-SHA clean run của batch hiện tại đang chờ; giữ blocked. Full AC còn thiếu D confirm TOCTOU/rotation, ACTIVE backfill, R app flow và camera/browser; selector H không đóng các mục đó."
+    "reason": "H selector kiểm tra chữ ký ES256 hợp lệ với kid lạ và projection lỗi đồng nhất cho ticket tồn tại/không tồn tại; focused verifier proof cho HS256 có chữ ký hợp lệ; audience sai; manual proof hết hạn trong cùng session; ticket CANCELLED khi còn ACTIVE/chưa USED; claims không PII; stale version; manual timing parity bằng median/MAD; wrong-tenant snapshot hai tenant dưới ticket_runtime/RLS và full reservation/check-in rows. GATE-03 vẫn blocked vì full AC còn thiếu D confirm TOCTOU/rotation, ACTIVE backfill, R app flow và camera/browser; selector H không đóng các mục đó."
   },
   {
     "caseId": "DB-01",
