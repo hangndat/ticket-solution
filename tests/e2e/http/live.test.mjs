@@ -836,6 +836,10 @@ async function gateSnapshot(
        (SELECT credential_version FROM tickets WHERE tenant_id = $1::uuid AND id = $2::uuid) AS credential_version,
        (SELECT count(*) FROM checkin_reservations WHERE tenant_id = $1::uuid AND ticket_id = $2::uuid) AS reservation_count,
        (SELECT count(*) FROM checkins WHERE tenant_id = $1::uuid AND ticket_id = $2::uuid) AS checkin_count,
+       (SELECT COALESCE(jsonb_agg(to_jsonb(r) ORDER BY r.id), '[]'::jsonb)
+          FROM checkin_reservations r WHERE r.tenant_id = $1::uuid AND r.ticket_id = $2::uuid) AS reservation_rows,
+       (SELECT COALESCE(jsonb_agg(to_jsonb(c) ORDER BY c.id), '[]'::jsonb)
+          FROM checkins c WHERE c.tenant_id = $1::uuid AND c.ticket_id = $2::uuid) AS checkin_rows,
        (SELECT count(*) FROM audit_logs WHERE tenant_id = $1::uuid AND event_id = $3::uuid
           AND action = 'gate.reject' AND reason = $4) AS reject_count`,
     [tenantId, ticketId, eventId, rejectReason],
@@ -844,13 +848,19 @@ async function gateSnapshot(
 }
 
 async function assertGateDenyNoMutation(ctx, f, input) {
-  const before = await gateSnapshot(
-    f,
-    input.auditEventId ?? f.eventId,
-    input.ticketId,
-    input.code,
-    input.auditTenantId ?? f.tenantId,
-  );
+  const auditTenantId = input.auditTenantId ?? f.tenantId;
+  const snapshotTenantIds = [
+    ...new Set(input.snapshotTenantIds ?? [auditTenantId]),
+  ];
+  const snapshot = (tenantId) =>
+    gateSnapshot(
+      f,
+      input.auditEventId ?? f.eventId,
+      input.ticketId,
+      input.code,
+      tenantId,
+    );
+  const before = await Promise.all(snapshotTenantIds.map(snapshot));
   const result = await request(
     ctx,
     'POST',
@@ -859,28 +869,36 @@ async function assertGateDenyNoMutation(ctx, f, input) {
     input.body,
   );
   expectStatus(result, input.status, input.code);
-  const after = await gateSnapshot(
-    f,
-    input.auditEventId ?? f.eventId,
-    input.ticketId,
-    input.code,
-    input.auditTenantId ?? f.tenantId,
-  );
-  for (const key of [
-    'ticket_state',
-    'credential_version',
-    'reservation_count',
-    'checkin_count',
-  ]) {
-    assert.equal(
-      after[key],
-      before[key],
-      `${input.code}: ${key} must not mutate`,
+  const after = await Promise.all(snapshotTenantIds.map(snapshot));
+  for (let index = 0; index < snapshotTenantIds.length; index += 1) {
+    for (const key of [
+      'ticket_state',
+      'credential_version',
+      'reservation_count',
+      'checkin_count',
+    ]) {
+      assert.equal(
+        after[index][key],
+        before[index][key],
+        `${input.code}: tenant ${snapshotTenantIds[index]} ${key} must not mutate`,
+      );
+    }
+    assert.deepEqual(
+      after[index].reservation_rows,
+      before[index].reservation_rows,
+      `${input.code}: tenant ${snapshotTenantIds[index]} reservation rows must not mutate`,
+    );
+    assert.deepEqual(
+      after[index].checkin_rows,
+      before[index].checkin_rows,
+      `${input.code}: tenant ${snapshotTenantIds[index]} check-in rows must not mutate`,
     );
   }
+  const auditSnapshot = after[snapshotTenantIds.indexOf(auditTenantId)];
+  const auditBefore = before[snapshotTenantIds.indexOf(auditTenantId)];
   assert.equal(
-    Number(after.reject_count),
-    Number(before.reject_count) + 1,
+    Number(auditSnapshot.reject_count),
+    Number(auditBefore.reject_count) + 1,
     `${input.code}: gate.reject must commit under tenant RLS`,
   );
   return result;
@@ -4150,6 +4168,28 @@ for (const caseId of CASE_IDS) {
       assert.equal(qr?.v, 1);
       assert.equal(typeof qr?.jws, 'string');
       const jws = qr.jws;
+      const [protectedHeader, encodedClaims] = jws.split('.');
+      const headerClaims = JSON.parse(
+        Buffer.from(protectedHeader, 'base64url').toString('utf8'),
+      );
+      const claims = JSON.parse(
+        Buffer.from(encodedClaims, 'base64url').toString('utf8'),
+      );
+      assert.deepEqual(Object.keys(qr).sort(), ['jws', 'kind', 'v']);
+      assert.deepEqual(Object.keys(claims).sort(), [
+        'aud',
+        'eid',
+        'iat',
+        'iss',
+        'jti',
+        'tkt',
+        'tid',
+        'ver',
+      ]);
+      assert.equal(headerClaims.alg, 'ES256');
+      assert.equal(headerClaims.kid, 'e2e');
+      assert.equal(claims.aud, 'gate');
+      assert.ok(!Object.hasOwn(claims, 'exp'), 'QR credentials do not expire');
       const session = await request(
         ctx,
         'POST',
@@ -4202,6 +4242,45 @@ for (const caseId of CASE_IDS) {
         body: { ...base, presented: { kind: 'qr', jws: tampered.join('.') } },
       });
 
+      const unknownKidHeader = {
+        ...headerClaims,
+        kid: 'unknown-e2e-key',
+      };
+      const unknownKidJws = `${Buffer.from(JSON.stringify(unknownKidHeader)).toString('base64url')}.${encodedClaims}.${jws.split('.')[2]}`;
+      await assertGateDenyNoMutation(ctx, f, {
+        ticketId,
+        token: scanner,
+        path,
+        status: 403,
+        code: 'CREDENTIAL_SIGNATURE_INVALID',
+        body: { ...base, presented: { kind: 'qr', jws: unknownKidJws } },
+      });
+
+      const wrongAlgJws = `${Buffer.from(JSON.stringify({ ...headerClaims, alg: 'HS256' })).toString('base64url')}.${encodedClaims}.${jws.split('.')[2]}`;
+      await assertGateDenyNoMutation(ctx, f, {
+        ticketId,
+        token: scanner,
+        path,
+        status: 403,
+        code: 'CREDENTIAL_SIGNATURE_INVALID',
+        body: { ...base, presented: { kind: 'qr', jws: wrongAlgJws } },
+      });
+
+      await assertGateDenyNoMutation(ctx, f, {
+        ticketId,
+        token: scanner,
+        path,
+        status: 403,
+        code: 'CREDENTIAL_SIGNATURE_INVALID',
+        body: {
+          ...base,
+          presented: {
+            kind: 'qr',
+            jws: required(f.data?.wrongAudienceJws, 'GATE-03 wrongAudienceJws'),
+          },
+        },
+      });
+
       const foreignEventId = required(
         f.data?.foreignEventId,
         'GATE-03 foreignEventId',
@@ -4250,6 +4329,7 @@ for (const caseId of CASE_IDS) {
         path: `/gate/events/${foreignTenantEventId}/reservations`,
         auditEventId: foreignTenantEventId,
         auditTenantId: foreignTenantId,
+        snapshotTenantIds: [f.tenantId, foreignTenantId],
         status: 409,
         code: 'CREDENTIAL_CONTEXT_MISMATCH',
         body: {
@@ -4259,14 +4339,40 @@ for (const caseId of CASE_IDS) {
         },
       });
 
-      const beforeWrongTenant = await unchanged();
+      const beforeWrongTenant = await Promise.all(
+        [f.tenantId, foreignTenantId].map((tenantId) =>
+          gateSnapshot(f, f.eventId, ticketId, '', tenantId),
+        ),
+      );
       const wrongTenant = await request(ctx, 'POST', path, scanner, {
         ...base,
-        tenantId: randomUUID(),
+        tenantId: foreignTenantId,
         presented: { kind: 'qr', jws },
       });
       assert.ok([403, 404].includes(wrongTenant.status));
-      assert.deepEqual(await unchanged(), beforeWrongTenant);
+      const afterWrongTenant = await Promise.all(
+        [f.tenantId, foreignTenantId].map((tenantId) =>
+          gateSnapshot(f, f.eventId, ticketId, '', tenantId),
+        ),
+      );
+      for (let index = 0; index < beforeWrongTenant.length; index += 1) {
+        assert.equal(
+          afterWrongTenant[index].ticket_state,
+          beforeWrongTenant[index].ticket_state,
+        );
+        assert.equal(
+          afterWrongTenant[index].credential_version,
+          beforeWrongTenant[index].credential_version,
+        );
+        assert.deepEqual(
+          afterWrongTenant[index].reservation_rows,
+          beforeWrongTenant[index].reservation_rows,
+        );
+        assert.deepEqual(
+          afterWrongTenant[index].checkin_rows,
+          beforeWrongTenant[index].checkin_rows,
+        );
+      }
 
       const stale = await web04Query(
         f,
@@ -4357,6 +4463,14 @@ for (const caseId of CASE_IDS) {
         ticketResponse.body.manualEntryCode,
         'GATE-03 manualEntryCode',
       );
+      await assertGateDenyNoMutation(ctx, f, {
+        ticketId,
+        token: scanner,
+        path: gatePath(f, 'manual-lookup'),
+        status: 404,
+        code: 'MANUAL_CODE_INVALID',
+        body: { ...base, code: 'ZZZZ-ZZZZ-ZZ' },
+      });
       const lookup = await request(
         ctx,
         'POST',
@@ -4366,6 +4480,23 @@ for (const caseId of CASE_IDS) {
       );
       expectStatus(lookup, 200);
       assert.equal(typeof lookup.body.proofToken, 'string');
+      await assertGateDenyNoMutation(ctx, f, {
+        ticketId,
+        token: scanner,
+        path,
+        status: 403,
+        code: 'MANUAL_PROOF_INVALID',
+        body: {
+          ...base,
+          presented: {
+            kind: 'manual',
+            proofToken: required(
+              f.data?.expiredManualProofToken,
+              'GATE-03 expiredManualProofToken',
+            ),
+          },
+        },
+      });
       const secondSession = await request(
         ctx,
         'POST',
@@ -4386,6 +4517,36 @@ for (const caseId of CASE_IDS) {
           presented: { kind: 'manual', proofToken: lookup.body.proofToken },
         },
       });
+      const staleManual = await web04Query(
+        f,
+        f.tenantId,
+        `UPDATE tickets SET credential_version = credential_version + 1
+         WHERE tenant_id = $1::uuid AND id = $2::uuid RETURNING credential_version`,
+        [f.tenantId, ticketId],
+      );
+      assert.equal(staleManual.length, 1);
+      try {
+        await assertGateDenyNoMutation(ctx, f, {
+          ticketId,
+          token: scanner,
+          path,
+          status: 409,
+          code: 'CREDENTIAL_VERSION_STALE',
+          body: {
+            ...base,
+            presented: { kind: 'manual', proofToken: lookup.body.proofToken },
+          },
+        });
+      } finally {
+        const restored = await web04Query(
+          f,
+          f.tenantId,
+          `UPDATE tickets SET credential_version = credential_version - 1
+           WHERE tenant_id = $1::uuid AND id = $2::uuid RETURNING credential_version`,
+          [f.tenantId, ticketId],
+        );
+        assert.equal(restored.length, 1);
+      }
       const manualReservation = await request(ctx, 'POST', path, scanner, {
         ...base,
         presented: { kind: 'manual', proofToken: lookup.body.proofToken },
@@ -4418,6 +4579,51 @@ for (const caseId of CASE_IDS) {
         code: 'TICKET_NOT_ACTIVE',
         body: { ...base, presented: { kind: 'qr', jws } },
       });
+      const cancelled = await web04Query(
+        f,
+        f.tenantId,
+        `UPDATE tickets SET state = 'CANCELLED'
+         WHERE tenant_id = $1::uuid AND id = $2::uuid RETURNING id`,
+        [f.tenantId, ticketId],
+      );
+      assert.equal(
+        cancelled.length,
+        1,
+        'cancelled-ticket fixture remains RLS scoped',
+      );
+      await assertGateDenyNoMutation(ctx, f, {
+        ticketId,
+        token: scanner,
+        path,
+        status: 409,
+        code: 'TICKET_NOT_ACTIVE',
+        body: { ...base, presented: { kind: 'qr', jws } },
+      });
+
+      let rateLimited = false;
+      for (let attempt = 0; attempt < 65; attempt += 1) {
+        const result = await request(
+          ctx,
+          'POST',
+          gatePath(f, 'manual-lookup'),
+          scanner,
+          { ...base, code: 'ZZZZ-ZZZZ-ZZ' },
+        );
+        if (result.status === 429) {
+          assertRateLimited(
+            result,
+            { code: 'RATE_LIMITED', retryable: true, noRetryAfter: true },
+            'GATE-03 manual lookup brute-force limit',
+          );
+          rateLimited = true;
+          break;
+        }
+        expectStatus(result, 404, 'MANUAL_CODE_INVALID');
+      }
+      assert.ok(
+        rateLimited,
+        'manual lookup must rate-limit repeated invalid codes',
+      );
       const reportAfter = await request(ctx, 'GET', reportPath(f), owner);
       expectStatus(reportAfter, 200);
       assert.equal(

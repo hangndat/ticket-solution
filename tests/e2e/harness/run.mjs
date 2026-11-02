@@ -240,11 +240,13 @@ if (mode === 'list' || args.includes('--list')) {
       if (await exitCode(core))
         throw new Error('BLOCKED: core build thất bại; xem core-build.log');
     }
+    let gateCredentialPrivateKeyPem;
     if (caseIds.includes('GATE-03')) {
       const { privateKey, publicKey } = generateKeyPairSync('ec', {
         namedCurve: 'prime256v1',
       });
       const privateKeyPem = privateKey.export({ type: 'pkcs8', format: 'pem' });
+      gateCredentialPrivateKeyPem = privateKeyPem;
       const publicKeyPem = publicKey.export({ type: 'spki', format: 'pem' });
       const backend = requireBackend('./dist/index.js');
       const sealed = backend.sealCredentialToken(
@@ -276,6 +278,43 @@ if (mode === 'list' || args.includes('--list')) {
       JSON.parse(readFileSync(resolve(state.dir, 'seed-result.json'), 'utf8')),
     );
     const rawManifest = JSON.parse(readFileSync(state.manifestPath, 'utf8'));
+    if (caseIds.includes('GATE-03')) {
+      const { SignJWT, importPKCS8 } = await import(requireBackend.resolve('jose'));
+      const privateKey = await importPKCS8(gateCredentialPrivateKeyPem, 'ES256');
+      const gate = rawManifest.cases['GATE-03'];
+      gate.data ??= {};
+      const ticketClaims = {
+        tid: gate.tenantId,
+        eid: gate.eventId,
+        tkt: gate.ticketId,
+        ver: 1,
+        jti: randomBytes(16).toString('hex'),
+      };
+      gate.data.wrongAudienceJws = await new SignJWT(ticketClaims)
+        .setProtectedHeader({
+          alg: 'ES256',
+          kid: state.secrets.gateCredentialCurrentKeyId,
+          typ: 'JWT',
+        })
+        .setIssuer('vemoki-gate')
+        .setAudience('not-gate')
+        .setIssuedAt()
+        .sign(privateKey);
+      gate.data.expiredManualProofToken = await new SignJWT({
+        ...ticketClaims,
+        sid: 'expired-e2e-session',
+      })
+        .setProtectedHeader({
+          alg: 'ES256',
+          kid: state.secrets.gateCredentialCurrentKeyId,
+          typ: 'JWT',
+        })
+        .setIssuer('vemoki-gate')
+        .setAudience('gate')
+        .setIssuedAt()
+        .setExpirationTime(Math.floor(Date.now() / 1000) - 1)
+        .sign(privateKey);
+    }
     if (rawManifest.cases['WEB-10'] || rawManifest.cases['PORT-08']) {
       const web10 = rawManifest.cases['WEB-10'];
       const catalogListPaths = web10

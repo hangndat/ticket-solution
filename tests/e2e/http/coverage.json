@@ -80,7 +80,7 @@
     "tests": ["H:tests/e2e/http/live.test.mjs#[GATE-03]"],
     "layers": ["H"],
     "status": "blocked",
-    "reason": "HTTP selector PASS (1/1) run mvyisdk6-156618 trên source SHA 989e68394ac6a301f26c47a519264c05e5e105da; summary evidenceExactShaEligible=false do working tree còn company/work-events.jsonl và sáu báo cáo James ngoài scope. Subset đã chạy với Keycloak/Postgres/API thật: signed QR response, valid reserve/confirm, tampered signature, wrong-event và signed wrong-tenant context mismatch, stale version, revoked ticket, used ticket, manual lookup, proof sai staff session; các deny kiểm tra reservation/check-in bất biến và gate.reject khi contract có audit. Không đánh dấu ID PASS: còn thiếu audience/kid/alg/hash matrix, cancelled ticket, manual invalid/expiry/version stale và rate-limit."
+    "reason": "H selector hiện được mở rộng assertion: kid lạ/alg sai/audience sai, envelope + claims tối thiểu không PII/no-exp, code manual sai, proof hết hạn và stale version, cancelled ticket, rate-limit, wrong-tenant snapshot hai tenant dưới ticket_runtime/RLS và so sánh full reservation/check-in rows cả sau confirm. Chỉ report run cũ mvyisdk6-156618 trên SHA 989e68394ac6a301f26c47a519264c05e5e105da; evidenceExactShaEligible=false vì checkout dirty ngoài scope. Runtime exact-SHA cho batch này đang chờ chạy trên checkout sạch; giữ blocked. H timing parity chưa chứng minh; D confirm TOCTOU, rotation và R app flow vẫn thiếu evidence; hash được kiểm qua mã manual/HMAC vì QR JWS contract không có claim hash riêng."
   },
   {
     "caseId": "DB-01",
