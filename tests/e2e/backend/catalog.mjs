@@ -124,9 +124,17 @@ export const catalog = {
     ),
   ],
   'DB-18': [
-    b('account-idp-erasure', 'SEC-2 T4/T14'),
-    b('account-idp-erasure', 'SEC-2 T9/T11/T12/T13'),
+    b('account-ack-session-revoke', 'SEC-1 ACK'),
+    b('account-ack-session-revoke', 'SEC-R1'),
     b('account-session-revoke', 'session'),
+    b('account-idp-erasure', 'SEC-2 T4/T14'),
+    b('account-idp-erasure', 'SEC-2 T5:'),
+    b('account-idp-erasure', 'SEC-2 T6/T7/T8'),
+    b('account-idp-erasure', 'SEC-2 T9/T11/T12/T13'),
+    b('account-idp-erasure', 'SEC-2 T16'),
+    b('account-idp-erasure', 'SEC-D-01'),
+    b('account-idp-erasure', 'SEC-D-05'),
+    b('platform', 'deletion acceptance'),
   ],
   'DB-19': [
     b('account-idp-erasure', 'SEC-2 B1:'),
@@ -314,7 +322,7 @@ export const notes = {
   'DB-17':
     'D presets/onboarding + tenant limit mutation/usage (event-quota-suspended #632 race, tenant-limits-usage) + non-Owner escalation deny (catalogue là surface duy nhất, cross-tenant 404) + maxEvents/maxStaff mutation limit/usage (rollback, race xác định, không oversell). Thiếu H Keycloak/HTTP presets/PENDING/operator activation.',
   'DB-18':
-    'D deletion/tombstone + session revoke + audit kept (account-session-revoke khẳng định audit_logs không hard-delete); thiếu H session/IdP end-to-end theo ACCEPTANCE.',
+    'D deletion/tombstone + session revoke (ACK và apply, cross-tenant) + race ACK vs raw INSERT (SEC-R1 advisory lock) + REJECTED giữ REVOKED/mở lại có điều kiện + IdP DELETE/NOT_FOUND/404/disable/503-retry không bypass COMPLETED + issuer allowlist/no fuzzy lookup + OIDC maxTokenAge>24h reject + lease fencing + PII anonymize + audit kept; mutation-check xác nhận tắt ACK revoke làm 3 test fail đúng. Thiếu H: live Keycloak Admin erasure DELETE thật qua /v1/me/account-deletion-requests — chưa có client/fixture trong harness, cần Task riêng.',
   'DB-19': 'D code pepper rotation (v1 alias giữ sau khi rotate v2, removed v1 fail-closed, không lộ plaintext). QR credential rotation (credential-crypto key đơn, kid local-v1) chưa có versioned keyring — product gap cần owner.',
   'GATE-01': 'D gate FK/list/open; thiếu H permission và response contract.',
   'GATE-02':
