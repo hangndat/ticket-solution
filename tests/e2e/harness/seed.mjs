@@ -130,7 +130,7 @@ export async function seedRuntime(state, caseIds) {
   const { migrationFiles } = requireBackend('./test/migration-files.cjs');
   if (!state.lane) {
     const admin = new Client({
-      connectionString: `postgresql://postgres:${state.secrets.pg}@127.0.0.1:${state.ports.pg}/e2e`,
+      connectionString: `postgresql://postgres:${state.secrets.pg}@127.0.0.1:${state.ports.pg}/${databaseName}`,
     });
     await admin.connect();
     try {
@@ -202,7 +202,7 @@ export async function seedRuntime(state, caseIds) {
           // Provision the test's explicit Operator via the isolated seed admin.
           // Runtime API still verifies the real OIDC MFA token and DB grant.
           const provision = new Client({
-            connectionString: `postgresql://postgres:${state.secrets.pg}@127.0.0.1:${state.ports.pg}/e2e`,
+            connectionString: `postgresql://postgres:${state.secrets.pg}@127.0.0.1:${state.ports.pg}/${databaseName}`,
           });
           await provision.connect();
           try {
@@ -2430,7 +2430,7 @@ export async function seedRuntime(state, caseIds) {
         const resolveBucket = 'redemption.resolve';
         const resolveLimit = 30;
         const prime = new Client({
-          connectionString: `postgresql://postgres:${state.secrets.pg}@127.0.0.1:${state.ports.pg}/e2e`,
+          connectionString: `postgresql://postgres:${state.secrets.pg}@127.0.0.1:${state.ports.pg}/${databaseName}`,
         });
         await prime.connect();
         try {
@@ -2572,6 +2572,7 @@ export async function seedRuntime(state, caseIds) {
     profile: 'isolated-https',
     tlsSpki: state.spki,
     hostSuffix: state.suffix,
+    realm: state.realm,
     httpClientId: 'e2e-http',
     httpClientSecret: state.clientSecrets['e2e-http'],
     httpPlatformClientId: 'e2e-http-platform',
