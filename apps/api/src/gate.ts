@@ -37,6 +37,7 @@ import {
   GATE_ERROR_CODES,
   IdentityError,
   IDENTITY_ERROR_CODES,
+  cancelReservation,
   confirmCheckin,
   applyOfflineSyncBatch,
   lookupOfflineSyncReceipt,
@@ -48,6 +49,7 @@ import {
   revokeStaffSession,
   revokeTicket,
   undoCheckin,
+  unwrapCancelOutcome,
   unwrapConfirmOutcome,
   unwrapReserveOutcome,
   unwrapReissueOutcome,
@@ -122,6 +124,34 @@ class SessionResponseDto {
   @ApiProperty({ enum: ['ACTIVE'] }) status!: 'ACTIVE';
   @ApiProperty({ format: 'uuid', nullable: true }) gateId!: string | null;
   @ApiProperty({ nullable: true }) gateName!: string | null;
+}
+
+class CancelBodyDto extends TenantBodyDto {
+  @ApiProperty({ format: 'uuid' }) staffSessionId!: string;
+}
+
+class CancelResponseDto {
+  @ApiProperty({ format: 'uuid' }) reservationId!: string;
+  @ApiProperty({ format: 'uuid' }) ticketId!: string;
+  @ApiProperty({ enum: ['RELEASED'] }) status!: 'RELEASED';
+  @ApiProperty({
+    description: 'true when the hold was already released or expired',
+  })
+  replayed!: boolean;
+}
+
+class UndoResponseDto {
+  @ApiProperty({ format: 'uuid' }) checkinId!: string;
+  @ApiProperty({ format: 'uuid' }) ticketId!: string;
+  @ApiProperty({
+    description:
+      "The ticket's real state after the undo: ACTIVE when it was returned to service; a ticket that already left USED (e.g. REVOKED in a race) keeps its own state",
+  })
+  state!: string;
+  @ApiProperty({
+    description: 'true when the same undo (same reason) was already applied',
+  })
+  replayed!: boolean;
 }
 
 class ReserveResponseDto {
@@ -236,6 +266,19 @@ function scopeError(message: string): HttpException {
   );
 }
 
+/** 422 REASON_REQUIRED — same code the domain raises for a blank undo/revoke/reissue reason. */
+function reasonRequired(): HttpException {
+  return new HttpException(
+    {
+      code: GATE_ERROR_CODES.REASON_REQUIRED,
+      message: 'reason is required',
+      requestId: randomUUID(),
+      retryable: false,
+    } satisfies ApiError,
+    422,
+  );
+}
+
 function requireUuid(value: string | undefined, name: string): string {
   const trimmed = value?.trim() ?? '';
   if (!UUID.test(trimmed)) {
@@ -265,6 +308,9 @@ function gateHttpException(error: GateError): HttpException {
     error.code === GATE_ERROR_CODES.OFFLINE_SYNC_REPLAY_ORDER_INVALID ||
     error.code === GATE_ERROR_CODES.OFFLINE_SYNC_IDEMPOTENCY_CONFLICT
   ) {
+    return new HttpException(body, 422);
+  }
+  if (error.code === GATE_ERROR_CODES.REASON_REQUIRED) {
     return new HttpException(body, 422);
   }
   const status =
@@ -422,6 +468,33 @@ export class GateService {
           eventId,
           reservationId,
           token: body.token,
+          staffSessionId: body.staffSessionId,
+          actorUserId: user.userId,
+        }),
+      ),
+    );
+  }
+
+  async cancel(
+    authorization: string | undefined,
+    eventId: string,
+    reservationId: string,
+    body: CancelBodyDto,
+  ) {
+    const user = await this.actor(authorization);
+    await consumeUserRateLimit(
+      this.deps.db,
+      user.userId,
+      API_RATE_BUCKETS.gateConfirm,
+      API_RATE_LIMITS.gateConfirmPerUser,
+    );
+    // Unwrap after withTenant so gate.reject audit commits on business deny.
+    return unwrapCancelOutcome(
+      await withTenant(this.deps.db!, body.tenantId, (tx) =>
+        cancelReservation(tx, {
+          tenantId: body.tenantId,
+          eventId,
+          reservationId,
           staffSessionId: body.staffSessionId,
           actorUserId: user.userId,
         }),
@@ -691,8 +764,32 @@ export class GateController {
     );
   }
 
+  @Post('gate/events/:eventId/reservations/:reservationId/cancel')
+  @HttpCode(200)
+  @ApiBearerAuth()
+  @ApiOkResponse({ type: CancelResponseDto })
+  @ApiResponse({ status: 409, type: ApiErrorDto })
+  @ApiResponse({ status: 404, type: ApiErrorDto })
+  cancel(
+    @Headers('authorization') authorization: string | undefined,
+    @Param('eventId') eventId: string,
+    @Param('reservationId') reservationId: string,
+    @Body() body: CancelBodyDto,
+  ) {
+    const event = requireUuid(eventId, 'eventId');
+    const reservation = requireUuid(reservationId, 'reservationId');
+    requireUuid(body?.tenantId, 'tenantId');
+    requireUuid(body?.staffSessionId, 'staffSessionId');
+    return this.run(() =>
+      this.gate.cancel(authorization, event, reservation, body),
+    );
+  }
+
   @Post('gate/events/:eventId/checkins/:checkinId/undo')
   @ApiBearerAuth()
+  @ApiResponse({ status: 201, type: UndoResponseDto })
+  @ApiResponse({ status: 409, type: ApiErrorDto })
+  @ApiResponse({ status: 422, type: ApiErrorDto })
   undo(
     @Headers('authorization') authorization: string | undefined,
     @Param('eventId') eventId: string,
@@ -702,7 +799,7 @@ export class GateController {
     const event = requireUuid(eventId, 'eventId');
     const checkin = requireUuid(checkinId, 'checkinId');
     requireUuid(body?.tenantId, 'tenantId');
-    if (!body?.reason?.trim()) throw scopeError('reason is required');
+    if (!body?.reason?.trim()) throw reasonRequired();
     return this.run(() => this.gate.undo(authorization, event, checkin, body));
   }
 
@@ -717,7 +814,7 @@ export class GateController {
     const event = requireUuid(eventId, 'eventId');
     const ticket = requireUuid(ticketId, 'ticketId');
     requireUuid(body?.tenantId, 'tenantId');
-    if (!body?.reason?.trim()) throw scopeError('reason is required');
+    if (!body?.reason?.trim()) throw reasonRequired();
     return this.run(async () => {
       await this.gate.revoke(authorization, event, ticket, body);
       return { status: 'REVOKED' as const, ticketId: ticket };
@@ -742,7 +839,7 @@ export class GateController {
     const ticket = requireUuid(ticketId, 'ticketId');
     requireUuid(body?.tenantId, 'tenantId');
     if (typeof body?.reason !== 'string' || !body.reason.trim()) {
-      throw scopeError('reason is required');
+      throw reasonRequired();
     }
     const key = requireUuid(idempotencyKey, 'Idempotency-Key');
     return this.run(() =>
