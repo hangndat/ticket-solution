@@ -446,7 +446,7 @@ Agent vẫn không tự hạ AC: điều chỉnh cần quyết định owner ho�
 
 **Tầng 1 — giữ nguyên gate đầy đủ (16 ID):** AUTH-06/07/08, SEC-01/02/05, PORT-02/03/10/11/12/14, PLAT-01/02/04, JOB-05. Đây là nhóm chỉ chứng minh được khi ghép thật: cookie host-only/CSRF/session boundary, SSR và BFF, mutation thực hiện qua UI, và với PORT-11/JOB-05 là worker process thật gửi Mailpit. Không thu gọn.
 
-**Tầng 2 — kiểm kê + vòng chạy gộp, AC thu gọn (20 ID):** GATE-01–09, SEC-03/04/06, DB-13/17/18/19, JOB-04/06/07, POL-02. §5–§6 đã chỉ yêu cầu D/H cho các ID này (GATE không kiểm native UI theo O23; SEC-03 là H; SEC-04/06 là H/D), và test nền đã tồn tại — xem inventory trong `ACCEPTANCE.md`. Cách làm:
+**Tầng 2 — kiểm kê + vòng chạy gộp, AC thu gọn (20 ID):** GATE-01–09, SEC-03/04/06, DB-13/17/18/19, JOB-04/06/07, POL-02. §5–§6 đã chỉ yêu cầu D/H cho các ID này (GATE không kiểm native UI theo O23; SEC-03 là H; SEC-04/06 là H/D), và test nền đã tồn tại — xem inventory trong `ACCEPTANCE.md`. **Hiệu chỉnh sau thử nghiệm GATE (02/11/2026):** "test nền đã tồn tại" không đồng nghĩa phủ đủ AC; GATE chỉ có H cho 2/9 ID và bốn ID dùng chung một test D, nên tầng 2 phải bắt đầu bằng kiểm kê assertion→AC trước khi hứa là chỉ cần chạy gộp. Chi tiết: `ACCEPTANCE.md`. Cách làm:
 
 1. Kiểm kê theo §8: mỗi ID có test path/test name, assertion đã phủ, phần thiếu.
 2. Bổ sung assertion còn thiếu **có giá trị phát hiện lỗi**; bỏ qua phần chỉ làm đầy ma trận.
