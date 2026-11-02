@@ -8,7 +8,7 @@
 | Ngày | 2026-10-20 |
 | Architecture impact | **Có** — chỉ shell/layout/component; **không** đổi route, BFF, OpenAPI |
 | Ownership triển khai | `web` → **`apps/portal`** |
-| Neo nghiệp vụ | [`PORTAL-IMPLEMENTATION-HANDOFF.md`](./PORTAL-IMPLEMENTATION-HANDOFF.md), [`o02-permission-nav/contract.md`](./o02-permission-nav/contract.md) |
+| Neo nghiệp vụ | [contract UI Portal](portal-contract.md), [`o02-permission-nav/contract.md`](./o02-permission-nav/contract.md) |
 | Supersede (UI kit) | Mục **`ANTD-CORE-FIRST`** trong handoff cũ → **ProComponents chọn lọc** (file này); các ràng buộc host/OIDC/Gate/Platform **giữ nguyên** |
 
 **Mục đích:** Worker `web` revamp giao diện portal sang **ngôn ngữ Ant Design Pro** (ProLayout, PageContainer, ProTable, ProForm, StatisticCard) trên **Next.js App Router**, không cần hỏi lại IA.
@@ -106,7 +106,7 @@ portal.vemoki.com
   /t/[tenantId]/e/[eventId]/support CS
 ```
 
-**Menu sider ↔ route:** giữ bảng §3.3 [`PORTAL-IMPLEMENTATION-HANDOFF.md`](./PORTAL-IMPLEMENTATION-HANDOFF.md); implementer map `href` → `path` ProLayout.
+**Menu sider ↔ route:** theo §2 của [contract UI Portal](portal-contract.md); implementer map `href` → `path` ProLayout.
 
 ---
 
@@ -158,7 +158,7 @@ Quy ước: **Page** = default export `app/**/page.tsx`; bọc nội dung bằng
 
 ## 4. Trạng thái giao diện (giữ matrix handoff)
 
-Reuse [`PORTAL-IMPLEMENTATION-HANDOFF.md` §4](./PORTAL-IMPLEMENTATION-HANDOFF.md): `loading` | `empty` | `ready` | `error` | `unknown` | `permission-denied` | `stale` | `async-*` | `suspended`.
+Dùng [contract Portal §3](portal-contract.md): `loading` | `empty` | `ready` | `error` | `unknown` | `permission-denied` | `stale` | `async-*` | `suspended`.
 
 **Pro mapping:**
 

@@ -1,6 +1,6 @@
 # Quyết định coordinator — mẫu banner v2
 
-Đây là handoff canonical cho FB08. Root dùng ủy quyền user để xác nhận hướng thiết kế; thay phần mâu thuẫn trong `HANDOFF.md` của Liv. Source baseline `30ce1da`; token/font giữ nguyên (`brand/vemoki/tokens.json`, Sora, Be Vietnam Pro).
+Đây là handoff canonical cho FB08. Root dùng ủy quyền user để xác nhận hướng thiết kế; thay phần mâu thuẫn trong [bản Liv lưu lịch sử](../../archive/design/UI869-FEEDBACK-HANDOFF.md). Source baseline `30ce1da`; token/font giữ nguyên (`brand/vemoki/tokens.json`, Sora, Be Vietnam Pro).
 
 **Đính chính:** Catalog có `CatalogHeroBand` tại `apps/web/app/(consumer)/page.tsx`, không được loại khỏi scope. Orca resize được bằng `exec --command 'set viewport W H'`. Không dùng/cài Playwright trực tiếp trong workflow này. Capture before không phải mẫu sau thiết kế.
 

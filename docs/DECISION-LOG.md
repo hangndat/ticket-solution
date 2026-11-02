@@ -258,7 +258,7 @@ Chỉ mở redemption / Gate / admin tenant **sau khi**:
 
 ## UX-11 — Guest redeem auth MVP (18/10/2026)
 
-Gap audit [PRODUCTION-READINESS-UX §6 UX-11](./plans/PRODUCTION-READINESS-UX.md): PRD §2/M02 mô tả OTP/magic link, runtime/PD pin D1 = Keycloak login + `email_verified`. **Chốt Option A** (khớp tip D11 / AC-A3) — không mở Task OTP/IdP mới trong MVP.
+Gap audit [PRODUCTION-READINESS-UX §6 UX-11](archive/research/production-readiness/PRODUCTION-READINESS-UX.md): PRD §2/M02 mô tả OTP/magic link, runtime/PD pin D1 = Keycloak login + `email_verified`. **Chốt Option A** (khớp tip D11 / AC-A3) — không mở Task OTP/IdP mới trong MVP.
 
 | # | Quyết định | Chi tiết MVP |
 | - | ---------- | ------------ |

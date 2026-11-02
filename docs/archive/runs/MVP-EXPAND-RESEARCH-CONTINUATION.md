@@ -1,3 +1,5 @@
+> **Bản lưu lịch sử — chuyển ngày 03/11/2026.** Nguồn: `docs/plans/MVP-EXPAND-RESEARCH-CONTINUATION.md` tại `36a594f62eca16b3307162d3598c40cb098a1a20`. Giữ approval, SHA và kết quả gốc; các nhãn Status, run/dispatch, lệnh và model bên dưới chỉ có giá trị tại thời điểm ghi. Công việc mới đọc [docs index](../../README.md). Bản lưu không xác nhận HEAD/runtime hoặc cấp quyền thực thi.
+
 # Mở rộng MVP — tiếp tục nghiên cứu (coordinator frame)
 
 | Trường | Giá trị |
@@ -6,15 +8,15 @@
 | Epic | [#222](https://github.com/hangndat/ticket-solution/issues/222) |
 | Run | `run_1246840dce98` |
 | Baseline đã chốt | O10 (D7–D10) · O11/D11 UX · O12 Dashboard dictionary |
-| Trạng thái | BA A/B + DoD #241 xong · tổng hợp [`MVP-EXPAND-MARKET-SYNTHESIS.md`](./MVP-EXPAND-MARKET-SYNTHESIS.md) · attendee `#234`/`#235` còn coding · **chờ user chốt** §4 tổng hợp |
+| Trạng thái | BA A/B + DoD #241 xong · tổng hợp [`MVP-EXPAND-MARKET-SYNTHESIS.md`](../../plans/MVP-EXPAND-MARKET-SYNTHESIS.md) · attendee `#234`/`#235` còn coding · **chờ user chốt** §4 tổng hợp |
 
 ## 1. Bối cảnh (đã có)
 
 | Lát | Evidence | Trạng thái |
 | --- | -------- | ---------- |
 | D0–D10 | Project #3 Hoàn thành | Code/acceptance theo từng Issue; **≠** pilot ready |
-| D11 UX discovery | Gói duyệt 18/10; tracker [`D11-IMPLEMENTATION-TRACKER.md`](./D11-IMPLEMENTATION-TRACKER.md) | Admin `#229` + iOS Gate `#231` đã Hoàn thành; attendee `#234`/`#235` Đang làm |
-| Dashboard M11 | [`DASHBOARD-MARKET-SYNTHESIS.md`](./DASHBOARD-MARKET-SYNTHESIS.md) + O12 | Wave P1 backend PR [#242](https://github.com/hangndat/ticket-solution/pull/242) · `#241` Chờ duyệt · SHA tip `4f6530bf…` |
+| D11 UX discovery | Gói duyệt 18/10; tracker [`D11-IMPLEMENTATION-TRACKER.md`](../../plans/D11-IMPLEMENTATION-TRACKER.md) | Admin `#229` + iOS Gate `#231` đã Hoàn thành; attendee `#234`/`#235` Đang làm |
+| Dashboard M11 | [`DASHBOARD-MARKET-SYNTHESIS.md`](../../plans/DASHBOARD-MARKET-SYNTHESIS.md) + O12 | Wave P1 backend PR [#242](https://github.com/hangndat/ticket-solution/pull/242) · `#241` Chờ duyệt · SHA tip `4f6530bf…` |
 
 ## 2. Wave hiện tại (fan-out)
 

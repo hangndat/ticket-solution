@@ -1,21 +1,23 @@
+> **Bản lưu lịch sử — chuyển ngày 03/11/2026.** Nguồn: `docs/design/PORTAL-IMPLEMENTATION-HANDOFF.md` tại `36a594f62eca16b3307162d3598c40cb098a1a20`. Giữ approval, SHA và kết quả gốc; các nhãn Status, run/dispatch, lệnh và model bên dưới chỉ có giá trị tại thời điểm ghi. Công việc mới đọc [contract UI Portal](../../design/portal-contract.md). Bản lưu không xác nhận HEAD/runtime hoặc cấp quyền thực thi.
+
 # Portal — Handoff triển khai UI (`product-design`)
 
-> **Supersession 24/10/2026:** [O23](../DECISION-LOG.md) thay `GATE-STAY-APP`: không còn Web Gate scan/link để admission. Các bảng dưới đây ghi lại handoff P0+P1 ngày 18/10; khi triển khai Gate dùng quyết định mới, Portal chỉ đọc báo cáo theo `report.read`.
+> **Supersession 24/10/2026:** [O23](../../DECISION-LOG.md) thay `GATE-STAY-APP`: không còn Web Gate scan/link để admission. Các bảng dưới đây ghi lại handoff P0+P1 ngày 18/10; khi triển khai Gate dùng quyết định mới, Portal chỉ đọc báo cáo theo `report.read`.
 
 | Trường | Giá trị |
 | --- | --- |
-| Role | `product-design` — [`docs/agents/roles/product-design.md`](../agents/roles/product-design.md) |
+| Role | `product-design` — [`docs/agents/roles/product-design.md`](../../agents/roles/product-design.md) |
 | Output duy nhất | File này — `docs/design/PORTAL-IMPLEMENTATION-HANDOFF.md` |
 | Ngày | 2026-10-18 |
-| Primary đã duyệt | [`docs/plans/PORTAL-ROADMAP.md`](../plans/PORTAL-ROADMAP.md) — gói **P0+P1** (user duyệt 18/10/2026) |
+| Primary đã duyệt | [`docs/plans/PORTAL-ROADMAP.md`](../../plans/PORTAL-ROADMAP.md) — gói **P0+P1** (user duyệt 18/10/2026) |
 | Architecture impact | **Không** — UI theo gói host/`apps/portal` đã duyệt; auth boundaries theo architect ADR |
 | Ownership UI | `web` → **`apps/portal`** (AntD); không trộn BE/iOS; không prototype code trong Task này |
 | Base / research | `origin/main` `c7e344847b1acf1688302fef513b277fc8f18973`; research local trong checkout portal-coordination |
 | OUT | P2 multi-event BI · SSO enterprise · payment · Android · Wallet · DNS/deploy/cutover production · mock prod |
 
-**Mục đích:** đủ để worker `web` implement shell + màn hình portal mà **không đoán** route, state, permission, copy VI, hoặc API. Neo contract gap: [`PORTAL-BACKEND-GAPS.md`](../plans/PORTAL-BACKEND-GAPS.md). Discovery UX trước: [`PORTAL-ANTD-UX.md`](./PORTAL-ANTD-UX.md) — **supersede** các option lệch primary (xem §1).
+**Mục đích:** đủ để worker `web` implement shell + màn hình portal mà **không đoán** route, state, permission, copy VI, hoặc API. Neo contract gap: [`PORTAL-BACKEND-GAPS.md`](../../plans/PORTAL-BACKEND-GAPS.md). Discovery UX trước: [`PORTAL-ANTD-UX.md`](../../design/PORTAL-ANTD-UX.md) — **supersede** các option lệch primary (xem §1).
 
-**Sync triển khai (2026-10-19):** Production `portal.vemoki.com` khớp §3.3–§3.6 (sider nhóm + home/auth). WIP nhánh `hangndat/d1-portal-nav-groups`, base `52bc54e3fdcb` — **chưa merge `main`**. UAT/DoD: [PORTAL-PROD-UAT-NAV-2026-10-19.md](../reviews/PORTAL-PROD-UAT-NAV-2026-10-19.md), [PORTAL-LOCAL-UAT-NAV-2026-10-19.md](../reviews/PORTAL-LOCAL-UAT-NAV-2026-10-19.md), [PORTAL-NAV-SPINNER-WIP-DOD-2026-10-19.md](../reviews/PORTAL-NAV-SPINNER-WIP-DOD-2026-10-19.md).
+**Sync triển khai (2026-10-19):** Production `portal.vemoki.com` khớp §3.3–§3.6 (sider nhóm + home/auth). WIP nhánh `hangndat/d1-portal-nav-groups`, base `52bc54e3fdcb` — **chưa merge `main`**. UAT/DoD: [PORTAL-PROD-UAT-NAV-2026-10-19.md](../../reviews/PORTAL-PROD-UAT-NAV-2026-10-19.md), [PORTAL-LOCAL-UAT-NAV-2026-10-19.md](../../reviews/PORTAL-LOCAL-UAT-NAV-2026-10-19.md), [PORTAL-NAV-SPINNER-WIP-DOD-2026-10-19.md](../../reviews/PORTAL-NAV-SPINNER-WIP-DOD-2026-10-19.md).
 
 ---
 
@@ -122,7 +124,7 @@ portal.vemoki.com
 
 ### 3.3 Menu permission (O02) — nhóm sider
 
-Nguồn: [`o02-permission-nav/contract.md`](./o02-permission-nav/contract.md). Client **chỉ** đọc allowlist server; ẩn item thiếu perm (không disabled giả quyền). `portal-shell.tsx` render Ant Design `Menu` theo **ba nhóm** (keys i18n `nav.group.org` / tên event / `nav.group.eventSetup`); logic item: `apps/portal/src/nav/capabilities.ts` (`EventMenuGroup`: `run` | `setup`).
+Nguồn: [`o02-permission-nav/contract.md`](../../design/o02-permission-nav/contract.md). Client **chỉ** đọc allowlist server; ẩn item thiếu perm (không disabled giả quyền). `portal-shell.tsx` render Ant Design `Menu` theo **ba nhóm** (keys i18n `nav.group.org` / tên event / `nav.group.eventSetup`); logic item: `apps/portal/src/nav/capabilities.ts` (`EventMenuGroup`: `run` | `setup`).
 
 | Nhóm sider | Menu | Route | Hiện khi |
 | --- | --- | --- | --- |
@@ -172,7 +174,7 @@ Tablet: sider collapsible; hit target ≥ 44px; Table horizontal scroll; Drawer 
 | Shell context | `loadShellContext` dedupe inflight; timeout BFF/OIDC (8–20s) → error/unauth, fail-closed |
 | Đã đăng nhập | Redirect tenant đầu tiên (`tenantId`) hoặc onboarding theo staff eligibility |
 
-Chi tiết review: [PORTAL-NAV-SPINNER-WIP-DOD-2026-10-19.md](../reviews/PORTAL-NAV-SPINNER-WIP-DOD-2026-10-19.md). **Không** claim merge `main`.
+Chi tiết review: [PORTAL-NAV-SPINNER-WIP-DOD-2026-10-19.md](../../reviews/PORTAL-NAV-SPINNER-WIP-DOD-2026-10-19.md). **Không** claim merge `main`.
 
 ---
 
@@ -219,7 +221,7 @@ Nguồn: `brand/vemoki/tokens.json`.
 
 ## 6. Screen-by-screen (reuse · API · wave · AntD · states)
 
-**Ký hiệu API:** `READY` = Nest/OpenAPI đủ dùng UI · `WIRE` = API có, thiếu BFF/UI · `GAP` = [`PORTAL-BACKEND-GAPS`](../plans/PORTAL-BACKEND-GAPS.md) G-\*/H-\* · `NEW` = business mới cần contract · `OUT` = ngoài gói.
+**Ký hiệu API:** `READY` = Nest/OpenAPI đủ dùng UI · `WIRE` = API có, thiếu BFF/UI · `GAP` = [`PORTAL-BACKEND-GAPS`](../../plans/PORTAL-BACKEND-GAPS.md) G-\*/H-\* · `NEW` = business mới cần contract · `OUT` = ngoài gói.
 
 **Reuse source (logic/DTO/copy):** `apps/web/app/admin/*` — port sang `apps/portal` + AntD; **không** copy nguyên page monolithic.
 

@@ -1,15 +1,17 @@
+> **Bản lưu lịch sử — chuyển ngày 03/11/2026.** Nguồn: `docs/plans/PRODUCTION-READINESS-UX.md` tại `36a594f62eca16b3307162d3598c40cb098a1a20`. Giữ approval, SHA và kết quả gốc; các nhãn Status, run/dispatch, lệnh và model bên dưới chỉ có giá trị tại thời điểm ghi. Công việc mới đọc [scope/gates](../../../ROADMAP.md), [Decision Log](../../../DECISION-LOG.md), [catalog UAT](../../../plans/PROD-LAUNCH-UAT.md). Bản lưu không xác nhận HEAD/runtime hoặc cấp quyền thực thi.
+
 # Production readiness — UX/UI audit (research-only)
 
 | Trường | Giá trị |
 | --- | --- |
-| Role | `product-design` — [`docs/agents/roles/product-design.md`](../agents/roles/product-design.md) |
+| Role | `product-design` — [`docs/agents/roles/product-design.md`](../../../agents/roles/product-design.md) |
 | Ownership | **Chỉ** file này (`docs/plans/PRODUCTION-READINESS-UX.md`) |
 | Ngày | 2026-10-18 |
 | Architecture impact | **Không** — đánh giá UX/UI + handoff; không đổi contract |
 | Ủy quyền | Nghiên cứu production readiness — **không** coding / commit / push / PR / merge / deploy / store / EAS Cloud |
 | Ngôn ngữ | Tiếng Việt (giữ ID, SHA, URL, lệnh nguyên bản) |
 
-> **Errata (2026-10-18, [#373](https://github.com/hangndat/ticket-solution/issues/373)):** Snapshot research này **stale một phần**. Nguồn quyết định hiện tại: [`GAP-AUDIT-2026-10-18-INDEX.md`](../reviews/GAP-AUDIT-2026-10-18-INDEX.md) (+ BA/ARCH/DOD/PD/SECURITY cùng đợt). **Không còn mở như claim cũ:** D11 / [#254](https://github.com/hangndat/ticket-solution/issues/254) (và UX-01…07 fixture SoT liên quan) **đã đóng board**; O06 **đã chốt**; `GET https://vemoki.com/privacy` → **HTTP 200**. **Còn mở:** Navigation O02 theo permission — [#368](https://github.com/hangndat/ticket-solution/issues/368)–[#371](https://github.com/hangndat/ticket-solution/issues/371). Không spawn lại gap stale-as-open.
+> **Errata (2026-10-18, [#373](https://github.com/hangndat/ticket-solution/issues/373)):** Snapshot research này **stale một phần**. Nguồn quyết định hiện tại: [`GAP-AUDIT-2026-10-18-INDEX.md`](../../../reviews/GAP-AUDIT-2026-10-18-INDEX.md) (+ BA/ARCH/DOD/PD/SECURITY cùng đợt). **Không còn mở như claim cũ:** D11 / [#254](https://github.com/hangndat/ticket-solution/issues/254) (và UX-01…07 fixture SoT liên quan) **đã đóng board**; O06 **đã chốt**; `GET https://vemoki.com/privacy` → **HTTP 200**. **Còn mở:** Navigation O02 theo permission — [#368](https://github.com/hangndat/ticket-solution/issues/368)–[#371](https://github.com/hangndat/ticket-solution/issues/371). Không spawn lại gap stale-as-open.
 
 ---
 
@@ -84,7 +86,7 @@ Nguồn: `gh project item-list 3 --owner hangndat --limit 300 --format json` →
 - Deploy, cloud resource, store submit, EAS Cloud Build.
 - Spawn worker con; claim PASS cho mục chưa verify.
 
-**Handoff PD sẵn có (không thay file này):** [`docs/design/D11-PRODUCTION-UX-UI.md`](../design/D11-PRODUCTION-UX-UI.md) + `docs/design/d11-prototype/**` — design complete ≠ runtime pass.
+**Handoff PD sẵn có (không thay file này):** [`docs/design/D11-PRODUCTION-UX-UI.md`](../../../design/D11-PRODUCTION-UX-UI.md) + `docs/design/d11-prototype/**` — design complete ≠ runtime pass.
 
 ---
 
@@ -168,7 +170,7 @@ Nguồn: `gh project item-list 3 --owner hangndat --limit 300 --format json` →
 | Privacy / legal | `vemoki.com/privacy` **404** (baseline D11 18/10); không route app | P0 ops + content — ngoài coding PD trừ link/copy |
 | A11y | Pattern SurfaceState + skip/focus tokens D6; PD checklist A1–A10 | Residual a11y Task chưa đóng trên board; không claim WCAG AA |
 | Responsive | Admin mobile screenshot từng có trong UAT artifacts | **Chưa xác minh** trên tip tích hợp |
-| Navigation | Guest Invite lẫn chrome (PD audit trước); staff mode theo permission O02 | **Còn mở (O02)** — [#368](https://github.com/hangndat/ticket-solution/issues/368)–[#371](https://github.com/hangndat/ticket-solution/issues/371); xem [`GAP-AUDIT-2026-10-18-INDEX.md`](../reviews/GAP-AUDIT-2026-10-18-INDEX.md) GAP-O02-NAV (không còn «chỉ kiểm lại sau attendee») |
+| Navigation | Guest Invite lẫn chrome (PD audit trước); staff mode theo permission O02 | **Còn mở (O02)** — [#368](https://github.com/hangndat/ticket-solution/issues/368)–[#371](https://github.com/hangndat/ticket-solution/issues/371); xem [`GAP-AUDIT-2026-10-18-INDEX.md`](../../../reviews/GAP-AUDIT-2026-10-18-INDEX.md) GAP-O02-NAV (không còn «chỉ kiểm lại sau attendee») |
 | Offline / conflict | Gate covered; redeem conflict messages | Ví offline empty vs error clarity OK source; sync conflict UI depth |
 | Email recovery | O14 mở CS UX | Chưa code trên board Sẵn sàng |
 | Day-of ops | BA day-of research; validate-only **OUT** (O11/O14) | Không mở resolution desk trong audit này |
@@ -208,7 +210,7 @@ Nguồn: `gh project item-list 3 --owner hangndat --limit 300 --format json` →
 | UX-08 | Gate iOS conflict/queue depth | Source `staff.tsx` queued≠admit; PR `#240` merged; venue **chưa xác minh** | Nhầm queued = cho vào; conflict đa TB | **P1** | GIVEN phase queued/CONFLICT WHEN hiện outcome THEN tone ≠ admit; text «không phải lượt vào» | sim-uat staff; device camera = chưa xác minh | `ios` | Soft ADR-18 | Không |
 | UX-09 | Attendee vé/QR evidence brand + Xcode | PR `#243/#248` merged; reviews local **untracked** có FAIL tip cũ — không kế thừa | Pilot/store thiếu build evidence | **P1** | GIVEN tip `main` WHEN brand ≥2 tenant + local xcodebuild Team `BLUA62D52G` THEN BUILD SUCCEEDED + sim artifacts | sim-uat + xcodebuild log | `ios` (+ web brand) | Revalidate SHA mới | Không |
 | UX-10 | A11y residual surface D11 | PD A1–A10; WCAG 2.2; không axe suite trên tip tích hợp | Keyboard/SR fail ngày event | **P1** | GIVEN redeem/admin/gate WHEN tab + axe THEN focus visible; live region unknown/queued; hit ≥44px | Playwright axe + manual VO sample | web ∥ ios | Sau merge surfaces | Không |
-| UX-11 | Auth đổi mã Keycloak vs PRD OTP | `redeem/messages.ts` UNAUTHENTICATED / EMAIL_NOT_VERIFIED; PRD §2; PD pin D1; [#372](https://github.com/hangndat/ticket-solution/issues/372) | Kỳ vọng guest lệch | **P1** product | **Đã chốt Option A** (18/10/2026): giữ pin Keycloak verified email; AC UI «Cần đăng nhập» / «Xác minh email». Option B OTP/magic link = **sau MVP** — không mở Task trừ user chọn B. [DECISION-LOG UX-11](../DECISION-LOG.md) | Unit messages + UAT auth | Product (± BE) | Contract nếu B | **Đã chốt A** |
+| UX-11 | Auth đổi mã Keycloak vs PRD OTP | `redeem/messages.ts` UNAUTHENTICATED / EMAIL_NOT_VERIFIED; PRD §2; PD pin D1; [#372](https://github.com/hangndat/ticket-solution/issues/372) | Kỳ vọng guest lệch | **P1** product | **Đã chốt Option A** (18/10/2026): giữ pin Keycloak verified email; AC UI «Cần đăng nhập» / «Xác minh email». Option B OTP/magic link = **sau MVP** — không mở Task trừ user chọn B. [DECISION-LOG UX-11](../../../DECISION-LOG.md) | Unit messages + UAT auth | Product (± BE) | Contract nếu B | **Đã chốt A** |
 | UX-12 | O06 retention/region/SLA — gói lựa chọn | DECISION-LOG O06; O14 tạm không ingest PII | PII thật không có policy | **P0 policy** | Xem **§6.1** — **không** chặn UX-01…10 độc lập (demo-label, Gate, CS copy) | N/A research | Product/ops | Trước ingest PII / privacy số | **Có** — chọn option |
 
 ### 6.1 O06 — gói lựa chọn (không blocker UX độc lập)
@@ -290,7 +292,7 @@ Cổng nghiệm thu:
 | - | ------- | -------- | -------------- |
 | Q1 | Publish `/privacy` + nội dung VI khi nào? | Trước store / PII thật | ASC + trust kém |
 | Q2 | O06 chọn A / B / C (§6.1)? | A hoặc C ngay; B trước PII số | Không chặn UX-01…10; chỉ chặn ingest PII |
-| Q3 | Keycloak pin vs OTP guest (UX-11)? | **Đã chốt A** 18/10/2026 — [DECISION-LOG UX-11](../DECISION-LOG.md) / [#372](https://github.com/hangndat/ticket-solution/issues/372) | OTP/magic link sau MVP; không blocker DoD redeem |
+| Q3 | Keycloak pin vs OTP guest (UX-11)? | **Đã chốt A** 18/10/2026 — [DECISION-LOG UX-11](../../../DECISION-LOG.md) / [#372](https://github.com/hangndat/ticket-solution/issues/372) | OTP/magic link sau MVP; không blocker DoD redeem |
 | Q4 | `#245` còn coding hay chỉ Status lệch? | Reconcile board | Trùng / sót UAT |
 | Q5 | Mở validate-only desk? | Giữ OUT | Scope creep |
 | Q6 | Production UX ready cần UX-01+03+04 (+ O06 B nếu PII)? | **Có** | Tránh tuyên bố sớm |

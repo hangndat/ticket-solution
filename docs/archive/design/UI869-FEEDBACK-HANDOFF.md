@@ -1,6 +1,8 @@
+> **Bản lưu lịch sử — chuyển ngày 03/11/2026.** Nguồn: `docs/design/UI869-FEEDBACK/HANDOFF.md` tại `36a594f62eca16b3307162d3598c40cb098a1a20`. Giữ approval, SHA và kết quả gốc; các nhãn Status, run/dispatch, lệnh và model bên dưới chỉ có giá trị tại thời điểm ghi. Công việc mới đọc [quyết định FB08](../../design/UI869-FEEDBACK/README.md). Bản lưu không xác nhận HEAD/runtime hoặc cấp quyền thực thi.
+
 # FB08 — Thiết kế lại hero/banner marketing + catalog + event header
 
-> Bản Liv ban đầu, được lưu làm lịch sử. **Đã được thay bởi [README.md](./README.md)**: catalog có `CatalogHeroBand`; Orca có lệnh resize; mẫu sau thiết kế và quyết định triển khai nằm trong README/prototype. Không dùng các kết luận mâu thuẫn bên dưới để nghiệm thu.
+> Bản Liv ban đầu, được lưu làm lịch sử. **Đã được thay bởi [README.md](../../design/UI869-FEEDBACK/README.md)**: catalog có `CatalogHeroBand`; Orca có lệnh resize; mẫu sau thiết kế và quyết định triển khai nằm trong README/prototype. Không dùng các kết luận mâu thuẫn bên dưới để nghiệm thu.
 
 **Issue:** #869 (batch 2/2) · PR #870 · Epic #867 / Story #868. Baseline `30ce1daa60572f6309305436ff9aa29a17ccebe1`.
 **Role:** `product-design`. **Owner tiếp theo:** Web (`apps/web`).
@@ -26,7 +28,7 @@
 
 Nguồn: `apps/web/src/marketing/sections/hero.tsx` render `ProductPreviewFrame` (`packages/ui/src/marketing/product-preview-frame.tsx`). Capture thật tại `localhost:3417/` (HEAD `30ce1da`), viewport 1227×973:
 
-![Hero hiện tại — browser chrome giả + phone mockup giả](./assets/actual-marketing-vi-hero-before-1227w.png)
+![Hero hiện tại — browser chrome giả + phone mockup giả](../../design/UI869-FEEDBACK/assets/actual-marketing-vi-hero-before-1227w.png)
 
 _(actual runtime capture — Orca embedded browser, `localhost:3417/`, 1227×973 logic px @2x DPR, không chỉnh sửa)_
 

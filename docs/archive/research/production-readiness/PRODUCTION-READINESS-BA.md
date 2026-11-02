@@ -1,8 +1,10 @@
+> **Bản lưu lịch sử — chuyển ngày 03/11/2026.** Nguồn: `docs/plans/PRODUCTION-READINESS-BA.md` tại `36a594f62eca16b3307162d3598c40cb098a1a20`. Giữ approval, SHA và kết quả gốc; các nhãn Status, run/dispatch, lệnh và model bên dưới chỉ có giá trị tại thời điểm ghi. Công việc mới đọc [scope/gates](../../../ROADMAP.md), [Decision Log](../../../DECISION-LOG.md), [catalog UAT](../../../plans/PROD-LAUNCH-UAT.md). Bản lưu không xác nhận HEAD/runtime hoặc cấp quyền thực thi.
+
 # Production readiness — BA nghiên cứu (không coding)
 
 | Trường | Giá trị |
 | ------ | ------- |
-| Role | `product-ba` — [`docs/agents/roles/product-ba.md`](../agents/roles/product-ba.md) |
+| Role | `product-ba` — [`docs/agents/roles/product-ba.md`](../../../agents/roles/product-ba.md) |
 | Ownership | **Chỉ** file này |
 | Ngày | 2026-10-18 |
 | Task / Dispatch | Research: `task_067a3392a050` / `ctx_bdc9363309a2` · Errata: `task_8d18b65e1ec9` / `ctx_b4e0fe5f2a1b` |
@@ -10,7 +12,7 @@
 | Ngôn ngữ | Tiếng Việt (giữ ID, path, SHA, URL nguyên bản) |
 | Trạng thái | **Đề xuất** — không claim PASS / pilot ready / production ready |
 
-> **Errata (2026-10-18, [#373](https://github.com/hangndat/ticket-solution/issues/373)):** Snapshot research này **stale một phần**. Nguồn quyết định hiện tại: [`GAP-AUDIT-2026-10-18-INDEX.md`](../reviews/GAP-AUDIT-2026-10-18-INDEX.md) (+ BA/ARCH/DOD/PD/SECURITY cùng đợt). **Không còn mở như claim cũ:** D11 / [#254](https://github.com/hangndat/ticket-solution/issues/254) **đã đóng**; O06 **đã chốt**; `GET https://vemoki.com/privacy` → **HTTP 200** (PR-02 stale-as-open). **Còn mở:** Navigation O02 — [#368](https://github.com/hangndat/ticket-solution/issues/368)–[#371](https://github.com/hangndat/ticket-solution/issues/371). Không spawn lại PR-01…03 / UX fixture SoT như feature mới.
+> **Errata (2026-10-18, [#373](https://github.com/hangndat/ticket-solution/issues/373)):** Snapshot research này **stale một phần**. Nguồn quyết định hiện tại: [`GAP-AUDIT-2026-10-18-INDEX.md`](../../../reviews/GAP-AUDIT-2026-10-18-INDEX.md) (+ BA/ARCH/DOD/PD/SECURITY cùng đợt). **Không còn mở như claim cũ:** D11 / [#254](https://github.com/hangndat/ticket-solution/issues/254) **đã đóng**; O06 **đã chốt**; `GET https://vemoki.com/privacy` → **HTTP 200** (PR-02 stale-as-open). **Còn mở:** Navigation O02 — [#368](https://github.com/hangndat/ticket-solution/issues/368)–[#371](https://github.com/hangndat/ticket-solution/issues/371). Không spawn lại PR-01…03 / UX fixture SoT như feature mới.
 
 ### Ranh giới tuyên bố
 
@@ -254,7 +256,7 @@ Ký hiệu: **OK-A** = acceptance-level evidence trên board/`main` · **GAP** =
 
 ## 7. O06 — lựa chọn để user quyết (không tự chốt số)
 
-Tham chiếu: [`docs/ops/O06-OPTIONS.md`](../ops/O06-OPTIONS.md).  
+Tham chiếu: [`docs/ops/O06-OPTIONS.md`](../../../ops/O06-OPTIONS.md).\
 Nguồn thị trường (privacy store, ngày truy cập **2026-10-18**):
 
 - Apple App Review Guidelines 5.1.1 Privacy Policies — bắt buộc link privacy trong metadata + trong app; phải nêu retention/deletion: https://developer.apple.com/app-store/review/guidelines/  
