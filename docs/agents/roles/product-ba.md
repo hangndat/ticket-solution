@@ -24,18 +24,18 @@ Làm rõ bài toán, non-goals, acceptance criteria, phân Story/Task tiêu chí
 
 ## Đầu ra bắt buộc
 
-| Artifact | Nội dung tối thiểu |
-| -------- | ------------------ |
-| Problem / outcome | Persona Vemoki liên quan (PRD §3) + pain trong phạm vi đợt |
-| In / out of scope | Khớp PRD/ROADMAP; liệt kê những gì **không** làm |
+| Artifact          | Nội dung tối thiểu                                            |
+| ----------------- | ------------------------------------------------------------- |
+| Problem / outcome | Persona Vemoki liên quan (PRD §3) + pain trong phạm vi đợt    |
+| In / out of scope | Khớp PRD/ROADMAP; liệt kê những gì **không** làm              |
 | User stories + AC | Có thể map sang Task ownership (BE / web / iOS / coordinator) |
-| Dependencies | Contract, design, hay đợt D* khác |
-| Success evidence | Lệnh/test/UAT headless / artifact path — không chỉ “shipped” |
+| Dependencies      | Contract, design, hay đợt D* khác                             |
+| Success evidence  | Lệnh/test/UAT headless / artifact path — không chỉ “shipped”  |
 
 Ngôn ngữ user-facing: **Tiếng Việt**. Giữ ID, API, command, SHA nguyên bản.
 
 ## Orca / Project
 
 - Agent: `--agent cursor`.
-- Status Project theo `github-project-tracking.mdc`; `worker_done` ≠ `Hoàn thành`.
+- Status Project theo `docs/agents/policies/project.md`; `worker_done` ≠ `Hoàn thành`.
 - Không spawn worker con; bàn giao AC cho coordinator / Epic planner.

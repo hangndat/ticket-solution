@@ -1,3 +1,5 @@
+> **Snapshot lịch sử, lưu ngày 03/11/2026 từ working tree trước khi dọn docs.** Chỉ giữ provenance/approval/evidence tại mốc ghi trong nội dung; không cấp quyền mới, không phải trạng thái live hoặc hướng dẫn thực thi. Nguồn hiện hành: [docs index](../../README.md). Các SHA/checks bên dưới giữ nghĩa lịch sử, không được coi là đã chạy lại.
+
 # Tiếp tục việc dang dở D11 / O14 / O15
 
 User giao ngày 18/10/2026: “làm các việc dang dở đi”. Run điều phối: `run_127c4628d08d` (tiếp tục sau research). Phạm vi là delivery đã duyệt; không tự mở feature từ research production mới, không deploy/store, không EAS Cloud Build.
@@ -17,7 +19,7 @@ Architecture impact: **Không** ở phần điều phối này; các task đối
 | `ctx_2961fe7737b7` | Sửa tương thích seed MFest cũ trong PR #253 | `packages/backend` only; role `backend` / `docs/agents/roles/backend.md` |
 | `ctx_d0c14124e629` | UAT tích hợp / local iOS build #236 | Evidence + task-owned runtime, không feature code; role `reviewer-dod` |
 
-Mọi dispatch mới dùng Cursor theo `orca-agent-routing-coordinator.mdc`. Worker có role/path trong Task Spec; không spawn worker con. Local build dùng Xcode; headless web và `sim-uat` trên simulator riêng, không dùng chuột macOS.
+Mọi dispatch mới dùng Cursor theo `docs/agents/workflows/dispatch.md`. Worker có role/path trong Task Spec; không spawn worker con. Local build dùng Xcode; headless web và `sim-uat` trên simulator riêng, không dùng chuột macOS.
 
 ## Kết quả đã kiểm chứng tại checkpoint
 

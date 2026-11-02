@@ -17,6 +17,8 @@ The organizer portal can show authorized Gate reporting and operations data, but
 
 ## Integration guidance
 
+Start with the [surface source map](../README.md). This package is the approved concept baseline; implementation uses VD-03 and later scoped handoffs/decisions. A prototype is not evidence that the production UI or every later scope matches it.
+
 Use the HTML, CSS, tokens and documents in this folder as the current design source. Earlier export patches are outside this canonical package. This is a design handoff, not production UI code.
 
 Implementation still requires owned Task Specs, independent review and app-level acceptance checks.

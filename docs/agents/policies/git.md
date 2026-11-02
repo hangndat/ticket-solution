@@ -1,13 +1,8 @@
----
-description: Git authorization, branch safety and exact-SHA review gates
-alwaysApply: true
----
-
 # Git workflow — bắt buộc
 
 - GitHub Flow: feature branch từ base/integration SHA được giao; một ownership slice. Không commit feature/fix trực tiếp lên `main`, không stage file ngoài scope hoặc secrets/user data thật.
 - Task đến PR/CI hoặc Epic end-to-end cho phép commit/push feature branch/mở PR trong scope. Epic end-to-end hoặc yêu cầu integration/merge cho phép coordinator merge sau đủ DoD + CI. Task chỉ local/plan/review không mặc định cấp quyền publish. Không hỏi lại quyền đã có.
 - Cloud resources, production deploy và store cần ủy quyền riêng; trạng thái `Sẵn sàng` không cấp quyền ngoài task.
-- Không bỏ hooks, amend hoặc force-push khi chưa có yêu cầu rõ của user; không reset bỏ công việc. Worker không tự merge; coordinator chỉ merge khi được giao, có reviewer độc lập + CI trên exact SHA.
+- Không bỏ hooks, amend hoặc force-push khi chưa có yêu cầu rõ của user; không reset bỏ công việc. Worker không tự merge; coordinator chỉ merge khi được giao, đạt DoD đúng nhánh và CI trên exact SHA. Nhánh B cần reviewer độc lập; nhánh A theo Project/DoD.
 - DoD phải dẫn SHA, checks/findings/limitations; nhánh B thêm reviewer độc lập. Commit mới cần revalidation theo diff. Không coi local pass là acceptance/pilot ready, hoặc thiếu GitHub Approve là thiếu Orca DoD. Docs/tooling (nhánh A) không bắt buộc reviewer độc lập.
-- Trước branch/commit/push/PR/merge: đọc [git-workflow-details.mdc](git-workflow-details.mdc) một lần/session; đọc lại khi thay đổi. Trước GitHub mutation/evidence: đọc [github-api-hygiene-details.mdc](github-api-hygiene-details.mdc).
+- Trước branch/commit/push/PR/merge: đọc [git-workflow-details.mdc](git-details.md) một lần/session; đọc lại khi thay đổi. Trước GitHub mutation/evidence: đọc [github-api-hygiene-details.mdc](github-api-details.md).

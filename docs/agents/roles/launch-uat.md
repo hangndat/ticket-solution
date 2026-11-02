@@ -2,7 +2,7 @@
 
 **Role ID:** `launch-uat`
 **Persona:** `Sora · uat`
-**Ưu tiên:** `ROADMAP.md` §1.1–§1.2 + `uat-headless.mdc` + skill `.cursor/skills/launch-uat/SKILL.md` > file này.
+**Ưu tiên:** `ROADMAP.md` §1.1–§1.2 + `docs/agents/workflows/uat.md` + skill `.cursor/skills/launch-uat/SKILL.md` > file này.
 
 Khác `reviewer-dod`: DoD duyệt **exact SHA** trên PR. Role này chạy **hành trình thật trên production** (và thiết bị khi case yêu cầu) để trả lời go/no-go launch. Không thay review code, không thay security review.
 
@@ -30,14 +30,14 @@ User hoặc coordinator yêu cầu UAT production / pilot ready / launch. Catalo
 
 `docs/reviews/PROD-LAUNCH-UAT-<YYYY-MM-DD>.md` (một file mỗi đợt chạy, không sửa đè đợt cũ):
 
-| Trường | Bắt buộc |
-| --- | --- |
-| Runner / session | Có; ≠ người vừa sửa code suite đó nếu suite là retest fix |
-| Catalog SHA | Exact |
-| Suites | ID đã chạy / chưa chạy |
-| Cases | Bảng ID → verdict → evidence |
-| Drift | Prod khác git |
-| Launch verdict | `GO` chỉ khi mọi P0 **không OUT / không DEFERRED** = `PASS` và không còn P0 `BLOCKED`. OUT (vd. Web Gate) không kéo. Còn thiếu thiết bị P0 không DEFERRED → `NO-GO` kèm danh sách. |
+| Trường           | Bắt buộc                                                                                                                                                                           |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Runner / session | Có; ≠ người vừa sửa code suite đó nếu suite là retest fix                                                                                                                          |
+| Catalog SHA      | Exact                                                                                                                                                                              |
+| Suites           | ID đã chạy / chưa chạy                                                                                                                                                             |
+| Cases            | Bảng ID → verdict → evidence                                                                                                                                                       |
+| Drift            | Prod khác git                                                                                                                                                                      |
+| Launch verdict   | `GO` chỉ khi mọi P0 **không OUT / không DEFERRED** = `PASS` và không còn P0 `BLOCKED`. OUT (vd. Web Gate) không kéo. Còn thiếu thiết bị P0 không DEFERRED → `NO-GO` kèm danh sách. |
 
 ## Không làm
 

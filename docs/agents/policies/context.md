@@ -1,20 +1,15 @@
----
-description: CRG ticket-solution — readiness gate + tool flow (single source; không duplicate trong AGENTS/.cursorrules)
-alwaysApply: true
----
-
 # Code-review-graph (ticket-solution)
 
-Namespace MCP: `code-review-graph-ticket` (Cursor: `user-code-review-graph-ticket`; Claude Code: `code-review-graph-ticket`). Graph khác: FE=`code-review-graph-fe`, SGAMES=`code-review-graph-sgames` (Cursor). Server BE `code-review-graph` (portal-be) đã gỡ — path không còn tồn tại.
+Khám phá namespace CRG được cấu hình trên host; không suy tên server từ agent vendor. Mọi stats/build/query phải truyền repo_root tuyệt đối của Git worktree hiện tại.
 
-Hook `.cursor/hooks/crg-ensure-ready.sh` (gọi từ `sessionStart` / `beforeSubmitPrompt`) build/update graph **trong repo root của worktree hiện tại** — DB `.code-review-graph/graph.db` (gitignored) **mỗi checkout một bản**. MCP global `code-review-graph-ticket` thường cấu hình `--repo` trên checkout `main` → tool MCP phản ánh graph **main**, không tự đồng bộ branch worktree; đối chiếu source khi lệch. Loại file khỏi graph bằng `.code-review-graphignore` (đã loại `.venv*`). Agent vẫn **verify** bước 1 readiness.
+Hook có thể hỗ trợ cập nhật graph của checkout, nhưng agent vẫn phải kiểm stats và thực hiện graph query liên quan trong session/worktree/HEAD hiện tại. Source và tests là authoritative; không thay graph của checkout khác.
 
 ## Readiness gate (bắt buộc)
 
 Trước **coding / explore / impact / review**:
 
-1. `list_graph_stats_tool`
-2. Trống / stale / lỗi MCP → `build_or_update_graph_tool` (incremental; `full_rebuild` khi thiếu node rõ)
+1. `list_graph_stats_tool(repo_root=<absolute-current-worktree>)`
+2. Trống/stale → `build_or_update_graph_tool` với cùng repo_root, rồi xác minh stats. Tool lỗi thật: ghi lỗi và dùng fallback có giới hạn theo policy host, không chế lỗi hoặc tắt guard.
 3. Sau ready → `semantic_search_nodes_tool` / `query_graph_tool` / `get_impact_radius_tool` / `detect_changes_tool`
 4. **Không** Grep/broad-scan thay graph khi MCP available
 
@@ -30,11 +25,11 @@ Trước **coding / explore / impact / review**:
 
 ## Khi ưu tiên graph
 
-| Nhu cầu | Tool |
-| -------- | ----- |
-| Explore | `semantic_search_nodes_tool`, `query_graph_tool` |
-| Impact | `get_impact_radius_tool`, `get_affected_flows_tool` |
-| Review | `detect_changes_tool`, `get_review_context_tool` |
+| Nhu cầu      | Tool                                                      |
+| ------------ | --------------------------------------------------------- |
+| Explore      | `semantic_search_nodes_tool`, `query_graph_tool`          |
+| Impact       | `get_impact_radius_tool`, `get_affected_flows_tool`       |
+| Review       | `detect_changes_tool`, `get_review_context_tool`          |
 | Architecture | `get_architecture_overview_tool`, `list_communities_tool` |
 
 Review: `query_graph_tool` pattern `tests_for` cho coverage.

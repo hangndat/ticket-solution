@@ -1,6 +1,6 @@
 # Chọn role và skill cho UI/UX
 
-Áp dụng khi Task thiết kế, sửa hoặc review giao diện. Scope/AC và quyết định đã chốt của repo là đầu vào; skill không tự mở thêm feature hay đổi brand. Chỉ coordinator gốc spawn qua Orca theo [routing](../../.cursor/rules/orca-agent-routing-coordinator.mdc); worker không spawn con.
+Áp dụng khi Task thiết kế, sửa hoặc review giao diện. Scope/AC và quyết định đã chốt của repo là đầu vào; skill không tự mở thêm feature hay đổi brand. Chỉ coordinator gốc spawn qua Orca theo [routing](workflows/dispatch.md); worker không spawn con.
 
 ## Chọn role theo việc thực sự cần làm
 
@@ -18,15 +18,15 @@ Reviewer UI độc lập với tác giả phần đang duyệt, kể cả tác g
 
 ## Nạp skill theo phạm vi
 
-| Phạm vi                                      | Skill cần nạp                                                                                                                                                                                            |
-| -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Thiết kế visual/flow/prototype               | `impeccable` — chỉ playbook liên quan (`shape`, `critique`); không nạp skill coding khi chưa code                                                                                                        |
+| Phạm vi                                      | Skill cần nạp                                                                                                                                                                                                                                     |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Thiết kế visual/flow/prototype               | `impeccable` — chỉ playbook liên quan (`shape`, `critique`); không nạp skill coding khi chưa code                                                                                                                                                 |
 | Đặc tả/duy trì Vemoki Design System          | [`vemoki-design-system`](../../.cursor/skills/vemoki-design-system/SKILL.md) — nguồn chuẩn, token/component mapping, governance; chỉ Task `product-design` đúng scope. Thêm `impeccable` khi cần thiết kế/render, không mặc định nạp skill coding |
-| Sửa UI web                                   | `impeccable` theo thay đổi; `vercel-react-best-practices` khi viết/sửa React/Next; không nạp backend/EAS                                                                                                 |
-| Review UI web                                | `impeccable` (`critique`); `web-design-guidelines` khi kiểm code web; `audit` khi Task có kiểm chất lượng kỹ thuật                                                                                       |
-| Sửa/review code UI iOS                       | `expo-overview` trước; `react-native-best-practices`; chọn `expo-native-ui` khi làm màn hoặc `expo-design-system` khi đổi token/component dùng chung; chỉ thêm skill chuyên môn khác khi thay đổi cần nó |
-| Review ảnh/prototype iOS, không đọc/sửa code | `impeccable` (`critique`) theo hành vi native; không áp quy tắc DOM/CSS của web                                                                                                                          |
-| UAT cần điều khiển browser/simulator         | Đọc [uat-headless.mdc](../../.cursor/rules/uat-headless.mdc), rồi skill công cụ Orca tương ứng; đây là công cụ lấy evidence của Task UI                                                                  |
+| Sửa UI web                                   | `impeccable` theo thay đổi; `vercel-react-best-practices` khi viết/sửa React/Next; không nạp backend/EAS                                                                                                                                          |
+| Review UI web                                | `impeccable` (`critique`); `web-design-guidelines` khi kiểm code web; `audit` khi Task có kiểm chất lượng kỹ thuật                                                                                                                                |
+| Sửa/review code UI iOS                       | `expo-overview` trước; `react-native-best-practices`; chọn `expo-native-ui` khi làm màn hoặc `expo-design-system` khi đổi token/component dùng chung; chỉ thêm skill chuyên môn khác khi thay đổi cần nó                                          |
+| Review ảnh/prototype iOS, không đọc/sửa code | `impeccable` (`critique`) theo hành vi native; không áp quy tắc DOM/CSS của web                                                                                                                                                                   |
+| UAT cần điều khiển browser/simulator         | Đọc [uat-headless.mdc](workflows/uat.md), rồi skill công cụ Orca tương ứng; đây là công cụ lấy evidence của Task UI                                                                                                                               |
 
 Task Spec ghi tên skill + mục đích; chỉ đọc `SKILL.md` và reference cần cho bước đang làm. Không nạp toàn bộ catalog, không biến skill thành `alwaysApply`. Các yêu cầu nền tảng bắt buộc vẫn áp dụng khi đọc/sửa code; “chỉ UI” không miễn accessibility hoặc checks liên quan.
 

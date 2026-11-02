@@ -2,16 +2,16 @@
 
 > **D11 đã được user duyệt triển khai 18/10/2026:** phạm vi và wave theo [gói review D11](./plans/D11-REVIEW-PACKAGE.md). Giữ các non-goals và gate production/store; approval không chứng minh pilot ready.
 
-> **Cập nhật phạm vi 24/10/2026 — O23:** user quyết định bỏ Web Gate. Gate scan, nhập tay và xác nhận vào cổng chỉ trên iOS Staff; Portal chỉ đọc báo cáo theo quyền. Các dòng mô tả Web Gate bên dưới là baseline lịch sử, không còn là đích triển khai. Xem [Decision Log O23](./DECISION-LOG.md#o23--gate-chỉ-trên-ios-staff-chốt-hướng-thiết-kế-vemoki-24102026). Migration `/gate` cần Task/contract và nghiệm thu riêng; quyết định này không chứng minh mọi link cũ đã sạch.
+> **Phạm vi hiện hành — O23:** scan, nhập tay và xác nhận vào cổng chỉ trên iOS Staff; web/iOS attendee hiển thị vé, Portal chỉ đọc báo cáo theo quyền. [Decision Log](DECISION-LOG.md) và ADR có hiệu lực khi chi tiết baseline chưa cập nhật. Bản trước đợt dọn được giữ trong [archive](archive/product/PRD-before-cleanup-2026-11-03.md).
 
-Phiên bản: 0.4 — Draft để review (MVP mở rộng O10)
-Ngày: 2026-10-17
+Phiên bản: 0.5 — tổng hợp baseline O10 và các quyết định O23/O33, ADR-17 đã có; không mở AC mới
+Ngày đối chiếu tài liệu: 2026-11-03 (không phải ngày xác minh runtime)
 Nguồn: yêu cầu sản phẩm trong trao đổi; quyết định mở rộng MVP 2026-10-17.
 Tên sản phẩm: **Vemoki**. Domain platform: `vemoki.com`.
 Thiết kế kỹ thuật: [Technical Design v0.1](./TECHNICAL-DESIGN.md) — các quyết định đề xuất và test scenarios được ghi riêng, chưa thay thế giả định sản phẩm.
 Phạm vi đợt: [ROADMAP](./ROADMAP.md) D0–D10; quyết định: [DECISION-LOG](./DECISION-LOG.md) O10.
 
-> **Bổ sung định hướng ngày 18/10/2026 (O11):** user yêu cầu mở rộng MVP với trọng tâm UX/UI cho vận hành production. D11 nghiên cứu nghiệp vụ (BA), thiết kế trải nghiệm/giao diện (PD) và roadmap theo ownership; [kế hoạch D11](./plans/D11-UX-PRODUCTION-PLAN.md) là bản đề xuất để review trước feature coding. Phạm vi chức năng D0–D10 bên dưới là baseline; tính năng đề xuất D11+ chưa tự trở thành yêu cầu được duyệt. Các phạm vi hủy và chính sách iOS local build vẫn giữ nguyên.
+> **D11:** phạm vi đã được duyệt theo gói D11 ở trên; bản đề xuất trước approval là lịch sử. D13/store và Pilot/UAT là phạm vi riêng, theo [roadmap](ROADMAP.md) và Task được authorize. Research/design không tự cấp quyền triển khai ngoài phạm vi.
 
 ## 1. Mục tiêu
 
@@ -57,13 +57,13 @@ Không bàn ngân sách hoặc giá dịch vụ trong PRD này.
 
 ### Release đầu / MVP mở rộng (bắt buộc)
 
-Multi-tenant; membership/RBAC; event; branding theo cấu hình; nguồn mã; loại vé; quota; đổi vé; import khách mời; duyệt nếu cần; QR; email; ví vé trên app; push thông báo giao dịch; check-in trên app và web dự phòng; CS; dashboard; audit; hardening/UAT (D5); UX/UI (D6); **offline Gate multi-device (D7)**; **white-label cấu hình (D8)**; **demo seed + UX/media còn lại (D9)**; **chuẩn bị metadata App Store + local signed archive (D10)** — không tự submit store.
+Multi-tenant; membership/RBAC; event; branding theo cấu hình; nguồn mã; loại vé; quota; đổi vé; import khách mời; duyệt nếu cần; QR; email; ví vé trên app; push thông báo giao dịch; check-in chỉ trên app iOS Staff; Portal báo cáo read-only; CS; dashboard; audit; hardening/UAT (D5); UX/UI (D6); **offline Gate multi-device (D7)**; **white-label cấu hình (D8)**; **demo seed + UX/media còn lại (D9)**; **chuẩn bị metadata App Store + local signed archive (D10)** — không tự submit store.
 
 Mỗi đợt D0–D10 khi đóng: headless UAT + local iOS build + deploy prod (nếu ủy quyền) + artifact evidence + cập nhật GitHub Project — xem [ROADMAP §4.1](./ROADMAP.md).
 
 ### Ngoài phạm vi có chủ đích (không làm trong MVP)
 
-- **Android native** / Google Play — khách Android dùng web responsive; camera web theo ma trận trình duyệt được kiểm thử.
+- **Android native** / Google Play — khách Android dùng web responsive; không có camera/admission Gate trên web (O23).
 - **Bán vé và thanh toán, refund; chuyển nhượng vé.**
 - **Seat map.**
 - **Apple Wallet / Google Wallet.**
@@ -86,20 +86,20 @@ Các mục «ngoài phạm vi» và «sau MVP» chưa phải cam kết release. 
 
 Ký hiệu: Có = thuộc release đầu; — = không thuộc giao diện đó.
 
-| Module                           | Web khách | Web quản trị   | App khách | App nhân viên      |
-| -------------------------------- | --------- | -------------- | --------- | ------------------ |
-| Thông tin event, FAQ, điều khoản | Có        | Biên tập       | Có        | Xem                |
-| Đổi mã, xem kết quả yêu cầu      | Có        | Hỗ trợ         | Có        | —                  |
-| Xem vé/QR, gửi lại email         | Có        | Hỗ trợ         | Có        | Tra cứu theo quyền |
-| Ví vé, vé đã lưu offline         | —         | —              | Có        | —                  |
-| Push giao dịch/nhắc sự kiện      | —         | Soạn lịch nhắc | Có        | Thông báo vận hành |
-| Công ty, thành viên, phân quyền  | —         | Có             | —         | —                  |
-| Event, branding, template        | —         | Có             | —         | —                  |
-| Mã, quota, import/export, duyệt  | —         | Có             | —         | —                  |
-| Scan và xác nhận vào cổng        | —         | Có, màn Gate   | —         | Có                 |
-| Dashboard                        | —         | Đầy đủ         | —         | Tóm tắt theo quyền |
-| Xử lý ngoại lệ                   | —         | Supervisor     | —         | Supervisor         |
-| Quản trị platform                | —         | Khu vực riêng  | —         | —                  |
+| Module                           | Web khách | Web quản trị    | App khách | App nhân viên      |
+| -------------------------------- | --------- | --------------- | --------- | ------------------ |
+| Thông tin event, FAQ, điều khoản | Có        | Biên tập        | Có        | Xem                |
+| Đổi mã, xem kết quả yêu cầu      | Có        | Hỗ trợ          | Có        | —                  |
+| Xem vé/QR, gửi lại email         | Có        | Hỗ trợ          | Có        | Tra cứu theo quyền |
+| Ví vé, vé đã lưu offline         | —         | —               | Có        | —                  |
+| Push giao dịch/nhắc sự kiện      | —         | Soạn lịch nhắc  | Có        | Thông báo vận hành |
+| Công ty, thành viên, phân quyền  | —         | Có              | —         | —                  |
+| Event, branding, template        | —         | Có              | —         | —                  |
+| Mã, quota, import/export, duyệt  | —         | Có              | —         | —                  |
+| Scan và xác nhận vào cổng        | —         | — (chỉ báo cáo) | —         | Có — iOS Staff     |
+| Dashboard                        | —         | Đầy đủ          | —         | Tóm tắt theo quyền |
+| Xử lý ngoại lệ                   | —         | Supervisor      | —         | Supervisor         |
+| Quản trị platform                | —         | Khu vực riêng   | —         | —                  |
 
 App là trải nghiệm native có camera, ví vé, lưu vé và push; không chỉ đóng website trong WebView. App có thể chuyển chế độ khách/nhân viên nếu tài khoản có quyền; chuyển chế độ không tự cấp quyền mới.
 
@@ -215,7 +215,7 @@ Nghiệm thu: tắt push hoặc email lỗi không chặn xem vé; token thiết
 ### M10 — Gate và check-in
 
 - Nhân viên chọn tenant/event được phân công, cổng và phiên vận hành; luôn hiển thị context đang hoạt động.
-- Camera scan trên app; web Gate hỗ trợ camera trên danh sách trình duyệt đã kiểm thử. Có nhập mã thủ công theo quyền.
+- Camera scan và nhập mã thủ công theo quyền chỉ trên iOS Staff. Web attendee chỉ hiển thị vé/QR; Portal chỉ đọc báo cáo Gate, không admission (O23).
 - Quy trình: scan → backend validate và giữ ngắn hạn → hiển thị kết quả → xác nhận phát vòng/cho vào → commit check-in.
 - Reservation TTL mặc định đề xuất 30 giây, cấu hình hệ thống; chỉ phiên giữ hợp lệ được xác nhận. Hủy/timeout giải phóng hold. Reservation dùng thời gian server.
 - Nếu vé đang được nhân viên khác giữ: trả kết quả riêng, không báo đã check-in.
@@ -285,19 +285,19 @@ Trạng thái tách biệt:
 
 Các chỉ tiêu tải dưới đây là baseline đề xuất để thiết kế và test, chưa phải nhu cầu đã được người dùng xác nhận.
 
-| Nhóm          | Tiêu chí release                                                                                                                                |
-| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| Pilot tải     | 2 event đồng thời, 20.000 vé/event, 50 thiết bị scan/event                                                                                      |
-| API nghiệp vụ | p95 không quá 1 giây ở 50 lượt cấp vé/giây và 20 lượt xác nhận check-in/giây tổng, loại thời gian provider ngoài; phải xác định môi trường test |
-| Tính đúng     | Không vượt quota, không cấp trùng mã, không xác nhận trùng vé trong concurrency test                                                            |
-| Khả dụng      | Mục tiêu 99,9%/tháng cho API; theo dõi riêng cửa sổ event, có runbook và cảnh báo                                                               |
-| Khôi phục     | Mục tiêu RPO ≤ 15 phút, RTO ≤ 2 giờ; phải diễn tập restore trước pilot                                                                          |
-| Thiết bị      | Web responsive; chốt ma trận iOS/browser trước UAT, thử camera trên thiết bị thật                                                               |
-| Accessibility | Luồng chính hỗ trợ screen reader, tăng cỡ chữ, focus và tương phản; không dùng màu làm tín hiệu duy nhất                                        |
-| Bảo mật       | TLS, secrets ngoài source, rate limit, MFA admin, kiểm tra file, log không chứa OTP/QR token/PII thô                                            |
-| Dữ liệu       | Có retention, xóa/anonymize, thời hạn file export và chính sách backup; giá trị cụ thể cần chốt                                                 |
-| Quan sát      | Request/operation ID, metric theo tenant/event, cảnh báo queue chậm, email lỗi và scan lỗi tăng                                                 |
-| Tương thích   | API có phiên bản, hỗ trợ mobile release đang lưu hành; migration không làm app cũ hỏng đột ngột                                                 |
+| Nhóm          | Tiêu chí release                                                                                                                                      |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Pilot tải     | 2 event đồng thời, 20.000 vé/event, 50 thiết bị scan/event                                                                                            |
+| API nghiệp vụ | p95 không quá 1 giây ở 50 lượt cấp vé/giây và 20 lượt xác nhận check-in/giây tổng, loại thời gian provider ngoài; phải xác định môi trường test       |
+| Tính đúng     | Không vượt quota, không cấp trùng mã, không xác nhận trùng vé trong concurrency test                                                                  |
+| Khả dụng      | Mục tiêu 99,9%/tháng cho API; theo dõi riêng cửa sổ event, có runbook và cảnh báo                                                                     |
+| Khôi phục     | Mục tiêu RPO ≤ 15 phút, RTO ≤ 2 giờ; phải diễn tập restore trước pilot                                                                                |
+| Thiết bị      | Web responsive; chốt ma trận iOS/browser trước UAT, thử camera trên thiết bị thật                                                                     |
+| Accessibility | Mục tiêu thiết kế screen reader/cỡ chữ/focus/tương phản; O33 waive VoiceOver, Dynamic Type và WCAG UAT khỏi gate MVP/pilot; không ghi thành known gap |
+| Bảo mật       | TLS, secrets ngoài source, rate limit, MFA admin, kiểm tra file, log không chứa OTP/QR token/PII thô                                                  |
+| Dữ liệu       | Có retention, xóa/anonymize, thời hạn file export và chính sách backup; giá trị cụ thể cần chốt                                                       |
+| Quan sát      | Request/operation ID, metric theo tenant/event, cảnh báo queue chậm, email lỗi và scan lỗi tăng                                                       |
+| Tương thích   | API có phiên bản, hỗ trợ mobile release đang lưu hành; migration không làm app cũ hỏng đột ngột                                                       |
 
 SLO không thay thế việc test thực tế đường truyền và camera tại địa điểm tổ chức.
 
@@ -307,17 +307,17 @@ SLO không thay thế việc test thực tế đường truyền và camera tạ
 
 | Lớp                   | Đề xuất                                                            | Vai trò                                                                         |
 | --------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------- |
-| Web                   | Next.js + React + TypeScript                                       | Portal public, tenant admin, platform admin, web Gate                           |
+| Web                   | Next.js + React + TypeScript                                       | Consumer public/attendee và Portal tenant/platform admin; không Web Gate        |
 | Mobile                | React Native + Expo + TypeScript + Expo Router                     | App native iOS, ví vé, camera, push, deep link                                  |
 | Backend               | NestJS + TypeScript, REST + OpenAPI                                | API chung, RBAC, tenant context, nghiệp vụ và tích hợp                          |
 | Kiến trúc backend     | Modular monolith; worker chạy riêng                                | Dễ giữ transaction nhất quán, triển khai độc lập worker; chưa cần microservices |
 | Database              | PostgreSQL                                                         | Nguồn dữ liệu chuẩn cho quota, vé, check-in, cấu hình                           |
 | Tenant isolation      | Shared schema + tenant keys + PostgreSQL RLS                       | Backend authz là lớp chính, RLS là lớp bảo vệ bổ sung                           |
 | ORM/migration         | Prisma, SQL migration khi cần                                      | Schema, truy vấn; transaction và tenant context phải được review cụ thể         |
-| Queue/cache           | Redis + BullMQ                                                     | Email, import/export, rate limit; không làm nguồn chuẩn cho quota/check-in      |
+| Queue/cache           | PostgreSQL outbox + worker poll; Redis auxiliary                   | ADR-17: lease/claim/retry tác vụ trong PG; Redis cho cache/admission/rate-limit |
 | Tính nhất quán tác vụ | Transactional outbox trong PostgreSQL                              | Không mất tác vụ gửi thông báo sau khi cấp vé thành công                        |
 | File                  | MinIO (S3-compatible) private + signed URLs                        | Asset, QR render nếu cần, import/export; self-host                              |
-| Email                 | SMTP adapter (Mailpit dev; Postal/Postfix trên VPS)               | Gửi và trạng thái; **không** SaaS transactional                                 |
+| Email                 | SMTP adapter (Mailpit dev; Postal/Postfix trên VPS)                | Gửi và trạng thái; **không** SaaS transactional                                 |
 | Push                  | expo-notifications UI + **APNs trực tiếp** từ worker               | Device token DB; **không** Expo Push Service                                    |
 | Identity              | Keycloak self-host (OIDC)                                          | Auth Code + PKCE; Nest verify JWKS; **không** Clerk/Auth0                       |
 | Mobile local          | SecureStore cho token; local database/cache cho ví vé              | Phân vùng theo tài khoản và dọn khi logout                                      |
@@ -386,15 +386,15 @@ Các bước là thứ tự phụ thuộc sản phẩm, chưa phải lịch ho�
 
 ## 15. Quyết định còn mở
 
-| ID  | Câu hỏi                                    | Baseline tạm thời                      | Ảnh hưởng                                               |
-| --- | ------------------------------------------ | -------------------------------------- | ------------------------------------------------------- |
-| O01 | App chung hay app riêng từng công ty?      | Một app chung có hai chế độ theo quyền | Branding store, release pipeline, identity và deep link |
-| O02 | Có cần app riêng cho staff?                | Staff trong app chung                  | UX, quyền và phân phối thiết bị                         |
-| O03 | Tải, số tenant/event và số cổng thực tế?   | Theo baseline pilot ở mục 9            | Capacity, SLO và kế hoạch test                          |
-| O04 | Form cần dữ liệu và ngôn ngữ nào?          | Tiếng Việt; schema sẵn sàng mở rộng    | Nội dung, email và quyền riêng tư                       |
-| O05 | Có cần tái nhập cổng, nhiều ngày/phiên?    | Một vé một lượt toàn event             | Ticket entitlement và check-in model                    |
+| ID  | Câu hỏi                                    | Baseline tạm thời                                   | Ảnh hưởng                                               |
+| --- | ------------------------------------------ | --------------------------------------------------- | ------------------------------------------------------- |
+| O01 | App chung hay app riêng từng công ty?      | Một app chung có hai chế độ theo quyền              | Branding store, release pipeline, identity và deep link |
+| O02 | Có cần app riêng cho staff?                | Staff trong app chung                               | UX, quyền và phân phối thiết bị                         |
+| O03 | Tải, số tenant/event và số cổng thực tế?   | Theo baseline pilot ở mục 9                         | Capacity, SLO và kế hoạch test                          |
+| O04 | Form cần dữ liệu và ngôn ngữ nào?          | Tiếng Việt; schema sẵn sàng mở rộng                 | Nội dung, email và quyền riêng tư                       |
+| O05 | Có cần tái nhập cổng, nhiều ngày/phiên?    | Một vé một lượt toàn event                          | Ticket entitlement và check-in model                    |
 | O06 | Retention, vị trí lưu dữ liệu, SLA hỗ trợ? | **Đã chốt (MVP)** 18/10/2026 — xem Decision Log O06 | Hạ tầng, vận hành và lifecycle dữ liệu                  |
-| O07 | Cần custom domain/sender ngay release đầu? | Subdomain và sender platform           | DNS, xác minh sở hữu và deliverability                  |
-| O08 | Tổ chức có cần database riêng?             | Shared database/schema có RLS          | Deployment và isolation tier                            |
+| O07 | Cần custom domain/sender ngay release đầu? | Subdomain và sender platform                        | DNS, xác minh sở hữu và deliverability                  |
+| O08 | Tổ chức có cần database riêng?             | Shared database/schema có RLS                       | Deployment và isolation tier                            |
 
 PRD đủ để review phạm vi và dựng user flow. Các giả định chưa xác nhận phải được chốt trước khi khóa thiết kế chi tiết liên quan, không được coi là yêu cầu đã được người dùng duyệt.

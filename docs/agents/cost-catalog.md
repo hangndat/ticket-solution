@@ -1,6 +1,6 @@
 # Cost catalog — tier và mapping model (Vemoki / Orca)
 
-Nguồn **pin** `--model` theo agent và Cost tier. Rules: `orca-agent-routing-core.mdc` · coordinator spawn: `orca-agent-routing-coordinator.mdc`.
+Nguồn **pin** `--model` theo agent và Cost tier. Rules: `docs/agents/policies/routing.md` · coordinator spawn: `docs/agents/workflows/dispatch.md`.
 
 **Không** dùng `auto` / omit flags làm mặc định (inherit UI thường đắt). Chỉ fallback inherit khi host **reject** mọi ID trong band và đã ghi limitation.
 
@@ -24,27 +24,27 @@ Sau khi refresh: cập nhật bảng **Pinned** bên dưới + `Pinned at` nếu
 
 Khi giao **code**, thay Composer 2.5 bằng hai model **OpenCode Go** dưới đây. Đây là lựa chọn cho worker coding; coordinator vẫn Codex và reviewer độc lập giữ route được giao. Code đơn giản không dùng Codex. Các route cũ còn trong catalog phục vụ task khác hoặc chỉ định riêng; khi OpenCode lỗi, dùng ngoại lệ Codex Luna bên dưới; không đổi Cursor ngầm.
 
-| Loại coding | Cost tier | `--agent` | `--model` | `--effort` |
-| --- | --- | --- | --- | --- |
-| Nhanh, đơn giản, nhiều request | `cheap`, `standard` | `opencode` | `opencode-go/deepseek-v4.1-flash` | Không truyền |
-| Cần reasoning hoặc context lớn | `focused`, `advanced`, `high` theo rủi ro | `opencode` | `opencode-go/deepseek-v4-pro` | Không truyền |
-| Fallback khi OpenCode Go báo limit/quota hoặc lỗi runtime | Giữ tier Task hiện tại (`cheap`–`high`) | `codex` | `gpt-6-luna` | `low` cheap/standard/focused; `medium` advanced; `high` high |
+| Loại coding                                               | Cost tier                                 | `--agent`  | `--model`                         | `--effort`                                                   |
+| --------------------------------------------------------- | ----------------------------------------- | ---------- | --------------------------------- | ------------------------------------------------------------ |
+| Nhanh, đơn giản, nhiều request                            | `cheap`, `standard`                       | `opencode` | `opencode-go/deepseek-v4.1-flash` | Không truyền                                                 |
+| Cần reasoning hoặc context lớn                            | `focused`, `advanced`, `high` theo rủi ro | `opencode` | `opencode-go/deepseek-v4-pro`     | Không truyền                                                 |
+| Fallback khi OpenCode Go báo limit/quota hoặc lỗi runtime | Giữ tier Task hiện tại (`cheap`–`high`)   | `codex`    | `gpt-6-luna`                      | `low` cheap/standard/focused; `medium` advanced; `high` high |
 
 Pin đã được xác minh bằng `opencode models` trên host ngày 02/11/2026; Orca có active account OpenCode Zen-Go. OpenCode không hỗ trợ `--effort` qua Orca: tier vẫn là metadata về scope/rủi ro, `high` vẫn bắt buộc `--tier-reason`. Start qua wrapper với `--employee`, trên worktree hiện có và kiểm requested/effective trong receipt. Không suy quota hoặc mức giá/off-peak từ tên model hay từ quota Codex; giữ số lượng quota unknown khi provider không cung cấp.
 
-**Fallback user cập nhật 02/11/2026:** khi OpenCode Go báo limit/quota hoặc lỗi runtime, chuyển thẳng sang Codex `gpt-6-luna`, giữ employee, Task, Cost tier và review/fix budget. Không dùng Beam Free. Checkpoint và xác minh attempt cũ đã dừng trước `--retry-of`; không bật Extra Usage. Flash/Pro vẫn là primary. Chi tiết: [opencode-limit-fallback.mdc](../../.cursor/rules/opencode-limit-fallback.mdc).
+**Fallback user cập nhật 02/11/2026:** khi OpenCode Go báo limit/quota hoặc lỗi runtime, chuyển thẳng sang Codex `gpt-6-luna`, giữ employee, Task, Cost tier và review/fix budget. Không dùng Beam Free. Checkpoint và xác minh attempt cũ đã dừng trước `--retry-of`; không bật Extra Usage. Flash/Pro vẫn là primary. Chi tiết: [opencode-limit-fallback.mdc](policies/provider-fallback.md).
 
 ## Pinned (Cursor host hangndat · 2026-10-19; Codex/Claude · 2026-10-24)
 
 Nguồn: `agent models` trên máy này. Effort nằm **trong** model id Cursor (vd. `…-low`, `…-thinking-high`) → **không** truyền `--effort` trừ khi receipt/host yêu cầu rõ.
 
-| Cost tier | `--agent` | `--model` primary | `--effort` | Fallback cùng tier |
-| --- | --- | --- | --- | --- |
-| `cheap` | `cursor` | `composer-2.5` | Không truyền | `grok-4.7-low`, `gemini-3.7-flash-low` |
-| `standard` | `cursor` | `composer-2.5` | Không truyền | `grok-4.7-low`, `gemini-3.7-flash-low` |
-| `focused` | `claude` | `claude-sonnet-5` | `low` | Codex `gpt-6-sol` / `low`; `gpt-6.1-sol` / `low` khi Sol 6 đầy tải |
-| `advanced` | `claude` | `claude-sonnet-5` | `medium` | Codex `gpt-6-sol` / `medium` |
-| `high` | `claude` | `claude-sonnet-5` | `high` | Codex `gpt-6-sol` / `high` |
+| Cost tier  | `--agent` | `--model` primary | `--effort`   | Fallback cùng tier                                                 |
+| ---------- | --------- | ----------------- | ------------ | ------------------------------------------------------------------ |
+| `cheap`    | `cursor`  | `composer-2.5`    | Không truyền | `grok-4.7-low`, `gemini-3.7-flash-low`                             |
+| `standard` | `cursor`  | `composer-2.5`    | Không truyền | `grok-4.7-low`, `gemini-3.7-flash-low`                             |
+| `focused`  | `claude`  | `claude-sonnet-5` | `low`        | Codex `gpt-6-sol` / `low`; `gpt-6.1-sol` / `low` khi Sol 6 đầy tải |
+| `advanced` | `claude`  | `claude-sonnet-5` | `medium`     | Codex `gpt-6-sol` / `medium`                                       |
+| `high`     | `claude`  | `claude-sonnet-5` | `high`       | Codex `gpt-6-sol` / `high`                                         |
 
 Task mới khai báo tier độc lập với agent/model/effort. Mapping thực thi nằm trong `scripts/lib/agent-cost-tiers.mjs`: mỗi tier là danh sách các route được phép. Khi thêm model khác, xác minh pin/effort trên host và cập nhật route cùng bảng này; tên tier và tiêu chí công việc giữ nguyên. Preflight chấp nhận đúng tổ hợp đã đăng ký, không tự mở model mới.
 
@@ -72,26 +72,24 @@ ORCA orchestration task-create \
   --task-title "James · dod+sec — PR #<n> exact SHA" \
   --spec "<spec đã điền>" --json
 
-ORCA orchestration worker-start \
-  --task <id> --worktree current --agent cursor \
-  --model composer-2.5 \
-  --task-title "James · dod+sec — PR #<n> exact SHA" \
-  --json
+node scripts/agent-workflow-run.mjs start \
+  --run-id <RUN> --task <id> --role-id reviewer-dod --employee james \
+  --cost-tier <tier-theo-scope> --agent <agent-theo-bang> --model <pin-theo-bang>
 ```
 
-Sau launch: so `launch.requested` vs `launch.effective`. Reject primary → thử fallback cùng tier → mới `launch: inherit (host rejected pins)` + limitation.
+Chọn tier/route trước dispatch; thêm effort đúng bảng khi agent hỗ trợ, không dùng placeholder nguyên văn. Sau launch: so `launch.requested` vs `launch.effective`. Reject primary → xét fallback cùng tier có evidence → mới inherit khi đủ điều kiện catalog và ghi limitation; không retry attempt chưa xác minh dừng.
 
 ## Chọn một trong năm tier
 
 Chọn tier theo **quyết định cần đưa ra, mức độ rõ của giải pháp và hậu quả nếu làm sai**. Tiêu chí `high` bên dưới được xét trước tên role, loại file, số file hoặc tên giai đoạn. Một Task nhận tier cao nhất cần cho phần việc chưa thể tách độc lập.
 
-| Tier | Khi nào chọn | Ví dụ / ranh giới |
-| --- | --- | --- |
-| `cheap` | Thao tác và expected outcome đã rõ, ít quyết định, hậu quả sai thấp | Thu log, chạy test có sẵn, sửa trình bày/link, ghi quyết định đã chốt, chia DAG đơn từ AC rõ. Chưa cấp verdict cho invariant nhạy cảm. |
-| `standard` | Cần thực hiện và tự kiểm một giải pháp trong phạm vi rõ; chưa cần phân tích sâu | Coding/UI/BA/PD thường lệ, viết test theo AC, tái hiện và sửa lỗi cục bộ, review thông thường. Coding dùng OpenCode Go Flash. |
-| `focused` | Cần phán đoán kỹ thuật tập trung cho một câu hỏi hẹp, bằng chứng và contract đã rõ, rủi ro thấp | Đối chiếu một consumer với contract đã chốt; xác minh một giả thuyết cụ thể hoặc một finding không nhạy cảm. Không dùng chỉ để chạy lệnh/thu log. |
-| `advanced` | Cần suy luận nhiều bước, lần theo vài module hoặc so sánh phương án; phạm vi và rủi ro vẫn có giới hạn | Phân tích tác động của contract tương thích, debug có vài giả thuyết từ evidence, review luồng logic nhiều module nhưng không ảnh hưởng invariant nhạy cảm. |
-| `high` | Quyết định kiến trúc còn mở với trade-off lớn hoặc hậu quả sai nghiêm trọng; bất kỳ tiêu chí high bên dưới đều ưu tiên tier này | Kiến trúc khó, auth/tenant, race/idempotency, migration rủi ro, sự cố nghiêm trọng; triển khai và review tương ứng. Spec rõ vẫn chọn high nếu rủi ro cao. |
+| Tier       | Khi nào chọn                                                                                                                    | Ví dụ / ranh giới                                                                                                                                           |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `cheap`    | Thao tác và expected outcome đã rõ, ít quyết định, hậu quả sai thấp                                                             | Thu log, chạy test có sẵn, sửa trình bày/link, ghi quyết định đã chốt, chia DAG đơn từ AC rõ. Chưa cấp verdict cho invariant nhạy cảm.                      |
+| `standard` | Cần thực hiện và tự kiểm một giải pháp trong phạm vi rõ; chưa cần phân tích sâu                                                 | Coding/UI/BA/PD thường lệ, viết test theo AC, tái hiện và sửa lỗi cục bộ, review thông thường. Coding dùng OpenCode Go Flash.                               |
+| `focused`  | Cần phán đoán kỹ thuật tập trung cho một câu hỏi hẹp, bằng chứng và contract đã rõ, rủi ro thấp                                 | Đối chiếu một consumer với contract đã chốt; xác minh một giả thuyết cụ thể hoặc một finding không nhạy cảm. Không dùng chỉ để chạy lệnh/thu log.           |
+| `advanced` | Cần suy luận nhiều bước, lần theo vài module hoặc so sánh phương án; phạm vi và rủi ro vẫn có giới hạn                          | Phân tích tác động của contract tương thích, debug có vài giả thuyết từ evidence, review luồng logic nhiều module nhưng không ảnh hưởng invariant nhạy cảm. |
+| `high`     | Quyết định kiến trúc còn mở với trade-off lớn hoặc hậu quả sai nghiêm trọng; bất kỳ tiêu chí high bên dưới đều ưu tiên tier này | Kiến trúc khó, auth/tenant, race/idempotency, migration rủi ro, sự cố nghiêm trọng; triển khai và review tương ứng. Spec rõ vẫn chọn high nếu rủi ro cao.   |
 
 `focused` và `advanced` mô tả độ sâu phán đoán; effort cụ thể phụ thuộc mapping của agent/model đang chọn. Năm tier mô tả mức phân công; không suy ra thứ tự giá tiền hay tỷ lệ quota khi chưa có phép đo. Revalidate chọn tier theo diff và findings còn mở; sửa ít file không tự hạ tier.
 
@@ -121,18 +119,18 @@ Coding `high` dùng `--agent opencode --model opencode-go/deepseek-v4-pro`, khô
 - Worker gặp quyết định/rủi ro vượt scope: checkpoint evidence và báo coordinator phân loại lại phần còn lại trước khi tiếp tục. Câu hỏi hẹp cần phán đoán kỹ thuật → `focused`; cần nhiều bước nhưng rủi ro giới hạn → `advanced`; khớp tiêu chí high → `high`. Một lần FAIL hoặc thiếu nguyên nhân ban đầu không tự nâng tier; chuyển tier không reset số lượt sửa theo review-convergence.
 - Reviewer chọn tier từ diff, invariant và findings đang mở. Người thu evidence có thể khác người kết luận; chạy test đạt không thay verdict độc lập.
 
-| Ví dụ | Cách chia |
-| --- | --- |
-| Offline sync/check-in | Coding logic xung đột/idempotency dùng OpenCode Go Pro `high`; Flash viết test đơn giản từ expected outcome đã chốt (`standard`); reviewer Claude `high` (Codex fallback) khác implementer kiểm invariant. Nếu phải thiết kế expected outcome cho race thì phần test cũng là `high`. |
-| Sửa bảng/list trong portal | OpenCode Go Flash `standard` triển khai và reviewer độc lập review UI; thu ảnh theo kịch bản đã chốt có thể `cheap`. Nếu phải sửa logic cấp quyền hoặc tenant scoping, dùng Pro `high`. |
-| Lỗi chưa rõ nguyên nhân | Coding sửa lỗi cục bộ đã rõ dùng Flash `standard`; coding cần lần theo nhiều module dùng Pro `advanced`. Khi evidence chỉ ra race hoặc nhiều invariant nhạy cảm, chọn `high`; reviewer vẫn độc lập. |
-| Đổi một field API tương thích | Flash `standard` triển khai theo spec; Claude `focused` (Codex fallback) đối chiếu consumer khi cần review độc lập. Coding phải lần qua nhiều module dùng Pro `advanced`; đụng quyền, dữ liệu nhạy cảm hoặc phá tương thích → Pro `high`. |
+| Ví dụ                         | Cách chia                                                                                                                                                                                                                                                                            |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Offline sync/check-in         | Coding logic xung đột/idempotency dùng OpenCode Go Pro `high`; Flash viết test đơn giản từ expected outcome đã chốt (`standard`); reviewer Claude `high` (Codex fallback) khác implementer kiểm invariant. Nếu phải thiết kế expected outcome cho race thì phần test cũng là `high`. |
+| Sửa bảng/list trong portal    | OpenCode Go Flash `standard` triển khai và reviewer độc lập review UI; thu ảnh theo kịch bản đã chốt có thể `cheap`. Nếu phải sửa logic cấp quyền hoặc tenant scoping, dùng Pro `high`.                                                                                              |
+| Lỗi chưa rõ nguyên nhân       | Coding sửa lỗi cục bộ đã rõ dùng Flash `standard`; coding cần lần theo nhiều module dùng Pro `advanced`. Khi evidence chỉ ra race hoặc nhiều invariant nhạy cảm, chọn `high`; reviewer vẫn độc lập.                                                                                  |
+| Đổi một field API tương thích | Flash `standard` triển khai theo spec; Claude `focused` (Codex fallback) đối chiếu consumer khi cần review độc lập. Coding phải lần qua nhiều module dùng Pro `advanced`; đụng quyền, dữ liệu nhạy cảm hoặc phá tương thích → Pro `high`.                                            |
 
 ## Soft caps liên quan
 
-Theo user: giữ fan-out tối đa task ready trong scope dưới caps 5 non-review + 3 reviewer; planner chỉ khi Epic ≥2 owner và dep artifact thật. Reuse cùng Composer/context dù task chuyển cheap ↔ standard. Cùng model không có nghĩa cùng chi phí: task dài/context lớn vẫn tiêu hao nhiều hơn. Quy tắc hiện hành: `orca-parallel-workers.mdc`.
+Theo user: giữ fan-out tối đa task ready trong scope dưới caps 5 non-review + 3 reviewer; planner chỉ khi Epic ≥2 owner và dep artifact thật. Reuse cùng Composer/context dù task chuyển cheap ↔ standard. Cùng model không có nghĩa cùng chi phí: task dài/context lớn vẫn tiêu hao nhiều hơn. Quy tắc hiện hành: `docs/agents/workflows/dispatch.md`.
 
-- ≤ **3** reviewer (`reviewer-dod`, `reviewer-security`, `reviewer-uiux`) live / Run; gộp nhiều role trong một session tính **một** reviewer — xem `orca-parallel-workers.mdc`.
+- ≤ **3** reviewer (`reviewer-dod`, `reviewer-security`, `reviewer-uiux`) live / Run; gộp nhiều role trong một session tính **một** reviewer — xem `docs/agents/workflows/dispatch.md`.
 
 ## Wave D — đo cost (bắt buộc 1 dòng / wave)
 
@@ -142,13 +140,13 @@ Sau mỗi wave `worker-start` (hoặc cuối checkpoint idle-fill), coordinator 
 cost-wave | run=<id> | n=<spawned> | cheap=<c> standard=<s> focused=<l> advanced=<m> high=<h> | pinned=<p> inherit=<i> | inherit%=<i*100/n> | models=<effective ids> | source=receipt|receipt+mixed|wt-comment-estimate
 ```
 
-| Trường           | Nguồn                                                                                                                                         |
-| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| Năm bộ đếm tier | Ưu tiên khai báo Cost tier trong Task Spec, rồi task-title, cuối cùng comment/displayName worktree (`heavy` legacy → đếm `standard`) |
-| `pinned`         | `launch.effective.model` khác null và không `auto`; requested không chứng minh effective                                                                         |
-| `inherit`        | omit `--model`, `--model auto`, hoặc receipt `effective.model` **null**                                                                       |
-| `models`         | `launch.effective.model` (ưu tiên). Comment wt chỉ là soft signal (`source=mixed` / `wt-comment-estimate`)                                    |
-| `source`         | `receipt` = start receipt local hoặc worker-show; `receipt+mixed` = null effective nhưng comment có pin; `wt-comment-estimate` = `--comments-only` hoặc không có receipt |
+| Trường          | Nguồn                                                                                                                                                                    |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Năm bộ đếm tier | Ưu tiên khai báo Cost tier trong Task Spec, rồi task-title, cuối cùng comment/displayName worktree (`heavy` legacy → đếm `standard`)                                     |
+| `pinned`        | `launch.effective.model` khác null và không `auto`; requested không chứng minh effective                                                                                 |
+| `inherit`       | omit `--model`, `--model auto`, hoặc receipt `effective.model` **null**                                                                                                  |
+| `models`        | `launch.effective.model` (ưu tiên). Comment wt chỉ là soft signal (`source=mixed` / `wt-comment-estimate`)                                                               |
+| `source`        | `receipt` = start receipt local hoặc worker-show; `receipt+mixed` = null effective nhưng comment có pin; `wt-comment-estimate` = `--comments-only` hoặc không có receipt |
 
 **Ngưỡng hành động:** `inherit%` > **20%** trong một đợt → refresh `agent models`, sửa pin stale, **không spawn thêm** cho đến khi wave kế có `--model` (Wave E). Comment wt **không** đủ để hạ `inherit%`.
 
@@ -174,12 +172,12 @@ node scripts/orca-spawn-model-preflight.mjs -- \
 
 `--cost-tier` bắt buộc với preflight và `agent-workflow-run.mjs start`; đây là metadata local, không truyền flag này vào Orca `worker-start`. Khi reuse `--terminal`, coordinator đối chiếu model/effort effective trong receipt với tier mới trước khi giao việc; preflight reuse không chứng minh tier khớp.
 
-| Gate                                                   | Hành vi                                                            |
-| ------------------------------------------------------ | ------------------------------------------------------------------ |
-| Thiếu `--model` / `--model auto`                       | **Reject** wave (trừ `--terminal` reuse)                           |
+| Gate                                                             | Hành vi                                                                                         |
+| ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Thiếu `--model` / `--model auto`                                 | **Reject** wave (trừ `--terminal` reuse)                                                        |
 | Thiếu/sai `--cost-tier`, hoặc agent/model/effort không khớp tier | **Reject** trước snapshot/start; ví dụ `high` + effort `medium` hoặc `standard` + Codex đều sai |
-| `--model` ngoài cost-catalog pin set                   | **Reject** — refresh `agent models` rồi cập nhật catalog           |
-| Receipt `effective.model` null sau spawn dù đã request | Ghi limitation; đếm **inherit** trên cost-wave; không claim pinned |
+| `--model` ngoài cost-catalog pin set                             | **Reject** — refresh `agent models` rồi cập nhật catalog                                        |
+| Receipt `effective.model` null sau spawn dù đã request           | Ghi limitation; đếm **inherit** trên cost-wave; không claim pinned                              |
 
 Snippet spawn trên existing worktree sau khi Task đã có Persona:
 
@@ -195,14 +193,14 @@ Sau `worker-start`: đối chiếu `launch.requested` vs `launch.effective` trê
 
 ## Vai trò và năm tier — 2026-10-24
 
-| Vai trò | Agent/model mặc định | Điều kiện |
-| --- | --- | --- |
-| Coordinator / Orchestrator | codex / `gpt-6-sol` | `advanced` cho điều phối thường lệ; phần quyết định khó/rủi ro theo tiêu chí `high` |
-| Backend, web/portal, iOS coding | opencode / `opencode-go/deepseek-v4.1-flash` hoặc `opencode-go/deepseek-v4-pro` | Flash cho code đơn giản; Pro cho reasoning/context lớn, tier theo rủi ro |
-| Documentation, unit tests | Coding test dùng OpenCode Go Flash/Pro theo tier; docs/evidence không coding theo route được giao | `cheap` cho ghi chép/thu evidence đã chốt; test đơn giản `standard`; quyết định policy/invariant và thiết kế test phức tạp phân loại theo tiêu chí tier |
-| Architect phức tạp, security | Claude trước Codex theo tier | `high` nếu khớp tiêu chí trên; đối chiếu/phân tích có giới hạn chọn `focused` hoặc `advanced` |
-| DoD | cursor / `composer-2.5` hoặc Codex/Claude theo tier | Thường lệ `standard`; Codex/Claude chọn `focused`, `advanced` hoặc `high` theo câu hỏi review và rủi ro |
-| Critical implementation | opencode / `opencode-go/deepseek-v4-pro` | `high`; coordinator ghi lý do và scope cụ thể; reviewer độc lập theo route review |
+| Vai trò                         | Agent/model mặc định                                                                              | Điều kiện                                                                                                                                               |
+| ------------------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Coordinator / Orchestrator      | codex / `gpt-6-sol`                                                                               | `advanced` cho điều phối thường lệ; phần quyết định khó/rủi ro theo tiêu chí `high`                                                                     |
+| Backend, web/portal, iOS coding | opencode / `opencode-go/deepseek-v4.1-flash` hoặc `opencode-go/deepseek-v4-pro`                   | Flash cho code đơn giản; Pro cho reasoning/context lớn, tier theo rủi ro                                                                                |
+| Documentation, unit tests       | Coding test dùng OpenCode Go Flash/Pro theo tier; docs/evidence không coding theo route được giao | `cheap` cho ghi chép/thu evidence đã chốt; test đơn giản `standard`; quyết định policy/invariant và thiết kế test phức tạp phân loại theo tiêu chí tier |
+| Architect phức tạp, security    | Claude trước Codex theo tier                                                                      | `high` nếu khớp tiêu chí trên; đối chiếu/phân tích có giới hạn chọn `focused` hoặc `advanced`                                                           |
+| DoD                             | cursor / `composer-2.5` hoặc Codex/Claude theo tier                                               | Thường lệ `standard`; Codex/Claude chọn `focused`, `advanced` hoặc `high` theo câu hỏi review và rủi ro                                                 |
+| Critical implementation         | opencode / `opencode-go/deepseek-v4-pro`                                                          | `high`; coordinator ghi lý do và scope cụ thể; reviewer độc lập theo route review                                                                       |
 
 Pin GPT-6 = `gpt-6-sol`, có trong catalog host 2026-10-23; catalog không chứng minh entitlement. Fallback `gpt-6.1-sol` chỉ được đăng ký ở `focused` / `low` theo refresh 2026-10-30 bên trên; các model khác cần refresh và đăng ký trước. Codex truyền đúng effort của tier: `focused` → `low`, `advanced` → `medium`, `high` → `high`; preflight từ chối mọi cặp lệch và effort cao hơn `high`. Cặp agent/model phải khớp; không truyền Codex pin vào Cursor.
 
@@ -222,7 +220,6 @@ Host Orca 1.4.237: `--display-name` truyền tại `task-create`; với `worker-
 
 Giới hạn 1 Codex worker live không tính coordinator gốc, nhưng allowance tính cả hai. Codex worker phải có lý do cần phán đoán kỹ thuật theo tier `focused`, `advanced` hoặc `high`; task thuần thực thi giao Composer. Reviewer vẫn khác implementer. User báo tổng tiêu hao 4% quota tuần; số đo benchmark chỉ bao phủ một đoạn phiên. Chưa tăng số Codex workers đồng thời hoặc chạy thêm benchmark. Fallback phải giữ đúng tier và scope như mục trên.
 
-
 ## Quota gate trước dispatch
 
 Wrapper `agent-workflow-run.mjs start` kiểm snapshot Codex mới (tối đa 5 phút), mọi window hiện diện của bucket được route đăng ký (`quotaLimitIds`). Mức còn lại lấy window thấp nhất. Policy tại `scripts/lib/agent-quota-policy.mjs` giữ **20% dự phòng**:
@@ -233,7 +230,7 @@ Wrapper `agent-workflow-run.mjs start` kiểm snapshot Codex mới (tối đa 5 
 
 Lưu quyết định trong `quota-decision.json` riêng tư. `--tier-reason` và `--essential-reason` là metadata local. Quota là allowance theo tài khoản/bucket, không phải số token còn lại cho từng model; gate không bảo đảm task tiếp theo không dùng hết quota. Coordinator phải xác minh tài khoản CLI snapshot trùng tài khoản worker Orca; wrapper chưa chứng minh được binding này. Reuse terminal cũng cần kiểm quota trước giao việc mới.
 
-Claude/Codex recovery (tier `focused|advanced|high`): `scripts/agent-provider-recovery.mjs` + state `.orca-metrics/provider-recovery/` — [provider-recovery.md](./provider-recovery.md). Wrapper chặn start Claude khi probe chưa `serviceAvailable`; không suy phần trăm quota Claude từ probe. Cursor/Composer không bị gate Codex. Không tự chọn model ngoài route đã đăng ký.
+Claude/Codex recovery (tier `focused|advanced|high`): `scripts/agent-provider-recovery.mjs` + state `.orca-metrics/provider-recovery/` — [provider-recovery.md](setup/provider-recovery.md). Wrapper chặn start Claude khi probe chưa `serviceAvailable`; không suy phần trăm quota Claude từ probe. Cursor/Composer không bị gate Codex. Không tự chọn model ngoài route đã đăng ký.
 
 ## Chỉ định Terra — 2026-10-31
 
