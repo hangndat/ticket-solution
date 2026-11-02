@@ -23,11 +23,11 @@ const cases = [
   ["--cost-tier high --agent opencode --model opencode-go/deepseek-v4.1-flash --tier-reason tenant-isolation", 2],
   ["--cost-tier standard --agent opencode --model opencode-go/deepseek-v4-pro", 2],
   ["--cost-tier high --agent opencode --model opencode-go/deepseek-v4-pro --effort high --tier-reason tenant-isolation", 2],
-  ["--cost-tier cheap --agent opencode --model opencode-go/beam-free", 0],
-  ["--cost-tier standard --agent opencode --model opencode-go/beam-free", 0],
-  ["--cost-tier focused --agent opencode --model opencode-go/beam-free", 0],
-  ["--cost-tier advanced --agent opencode --model opencode-go/beam-free", 0],
-  ["--cost-tier high --agent opencode --model opencode-go/beam-free --tier-reason tenant-isolation", 0],
+  ["--cost-tier cheap --agent opencode --model opencode-go/beam-free", 2],
+  ["--cost-tier standard --agent opencode --model opencode-go/beam-free", 2],
+  ["--cost-tier focused --agent opencode --model opencode-go/beam-free", 2],
+  ["--cost-tier advanced --agent opencode --model opencode-go/beam-free", 2],
+  ["--cost-tier high --agent opencode --model opencode-go/beam-free --tier-reason tenant-isolation", 2],
   ["--cost-tier high --agent opencode --model opencode-go/beam-free", 2],
   ["--cost-tier high --agent opencode --model opencode-go/beam-free --effort high --tier-reason tenant-isolation", 2],
   ["--cost-tier standard --agent cursor --model opencode-go/beam-free", 2],
@@ -87,12 +87,13 @@ for (const [args, expected] of cases) {
   });
 }
 
-test("Beam Free fallback preserves the primary OpenCode model for each tier", () => {
+test("each tier pins only its primary OpenCode model", () => {
   for (const [tier, routes] of Object.entries(COST_TIER_ROUTES)) {
     const primary = routes.find((route) => route.agent === "opencode");
     assert.equal(primary.models[0], ["cheap", "standard"].includes(tier)
       ? "opencode-go/deepseek-v4.1-flash"
       : "opencode-go/deepseek-v4-pro");
+    assert.equal(primary.models.length, 1);
   }
 });
 
