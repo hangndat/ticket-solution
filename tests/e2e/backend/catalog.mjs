@@ -86,8 +86,19 @@ export const catalog = {
   ],
   'DB-13': [
     b('event-lifecycle', 'C-E event lifecycle'),
-    b('db13-event-windows', 'DB-13: isWindowOpen is half-open with null bounds unbounded'),
-    b('db13-event-windows', 'DB-13: two IANA timezones stored independently; invalid timezone/window rejected'),
+    b(
+      'db13-event-windows',
+      'DB-13: isWindowOpen is half-open with null bounds unbounded',
+    ),
+    b(
+      'db13-event-windows',
+      'DB-13: two IANA timezones stored independently; invalid timezone/window rejected',
+    ),
+    {
+      file: 'tests/e2e/http/live.test.mjs',
+      name: '[DB-13] live HTTP',
+      layer: 'H',
+    },
   ],
   'DB-14': [
     b('form-consent', 'F-BE: form/consent'),
@@ -313,7 +324,7 @@ export const notes = {
   'DB-12':
     'D publish/projection/rollback optimistic concurrency PASS; H publish/rollback/draft-non-leak qua Keycloak/HTTP thật PASS run mvuphcyf-88857a. BLOCKED thật (không phải thiếu test): public cache key host+tenant+event+published version+locale và Cache-Control no-store trên preview không có ở runtime (apps/api/src/published-events.ts, apps/api/src/config.ts ~L374) — đã báo coordinator, chờ review sản phẩm riêng trước khi mở Task runtime.',
   'DB-13':
-    'D lifecycle + db13-event-windows (hai IANA timezone độc lập, isWindowOpen half-open, invalid timezone/window bị từ chối). Thiếu H Keycloak/HTTP theo ACCEPTANCE.',
+    'D lifecycle + db13-event-windows; H Keycloak/HTTP kiểm hai IANA timezone, windows độc lập, DB deadline sau event lock, clone zero-copy, archive/cancel và vé đã cấp sau đóng redeem. Chờ SHA sạch và review.',
   'DB-14':
     'D PostgreSQL PASS: form/terms version + consent hashes on request, structural allowlist rejects script/unknown keys/non-allowlisted field types, entitlement_snapshot on ticket immutable after publish/rebrand and ticket_type mutation; stale terms rejected. H Keycloak/HTTP PASS qua redeem + config-versions/publish + public projection và control DB snapshot. Chờ DoD độc lập trên SHA cuối.',
   'DB-15':
