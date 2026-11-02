@@ -135,6 +135,7 @@ export const catalog = {
     b('account-idp-erasure', 'SEC-D-01'),
     b('account-idp-erasure', 'SEC-D-05'),
     b('platform', 'deletion acceptance'),
+    { file: 'tests/e2e/http/live.test.mjs', name: '[DB-18] live HTTP', layer: 'H' },
   ],
   'DB-19': [
     b('account-idp-erasure', 'SEC-2 B1:'),

@@ -87,6 +87,7 @@ const httpCases = [
   'DB-14',
   'DB-15',
   'DB-16',
+  'DB-18',
   'JOB-04',
   'PLAT-03',
   'WEB-04',
@@ -446,7 +447,16 @@ if (mode === 'list' || args.includes('--list')) {
       'worker',
       process.execPath,
       [resolve(ROOT, 'apps/worker/dist/main.js')],
-      common,
+      caseIds.includes('DB-18')
+        ? {
+            ...common,
+            KEYCLOAK_ERASURE_ENABLED: '1',
+            KEYCLOAK_BASE_URL: state.origins.auth,
+            KEYCLOAK_REALM: state.realm,
+            KEYCLOAK_ERASURE_CLIENT_ID: 'e2e-erasure',
+            KEYCLOAK_ERASURE_CLIENT_SECRET: state.clientSecrets['e2e-erasure'],
+          }
+        : common,
     );
     await waitFor('API health', () =>
       getLocalJson(state, state.origins.api, '/v1/health'),

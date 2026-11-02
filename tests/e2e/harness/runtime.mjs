@@ -25,6 +25,7 @@ import {
   deleteRealms,
   dropRunDatabase,
   importRealms,
+  provisionErasureClient,
   provisionRunDatabase,
   removeRunObjectStorage,
 } from './lane-infra.mjs';
@@ -494,6 +495,19 @@ function realmConfig(state, caseIds) {
       },
     ],
   });
+  if (caseIds.includes('DB-18')) {
+    state.clientSecrets['e2e-erasure'] = randomBytes(24).toString('base64url');
+    realm.clients.push({
+      clientId: 'e2e-erasure',
+      enabled: true,
+      publicClient: false,
+      secret: state.clientSecrets['e2e-erasure'],
+      protocol: 'openid-connect',
+      standardFlowEnabled: false,
+      directAccessGrantsEnabled: false,
+      serviceAccountsEnabled: true,
+    });
+  }
   const realmPath = resolve(state.dir, 'realm.json');
   privateJson(realmPath, realm);
   return realmPath;
@@ -1237,6 +1251,7 @@ export async function createRuntime(caseIds, options = {}) {
         150_000,
       );
     }
+    if (caseIds.includes('DB-18')) await provisionErasureClient(state);
     await waitFor(
       'MinIO health',
       async () =>
