@@ -199,13 +199,20 @@
   {
     "caseId": "DB-18",
     "tests": [
+      "D:packages/backend/test/account-ack-session-revoke.test.cjs#SEC-1 ACK",
+      "D:packages/backend/test/account-ack-session-revoke.test.cjs#SEC-R1",
+      "D:packages/backend/test/account-session-revoke.test.cjs#session",
       "D:packages/backend/test/account-idp-erasure.test.cjs#SEC-2 T4/T14",
+      "D:packages/backend/test/account-idp-erasure.test.cjs#SEC-2 T6/T7/T8",
       "D:packages/backend/test/account-idp-erasure.test.cjs#SEC-2 T9/T11/T12/T13",
-      "D:packages/backend/test/account-session-revoke.test.cjs#session"
+      "D:packages/backend/test/account-idp-erasure.test.cjs#SEC-2 T16",
+      "D:packages/backend/test/account-idp-erasure.test.cjs#SEC-D-01",
+      "D:packages/backend/test/account-idp-erasure.test.cjs#SEC-D-05",
+      "D:packages/backend/test/platform.test.cjs#deletion acceptance"
     ],
     "layers": ["D"],
     "status": "blocked",
-    "reason": "D deletion/tombstone + session revoke + audit kept (account-session-revoke khẳng định audit_logs không hard-delete). Thiếu H session/IdP end-to-end theo ACCEPTANCE."
+    "reason": "Kiểm kê đầy đủ (2026-11-03, tip 34a563e1): ACK-time session revoke + REJECTED giữ REVOKED + mở lại sau REJECTED (account-ack-session-revoke SEC-1 ACK); race ACK vs uncommitted raw INSERT qua advisory lock (SEC-R1, deterministic — chặn bằng lock_user_session_mutation, không sleep-as-sync); apply-time revoke cross-tenant + Gate SESSION_NOT_ACTIVE (account-session-revoke); IdP DELETE/NOT_FOUND → COMPLETED, path404/disable/503-retry giữ REQUESTED không bypass (T4/T14, T6/T7/T8); upsert deny + lease + issuer allowlist + no fuzzy lookup (T9/T11/T12/T13); OIDC maxTokenAge>24h reject (T16); lease fencing chống double-complete (SEC-D-05); fault >48h giữ digest tới terminal (SEC-D-01); PII anonymize (email/subject→anon:<requestId>) + audit_logs count không đổi qua toàn bộ vòng ACK→apply→REJECTED→re-ACK (platform.test.cjs). Mutation-check thủ công: tắt revoke_sessions_for_user tại nhánh ACK đầu tiên trong account-deletion.ts → cả 3 test trong account-ack-session-revoke.test.cjs fail đúng như kỳ vọng (revert ngay sau, không còn diff). Vẫn thiếu H: live Keycloak Admin erasure (DELETE user thật) + bearer HTTP qua /v1/me/account-deletion-requests — hạ tầng tests/e2e/http/live.test.mjs + harness chưa có case DB-18/fixture erasure client (infra/keycloak/realm-ticket.json không có vemoki-erasure client); build case này đụng harness dùng chung nhiều ID khác, ngoài scope Task DB-18-only — cần Task/Dispatch riêng do coordinator mở."
   },
   {
     "caseId": "DB-19",
