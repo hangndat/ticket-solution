@@ -6617,11 +6617,11 @@ for (const caseId of CASE_IDS) {
                 (SELECT count(*)::int FROM redemption_requests WHERE tenant_id=$1::uuid AND event_id=$2::uuid) AS requests`,
         [f.tenantId, f.eventId],
       );
-      // The request starts before this DB deadline, then waits on an event
-      // lock. The service must sample DB time after acquiring that lock.
+      // The observer below proves the HTTP request reaches the event lock
+      // before the DB deadline and remains blocked until after it.
       const [deadlineClock] = await dbRows('SELECT clock_timestamp() AS now');
       const deadlineAt = new Date(
-        new Date(deadlineClock.now).getTime() + 1_200,
+        new Date(deadlineClock.now).getTime() + 2_000,
       ).toISOString();
       const deadline = await request(
         ctx,
@@ -6635,6 +6635,16 @@ for (const caseId of CASE_IDS) {
         { 'idempotency-key': randomUUID() },
       );
       expectStatus(deadline, 200);
+      const redemptionState = () => dbRows(
+        `SELECT (SELECT count(*)::int FROM tickets WHERE tenant_id=$1::uuid AND event_id=$2::uuid) AS tickets,
+                (SELECT count(*)::int FROM redemption_requests WHERE tenant_id=$1::uuid AND event_id=$2::uuid) AS requests,
+                (SELECT count(*)::int FROM outbox WHERE tenant_id=$1::uuid AND event_id=$2::uuid) AS outbox,
+                (SELECT count(*)::int FROM audit_logs WHERE tenant_id=$1::uuid AND event_id=$2::uuid) AS audits,
+                (SELECT count(*)::int FROM redemption_codes WHERE tenant_id=$1::uuid AND event_id=$2::uuid AND status='USED') AS used_codes,
+                (SELECT coalesce(sum(allocated), 0)::int FROM quota_buckets WHERE tenant_id=$1::uuid AND event_id=$2::uuid) AS allocated`,
+        [f.tenantId, f.eventId],
+      );
+      const beforeWait = await redemptionState();
       const requireBackend = createRequire(
         new URL('../../../packages/backend/package.json', import.meta.url),
       );
@@ -6645,7 +6655,11 @@ for (const caseId of CASE_IDS) {
           'DB-13 controlDatabaseUrl',
         ),
       });
+      const observer = new Client({
+        connectionString: required(f.data?.controlDatabaseUrl, 'DB-13 controlDatabaseUrl'),
+      });
       await lock.connect();
+      await observer.connect();
       let waiting;
       try {
         await lock.query('BEGIN');
@@ -6653,10 +6667,12 @@ for (const caseId of CASE_IDS) {
         await lock.query("SELECT set_config('app.tenant_id', $1, true)", [
           f.tenantId,
         ]);
-        await lock.query(
-          'SELECT id FROM events WHERE tenant_id=$1::uuid AND id=$2::uuid FOR UPDATE',
+        const locked = await lock.query(
+          'SELECT id, pg_backend_pid() AS pid FROM events WHERE tenant_id=$1::uuid AND id=$2::uuid FOR NO KEY UPDATE',
           [f.tenantId, f.eventId],
         );
+        assert.equal(locked.rows.length, 1, 'DB-13 event row must be locked');
+        const blockerPid = locked.rows[0].pid;
         waiting = request(
           ctx,
           'POST',
@@ -6665,24 +6681,46 @@ for (const caseId of CASE_IDS) {
           { ...redemptionBody(f, caseId), code: f.secondCode },
           { 'idempotency-key': randomUUID() },
         );
-        await lock.query('SELECT pg_sleep(1.5)');
-        const [afterDeadline] = await lock
-          .query('SELECT clock_timestamp() AS now')
-          .then((r) => r.rows);
+        let waiter;
+        const probeUntil = Date.now() + 1_500;
+        while (Date.now() < probeUntil) {
+          const { rows } = await observer.query(
+            `SELECT pid, right(query, 200) AS query, pg_blocking_pids(pid) AS blockers,
+                    clock_timestamp() AS observed_at
+             FROM pg_stat_activity
+             WHERE pid <> pg_backend_pid() AND wait_event_type = 'Lock'`,
+          );
+          waiter = rows.find((row) =>
+            row.blockers.includes(blockerPid) && row.query.includes('FROM events'));
+          if (waiter) break;
+          await new Promise((resolve) => setTimeout(resolve, 20));
+        }
+        assert.ok(waiter,
+          'DB-13 HTTP redemption must wait on the locked PostgreSQL event row');
+        assert.ok(new Date(waiter.observed_at) < new Date(deadlineAt),
+          'DB-13 HTTP request must reach the event lock before the DB deadline');
+        const remainingMs = new Date(deadlineAt).getTime() - new Date(waiter.observed_at).getTime();
+        await observer.query('SELECT pg_sleep($1)', [Math.max(0, remainingMs / 1000)]);
+        const { rows: [afterDeadline] } = await observer.query('SELECT clock_timestamp() AS now');
         assert.ok(
           new Date(afterDeadline.now) >= new Date(deadlineAt),
           'control must release the event lock after the DB deadline',
         );
+        console.log(`DB-13 lock timing: waiter observed at ${new Date(waiter.observed_at).toISOString()}, deadline ${deadlineAt}, released at ${new Date(afterDeadline.now).toISOString()}`);
       } finally {
         await lock.query('ROLLBACK').catch(() => {});
         await lock.end().catch(() => {});
+        await observer.end().catch(() => {});
       }
       const waited = await waiting;
+      assert.ok(waited.status >= 400, 'waited redemption must be denied');
       assert.equal(
         waited.body.code,
         'REDEMPTION_WINDOW_CLOSED',
         'redemption must use DB time sampled after the event lock',
       );
+      assert.deepEqual(await redemptionState(), beforeWait,
+        'waited redemption cannot mutate business state');
       const closed = await request(
         ctx,
         'PATCH',
