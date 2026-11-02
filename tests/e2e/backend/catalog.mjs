@@ -119,10 +119,19 @@ export const catalog = {
     b('issue-unit', 'CODE_HMAC_PEPPER', 'U'),
   ],
   'GATE-01': [b('gates', 'O31 gates:')],
-  'GATE-02': [b('gate', 'gate: one confirm wins')],
+  'GATE-02': [
+    b('gate', 'gate: one confirm wins'),
+    b('gate-acceptance', 'GATE-02/04/05 acceptance'),
+  ],
   'GATE-03': [b('gate', 'gate: one confirm wins')],
-  'GATE-04': [b('gate', 'gate: one confirm wins')],
-  'GATE-05': [b('gate', 'gate: one confirm wins')],
+  'GATE-04': [
+    b('gate', 'gate: one confirm wins'),
+    b('gate-acceptance', 'GATE-02/04/05 acceptance'),
+  ],
+  'GATE-05': [
+    b('gate', 'gate: one confirm wins'),
+    b('gate-acceptance', 'GATE-02/04/05 acceptance'),
+  ],
   'GATE-06': [
     b('offline-sync-apply', 'offline sync: apply'),
     b('offline-sync-unit', 'validateOfflineSyncRequest', 'U'),
@@ -283,13 +292,14 @@ export const notes = {
     'D deletion/tombstone; thiếu H session/IdP end-to-end và audit retention.',
   'DB-19': 'Keyring tombstone tests không chứng minh code/QR rotation.',
   'GATE-01': 'D gate FK/list/open; thiếu H permission và response contract.',
-  'GATE-02': 'D reserve conflict; thiếu H retry/cancel/expiry matrix.',
+  'GATE-02':
+    'D hold/retry/expiry + H; thiếu thao tác huỷ hold chủ động (API/domain chưa có, cần quyết định sản phẩm).',
   'GATE-03':
     'Thiếu H QR audience/kid/version/hash/manual rejection và reject-audit.',
   'GATE-04':
-    'D concurrent confirm; thiếu wrong holder/token, revoke/session race và H retry.',
+    'D confirm đồng thời, sai holder/token, session revoke, retry + H; thiếu revoke permission giữa request đang bay.',
   'GATE-05':
-    'D undo; thiếu H permission/idempotency và concurrent scan/revoke.',
+    'D undo quyền/lý do/lịch sử/audit + H; idempotency kiểu replay chưa có contract; thiếu undo đồng thời với scan/revoke.',
   'GATE-06':
     'D replay và U validation; thiếu H batch boundary, skew ±300s và mixed items.',
   'GATE-07':

@@ -18,7 +18,10 @@ const CASE_IDS = [
   'AUTH-03',
   'AUTH-06',
   'GATE-01',
+  'GATE-02',
   'GATE-03',
+  'GATE-04',
+  'GATE-05',
   'DB-01',
   'DB-02',
   'DB-03',
@@ -4301,6 +4304,200 @@ for (const caseId of CASE_IDS) {
         reportAfter.body.rejectByReason.TICKET_NOT_FOUND ?? 0,
         (reportBefore.body.rejectByReason.TICKET_NOT_FOUND ?? 0) + 1,
       );
+      return;
+    }
+    if (caseId === 'GATE-02' || caseId === 'GATE-04' || caseId === 'GATE-05') {
+      // PLAN §6.2 H for hold / confirm / undo through real Keycloak JWTs. One
+      // seeded ticket per case. Scanner holds gate.confirm only; Supervisor also
+      // holds gate.undo (role-map.ts).
+      const scanner = await bearer(ctx, 'scanner');
+      const supervisor = await bearer(ctx, 'supervisor');
+      const owner = await bearer(ctx, 'owner');
+      const ticketId = required(f.ticketId, `${caseId} ticketId`);
+      const openSession = async (token) => {
+        const opened = await request(
+          ctx,
+          'POST',
+          gatePath(f, 'sessions'),
+          token,
+          { tenantId: f.tenantId },
+        );
+        expectStatus(opened, 200);
+        return opened.body.sessionId;
+      };
+      const scannerSession = await openSession(scanner);
+      const supervisorSession = await openSession(supervisor);
+      const checkInCount = async () => {
+        const report = await request(ctx, 'GET', reportPath(f), owner);
+        expectStatus(report, 200);
+        return report.body.checkInSuccessCount;
+      };
+      const reserve = (token, staffSessionId) =>
+        request(ctx, 'POST', gatePath(f, 'reservations'), token, {
+          tenantId: f.tenantId,
+          ticketId,
+          staffSessionId,
+        });
+      const confirm = (token, staffSessionId, hold, secret) =>
+        request(
+          ctx,
+          'POST',
+          gatePath(f, `reservations/${hold.reservationId}/confirm`),
+          token,
+          { tenantId: f.tenantId, staffSessionId, token: secret },
+        );
+      const undo = (token, checkinId, reason) =>
+        request(
+          ctx,
+          'POST',
+          gatePath(f, `checkins/${checkinId}/undo`),
+          token,
+          { tenantId: f.tenantId, reason },
+        );
+      const baseline = await checkInCount();
+
+      if (caseId === 'GATE-02') {
+        const first = await reserve(scanner, scannerSession);
+        expectStatus(first, 200);
+        assert.equal(
+          await checkInCount(),
+          baseline,
+          'a hold must not count as a check-in',
+        );
+        expectStatus(
+          await reserve(supervisor, supervisorSession),
+          409,
+          'HELD_BY_OTHER_SESSION',
+        );
+        const retry = await reserve(scanner, scannerSession);
+        expectStatus(retry, 200);
+        assert.equal(retry.body.reservationId, first.body.reservationId);
+        assert.notEqual(retry.body.token, first.body.token);
+        expectStatus(
+          await confirm(scanner, scannerSession, first.body, first.body.token),
+          409,
+          'RESERVATION_TOKEN_MISMATCH',
+        );
+        assert.equal(await checkInCount(), baseline);
+        // An expired hold is released to another session.
+        await web04Query(
+          f,
+          f.tenantId,
+          "UPDATE checkin_reservations SET expires_at = clock_timestamp() - interval '1 second' WHERE id = $1::uuid",
+          [first.body.reservationId],
+        );
+        const taken = await reserve(supervisor, supervisorSession);
+        expectStatus(taken, 200);
+        assert.notEqual(taken.body.reservationId, first.body.reservationId);
+        expectStatus(
+          await confirm(scanner, scannerSession, retry.body, retry.body.token),
+          409,
+          'RESERVATION_EXPIRED',
+        );
+        assert.equal(await checkInCount(), baseline);
+        return;
+      }
+
+      if (caseId === 'GATE-04') {
+        const hold = await reserve(scanner, scannerSession);
+        expectStatus(hold, 200);
+        expectStatus(
+          await confirm(
+            supervisor,
+            supervisorSession,
+            hold.body,
+            hold.body.token,
+          ),
+          409,
+          'HELD_BY_OTHER_SESSION',
+        );
+        expectStatus(
+          await confirm(
+            scanner,
+            scannerSession,
+            hold.body,
+            'x'.repeat(hold.body.token.length),
+          ),
+          409,
+          'RESERVATION_TOKEN_MISMATCH',
+        );
+        assert.equal(
+          await checkInCount(),
+          baseline,
+          'denied confirms must not check in',
+        );
+        // Two simultaneous confirms of one hold: exactly one wins.
+        const raced = await Promise.all([
+          confirm(scanner, scannerSession, hold.body, hold.body.token),
+          confirm(scanner, scannerSession, hold.body, hold.body.token),
+        ]);
+        assert.deepEqual(raced.map((r) => r.status).sort(), [200, 409]);
+        const loser = raced.find((r) => r.status === 409);
+        assert.equal(loser.body.code, 'ALREADY_CHECKED_IN');
+        assert.equal(await checkInCount(), baseline + 1);
+        // Lost response: the client retries the same confirm.
+        expectStatus(
+          await confirm(scanner, scannerSession, hold.body, hold.body.token),
+          409,
+          'ALREADY_CHECKED_IN',
+        );
+        assert.equal(await checkInCount(), baseline + 1);
+        return;
+      }
+
+      // GATE-05
+      const hold = await reserve(scanner, scannerSession);
+      expectStatus(hold, 200);
+      const won = await confirm(
+        scanner,
+        scannerSession,
+        hold.body,
+        hold.body.token,
+      );
+      expectStatus(won, 200);
+      const checkinId = required(won.body.checkinId, 'GATE-05 checkinId');
+      assert.equal(await checkInCount(), baseline + 1);
+      // Scanner holds gate.confirm but not gate.undo: no override.
+      expectStatus(await undo(scanner, checkinId, 'scanner override'), 403);
+      assert.equal(await checkInCount(), baseline + 1);
+      expectStatus(
+        await undo(supervisor, checkinId, '   '),
+        422,
+        'SCOPE_REQUIRED',
+      );
+      assert.equal(await checkInCount(), baseline + 1);
+      const undone = await undo(supervisor, checkinId, 'khách vào nhầm cổng');
+      expectStatus(undone, 201);
+      assert.equal(undone.body.state, 'ACTIVE');
+      assert.equal(await checkInCount(), baseline);
+      // The undone row is history: it stays, marked with who/why, one audit row.
+      const kept = await web04Query(
+        f,
+        f.tenantId,
+        'SELECT undone_at, undo_reason FROM checkins WHERE id = $1::uuid',
+        [checkinId],
+      );
+      assert.equal(kept.length, 1, 'undo must not delete the check-in');
+      assert.ok(kept[0].undone_at);
+      assert.equal(kept[0].undo_reason, 'khách vào nhầm cổng');
+      const audited = await web04Query(
+        f,
+        f.tenantId,
+        "SELECT count(*)::int AS n FROM audit_logs WHERE action = 'gate.undo' AND resource_id = $1::uuid",
+        [checkinId],
+      );
+      assert.equal(audited[0].n, 1);
+      expectStatus(
+        await undo(supervisor, checkinId, 'again'),
+        409,
+        'CHECKIN_ALREADY_UNDONE',
+      );
+      expectStatus(
+        await undo(supervisor, randomUUID(), 'unknown check-in'),
+        404,
+        'CHECKIN_NOT_FOUND',
+      );
+      assert.equal(await checkInCount(), baseline);
       return;
     }
     if (caseId === 'DB-09') {
