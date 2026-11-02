@@ -296,13 +296,13 @@ export const notes = {
   'DB-19': 'Keyring tombstone tests không chứng minh code/QR rotation.',
   'GATE-01': 'D gate FK/list/open; thiếu H permission và response contract.',
   'GATE-02':
-    'D hold/retry/expiry + H; thiếu thao tác huỷ hold chủ động (API/domain chưa có, cần quyết định sản phẩm).',
+    'D hold/retry/expiry + huỷ hold chủ động + H; chưa phủ cancel đồng thời với confirm/expiry.',
   'GATE-03':
     'Thiếu H QR audience/kid/version/hash/manual rejection và reject-audit.',
   'GATE-04':
     'D confirm đồng thời, sai holder/token, session revoke, retry + H; thiếu revoke permission giữa request đang bay.',
   'GATE-05':
-    'D undo quyền/lý do/lịch sử/audit + H; idempotency kiểu replay chưa có contract; thiếu undo đồng thời với scan/revoke.',
+    'D undo quyền/lý do (REASON_REQUIRED)/lịch sử/audit/replay-safe + H; thiếu undo đồng thời với scan/revoke.',
   'GATE-06':
     'D replay và U validation; thiếu H batch boundary, skew ±300s và mixed items.',
   'GATE-07':

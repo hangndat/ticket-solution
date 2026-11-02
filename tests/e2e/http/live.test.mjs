@@ -4395,6 +4395,57 @@ for (const caseId of CASE_IDS) {
           'RESERVATION_EXPIRED',
         );
         assert.equal(await checkInCount(), baseline);
+
+        // Release a hold on purpose. Only the holder may do it.
+        const cancel = (token, staffSessionId, hold) =>
+          request(
+            ctx,
+            'POST',
+            gatePath(f, `reservations/${hold.reservationId}/cancel`),
+            token,
+            { tenantId: f.tenantId, staffSessionId },
+          );
+        expectStatus(
+          await cancel(scanner, scannerSession, taken.body),
+          409,
+          'HELD_BY_OTHER_SESSION',
+        );
+        const released = await cancel(supervisor, supervisorSession, taken.body);
+        expectStatus(released, 200);
+        assert.equal(released.body.status, 'RELEASED');
+        assert.equal(released.body.replayed, false);
+        assert.equal(await checkInCount(), baseline, 'cancel is not a check-in');
+        expectStatus(
+          await confirm(
+            supervisor,
+            supervisorSession,
+            taken.body,
+            taken.body.token,
+          ),
+          409,
+          'RESERVATION_EXPIRED',
+        );
+        const retaken = await reserve(scanner, scannerSession);
+        expectStatus(retaken, 200);
+        const replayed = await cancel(supervisor, supervisorSession, taken.body);
+        expectStatus(replayed, 200);
+        assert.equal(replayed.body.replayed, true);
+        // The replay must not release the new holder's hold.
+        expectStatus(
+          await confirm(
+            scanner,
+            scannerSession,
+            retaken.body,
+            retaken.body.token,
+          ),
+          200,
+        );
+        assert.equal(await checkInCount(), baseline + 1);
+        expectStatus(
+          await cancel(scanner, scannerSession, retaken.body),
+          409,
+          'ALREADY_CHECKED_IN',
+        );
         return;
       }
 
@@ -4463,7 +4514,7 @@ for (const caseId of CASE_IDS) {
       expectStatus(
         await undo(supervisor, checkinId, '   '),
         422,
-        'SCOPE_REQUIRED',
+        'REASON_REQUIRED',
       );
       assert.equal(await checkInCount(), baseline + 1);
       const undone = await undo(supervisor, checkinId, 'khách vào nhầm cổng');
@@ -4487,6 +4538,21 @@ for (const caseId of CASE_IDS) {
         [checkinId],
       );
       assert.equal(audited[0].n, 1);
+      // Replay: the same undo again returns the original result, no new audit.
+      const replay = await undo(supervisor, checkinId, 'khách vào nhầm cổng');
+      expectStatus(replay, 201);
+      assert.equal(replay.body.replayed, true);
+      assert.equal(replay.body.checkinId, checkinId);
+      assert.equal(undone.body.replayed, false);
+      const auditedAfterReplay = await web04Query(
+        f,
+        f.tenantId,
+        "SELECT count(*)::int AS n FROM audit_logs WHERE action = 'gate.undo' AND resource_id = $1::uuid",
+        [checkinId],
+      );
+      assert.equal(auditedAfterReplay[0].n, 1);
+      assert.equal(await checkInCount(), baseline);
+      // A different reason is a different request and stays a conflict.
       expectStatus(
         await undo(supervisor, checkinId, 'again'),
         409,
