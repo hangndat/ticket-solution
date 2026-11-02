@@ -84,7 +84,11 @@ export const catalog = {
     b('published-events', 'public published events'),
     { file: 'tests/e2e/http/live.test.mjs', name: '[DB-12] live HTTP', layer: 'H' },
   ],
-  'DB-13': [b('event-lifecycle', 'C-E event lifecycle')],
+  'DB-13': [
+    b('event-lifecycle', 'C-E event lifecycle'),
+    b('db13-event-windows', 'DB-13: isWindowOpen is half-open with null bounds unbounded'),
+    b('db13-event-windows', 'DB-13: two IANA timezones stored independently; invalid timezone/window rejected'),
+  ],
   'DB-14': [
     b('form-consent', 'F-BE: form/consent'),
     b('config-publish', 'config publish is versioned'),
@@ -108,6 +112,8 @@ export const catalog = {
   'DB-17': [
     b('role-presets', 'P2-ROLES-PRESET'),
     b('tenant-registration', 'P2 self-serve PENDING registration'),
+    b('event-quota-suspended', '#632 concurrent createEvent at max_events — one winner, one TENANT_LIMIT_REACHED'),
+    b('tenant-limits-usage', 'G-10 runtime role reads only authorized tenant counters and UTC day'),
   ],
   'DB-18': [
     b('account-idp-erasure', 'SEC-2 T4/T14'),
@@ -117,6 +123,7 @@ export const catalog = {
   'DB-19': [
     b('account-idp-erasure', 'SEC-2 B1:'),
     b('issue-unit', 'CODE_HMAC_PEPPER', 'U'),
+    b('db19-code-pepper-rotation', 'DB-19: code issued under v1 keeps resolving after v2 rotation; removed v1 fails closed; no plaintext'),
   ],
   'GATE-01': [b('gates', 'O31 gates:')],
   'GATE-02': [
@@ -288,7 +295,7 @@ export const notes = {
   'DB-12':
     'D publish/projection/rollback optimistic concurrency PASS; H publish/rollback/draft-non-leak qua Keycloak/HTTP thật PASS run mvuphcyf-88857a. BLOCKED thật (không phải thiếu test): public cache key host+tenant+event+published version+locale và Cache-Control no-store trên preview không có ở runtime (apps/api/src/published-events.ts, apps/api/src/config.ts ~L374) — đã báo coordinator, chờ review sản phẩm riêng trước khi mở Task runtime.',
   'DB-13':
-    'D lifecycle; thiếu UTC/IANA/deadline sau lock và archived ticket policy.',
+    'D lifecycle + db13-event-windows (hai IANA timezone độc lập, isWindowOpen half-open, invalid timezone/window bị từ chối). Thiếu H Keycloak/HTTP theo ACCEPTANCE.',
   'DB-14':
     'D PostgreSQL PASS: form/terms version + consent hashes on request, structural allowlist rejects script/unknown keys/non-allowlisted field types, entitlement_snapshot on ticket immutable after publish/rebrand and ticket_type mutation; stale terms rejected. H Keycloak/HTTP PASS qua redeem + config-versions/publish + public projection và control DB snapshot. Chờ DoD độc lập trên SHA cuối.',
   'DB-15':
@@ -296,10 +303,10 @@ export const notes = {
   'DB-16':
     'D/H portfolio tenant RLS, assignment, cursor/limit/watermark và owner/manager deny-by-default; chờ reviewer độc lập.',
   'DB-17':
-    'D presets/onboarding; thiếu H usage/mutation limit và arbitrary permissions matrix.',
+    'D presets/onboarding + tenant limit mutation/usage (event-quota-suspended #632 race, tenant-limits-usage). Thiếu H Keycloak/HTTP; escalation bằng preset của Manager chưa có assertion rõ (cần owner quyết định policy).',
   'DB-18':
-    'D deletion/tombstone; thiếu H session/IdP end-to-end và audit retention.',
-  'DB-19': 'Keyring tombstone tests không chứng minh code/QR rotation.',
+    'D deletion/tombstone + session revoke + audit kept (account-session-revoke khẳng định audit_logs không hard-delete); thiếu H session/IdP end-to-end theo ACCEPTANCE.',
+  'DB-19': 'D code pepper rotation (v1 alias giữ sau khi rotate v2, removed v1 fail-closed, không lộ plaintext). QR credential rotation (credential-crypto key đơn, kid local-v1) chưa có versioned keyring — product gap cần owner.',
   'GATE-01': 'D gate FK/list/open; thiếu H permission và response contract.',
   'GATE-02':
     'D hold/retry/expiry + huỷ hold chủ động + race cancel vs confirm/hết hạn + H.',
