@@ -114,6 +114,14 @@ export const catalog = {
     b('tenant-registration', 'P2 self-serve PENDING registration'),
     b('event-quota-suspended', '#632 concurrent createEvent at max_events — one winner, one TENANT_LIMIT_REACHED'),
     b('tenant-limits-usage', 'G-10 runtime role reads only authorized tenant counters and UTC day'),
+    b(
+      'db17-role-escalation',
+      'DB-17: non-Owner cannot create/list role presets; catalogue stays the only grantable surface',
+    ),
+    b(
+      'db17-tenant-limits-mutation',
+      'DB-17: maxEvents/maxStaff enforced at mutation; usage reflects committed counts',
+    ),
   ],
   'DB-18': [
     b('account-idp-erasure', 'SEC-2 T4/T14'),
@@ -304,7 +312,7 @@ export const notes = {
   'DB-16':
     'D/H portfolio tenant RLS, assignment, cursor/limit/watermark và owner/manager deny-by-default; chờ reviewer độc lập.',
   'DB-17':
-    'D presets/onboarding + tenant limit mutation/usage (event-quota-suspended #632 race, tenant-limits-usage). Thiếu H Keycloak/HTTP; escalation bằng preset của Manager chưa có assertion rõ (cần owner quyết định policy).',
+    'D presets/onboarding + tenant limit mutation/usage (event-quota-suspended #632 race, tenant-limits-usage) + non-Owner escalation deny (catalogue là surface duy nhất, cross-tenant 404) + maxEvents/maxStaff mutation limit/usage (rollback, race xác định, không oversell). Thiếu H Keycloak/HTTP presets/PENDING/operator activation.',
   'DB-18':
     'D deletion/tombstone + session revoke + audit kept (account-session-revoke khẳng định audit_logs không hard-delete); thiếu H session/IdP end-to-end theo ACCEPTANCE.',
   'DB-19': 'D code pepper rotation (v1 alias giữ sau khi rotate v2, removed v1 fail-closed, không lộ plaintext). QR credential rotation (credential-crypto key đơn, kid local-v1) chưa có versioned keyring — product gap cần owner.',
