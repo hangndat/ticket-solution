@@ -335,7 +335,7 @@ if (mode === 'list' || args.includes('--list')) {
       JSON.parse(readFileSync(resolve(state.dir, 'seed-result.json'), 'utf8')),
     );
     const rawManifest = JSON.parse(readFileSync(state.manifestPath, 'utf8'));
-    if (rawManifest.cases['WEB-10'] || rawManifest.cases['PORT-08']) {
+    if (rawManifest.cases['WEB-10'] || rawManifest.cases['PORT-08'] || rawManifest.cases['DB-18']) {
       const web10 = rawManifest.cases['WEB-10'];
       const catalogListPaths = web10
         ? [
@@ -369,6 +369,10 @@ if (mode === 'list' || args.includes('--list')) {
         routes: {},
       });
       rawManifest.runtime.faultControlPath = state.faultControlPath;
+      if (rawManifest.cases['DB-18']) {
+        state.idpFaultHitPath = resolve(state.dir, 'idp-delete-fault-hit.json');
+        rawManifest.runtime.idpFaultHitPath = state.idpFaultHitPath;
+      }
     }
     if (state.origins.faultPortal) {
       rawManifest.cases['PLAT-05'].data.unconfiguredPortalOrigin =
