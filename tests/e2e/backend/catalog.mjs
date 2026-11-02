@@ -136,6 +136,10 @@ export const catalog = {
     ),
     b(
       'gate03-signed-qr-d',
+      'gate03 signed-QR D: manual hold then reissue then confirm returns CREDENTIAL_VERSION_STALE',
+    ),
+    b(
+      'gate03-signed-qr-d',
       'gate03 signed-QR D: keyring rotation — two kids verify, unknown kid denied',
     ),
   ],
