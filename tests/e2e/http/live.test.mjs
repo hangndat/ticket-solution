@@ -4255,6 +4255,18 @@ for (const caseId of CASE_IDS) {
         body: { ...base, presented: { kind: 'qr', jws: 'not-a-compact-jws' } },
       });
 
+      await assertGateDenyNoMutation(ctx, f, {
+        ticketId,
+        token: scanner,
+        path,
+        status: 403,
+        code: 'MANUAL_PROOF_INVALID',
+        body: {
+          ...base,
+          presented: { kind: 'manual', proofToken: 'not-a-compact-jws' },
+        },
+      });
+
       const unknownKidJws = required(
         f.data?.unknownKidJws,
         'GATE-03 unknownKidJws',
