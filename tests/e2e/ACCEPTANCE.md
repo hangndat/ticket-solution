@@ -140,6 +140,21 @@ Owner chọn đề xuất kết hợp (viết thêm test cho logic check-in cố
 | GATE-07 | Cần thêm assertion D cho authz-on-retry (phát hiện 4) |
 | GATE-03 | Bị chặn bởi signed QR (quyết định sản phẩm) |
 
+### GATE: xử lý các mục còn mở — 02/11/2026
+
+Owner trả lời "làm theo cách bạn suggestion". Gợi ý cụ thể của tôi chỉ có một mục; các mục còn lại là quyết định hành vi sản phẩm nên **không tự đổi contract**, chỉ ghi known gap.
+
+| Mục | Xử lý | Ghi chú |
+| --- | ----- | ------- |
+| GATE-07 authz-on-retry | **Đã làm.** Thêm `packages/backend/test/offline-sync-authz-retry.test.cjs` (D) | Retry DUPLICATE trước khi thu quyền là vô hại; sau khi thu `event_assignments` thì `AuthzError`, sau khi revoke staff session thì `SESSION_NOT_ACTIVE`; `offline_sync_events` và `checkins` không đổi. Kiểm đột biến: bỏ kiểm quyền hoặc bỏ kiểm session làm test fail. CI: thêm vào shard `offline-sync-apply` |
+| GATE-02 huỷ hold chủ động | **Known gap, chờ owner** | Chưa có thao tác trong API/domain; không viết test cho thứ chưa tồn tại và không tự thêm feature. Vế "cancel" của AC giữ BLOCKED |
+| GATE-05 idempotency của undo | **Known gap, chờ owner** | Hành vi hiện tại (từ chối undo lần hai bằng 409 `CHECKIN_ALREADY_UNDONE`) đã được ghim ở D và H như *hành vi hiện tại*, không như quyết định. Đổi sang replay cần owner chốt contract |
+| GATE-05 mã lỗi lý do trống | **Known gap, chờ owner** | Test không ghim mã (`CHECKIN_NOT_FOUND` ở domain, `SCOPE_REQUIRED` ở HTTP) |
+
+**Giới hạn của GATE-07:** vế "mixed batch audit" ghi trong catalog cũ vẫn chỉ có ở `offline-sync-apply` (REJECTED/CONFLICT có audit idempotent, không inflate `rejectByReason` khi replay); không có assertion mới cho batch hỗn hợp trong cùng một request. H không viết, theo cùng giảm AC như GATE-06/08/09, rủi ro còn lại là ánh xạ route và JWT thật cho offline-sync.
+
+**Trạng thái GATE sau bước này** (chưa ID nào đổi verdict; sẵn sàng xin review gộp): GATE-01, 04, 06, 07, 08, 09. Chờ owner: GATE-02, 05. Bị chặn sản phẩm: GATE-03.
+
 ## Các nhóm còn thiếu nghiệm thu toàn phần
 
 Các dòng này giữ BLOCKED ở mức AC; không có nghĩa tất cả đều đã chứng minh có bug. Có thể thiếu test, runtime evidence, review hoặc contract; không đổi expected outcome để lấy PASS.
