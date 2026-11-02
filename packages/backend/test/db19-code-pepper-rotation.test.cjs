@@ -383,3 +383,202 @@ test(
     }
   },
 );
+
+test(
+  'DB-19: duplicate rows for the same raw code across a pepper rotation fail closed with zero mutation',
+  { timeout: 240000 },
+  async () => {
+    let name;
+    let db;
+    try {
+      const boot = await startIsolatedPostgres();
+      name = boot.name;
+      db = createDatabase(boot.url, 3);
+
+      const hmacV1 = readCodeHmacEnvironment({
+        CODE_HMAC_PEPPER: PEPPER_V1,
+        CODE_HMAC_VERSION: '1',
+      });
+      const hmacV2 = readCodeHmacEnvironment({
+        CODE_HMAC_PEPPER: PEPPER_V2,
+        CODE_HMAC_VERSION: '2',
+      });
+
+      const users = createPrismaIdentityUserRepository(db);
+      const guest = await users.upsertFromVerifiedIdentity({
+        issuer: 'http://127.0.0.1:8080/realms/ticket',
+        subject: 'db19-ambiguous-guest',
+        email: 'db19-ambiguous@example.com',
+        emailVerified: true,
+      });
+
+      const tenantId = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
+      const eventId = randomUUID();
+      await withTenant(db, tenantId, async (tx) => {
+        await tx.tenant.create({
+          data: { id: tenantId, slug: 'db19-ambiguous', name: 'Ambiguous' },
+        });
+        await tx.event.create({
+          data: {
+            tenantId,
+            id: eventId,
+            slug: 'db19-ambiguous-event',
+            name: 'Ambiguous Event',
+            status: 'PUBLISHED',
+            contentStatus: 'PUBLISHED',
+            businessStatus: 'ACTIVE',
+          },
+        });
+        // Residual duplicate: same raw code re-imported across a pepper
+        // rotation without the DB-10 routing registry (no global fingerprint
+        // to reject the re-insert) — two rows, different code_hmac/version,
+        // same tenant/event, different source/ticket type.
+        await seedEventInventory(tx, hmacV1, {
+          tenantId,
+          eventId,
+          eventQuota: 2,
+          rawCodes: ['DUP-ROW'],
+          ticketTypeLabel: 'General-V1',
+          sourceName: 'Import-V1',
+        });
+        await seedEventInventory(tx, hmacV2, {
+          tenantId,
+          eventId,
+          eventQuota: 2,
+          rawCodes: ['DUP-ROW'],
+          ticketTypeLabel: 'General-V2',
+          sourceName: 'Import-V2',
+        });
+      });
+
+      const pepperRing = readSupportedPepperConfigs({
+        CODE_HMAC_PEPPER: PEPPER_V2,
+        CODE_HMAC_VERSION: '2',
+        CODE_HMAC_LEGACY_PEPPERS: JSON.stringify({ '1': PEPPER_V1 }),
+      });
+
+      await assert.rejects(
+        async () => {
+          const outcome = await withTenant(db, tenantId, (tx) =>
+            redeemAndIssueTicket(tx, hmacV2, CRED_KEY, {
+              tenantId,
+              eventId,
+              actorUserId: guest.userId,
+              actorEmail: guest.email,
+              emailVerified: true,
+              rawCode: 'DUP-ROW',
+              idempotencyKey: randomUUID(),
+              routingPeppers: pepperRing,
+            }),
+          );
+          unwrapRedeemOutcome(outcome);
+        },
+        (e) =>
+          e instanceof IssueError && e.code === ISSUE_ERROR_CODES.CODE_INVALID,
+      );
+
+      // Zero mutation: no ticket, no outbox entry, quota untouched, and both
+      // ambiguous rows remain AVAILABLE — rejected before any write.
+      const [tickets, outboxRows, codes, quotas] = await withTenant(
+        db,
+        tenantId,
+        async (tx) => [
+          await tx.$queryRaw`
+            SELECT COUNT(*)::int AS n FROM tickets
+            WHERE tenant_id = ${tenantId}::uuid AND event_id = ${eventId}::uuid
+          `,
+          await tx.$queryRaw`
+            SELECT COUNT(*)::int AS n FROM outbox
+            WHERE tenant_id = ${tenantId}::uuid AND event_id = ${eventId}::uuid
+          `,
+          await tx.$queryRaw`
+            SELECT status, active_request_id FROM redemption_codes
+            WHERE tenant_id = ${tenantId}::uuid AND event_id = ${eventId}::uuid
+            ORDER BY code_pepper_version
+          `,
+          await tx.$queryRaw`
+            SELECT COALESCE(SUM(allocated), 0)::int AS n FROM quota_buckets
+            WHERE tenant_id = ${tenantId}::uuid AND event_id = ${eventId}::uuid
+          `,
+        ],
+      );
+      assert.equal(Number(tickets[0].n), 0);
+      assert.equal(Number(outboxRows[0].n), 0);
+      assert.equal(codes.length, 2);
+      for (const row of codes) {
+        assert.equal(row.status, 'AVAILABLE');
+        assert.equal(row.active_request_id, null);
+      }
+      assert.equal(Number(quotas[0].n), 0);
+
+      // Guard rail: a single legitimate old-pepper code (no duplicate row)
+      // still resolves normally through the same ring, and once consumed
+      // stays denied — the new ambiguity guard must not regress the
+      // existing single-row rotation path.
+      const singleEventId = randomUUID();
+      await withTenant(db, tenantId, async (tx) => {
+        await tx.event.create({
+          data: {
+            tenantId,
+            id: singleEventId,
+            slug: 'db19-ambiguous-single-event',
+            name: 'Single Row Event',
+            status: 'PUBLISHED',
+            contentStatus: 'PUBLISHED',
+            businessStatus: 'ACTIVE',
+          },
+        });
+        await seedEventInventory(tx, hmacV1, {
+          tenantId,
+          eventId: singleEventId,
+          eventQuota: 2,
+          rawCodes: ['SINGLE-ROW'],
+        });
+      });
+      const singleIssued = unwrapRedeemOutcome(
+        await withTenant(db, tenantId, (tx) =>
+          redeemAndIssueTicket(tx, hmacV2, CRED_KEY, {
+            tenantId,
+            eventId: singleEventId,
+            actorUserId: guest.userId,
+            actorEmail: guest.email,
+            emailVerified: true,
+            rawCode: 'SINGLE-ROW',
+            idempotencyKey: randomUUID(),
+            routingPeppers: pepperRing,
+          }),
+        ),
+      );
+      assert.equal(singleIssued.state, 'ACTIVE');
+
+      await assert.rejects(
+        async () => {
+          const outcome = await withTenant(db, tenantId, (tx) =>
+            redeemAndIssueTicket(tx, hmacV2, CRED_KEY, {
+              tenantId,
+              eventId: singleEventId,
+              actorUserId: guest.userId,
+              actorEmail: guest.email,
+              emailVerified: true,
+              rawCode: 'SINGLE-ROW',
+              idempotencyKey: randomUUID(),
+              routingPeppers: pepperRing,
+            }),
+          );
+          unwrapRedeemOutcome(outcome);
+        },
+        (e) =>
+          e instanceof IssueError && e.code === ISSUE_ERROR_CODES.CODE_CONSUMED,
+      );
+    } finally {
+      if (db) await db.$disconnect().catch(() => {});
+      if (name) {
+        try {
+          docker('rm', '-f', name);
+        } catch {
+          /* ignore cleanup races */
+        }
+      }
+    }
+  },
+);
