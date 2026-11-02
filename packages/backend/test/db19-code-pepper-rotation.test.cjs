@@ -308,9 +308,9 @@ test(
           e.code === ISSUE_ERROR_CODES.CODE_CONSUMED,
       );
 
-      // Rotate v1→v2 (v1 retained in the legacy ring). The consumed code must
-      // stay un-issuable under the current pepper — rotation must not resurrect
-      // it into a second ticket.
+      // Rotate v1→v2. With the ring not yet carrying v1 (legacy peppers not
+      // configured), the v1-hashed row is invisible to the current-only
+      // lookup — fails closed as CODE_INVALID, not a false CODE_CONSUMED.
       const hmacV2 = readCodeHmacEnvironment({
         CODE_HMAC_PEPPER: PEPPER_V2,
         CODE_HMAC_VERSION: '2',
@@ -330,7 +330,37 @@ test(
           );
           unwrapRedeemOutcome(outcome);
         },
-        (e) => e instanceof IssueError,
+        (e) =>
+          e instanceof IssueError && e.code === ISSUE_ERROR_CODES.CODE_INVALID,
+      );
+
+      // Same rotation, but with v1 retained in the legacy pepper ring: the
+      // v1-hashed row resolves again and must be reported as CODE_CONSUMED
+      // specifically — rotation must not resurrect it into a second ticket.
+      const pepperRing = readSupportedPepperConfigs({
+        CODE_HMAC_PEPPER: PEPPER_V2,
+        CODE_HMAC_VERSION: '2',
+        CODE_HMAC_LEGACY_PEPPERS: JSON.stringify({ '1': PEPPER_V1 }),
+      });
+      await assert.rejects(
+        async () => {
+          const outcome = await withTenant(db, tenantId, (tx) =>
+            redeemAndIssueTicket(tx, hmacV2, CRED_KEY, {
+              tenantId,
+              eventId,
+              actorUserId: guest.userId,
+              actorEmail: guest.email,
+              emailVerified: true,
+              rawCode: 'ROTATE-USED',
+              idempotencyKey: randomUUID(),
+              routingPeppers: pepperRing,
+            }),
+          );
+          unwrapRedeemOutcome(outcome);
+        },
+        (e) =>
+          e instanceof IssueError &&
+          e.code === ISSUE_ERROR_CODES.CODE_CONSUMED,
       );
 
       // Invariant: exactly one ticket exists; rotation never resurrected the code.
