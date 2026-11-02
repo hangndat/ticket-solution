@@ -31,6 +31,7 @@ const CASE_IDS = [
   'DB-10',
   'DB-11',
   'DB-12',
+  'DB-13',
   'DB-14',
   'DB-18',
   'DB-15',
@@ -6506,6 +6507,337 @@ for (const caseId of CASE_IDS) {
       assert.equal(consentRow.terms_version, 'terms-v2');
       assert.equal(consentRow.form_definition_hash, expectedHashes.v2.form);
       assert.equal(consentRow.terms_content_hash, expectedHashes.v2.terms);
+    }
+    if (caseId === 'DB-13') {
+      const owner = await bearer(ctx, 'owner');
+      const attendee = await bearer(ctx, 'attendee');
+      const base = `/tenants/${f.tenantId}/events`;
+      const eventPath = `${base}/${f.eventId}`;
+      const dbRows = (sql, values = []) =>
+        web04Query(f, f.tenantId, sql, values);
+      const [clock] = await dbRows('SELECT clock_timestamp() AS now');
+      const at = (minutes) =>
+        new Date(
+          new Date(clock.now).getTime() + minutes * 60_000,
+        ).toISOString();
+      const windows = {
+        redemptionOpensAt: at(-60),
+        redemptionClosesAt: at(60),
+        checkInOpensAt: at(120),
+        checkInClosesAt: at(180),
+      };
+      const original = await request(ctx, 'GET', eventPath, owner);
+      expectStatus(original, 200);
+      const revision = original.body.revision;
+      const badTimezone = await request(
+        ctx,
+        'PATCH',
+        eventPath,
+        owner,
+        { expectedRevision: revision, timezone: 'Not/AZone' },
+        { 'idempotency-key': randomUUID() },
+      );
+      expectStatus(badTimezone, 422, 'INVALID_TIMEZONE');
+      const badWindow = await request(
+        ctx,
+        'PATCH',
+        eventPath,
+        owner,
+        {
+          expectedRevision: revision,
+          redemptionOpensAt: at(90),
+          redemptionClosesAt: at(60),
+        },
+        { 'idempotency-key': randomUUID() },
+      );
+      expectStatus(badWindow, 422, 'INVALID_WINDOW');
+      const opened = await request(
+        ctx,
+        'PATCH',
+        eventPath,
+        owner,
+        {
+          expectedRevision: revision,
+          timezone: 'Asia/Ho_Chi_Minh',
+          ...windows,
+        },
+        { 'idempotency-key': randomUUID() },
+      );
+      expectStatus(opened, 200);
+      assert.equal(opened.body.event.timezone, 'Asia/Ho_Chi_Minh');
+      assert.deepEqual(opened.body.event.redemptionWindow, {
+        opensAt: windows.redemptionOpensAt,
+        closesAt: windows.redemptionClosesAt,
+      });
+      assert.deepEqual(opened.body.event.checkInWindow, {
+        opensAt: windows.checkInOpensAt,
+        closesAt: windows.checkInClosesAt,
+      });
+      const ny = await request(
+        ctx,
+        'POST',
+        base,
+        owner,
+        {
+          slug: `db13-ny-${randomUUID().slice(0, 8)}`,
+          name: 'DB-13 New York',
+          timezone: 'America/New_York',
+          redemptionOpensAt: windows.checkInOpensAt,
+          redemptionClosesAt: windows.checkInClosesAt,
+          checkInOpensAt: windows.redemptionOpensAt,
+          checkInClosesAt: windows.redemptionClosesAt,
+        },
+        { 'idempotency-key': randomUUID() },
+      );
+      expectStatus(ny, 201);
+      assert.equal(ny.body.event.timezone, 'America/New_York');
+      assert.equal(
+        ny.body.event.redemptionWindow.opensAt,
+        windows.checkInOpensAt,
+      );
+      assert.equal(
+        ny.body.event.checkInWindow.opensAt,
+        windows.redemptionOpensAt,
+      );
+      const issued = await request(
+        ctx,
+        'POST',
+        redemptionPath(f),
+        attendee,
+        redemptionBody(f, caseId),
+        { 'idempotency-key': randomUUID() },
+      );
+      expectStatus(issued, 201);
+      assert.ok(
+        issued.body.ticketId,
+        'redemption must issue while check-in is closed',
+      );
+      const before = await dbRows(
+        `SELECT (SELECT count(*)::int FROM tickets WHERE tenant_id=$1::uuid AND event_id=$2::uuid) AS tickets,
+                (SELECT count(*)::int FROM redemption_requests WHERE tenant_id=$1::uuid AND event_id=$2::uuid) AS requests`,
+        [f.tenantId, f.eventId],
+      );
+      // The observer below proves the HTTP request reaches the event lock
+      // before the DB deadline and remains blocked until after it.
+      const [deadlineClock] = await dbRows('SELECT clock_timestamp() AS now');
+      const deadlineAt = new Date(
+        new Date(deadlineClock.now).getTime() + 2_000,
+      ).toISOString();
+      const deadline = await request(
+        ctx,
+        'PATCH',
+        eventPath,
+        owner,
+        {
+          expectedRevision: opened.body.event.revision,
+          redemptionClosesAt: deadlineAt,
+        },
+        { 'idempotency-key': randomUUID() },
+      );
+      expectStatus(deadline, 200);
+      const redemptionState = () => dbRows(
+        `SELECT (SELECT count(*)::int FROM tickets WHERE tenant_id=$1::uuid AND event_id=$2::uuid) AS tickets,
+                (SELECT count(*)::int FROM redemption_requests WHERE tenant_id=$1::uuid AND event_id=$2::uuid) AS requests,
+                (SELECT count(*)::int FROM outbox WHERE tenant_id=$1::uuid AND event_id=$2::uuid) AS outbox,
+                (SELECT count(*)::int FROM audit_logs WHERE tenant_id=$1::uuid AND event_id=$2::uuid) AS audits,
+                (SELECT count(*)::int FROM redemption_codes WHERE tenant_id=$1::uuid AND event_id=$2::uuid AND status='USED') AS used_codes,
+                (SELECT coalesce(sum(allocated), 0)::int FROM quota_buckets WHERE tenant_id=$1::uuid AND event_id=$2::uuid) AS allocated`,
+        [f.tenantId, f.eventId],
+      );
+      const beforeWait = await redemptionState();
+      const requireBackend = createRequire(
+        new URL('../../../packages/backend/package.json', import.meta.url),
+      );
+      const { Client } = requireBackend('pg');
+      const lock = new Client({
+        connectionString: required(
+          f.data?.controlDatabaseUrl,
+          'DB-13 controlDatabaseUrl',
+        ),
+      });
+      const observer = new Client({
+        connectionString: required(f.data?.controlDatabaseUrl, 'DB-13 controlDatabaseUrl'),
+      });
+      await lock.connect();
+      await observer.connect();
+      let waiting;
+      try {
+        await lock.query('BEGIN');
+        await lock.query('SET LOCAL ROLE ticket_runtime');
+        await lock.query("SELECT set_config('app.tenant_id', $1, true)", [
+          f.tenantId,
+        ]);
+        const locked = await lock.query(
+          'SELECT id, pg_backend_pid() AS pid FROM events WHERE tenant_id=$1::uuid AND id=$2::uuid FOR NO KEY UPDATE',
+          [f.tenantId, f.eventId],
+        );
+        assert.equal(locked.rows.length, 1, 'DB-13 event row must be locked');
+        const blockerPid = locked.rows[0].pid;
+        waiting = request(
+          ctx,
+          'POST',
+          redemptionPath(f),
+          attendee,
+          { ...redemptionBody(f, caseId), code: f.secondCode },
+          { 'idempotency-key': randomUUID() },
+        );
+        let waiter;
+        const probeUntil = Date.now() + 1_500;
+        while (Date.now() < probeUntil) {
+          const { rows } = await observer.query(
+            `SELECT pid, right(query, 200) AS query, pg_blocking_pids(pid) AS blockers,
+                    clock_timestamp() AS observed_at
+             FROM pg_stat_activity
+             WHERE pid <> pg_backend_pid() AND wait_event_type = 'Lock'`,
+          );
+          waiter = rows.find((row) =>
+            row.blockers.includes(blockerPid) && row.query.includes('FROM events'));
+          if (waiter) break;
+          await new Promise((resolve) => setTimeout(resolve, 20));
+        }
+        assert.ok(waiter,
+          'DB-13 HTTP redemption must wait on the locked PostgreSQL event row');
+        assert.ok(new Date(waiter.observed_at) < new Date(deadlineAt),
+          'DB-13 HTTP request must reach the event lock before the DB deadline');
+        const remainingMs = new Date(deadlineAt).getTime() - new Date(waiter.observed_at).getTime();
+        await observer.query('SELECT pg_sleep($1)', [Math.max(0, remainingMs / 1000)]);
+        const { rows: [afterDeadline] } = await observer.query('SELECT clock_timestamp() AS now');
+        assert.ok(
+          new Date(afterDeadline.now) >= new Date(deadlineAt),
+          'control must release the event lock after the DB deadline',
+        );
+        console.log(`DB-13 lock timing: waiter observed at ${new Date(waiter.observed_at).toISOString()}, deadline ${deadlineAt}, released at ${new Date(afterDeadline.now).toISOString()}`);
+      } finally {
+        await lock.query('ROLLBACK').catch(() => {});
+        await lock.end().catch(() => {});
+        await observer.end().catch(() => {});
+      }
+      const waited = await waiting;
+      assert.ok(waited.status >= 400, 'waited redemption must be denied');
+      assert.equal(
+        waited.body.code,
+        'REDEMPTION_WINDOW_CLOSED',
+        'redemption must use DB time sampled after the event lock',
+      );
+      assert.deepEqual(await redemptionState(), beforeWait,
+        'waited redemption cannot mutate business state');
+      const closed = await request(
+        ctx,
+        'PATCH',
+        eventPath,
+        owner,
+        {
+          expectedRevision: deadline.body.event.revision,
+          redemptionClosesAt: at(-1),
+          checkInOpensAt: at(-60),
+          checkInClosesAt: at(60),
+        },
+        { 'idempotency-key': randomUUID() },
+      );
+      expectStatus(closed, 200);
+      const denied = await request(
+        ctx,
+        'POST',
+        redemptionPath(f),
+        attendee,
+        { ...redemptionBody(f, caseId), code: f.secondCode },
+        { 'idempotency-key': randomUUID() },
+      );
+      assert.ok(denied.status >= 400, 'closed redemption must be denied');
+      assert.equal(denied.body.code, 'REDEMPTION_WINDOW_CLOSED');
+      const ticket = await request(
+        ctx,
+        'GET',
+        `/me/tickets/${issued.body.ticketId}?tenantId=${f.tenantId}`,
+        attendee,
+      );
+      expectStatus(ticket, 200);
+      assert.equal(ticket.body.ticketId, issued.body.ticketId);
+      const after = await dbRows(
+        `SELECT (SELECT count(*)::int FROM tickets WHERE tenant_id=$1::uuid AND event_id=$2::uuid) AS tickets,
+                (SELECT count(*)::int FROM redemption_requests WHERE tenant_id=$1::uuid AND event_id=$2::uuid) AS requests`,
+        [f.tenantId, f.eventId],
+      );
+      assert.deepEqual(
+        after,
+        before,
+        'denied redemption cannot create business rows',
+      );
+      const scanner = await bearer(ctx, 'scanner');
+      const session = await request(ctx, 'POST', gatePath(f, 'sessions'), scanner,
+        { tenantId: f.tenantId });
+      expectStatus(session, 200);
+      const hold = await request(ctx, 'POST', gatePath(f, 'reservations'), scanner, {
+        tenantId: f.tenantId,
+        ticketId: issued.body.ticketId,
+        staffSessionId: session.body.sessionId,
+      });
+      expectStatus(hold, 200);
+      const confirmed = await request(ctx, 'POST',
+        gatePath(f, `reservations/${hold.body.reservationId}/confirm`), scanner, {
+          tenantId: f.tenantId,
+          staffSessionId: session.body.sessionId,
+          token: hold.body.token,
+        });
+      expectStatus(confirmed, 200);
+      assert.ok(confirmed.body.checkinId, 'issued ticket remains usable at Gate after redeem closes');
+      const clone = await request(
+        ctx,
+        'POST',
+        `${eventPath}/clone`,
+        owner,
+        {
+          slug: `db13-copy-${randomUUID().slice(0, 8)}`,
+          name: 'DB-13 Copy',
+          copyConfig: true,
+        },
+        { 'idempotency-key': randomUUID() },
+      );
+      expectStatus(clone, 201);
+      const cloneId = clone.body.event.eventId;
+      assert.equal(clone.body.event.contentStatus, 'DRAFT');
+      assert.equal(clone.body.event.timezone, 'Asia/Ho_Chi_Minh');
+      const [cloneRows] = await dbRows(
+        `SELECT (SELECT count(*)::int FROM redemption_codes WHERE tenant_id=$1::uuid AND event_id=$2::uuid) AS codes,
+                (SELECT count(*)::int FROM tickets WHERE tenant_id=$1::uuid AND event_id=$2::uuid) AS tickets,
+                (SELECT count(*)::int FROM event_attendees WHERE tenant_id=$1::uuid AND event_id=$2::uuid) AS attendees,
+                (SELECT count(*)::int FROM quota_buckets WHERE tenant_id=$1::uuid AND event_id=$2::uuid) AS quotas,
+                (SELECT count(*)::int FROM staff_sessions WHERE tenant_id=$1::uuid AND event_id=$2::uuid) AS staff`,
+        [f.tenantId, cloneId],
+      );
+      assert.deepEqual(Object.values(cloneRows), [0, 0, 0, 0, 0]);
+      const archive = await request(
+        ctx,
+        'POST',
+        `${base}/${cloneId}/archive`,
+        owner,
+        { expectedRevision: clone.body.event.revision },
+        { 'idempotency-key': randomUUID() },
+      );
+      expectStatus(archive, 201);
+      assert.equal(archive.body.event.contentStatus, 'ARCHIVED');
+      const cancel = await request(
+        ctx,
+        'POST',
+        `${eventPath}/cancel`,
+        owner,
+        {
+          expectedRevision: closed.body.event.revision,
+          reason: 'DB-13 lifecycle',
+          notifyAttendees: false,
+        },
+        { 'idempotency-key': randomUUID() },
+      );
+      expectStatus(cancel, 201);
+      assert.equal(cancel.body.event.businessStatus, 'CANCELLED');
+      assert.deepEqual(
+        await dbRows(
+          'SELECT count(*)::int AS tickets FROM tickets WHERE tenant_id=$1::uuid AND event_id=$2::uuid',
+          [f.tenantId, f.eventId],
+        ),
+        [{ tickets: before[0].tickets }],
+      );
+      return;
     }
     if (caseId === 'DB-12') {
       // PLAN §6.1 DB-12 H: publish/rollback optimistic concurrency and
