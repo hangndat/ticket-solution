@@ -19,6 +19,15 @@ import { fileURLToPath } from 'node:url';
 import { once } from 'node:events';
 import { setTimeout as delay } from 'node:timers/promises';
 import { captureSourceProvenance } from './source-provenance.mjs';
+import { laneConfig, laneSecrets, runDatabase } from './lane.mjs';
+import {
+  clearMailbox,
+  deleteRealms,
+  dropRunDatabase,
+  importRealms,
+  provisionRunDatabase,
+  removeRunObjectStorage,
+} from './lane-infra.mjs';
 
 export const ROOT = resolve(
   dirname(fileURLToPath(import.meta.url)),
@@ -36,6 +45,10 @@ const ACTORS = [
   'supervisor',
   'operator',
 ];
+
+// Client `mc`, khác image của MinIO server trong compose.
+export const MC_IMAGE =
+  'cgr.dev/chainguard/minio@sha256:c93745c56fccdaf0e5dcb88999a96a65a136428beb045ef5d546255a80d747a7';
 
 export function privateJson(path, value) {
   writeFileSync(path, JSON.stringify(value, null, 2) + '\n', { mode: 0o600 });
@@ -76,10 +89,44 @@ export async function waitFor(description, check, timeout = 120_000) {
   );
 }
 
-function certs(state) {
-  const key = resolve(state.dir, 'tls.key');
-  const cert = resolve(state.dir, 'tls.crt');
-  const config = resolve(state.dir, 'openssl.cnf');
+function applyCertState(state, cert, key) {
+  const pub = command('openssl', ['x509', '-in', cert, '-pubkey', '-noout']);
+  const der = execFileSync('openssl', ['pkey', '-pubin', '-outform', 'DER'], {
+    input: pub,
+  });
+  state.cert = cert;
+  state.key = key;
+  state.spki = createHash('sha256').update(der).digest('base64');
+}
+
+function certUsable(cert) {
+  try {
+    // Còn hiệu lực ít nhất một giờ nữa mới dùng lại.
+    command('openssl', ['x509', '-in', cert, '-checkend', '3600', '-noout'], {
+      stdio: 'ignore',
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function certs(state, options = {}) {
+  const dir = options.dir || state.dir;
+  const key = resolve(dir, 'tls.key');
+  const cert = resolve(dir, 'tls.crt');
+  const config = resolve(dir, 'openssl.cnf');
+  // Cert của lane gắn với hostname cố định nên dùng lại được giữa các run;
+  // Chromium vẫn chỉ tin đúng SPKI này.
+  if (
+    options.reuse &&
+    existsSync(cert) &&
+    existsSync(key) &&
+    certUsable(cert)
+  ) {
+    applyCertState(state, cert, key);
+    return;
+  }
   writeFileSync(
     config,
     `[req]\ndistinguished_name=dn\nx509_extensions=ext\nprompt=no\n[dn]\nCN=${state.suffix}\n[ext]\nsubjectAltName=DNS:${state.suffix},DNS:*.${state.suffix}\nbasicConstraints=critical,CA:TRUE\nkeyUsage=critical,digitalSignature,keyEncipherment,keyCertSign\nextendedKeyUsage=serverAuth\n`,
@@ -104,13 +151,7 @@ function certs(state) {
     ],
     { stdio: 'ignore' },
   );
-  const pub = command('openssl', ['x509', '-in', cert, '-pubkey', '-noout']);
-  const der = execFileSync('openssl', ['pkey', '-pubin', '-outform', 'DER'], {
-    input: pub,
-  });
-  state.cert = cert;
-  state.key = key;
-  state.spki = createHash('sha256').update(der).digest('base64');
+  applyCertState(state, cert, key);
 }
 
 function account(actor, suffix, needsTotp = actor === 'operator') {
@@ -534,7 +575,9 @@ function secondaryRealmConfig(state, caseIds) {
 function composeConfig(state, realmPath, secondaryRealmPath) {
   const env = state.secrets;
   const port = (inner) => [`127.0.0.1::${inner}`];
-  const label = { 'vemoki.e2e.run': state.id };
+  const label = state.lane
+    ? { 'vemoki.e2e.lane': state.lane.name }
+    : { 'vemoki.e2e.run': state.id };
   const compose = {
     name: state.project,
     services: {
@@ -574,7 +617,9 @@ function composeConfig(state, realmPath, secondaryRealmPath) {
         image: 'quay.io/keycloak/keycloak:26.0',
         user: '0:0',
         labels: label,
-        command: ['start-dev', '--import-realm', '--http-port=8080'],
+        command: state.lane
+          ? ['start-dev', '--http-port=8080']
+          : ['start-dev', '--import-realm', '--http-port=8080'],
         environment: {
           KC_BOOTSTRAP_ADMIN_USERNAME: 'e2e-admin',
           KC_BOOTSTRAP_ADMIN_PASSWORD: env.kc,
@@ -584,14 +629,18 @@ function composeConfig(state, realmPath, secondaryRealmPath) {
           KC_PROXY_HEADERS: 'xforwarded',
         },
         ports: port(8080),
-        volumes: [
-          `${realmPath}:/opt/keycloak/data/import/e2e.json:ro`,
-          ...(secondaryRealmPath
-            ? [
-                `${secondaryRealmPath}:/opt/keycloak/data/import/e2e-secondary.json:ro`,
-              ]
-            : []),
-        ],
+        // Lane giữ container qua nhiều run nên realm được import lại bằng
+        // admin API thay vì mount file lúc khởi động.
+        volumes: state.lane
+          ? []
+          : [
+              `${realmPath}:/opt/keycloak/data/import/e2e.json:ro`,
+              ...(secondaryRealmPath
+                ? [
+                    `${secondaryRealmPath}:/opt/keycloak/data/import/e2e-secondary.json:ro`,
+                  ]
+                : []),
+            ],
       },
       minio: {
         image:
@@ -607,7 +656,9 @@ function composeConfig(state, realmPath, secondaryRealmPath) {
       },
     },
   };
-  state.composeFile = resolve(state.dir, 'compose.json');
+  state.composeFile = state.lane
+    ? state.lane.composePath
+    : resolve(state.dir, 'compose.json');
   privateJson(state.composeFile, compose);
 }
 
@@ -900,8 +951,7 @@ export function startProcess(state, name, binary, args, env) {
 }
 
 function bootstrapMinio(state) {
-  const image =
-    'cgr.dev/chainguard/minio@sha256:c93745c56fccdaf0e5dcb88999a96a65a136428beb045ef5d546255a80d747a7';
+  const image = MC_IMAGE;
   const buckets = {
     assets: `e2e-${state.id}-assets`,
     imports: `e2e-${state.id}-imports`,
@@ -1054,19 +1104,28 @@ function bootstrapMinio(state) {
   state.minio = { buckets, identities };
 }
 
-export async function createRuntime(caseIds) {
+export async function createRuntime(caseIds, options = {}) {
+  // `options.lane` là lane đã được caller khoá; không tự lấy lock ở đây để
+  // run.mjs báo được trạng thái chờ và nhả lock đúng thứ tự.
+  const lane = options.lane || null;
+  const laneValues = lane ? laneSecrets(lane) : null;
   const id = `${Date.now().toString(36)}-${randomBytes(3).toString('hex')}`;
   const state = {
     id,
-    project: `e2e-${id}`,
-    realm: `e2e-${id}`,
-    suffix: `e2e-${id}.test`,
+    lane: lane
+      ? { name: lane.name, laneId: lane.laneId, tlsPort: lane.tlsPort }
+      : null,
+    project: lane ? lane.project : `e2e-${id}`,
+    realm: lane ? lane.realm : `e2e-${id}`,
+    suffix: lane ? lane.suffix : `e2e-${id}.test`,
+    databaseName: lane ? runDatabase(id) : 'e2e',
     children: [],
     ports: {},
     secrets: {
-      pg: randomBytes(24).toString('hex'),
-      kc: randomBytes(24).toString('hex'),
-      minio: randomBytes(24).toString('hex'),
+      // Secret hạ tầng phải theo lane: container chỉ đọc env lúc khởi động.
+      pg: laneValues ? laneValues.pg : randomBytes(24).toString('hex'),
+      kc: laneValues ? laneValues.kc : randomBytes(24).toString('hex'),
+      minio: laneValues ? laneValues.minio : randomBytes(24).toString('hex'),
       hmac: randomBytes(32).toString('hex'),
       credential: randomBytes(24).toString('hex'),
     },
@@ -1074,7 +1133,7 @@ export async function createRuntime(caseIds) {
   state.dir = resolve(E2E, '.artifacts', id);
   mkdirSync(state.dir, { recursive: true, mode: 0o700 });
   state.sourceProvenance = captureSourceProvenance(ROOT);
-  state.tlsPort = await freePort();
+  state.tlsPort = lane ? lane.tlsPort : await freePort();
   state.origins = Object.fromEntries(
     ['web', 'portal', 'marketing', 'api', 'auth', 'mailpit'].map((key) => [
       key,
@@ -1085,20 +1144,26 @@ export async function createRuntime(caseIds) {
     state.origins.faultPortal = `https://fault-portal.${state.suffix}:${state.tlsPort}`;
   if (caseIds.includes('AUTH-05'))
     state.origins.shortWeb = `https://short-web.${state.suffix}:${state.tlsPort}`;
-  certs(state);
+  certs(state, lane ? { dir: lane.dir, reuse: true } : {});
   const realmPath = realmConfig(state, caseIds);
   const secondaryRealmPath = secondaryRealmConfig(state, caseIds);
   composeConfig(state, realmPath, secondaryRealmPath);
   privateJson(resolve(state.dir, 'owner.json'), {
     runId: id,
     project: state.project,
+    lane: lane ? lane.name : null,
     root: ROOT,
     pid: process.pid,
   });
   try {
-    console.log(`E2E ${id}: khởi tạo stack Docker riêng`);
+    console.log(
+      lane
+        ? `E2E ${id}: dùng lane ${lane.name}, stack Docker dùng lại`
+        : `E2E ${id}: khởi tạo stack Docker riêng`,
+    );
     const log = openSync(resolve(state.dir, 'compose.log'), 'a', 0o600);
     try {
+      // `up -d --wait` là idempotent: lane đang chạy thì đây chỉ là healthcheck.
       command(
         'docker',
         [
@@ -1132,6 +1197,19 @@ export async function createRuntime(caseIds) {
     if (state.origins.faultPortal) state.ports.faultPortal = await freePort();
     if (state.origins.shortWeb) state.ports.shortWeb = await freePort();
     await startProxy(state);
+    if (lane) {
+      await waitFor(
+        'Keycloak admin API',
+        async () =>
+          (
+            await fetch(
+              `http://127.0.0.1:${state.ports.auth}/realms/master/.well-known/openid-configuration`,
+            )
+          ).status === 200,
+        150_000,
+      );
+      await importRealms(state, [realmPath, secondaryRealmPath]);
+    }
     await waitFor(
       'Keycloak realm OIDC HTTPS',
       () =>
@@ -1161,12 +1239,50 @@ export async function createRuntime(caseIds) {
           .status === 200,
     );
     bootstrapMinio(state);
+    if (lane) {
+      await clearMailbox(state);
+      await provisionRunDatabase(state);
+    }
     return state;
   } catch (error) {
     await destroyRuntime(state);
     if (error.message?.startsWith('BLOCKED: MinIO ')) throw error;
+    // Lane: giữ nguyên lý do BLOCKED (database/realm/mailbox) thay vì gộp thành
+    // lỗi setup chung; đường stack-riêng giữ hành vi cũ.
+    if (lane && error.message?.startsWith('BLOCKED: ')) throw error;
     throw new Error(
       `BLOCKED: không tạo được isolated runtime (${error.code || 'setup_failed'}); log private: ${state.dir}`,
+    );
+  }
+}
+
+/**
+ * Trong lane, cleanup xoá tài nguyên logic của run (database, realm, mailbox,
+ * bucket/user/policy) và giữ container cho run kế tiếp. Lane lock do caller nhả.
+ */
+async function destroyLaneRun(state) {
+  const failures = [];
+  const step = async (name, body) => {
+    try {
+      await body();
+    } catch (error) {
+      failures.push(`${name}: ${error.message || error.code || 'failed'}`);
+    }
+  };
+  await step('database', () => dropRunDatabase(state));
+  await step('realm', () =>
+    deleteRealms(state, [state.realm, state.secondaryRealm]),
+  );
+  await step('mailbox', () => clearMailbox(state));
+  await step('object-storage', async () => {
+    const lane = laneConfig(state.lane.laneId);
+    removeRunObjectStorage(state, MC_IMAGE, laneSecrets(lane).minio);
+  });
+  if (failures.length) {
+    writeFileSync(
+      resolve(state.dir, 'lane-cleanup.log'),
+      failures.join('\n') + '\n',
+      { mode: 0o600 },
     );
   }
 }
@@ -1199,6 +1315,10 @@ export async function destroyRuntime(state) {
   if (state.proxy) {
     state.proxy.closeAllConnections();
     await new Promise((done) => state.proxy.close(done));
+  }
+  if (state.lane) {
+    await destroyLaneRun(state);
+    return;
   }
   if (state.composeFile) {
     const log = openSync(resolve(state.dir, 'cleanup.log'), 'a', 0o600);

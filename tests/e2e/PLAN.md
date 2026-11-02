@@ -495,7 +495,7 @@ Vì vậy mỗi run hiện phải build lại toàn bộ frontend production. Đ
 - **Shard theo case group:** ba vòng Web tuần tự `WEB-01–04` / `WEB-05–09` / `WEB-10–13` (`mvxomaja-f033ff`, `mvxoo1n7-64f925`, `mvxosf1l-6a95d0`) chạy song song trên ba worktree. Tầng 2 ở §15 chủ yếu là `test:integration:local` và `test:e2e:http` — nhẹ hơn nhiều, shard được rộng hơn.
 - **Trần tài nguyên:** mỗi run là năm container, Keycloak nặng nhất. Bắt đầu 2–3 run song song, đo RAM/CPU rồi mới tăng; không đẩy số lane vượt khả năng máy rồi quy kết quả cho flaky.
 
-### 16.4 Lane cố định — bỏ rebuild mỗi run
+### 16.4 Lane cố định — bỏ rebuild mỗi run (đã triển khai)
 
 Thay `runId` trong origin bằng `laneId` cố định:
 
@@ -504,7 +504,7 @@ Thay `runId` trong origin bằng `laneId` cố định:
 - Lane giữ lock liên tiến trình (file lock theo lane); run lấy lane rảnh và trả lại trong `finally` — đúng cơ chế §4.2 đã dự trù, chỉ áp cho nhiều lane thay vì một stack.
 - Cookie isolation giữ nguyên: hai run song song nằm ở hai host khác nhau. Run tuần tự trong cùng lane phải reset fixture do harness sở hữu trước khi release lock.
 
-### 16.5 Tái dùng container, cấp phát logic cho mỗi run
+### 16.5 Tái dùng container, cấp phát logic cho mỗi run (đã triển khai)
 
 Giữ stack theo lane sống lâu, tách run ở mức logic thay vì dựng container mới:
 
@@ -529,3 +529,22 @@ Nếu Web/Portal đọc public origin lúc chạy thay vì nướng lúc build (
 5. Cân nhắc §16.6 nếu vẫn cần thêm throughput.
 
 Mỗi bước phải đo lại wall-clock một vòng tầng 2, số run song song ổn định và tỉ lệ flake. Không tuyên bố tăng throughput khi chưa có số trước/sau.
+
+### 16.8 Trạng thái triển khai
+
+Bước 2 và 3 đã có code trong harness; chế độ mặc định (stack riêng cho mỗi run) **không đổi**, lane là opt-in.
+
+| Thành phần | Nơi triển khai |
+| ---------- | --------------- |
+| Lane pool, lock liên tiến trình, build marker | [`harness/lane.mjs`](harness/lane.mjs) |
+| Template database, realm import qua admin API, dọn mailbox/object storage theo run | [`harness/lane-infra.mjs`](harness/lane-infra.mjs) |
+| `createRuntime`/`destroyRuntime` nhận lane, compose dùng lại, cert theo lane | [`harness/runtime.mjs`](harness/runtime.mjs) |
+| Cờ `--lane[=N]`, `--rebuild`, nhả lock trong `finally`, `lane` trong summary | [`harness/run.mjs`](harness/run.mjs) |
+| Bỏ migration khi đã có template, manifest mang `lane` | [`harness/seed.mjs`](harness/seed.mjs) |
+| Chấp nhận hostname lane trong manifest | [`validation/validate.mjs`](validation/validate.mjs) |
+| `status` / `down` cho lane pool | [`harness/lane-cli.mjs`](harness/lane-cli.mjs) · `pnpm test:e2e:lane` |
+| Test logic lane (định danh, lock, build key, manifest) | [`validation/lane.test.mjs`](validation/lane.test.mjs) · `pnpm test:e2e:guards` |
+
+Quy ước: lane `N` dùng `*.e2e-lane<N>.test`, cổng TLS `44300+N`, Compose project và realm `e2e-lane<N>`; mỗi run vẫn có database riêng (`e2e_<runId>` tạo từ `e2e_tpl_<fingerprint migration>`), realm import lại, bucket/user/policy MinIO riêng và hộp thư được xoá đầu run. Build dùng lại khi git commit, fingerprint working tree và origin của lane không đổi.
+
+**Chưa xác minh:** mới chỉ chạy `pnpm test:e2e:guards` (25 test, PASS) và `pnpm test:e2e:list`. Chưa có vòng chạy thật nào trên lane, nên chưa có số wall-clock trước/sau, chưa chứng minh `CREATE DATABASE ... TEMPLATE`, realm import và cleanup hoạt động đúng trên stack Docker, và chưa đo giới hạn số lane song song trên máy. Không dùng mục này làm bằng chứng nghiệm thu cho ID nào.
