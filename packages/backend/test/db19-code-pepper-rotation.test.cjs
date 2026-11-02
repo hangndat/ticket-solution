@@ -21,6 +21,8 @@ const {
   lookupRoutableTarget,
   readCodeHmacEnvironment,
   readSupportedPepperConfigs,
+  redeemAndIssueTicket,
+  unwrapRedeemOutcome,
   IssueError,
   ISSUE_ERROR_CODES,
 } = require('../dist');
@@ -35,6 +37,7 @@ const MIGRATIONS = migrationFiles();
 
 const PEPPER_V1 = 'db19-pepper-v1-16bytes-min!';
 const PEPPER_V2 = 'db19-pepper-v2-16bytes-min!';
+const CRED_KEY = 'db19-credential-key-material';
 
 async function startIsolatedPostgres() {
   const name = 'ticket-db19-' + randomBytes(4).toString('hex');
@@ -203,6 +206,141 @@ test(
       assert.notEqual(stored[0].code_hmac, 'ROTATE-1');
       assert.doesNotMatch(stored[0].code_hmac, /ROTATE-1/i);
       void manager;
+    } finally {
+      if (db) await db.$disconnect().catch(() => {});
+      if (name) {
+        try {
+          docker('rm', '-f', name);
+        } catch {
+          /* ignore cleanup races */
+        }
+      }
+    }
+  },
+);
+
+test(
+  'DB-19: consumed code cannot be re-issued after pepper rotation (fail-closed)',
+  { timeout: 240000 },
+  async () => {
+    let name;
+    let db;
+    try {
+      const boot = await startIsolatedPostgres();
+      name = boot.name;
+      db = createDatabase(boot.url, 3);
+
+      const hmacV1 = readCodeHmacEnvironment({
+        CODE_HMAC_PEPPER: PEPPER_V1,
+        CODE_HMAC_VERSION: '1',
+      });
+
+      const users = createPrismaIdentityUserRepository(db);
+      const guest = await users.upsertFromVerifiedIdentity({
+        issuer: 'http://127.0.0.1:8080/realms/ticket',
+        subject: 'db19-guest',
+        email: 'db19-guest@example.com',
+        emailVerified: true,
+      });
+
+      const tenantId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+      const eventId = randomUUID();
+      await withTenant(db, tenantId, async (tx) => {
+        await tx.tenant.create({
+          data: { id: tenantId, slug: 'db19-consumed', name: 'Consumed' },
+        });
+        await tx.event.create({
+          data: {
+            tenantId,
+            id: eventId,
+            slug: 'db19-consumed-event',
+            name: 'Consumed Event',
+            status: 'PUBLISHED',
+            contentStatus: 'PUBLISHED',
+            businessStatus: 'ACTIVE',
+          },
+        });
+        await seedEventInventory(tx, hmacV1, {
+          tenantId,
+          eventId,
+          eventQuota: 2,
+          rawCodes: ['ROTATE-USED'],
+        });
+        const backfill = await backfillCodeRoutingFromRedemptionCodes(tx);
+        assert.equal(backfill.candidates, 1);
+      });
+
+      // Issue the code under v1 → redemption_codes.status becomes CONSUMED.
+      const issued = unwrapRedeemOutcome(
+        await withTenant(db, tenantId, (tx) =>
+          redeemAndIssueTicket(tx, hmacV1, CRED_KEY, {
+            tenantId,
+            eventId,
+            actorUserId: guest.userId,
+            actorEmail: guest.email,
+            emailVerified: true,
+            rawCode: 'ROTATE-USED',
+            idempotencyKey: randomUUID(),
+          }),
+        ),
+      );
+      assert.equal(issued.state, 'ACTIVE');
+
+      // Same pepper: a consumed code is rejected with CODE_CONSUMED, never
+      // re-issued into a second ticket.
+      await assert.rejects(
+        async () => {
+          const outcome = await withTenant(db, tenantId, (tx) =>
+            redeemAndIssueTicket(tx, hmacV1, CRED_KEY, {
+              tenantId,
+              eventId,
+              actorUserId: guest.userId,
+              actorEmail: guest.email,
+              emailVerified: true,
+              rawCode: 'ROTATE-USED',
+              idempotencyKey: randomUUID(),
+            }),
+          );
+          unwrapRedeemOutcome(outcome);
+        },
+        (e) =>
+          e instanceof IssueError &&
+          e.code === ISSUE_ERROR_CODES.CODE_CONSUMED,
+      );
+
+      // Rotate v1→v2 (v1 retained in the legacy ring). The consumed code must
+      // stay un-issuable under the current pepper — rotation must not resurrect
+      // it into a second ticket.
+      const hmacV2 = readCodeHmacEnvironment({
+        CODE_HMAC_PEPPER: PEPPER_V2,
+        CODE_HMAC_VERSION: '2',
+      });
+      await assert.rejects(
+        async () => {
+          const outcome = await withTenant(db, tenantId, (tx) =>
+            redeemAndIssueTicket(tx, hmacV2, CRED_KEY, {
+              tenantId,
+              eventId,
+              actorUserId: guest.userId,
+              actorEmail: guest.email,
+              emailVerified: true,
+              rawCode: 'ROTATE-USED',
+              idempotencyKey: randomUUID(),
+            }),
+          );
+          unwrapRedeemOutcome(outcome);
+        },
+        (e) => e instanceof IssueError,
+      );
+
+      // Invariant: exactly one ticket exists; rotation never resurrected the code.
+      const ticketCount = await withTenant(db, tenantId, (tx) =>
+        tx.$queryRaw`
+          SELECT COUNT(*)::int AS n FROM tickets
+          WHERE tenant_id = ${tenantId}::uuid AND event_id = ${eventId}::uuid
+        `,
+      );
+      assert.equal(Number(ticketCount[0].n), 1);
     } finally {
       if (db) await db.$disconnect().catch(() => {});
       if (name) {

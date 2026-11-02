@@ -124,6 +124,7 @@ export const catalog = {
     b('account-idp-erasure', 'SEC-2 B1:'),
     b('issue-unit', 'CODE_HMAC_PEPPER', 'U'),
     b('db19-code-pepper-rotation', 'DB-19: code issued under v1 keeps resolving after v2 rotation; removed v1 fails closed; no plaintext'),
+    b('db19-code-pepper-rotation', 'DB-19: consumed code cannot be re-issued after pepper rotation (fail-closed)'),
   ],
   'GATE-01': [b('gates', 'O31 gates:')],
   'GATE-02': [
