@@ -218,8 +218,9 @@ export const catalog = {
     'H:tests/e2e/http/live.test.mjs#[SEC-02]',
     'B:tests/e2e/harness/security.spec.ts#[SEC-02]',
   ],
-  'SEC-03': [],
+  'SEC-03': ['H:tests/e2e/http/live.test.mjs#[SEC-03]'],
   'SEC-04': [
+    'H:tests/e2e/http/live.test.mjs#[SEC-04]',
     a('redemptions-resolve-rls', 'resolve rate limit and API endpoint matrix', 'D'),
     b('job04-resend-caps', '[JOB-04] D staff resend: cooldown'),
     a('import-list', 'G-09 API limits'),
@@ -232,6 +233,7 @@ export const catalog = {
     b('notification-unit', 'template allowlist', 'U'),
   ],
   'SEC-06': [
+    'H:tests/e2e/http/live.test.mjs#[SEC-06]',
     b('cs-export', 'CS lookup/export/events'),
     b('portal-audit-codes', 'H-A1/H-C1/H-P-AUDIT'),
     w('worker-budget-fault', 'queue alert emits only aggregate'),

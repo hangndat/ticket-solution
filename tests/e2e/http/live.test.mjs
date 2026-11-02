@@ -2597,6 +2597,20 @@ for (const caseId of CASE_IDS) {
         'import jobs list',
       );
 
+      const invitationListPath = `/tenants/${f.tenantId}/events/${f.eventId}/invitations`;
+      assertRateLimited(
+        await request(ctx, 'GET', invitationListPath, owner),
+        { code: 'RATE_LIMITED', retryable: true, retryAfter: true },
+        'invitations list',
+      );
+
+      const tenantLimitsPath = `/tenants/${f.tenantId}/limits`;
+      assertRateLimited(
+        await request(ctx, 'GET', tenantLimitsPath, owner),
+        { code: 'RATE_LIMITED', retryable: true, retryAfter: true },
+        'tenant limits usage',
+      );
+
       const clientEventId = randomUUID();
       assertRateLimited(
         await request(
@@ -3425,6 +3439,27 @@ for (const caseId of CASE_IDS) {
         'audit denied error',
       );
 
+      const cs = await bearer(ctx, 'cs');
+      const csAssignmentId = required(f.data?.csAssignmentId, 'SEC-06 csAssignmentId');
+      assert.match(csAssignmentId, /^[0-9a-f-]{36}$/i);
+      const csTicketPath = `/tenants/${tenantId}/events/${eventId}/tickets/${required(f.data?.csTicketId, 'SEC-06 csTicketId')}`;
+      const csDetail = await request(ctx, 'GET', csTicketPath, cs);
+      expectStatus(csDetail, 200);
+      assert.equal(
+        /\bpublic\b/i.test(csDetail.headers.get('cache-control') ?? ''),
+        false,
+        'CS ticket detail must not be publicly cacheable',
+      );
+      assertNoForbiddenStrings(csDetail.body, FORBIDDEN_VALUES, 'CS ticket detail');
+      assertNoForbiddenKeys(
+        csDetail.body,
+        ['email', 'phone', 'reason', 'sanitizedDiff', 'codeHmac', 'rawCode', 'token'],
+        'CS ticket detail',
+      );
+      assert.equal(typeof csDetail.body.ownerEmailMasked, 'string');
+      assert.notEqual(csDetail.body.ownerEmailMasked, f.accounts.attendee.username);
+      assert.match(csDetail.body.ownerEmailMasked, /\*\*\*/);
+
       const codesPath = `/tenants/${tenantId}/events/${eventId}/codes`;
       const codesBySource = await request(
         ctx,
@@ -3538,6 +3573,30 @@ for (const caseId of CASE_IDS) {
         false,
         'error body must not leak stack',
       );
+
+      const beforePlatformAuditDeny = await platformGrantSnapshot(ctx, tenantId);
+      const platformAuditDenied = await request(
+        ctx,
+        'GET',
+        `/platform/audit?tenantId=${tenantId}&limit=50`,
+      );
+      expectStatus(platformAuditDenied, 401);
+      assert.equal(
+        /\bpublic\b/i.test(platformAuditDenied.headers.get('cache-control') ?? ''),
+        false,
+        'platform audit denial must not be publicly cacheable',
+      );
+      assertNoForbiddenStrings(platformAuditDenied.body, FORBIDDEN_VALUES, 'platform audit unauthenticated');
+      assert.deepEqual(
+        await platformGrantSnapshot(ctx, tenantId),
+        beforePlatformAuditDeny,
+        'unauthenticated platform audit must not create platform audit rows or grants',
+      );
+
+      const apiLog = readFileSync(`${required(process.env.E2E_RUN_DIR, 'E2E_RUN_DIR')}/api.log`, 'utf8');
+      for (const value of FORBIDDEN_VALUES) {
+        assert.equal(apiLog.includes(value), false, 'API process log must not contain SEC-06 secret canaries');
+      }
       return;
     }
     if (caseId === 'AUTH-03') {
