@@ -821,10 +821,16 @@ async function web04Query(f, tenantId, statement, values) {
   }
 }
 
-async function gateSnapshot(f, eventId, ticketId, rejectReason) {
+async function gateSnapshot(
+  f,
+  eventId,
+  ticketId,
+  rejectReason,
+  tenantId = f.tenantId,
+) {
   const [row] = await web04Query(
     f,
-    f.tenantId,
+    tenantId,
     `SELECT
        (SELECT state FROM tickets WHERE tenant_id = $1::uuid AND id = $2::uuid) AS ticket_state,
        (SELECT credential_version FROM tickets WHERE tenant_id = $1::uuid AND id = $2::uuid) AS credential_version,
@@ -832,7 +838,7 @@ async function gateSnapshot(f, eventId, ticketId, rejectReason) {
        (SELECT count(*) FROM checkins WHERE tenant_id = $1::uuid AND ticket_id = $2::uuid) AS checkin_count,
        (SELECT count(*) FROM audit_logs WHERE tenant_id = $1::uuid AND event_id = $3::uuid
           AND action = 'gate.reject' AND reason = $4) AS reject_count`,
-    [f.tenantId, ticketId, eventId, rejectReason],
+    [tenantId, ticketId, eventId, rejectReason],
   );
   return row;
 }
@@ -843,6 +849,7 @@ async function assertGateDenyNoMutation(ctx, f, input) {
     input.auditEventId ?? f.eventId,
     input.ticketId,
     input.code,
+    input.auditTenantId ?? f.tenantId,
   );
   const result = await request(
     ctx,
@@ -857,6 +864,7 @@ async function assertGateDenyNoMutation(ctx, f, input) {
     input.auditEventId ?? f.eventId,
     input.ticketId,
     input.code,
+    input.auditTenantId ?? f.tenantId,
   );
   for (const key of [
     'ticket_state',
@@ -4216,6 +4224,37 @@ for (const caseId of CASE_IDS) {
         body: {
           tenantId: f.tenantId,
           staffSessionId: foreignSession.body.sessionId,
+          presented: { kind: 'qr', jws },
+        },
+      });
+
+      const foreignTenantId = required(
+        f.data?.foreignTenantId,
+        'GATE-03 foreignTenantId',
+      );
+      const foreignTenantEventId = required(
+        f.data?.foreignTenantEventId,
+        'GATE-03 foreignTenantEventId',
+      );
+      const foreignTenantSession = await request(
+        ctx,
+        'POST',
+        `/gate/events/${foreignTenantEventId}/sessions`,
+        scanner,
+        { tenantId: foreignTenantId },
+      );
+      expectStatus(foreignTenantSession, 200);
+      await assertGateDenyNoMutation(ctx, f, {
+        ticketId,
+        token: scanner,
+        path: `/gate/events/${foreignTenantEventId}/reservations`,
+        auditEventId: foreignTenantEventId,
+        auditTenantId: foreignTenantId,
+        status: 409,
+        code: 'CREDENTIAL_CONTEXT_MISMATCH',
+        body: {
+          tenantId: foreignTenantId,
+          staffSessionId: foreignTenantSession.body.sessionId,
           presented: { kind: 'qr', jws },
         },
       });

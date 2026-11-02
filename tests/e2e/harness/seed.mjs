@@ -886,6 +886,41 @@ export async function seedRuntime(state, caseIds) {
             permissions: backend.eventPermissionsForRole('Scanner'),
           });
           fixture.data.foreignEventId = foreignEventId;
+
+          const foreignTenantId = randomUUID();
+          const foreignTenantEventId = randomUUID();
+          await backend.withTenant(db, foreignTenantId, async (foreignTx) => {
+            await foreignTx.tenant.create({
+              data: {
+                id: foreignTenantId,
+                slug: `gate03-other-${state.id}`,
+                name: `Other tenant ${caseId}`,
+              },
+            });
+            const scannerMembership = await backend.grantMembership(foreignTx, {
+              tenantId: foreignTenantId,
+              userId: accounts.scanner.userId,
+              role: 'Scanner',
+              permissions: backend.tenantPermissionsForRole('Scanner'),
+            });
+            await foreignTx.event.create({
+              data: {
+                tenantId: foreignTenantId,
+                id: foreignTenantEventId,
+                slug: 'event',
+                name: `Other tenant event ${caseId}`,
+                status: 'PUBLISHED',
+              },
+            });
+            await backend.grantEventAssignment(foreignTx, {
+              tenantId: foreignTenantId,
+              eventId: foreignTenantEventId,
+              membershipId: scannerMembership.membershipId,
+              permissions: backend.eventPermissionsForRole('Scanner'),
+            });
+          });
+          fixture.data.foreignTenantId = foreignTenantId;
+          fixture.data.foreignTenantEventId = foreignTenantEventId;
         }
         if (caseId === 'WEB-04') {
           const expiredEventId = randomUUID();
