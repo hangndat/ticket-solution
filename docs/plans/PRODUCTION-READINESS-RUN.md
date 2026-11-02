@@ -12,15 +12,15 @@ Nghiên cứu nghiệp vụ, UX/UI, kiến trúc/vận hành và bảo mật; t�
 
 ## Phân công
 
-Tất cả worker dùng `cursor`, theo `.cursor/rules/orca-agent-routing-coordinator.mdc`; không override model. Các task độc lập được giao cùng wave, chỉ ghi report được phân công, không sửa source hoặc tài liệu khác.
+Tất cả worker dùng `cursor`, theo `docs/agents/workflows/dispatch.md`; không override model. Các task độc lập được giao cùng wave, chỉ ghi report được phân công, không sửa source hoặc tài liệu khác.
 
-| Task | Vai trò / tài liệu | Dispatch | Báo cáo được giao |
-| --- | --- | --- | --- |
-| Tổng hợp roadmap | Epic planner; không coding, không worker con | `ctx_ac1c063e393e` | `PRODUCTION-READINESS-ROADMAP.md` |
-| Nghiệp vụ | `product-ba` / `docs/agents/roles/product-ba.md` | `ctx_bdc9363309a2` | `PRODUCTION-READINESS-BA.md` |
-| Trải nghiệm | `product-design` / `docs/agents/roles/product-design.md` | `ctx_72fbe28af246` | `PRODUCTION-READINESS-UX.md` |
-| Kiến trúc/vận hành | `architect` / `docs/agents/roles/architect.md` | `ctx_566d14427627` | `PRODUCTION-READINESS-ARCHITECTURE.md` |
-| Bảo mật | `reviewer-security` / `docs/agents/roles/reviewer-security.md` | `ctx_03891bf41549` | `PRODUCTION-READINESS-SECURITY.md` |
+| Task               | Vai trò / tài liệu                                             | Dispatch           | Báo cáo được giao                      |
+| ------------------ | -------------------------------------------------------------- | ------------------ | -------------------------------------- |
+| Tổng hợp roadmap   | Epic planner; không coding, không worker con                   | `ctx_ac1c063e393e` | `PRODUCTION-READINESS-ROADMAP.md`      |
+| Nghiệp vụ          | `product-ba` / `docs/agents/roles/product-ba.md`               | `ctx_bdc9363309a2` | `PRODUCTION-READINESS-BA.md`           |
+| Trải nghiệm        | `product-design` / `docs/agents/roles/product-design.md`       | `ctx_72fbe28af246` | `PRODUCTION-READINESS-UX.md`           |
+| Kiến trúc/vận hành | `architect` / `docs/agents/roles/architect.md`                 | `ctx_566d14427627` | `PRODUCTION-READINESS-ARCHITECTURE.md` |
+| Bảo mật            | `reviewer-security` / `docs/agents/roles/reviewer-security.md` | `ctx_03891bf41549` | `PRODUCTION-READINESS-SECURITY.md`     |
 
 ## Yêu cầu đầu ra
 

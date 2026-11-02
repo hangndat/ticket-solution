@@ -11,13 +11,13 @@
 
 **Có thể đo hiệu quả theo Role catalog** — nhưng **không** bằng cách mua một SaaS LLM observability rồi gắn vào Cursor.
 
-| Layer | MVP khả thi ngay | Gap chính |
-| ----- | ---------------- | --------- |
-| Attribution | Role ID trong Task Spec × `dispatch_id` | Orca `projection.role` = `worker`, **không** = catalog |
-| Cost / token | Proxy: wall-clock + rework + turns | Cursor path opaque; agent-top: Cursor = process only, tokens “not yet” |
-| Quality | Project Status + DoD exact-SHA + reopen | Không dùng vanity / tự chấm |
-| Host | PID sampler / agent-top CPU·MEM | Cần map terminalHandle → process tree |
-| Surface | CLI + markdown export | **Không** nhét vào portal Vemoki (`apps/web`) ở MVP |
+| Layer        | MVP khả thi ngay                        | Gap chính                                                              |
+| ------------ | --------------------------------------- | ---------------------------------------------------------------------- |
+| Attribution  | Role ID trong Task Spec × `dispatch_id` | Orca `projection.role` = `worker`, **không** = catalog                 |
+| Cost / token | Proxy: wall-clock + rework + turns      | Cursor path opaque; agent-top: Cursor = process only, tokens “not yet” |
+| Quality      | Project Status + DoD exact-SHA + reopen | Không dùng vanity / tự chấm                                            |
+| Host         | PID sampler / agent-top CPU·MEM         | Cần map terminalHandle → process tree                                  |
+| Surface      | CLI + markdown export                   | **Không** nhét vào portal Vemoki (`apps/web`) ở MVP                    |
 
 **Chiến lược:** **hybrid** — build ledger + join Orca/Project; adopt agent-top (host); align attribute với OTel GenAI sau; **không** full-buy Langfuse/LangSmith/Helicone làm SoT cho session Cursor.
 
@@ -27,14 +27,14 @@
 
 Đã khảo sát ≥8 hệ (chi tiết `04-sota-landscape.md`):
 
-| Hệ | Token/cost | CPU/RAM | Multi-agent | Fit Cursor+Orca |
-| -- | ---------- | ------- | ----------- | --------------- |
-| OTel GenAI conventions | Có (spec) | Không | `gen_ai.agent.name` | Từ điển attribute; Cursor chưa được liệt kê emit |
-| Langfuse / Phoenix | Có | Không | Graph/nest | Self-host OK nếu **ta** gọi LLM; miss IDE agent |
-| LangSmith | Có | Không | Nested runs | SaaS/Enterprise; stack không phải LangChain |
-| Helicone | Có (qua proxy) | Không | Session props | Cursor thường **không** đi qua proxy của ta |
-| Google Agent Platform obs. | Có | Container | Topology | Pattern tham khảo; không migrate |
-| **agent-top** | Transcript-based; **Cursor tokens not yet** | **Có** (process tree) | Per harness | **Gần nhất** cho host parallel workers |
+| Hệ                         | Token/cost                                  | CPU/RAM               | Multi-agent         | Fit Cursor+Orca                                  |
+| -------------------------- | ------------------------------------------- | --------------------- | ------------------- | ------------------------------------------------ |
+| OTel GenAI conventions     | Có (spec)                                   | Không                 | `gen_ai.agent.name` | Từ điển attribute; Cursor chưa được liệt kê emit |
+| Langfuse / Phoenix         | Có                                          | Không                 | Graph/nest          | Self-host OK nếu **ta** gọi LLM; miss IDE agent  |
+| LangSmith                  | Có                                          | Không                 | Nested runs         | SaaS/Enterprise; stack không phải LangChain      |
+| Helicone                   | Có (qua proxy)                              | Không                 | Session props       | Cursor thường **không** đi qua proxy của ta      |
+| Google Agent Platform obs. | Có                                          | Container             | Topology            | Pattern tham khảo; không migrate                 |
+| **agent-top**              | Transcript-based; **Cursor tokens not yet** | **Có** (process tree) | Per harness         | **Gần nhất** cho host parallel workers           |
 
 **Insight chung ngành:** cost-per-outcome + trace handoff orchestrator→worker; stack ta thiếu “SDK gọi model” nên phải **ledger quanh Orca Dispatch**.
 
@@ -44,7 +44,7 @@
 
 Hiệu quả role ≈ **Quality / (Cost_proxy + Host_proxy + Process_penalty)** — **role-specific**, không leaderboard token chung.
 
-Bốn lớp: `cost.*` · `qual.*` · `host.*` · process WIP (đã có mầm trong `github-project-tracking.mdc`).
+Bốn lớp: `cost.*` · `qual.*` · `host.*` · process WIP (đã có mầm trong `docs/agents/policies/project.md`).
 
 MVP đo được **hôm nay không cần token meter:** `cost.wall_ms`, `cost.rework_dispatches`, `qual.reopen`, thời gian chờ duyệt, CI re-run — gắn `meter=proxy` khi thiếu token.
 
@@ -88,13 +88,13 @@ Claim “role X hơn Y” chỉ PASS khi: cùng class Task, cùng cửa sổ, sa
 
 ## 7. Đề xuất bước tiếp (cần bạn chốt)
 
-| # | Quyết định | Gợi ý coordinator |
-| - | ---------- | ----------------- |
-| D1 | Mở Epic implement MVP ledger + CLI rollup? | Có — scope tooling, không portal |
-| D2 | Thử agent-top trên fleet Orca (host only)? | Có — evaluate Cursor token gap |
-| D3 | Cursor Teams Admin API / hooks cho token join? | Spike riêng nếu account hỗ trợ |
-| D4 | Commit spike docs `docs/spikes/agent-role-monitor/*` lên branch? | Khi bạn yêu cầu commit |
-| D5 | Đưa metric vào Project automation weekday? | Sau khi có JSONL ổn định |
+| #   | Quyết định                                                       | Gợi ý coordinator                |
+| --- | ---------------------------------------------------------------- | -------------------------------- |
+| D1  | Mở Epic implement MVP ledger + CLI rollup?                       | Có — scope tooling, không portal |
+| D2  | Thử agent-top trên fleet Orca (host only)?                       | Có — evaluate Cursor token gap   |
+| D3  | Cursor Teams Admin API / hooks cho token join?                   | Spike riêng nếu account hỗ trợ   |
+| D4  | Commit spike docs `docs/spikes/agent-role-monitor/*` lên branch? | Khi bạn yêu cầu commit           |
+| D5  | Đưa metric vào Project automation weekday?                       | Sau khi có JSONL ổn định         |
 
 **Không làm mặc định:** deploy prod, nhúng monitor vào tenant admin, mua LangSmith làm SoT.
 
@@ -102,15 +102,15 @@ Claim “role X hơn Y” chỉ PASS khi: cùng class Task, cùng cửa sổ, sa
 
 ## 8. Index artifact
 
-| File | Role | Trọng tâm |
-| ---- | ---- | --------- |
-| [01-ba-metrics-taxonomy.md](./01-ba-metrics-taxonomy.md) | product-ba | Định nghĩa hiệu quả + metric IDs |
-| [02-pd-monitor-ux.md](./02-pd-monitor-ux.md) | product-design | UX composition + states |
-| [03-architect-telemetry.md](./03-architect-telemetry.md) | architect | Data-flow + ADR draft |
-| [04-sota-landscape.md](./04-sota-landscape.md) | product-ba (SOTA) | Internet scan + build/buy/hybrid |
-| [05-dod-evidence-gates.md](./05-dod-evidence-gates.md) | reviewer-dod | Chống vanity / checklist |
-| [06-backend-data-plane.md](./06-backend-data-plane.md) | backend | JSONL schema + retention |
-| [07-web-surfaces.md](./07-web-surfaces.md) | web | CLI+MD vs portal |
+| File                                                     | Role              | Trọng tâm                        |
+| -------------------------------------------------------- | ----------------- | -------------------------------- |
+| [01-ba-metrics-taxonomy.md](./01-ba-metrics-taxonomy.md) | product-ba        | Định nghĩa hiệu quả + metric IDs |
+| [02-pd-monitor-ux.md](./02-pd-monitor-ux.md)             | product-design    | UX composition + states          |
+| [03-architect-telemetry.md](./03-architect-telemetry.md) | architect         | Data-flow + ADR draft            |
+| [04-sota-landscape.md](./04-sota-landscape.md)           | product-ba (SOTA) | Internet scan + build/buy/hybrid |
+| [05-dod-evidence-gates.md](./05-dod-evidence-gates.md)   | reviewer-dod      | Chống vanity / checklist         |
+| [06-backend-data-plane.md](./06-backend-data-plane.md)   | backend           | JSONL schema + retention         |
+| [07-web-surfaces.md](./07-web-surfaces.md)               | web               | CLI+MD vs portal                 |
 
 ---
 
@@ -120,33 +120,32 @@ Claim “role X hơn Y” chỉ PASS khi: cùng class Task, cùng cửa sổ, sa
 - Chưa có số đo thật từ fleet (token/CPU) trong spike.
 - iOS / reviewer-security không có file riêng; host iOS sim nằm trong taxonomy BA + architect host layer.
 
-
 ---
 
 ## Implementation status
 
 > Mục này bổ sung sau wave research — **không thay** verdict / SOTA / taxonomy ở các mục trên.
 
-| Artifact | Status | Ghi chú |
-| -------- | ------ | ------- |
+| Artifact    | Status          | Ghi chú                                                                                                                                                                                                                                           |
+| ----------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Runbook ops | **Đã cập nhật** | [`docs/ops/AGENT-ROLE-MONITOR.md`](../../ops/AGENT-ROLE-MONITOR.md) — `record-opened` → **`record-join`** → settle `ingest-settlement` → `rollup`; hook `stop` → `cursor.turn`; privacy; gaps (subagent, CLI/terminal fire); pointer probe **09** |
-| Ledger lib | **Đã có** | `scripts/agent-role-monitor/lib/ledger.mjs` (+ `host-sample.mjs`) — schema v1: opened / settled / **`join.conversation`** / **`cursor.turn`** / rollup token sums |
-| CLI entry | **Đã có** | `scripts/agent-role-monitor/cli.mjs` + `pnpm agent-metrics:*` (opened / **join** / ingest / **ingest-cursor-turn** / rollup / host-sample / test) |
-| Surface | CLI + MD | Portal hoãn (`07`) |
-| Meter token | Partial | Có path hooks → `cursor.turn` khi join sẵn; thiếu join / hook chưa fire / subagent → rollup `tokens_*` = **null**, không `0` |
+| Ledger lib  | **Đã có**       | `scripts/agent-role-monitor/lib/ledger.mjs` (+ `host-sample.mjs`) — schema v1: opened / settled / **`join.conversation`** / **`cursor.turn`** / rollup token sums                                                                                 |
+| CLI entry   | **Đã có**       | `scripts/agent-role-monitor/cli.mjs` + `pnpm agent-metrics:*` (opened / **join** / ingest / **ingest-cursor-turn** / rollup / host-sample / test)                                                                                                 |
+| Surface     | CLI + MD        | Portal hoãn (`07`)                                                                                                                                                                                                                                |
+| Meter token | Partial         | Có path hooks → `cursor.turn` khi join sẵn; thiếu join / hook chưa fire / subagent → rollup `tokens_*` = **null**, không `0`                                                                                                                      |
 
 ### Hooks status
 
-| Hạng mục | Status | Chi tiết |
-| -------- | ------ | -------- |
-| Project hooks wired | **Đã có** | `.cursor/hooks.json` → `stop` + `afterAgentResponse` → `.cursor/hooks/agent-metrics-cursor-turn.sh` (không đụng `~/.cursor/hooks.json`) |
-| SoT turn tokens | **`stop`** | `afterAgentResponse` accepted, dedupe theo `generation_id` |
-| Join trước ingest | **Bắt buộc process** | `pnpm agent-metrics:join` (`record-join`) map `conversation_id` ↔ `dispatch_id` + `role_id`; thiếu join → skip `join_missing` (exit 0) |
-| Rollup tokens | **Đã có** | `rollup` cộng `tokens_in/out/cache_*_sum` từ `cursor.turn`; field null nếu mọi turn thiếu số |
-| Privacy | **Fail-open + strip** | Hook không lưu text/prompt/transcript; log local `.orca-metrics/cursor-hooks.log`; ledger gitignored |
-| Subagent | **Gap** | `subagentStop` không có token; reasoning tokens chưa expose qua hooks |
-| CLI / terminal fire? | **Chưa chứng minh** | Orca CLI / terminal-only worker có fire `stop` + lấy `conversation_id` ổn định không — **xem `09` khi probe xong** |
-| Probe 09 | **Chưa có** | Artifact `09-*` chưa tồn tại trong spike; runbook chỉ pointer “xem 09 khi probe xong” |
-| agent-top (08) | **Host only** | CPU/MEM hữu dụng; Cursor tokens qua agent-top vẫn 0 / `$0.00` |
+| Hạng mục             | Status                | Chi tiết                                                                                                                                |
+| -------------------- | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Project hooks wired  | **Đã có**             | `.cursor/hooks.json` → `stop` + `afterAgentResponse` → `.cursor/hooks/agent-metrics-cursor-turn.sh` (không đụng `~/.cursor/hooks.json`) |
+| SoT turn tokens      | **`stop`**            | `afterAgentResponse` accepted, dedupe theo `generation_id`                                                                              |
+| Join trước ingest    | **Bắt buộc process**  | `pnpm agent-metrics:join` (`record-join`) map `conversation_id` ↔ `dispatch_id` + `role_id`; thiếu join → skip `join_missing` (exit 0)  |
+| Rollup tokens        | **Đã có**             | `rollup` cộng `tokens_in/out/cache_*_sum` từ `cursor.turn`; field null nếu mọi turn thiếu số                                            |
+| Privacy              | **Fail-open + strip** | Hook không lưu text/prompt/transcript; log local `.orca-metrics/cursor-hooks.log`; ledger gitignored                                    |
+| Subagent             | **Gap**               | `subagentStop` không có token; reasoning tokens chưa expose qua hooks                                                                   |
+| CLI / terminal fire? | **Chưa chứng minh**   | Orca CLI / terminal-only worker có fire `stop` + lấy `conversation_id` ổn định không — **xem `09` khi probe xong**                      |
+| Probe 09             | **Chưa có**           | Artifact `09-*` chưa tồn tại trong spike; runbook chỉ pointer “xem 09 khi probe xong”                                                   |
+| agent-top (08)       | **Host only**         | CPU/MEM hữu dụng; Cursor tokens qua agent-top vẫn 0 / `$0.00`                                                                           |
 
 **Pointer cho coordinator:** copy-paste theo runbook [`docs/ops/AGENT-ROLE-MONITOR.md`](../../ops/AGENT-ROLE-MONITOR.md) + README CLI; research `01`–`08` vẫn là nguồn taxonomy / privacy / DoD / host trial; **đợi probe 09** trước khi claim token path cho CLI/terminal worker.

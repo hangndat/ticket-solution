@@ -75,7 +75,7 @@ Bổ sung state đặc thù nghiệp vụ (offline Gate, sync pending, …) nế
 ### 4. Tiêu chí nghiệm thu (UI)
 
 - AC quan sát được (Given/When/Then hoặc checklist screenshot headless).
-- Map evidence sang Orca browser/emulator theo [uat-headless.mdc](../../../.cursor/rules/uat-headless.mdc); không điều khiển desktop của user hoặc tự chạy UAT wrapper legacy ngoài rule.
+- Map evidence sang Orca browser/emulator theo [uat-headless.mdc](../workflows/uat.md); không điều khiển desktop của user hoặc tự chạy UAT wrapper legacy ngoài rule.
 
 ### 5. Hướng dẫn triển khai
 

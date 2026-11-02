@@ -1,3 +1,5 @@
+> **Snapshot lịch sử, lưu ngày 03/11/2026 từ working tree trước khi dọn docs.** Chỉ giữ provenance/approval/evidence tại mốc ghi trong nội dung; không cấp quyền mới, không phải trạng thái live hoặc hướng dẫn thực thi. Nguồn hiện hành: [docs index](../../README.md). Các SHA/checks bên dưới giữ nghĩa lịch sử, không được coi là đã chạy lại.
+
 # Portal — nhật ký điều phối nghiên cứu
 
 - Ngày: 18/10/2026.
@@ -6,12 +8,12 @@
 - Baseline source: `400ad87a1401972476c79f17c4fd726ca7538063`. Tài liệu nghiên cứu là thay đổi local chưa commit; SHA này không phải SHA nghiệm thu tài liệu mới.
 - Chỉ nghiên cứu/thiết kế/lập kế hoạch. Chưa ủy quyền feature coding, commit/push/PR/merge, DNS/deploy hoặc store trong Run này.
 - Project #3 đọc live lúc bắt đầu: 183 items; D12 #293 và D13 #301 đang làm. Các Task phát hành và thay đổi local ngoài phạm vi được giữ nguyên. Snapshot không thay authority trạng thái live.
-- Agent cho mọi worker: `cursor`, theo `.cursor/rules/orca-agent-routing-coordinator.mdc`; model theo cấu hình host, không override.
+- Agent cho mọi worker: `cursor`, theo `docs/agents/workflows/dispatch.md`; model theo cấu hình host, không override.
 - Các worker cùng checkout, output docs riêng; không đổi branch hoặc source. Không spawn con.
 
 | Task | Role ID / hướng dẫn | Dispatch | Output |
 | --- | --- | --- | --- |
-| `task_b1db0479e51c` | Epic planner, `.cursor/rules/orca-epic-orchestrator.mdc` | `ctx_9b7a4ed81ac7` | `PORTAL-EPIC-TASKS.md` |
+| `task_b1db0479e51c` | Epic planner, `docs/agents/workflows/dispatch.md` | `ctx_9b7a4ed81ac7` | `PORTAL-EPIC-TASKS.md` |
 | `task_1e1ca2b60057` | `product-ba`, `docs/agents/roles/product-ba.md` | `ctx_618214f7487e` | `PORTAL-PRODUCT-RESEARCH.md` |
 | `task_7419fcbe66d4` | `product-design`, `docs/agents/roles/product-design.md` | `ctx_a0717a2c4a4d` | `../design/PORTAL-ANTD-UX.md` |
 | `task_e3802a180517` | `architect`, `docs/agents/roles/architect.md` | `ctx_196dc48c2047` | `../architecture/PORTAL-SUBDOMAIN-ANTD.md` |
@@ -39,7 +41,7 @@ Truy cập 18/10/2026:
 
 ## Kết quả và cleanup
 
-Đã thu đủ 7 báo cáo nghiên cứu ban đầu; BA/PD/planner/security có lượt hiệu chỉnh trong cùng session. Tất cả đều giữ output docs riêng, không sửa source hoặc remote. Roadmap tổng hợp: [PORTAL-ROADMAP.md](./PORTAL-ROADMAP.md); root ROADMAP chỉ thêm pointer nghiên cứu. Sơ đồ HTML: `docs/design/PORTAL-ROADMAP.html` (tài liệu, không phải feature code).
+Đã thu đủ 7 báo cáo nghiên cứu ban đầu; BA/PD/planner/security có lượt hiệu chỉnh trong cùng session. Tất cả đều giữ output docs riêng, không sửa source hoặc remote. Roadmap tổng hợp: [PORTAL-ROADMAP.md](../../plans/PORTAL-ROADMAP.md); root ROADMAP chỉ thêm pointer nghiên cứu. Sơ đồ HTML: `docs/design/PORTAL-ROADMAP.html` (tài liệu, không phải feature code).
 
 | Lượt tiếp theo | Task | Dispatch | Kết quả |
 | --- | --- | --- | --- |
@@ -60,7 +62,7 @@ Review lần đầu: `PASS with known gap` cho planning; coordinator bổ sung g
 
 ### Kết thúc Run nghiên cứu
 
-- DoD delta: **PASS (planning)**, [artifact](../reviews/PORTAL-ROADMAP-DOD.md); KG-1…KG-4 resolved trong bản tổng hợp. Primary roadmap SHA256: `575d2dfb6cc07f8b72fbf32d1b058c3a79a4fe09a6c3e463cc61e153787ad8ec`.
+- DoD delta: **PASS (planning)**, [artifact](../../reviews/PORTAL-ROADMAP-DOD.md); KG-1…KG-4 resolved trong bản tổng hợp. Primary roadmap SHA256: `575d2dfb6cc07f8b72fbf32d1b058c3a79a4fe09a6c3e463cc61e153787ad8ec`.
 - Đã release **8 session/resource duy nhất**; receipt owner cuối đều `closed_agent_terminal` / archive `captured`. Audit `worker-list --run run_df32d5572a2d`: không active/reclaimable; 8 resource `released`; 5 Dispatch lịch sử `retained` do reuse không còn resource riêng. Không còn session/task-owned process phải giữ trong Run.
 - Delivery cuối `delivery_dddb9fde719f` đã ack; check trả 0 messages, không còn question pending. Tổng cộng 13 Dispatch gồm research, hiệu chỉnh và review; tất cả đã settle. Không có Task coding đang chạy.
 - Output: 11 file PORTAL mới (Markdown/HTML) và pointer 2 dòng trong `docs/ROADMAP.md`; không đổi source/mobile/infra từ Run này. Baseline commit giữ `400ad87a1401972476c79f17c4fd726ca7538063`; chưa tạo commit mới.

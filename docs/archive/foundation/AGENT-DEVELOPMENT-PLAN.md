@@ -1,10 +1,12 @@
+> **Snapshot lịch sử, lưu ngày 03/11/2026 từ working tree trước khi dọn docs.** Chỉ giữ provenance/approval/evidence tại mốc ghi trong nội dung; không cấp quyền mới, không phải trạng thái live hoặc hướng dẫn thực thi. Nguồn hiện hành: [docs index](../../README.md). Các SHA/checks bên dưới giữ nghĩa lịch sử, không được coi là đã chạy lại.
+
 # Kế hoạch phát triển song song bằng Orca agents
 
-**Vai trò tài liệu:** kế hoạch ownership / wave / contract-first / DoD vận hành agent — **không** phải nguồn Status live.  
-**Status động:** [GitHub Project #3](https://github.com/users/hangndat/projects/3). **Phạm vi & gate hiện tại:** [ROADMAP.md](./ROADMAP.md).
+**Vai trò tài liệu:** kế hoạch ownership / wave / contract-first / DoD vận hành agent — **không** phải nguồn Status live.\
+**Status động:** [GitHub Project #3](https://github.com/users/hangndat/projects/3). **Phạm vi & gate hiện tại:** [ROADMAP.md](../../ROADMAP.md).
 
-Trạng thái kế hoạch: đã dùng để thực thi **W0** ([W0 report](./W0-FOUNDATION-REPORT.md)); các wave W1–W4 bên dưới là **khung lịch sử** đã được ánh xạ sang đợt D1–D5 trên Project (D0–D3 parent Hoàn thành; D4/D5 Đang làm tại sync 2026-10-17). Không đọc “Chưa triển khai W1” ở cuối file như trạng thái hiện tại.  
-Nguồn: [PRD](./PRD.md), [Technical Design](./TECHNICAL-DESIGN.md).  
+Trạng thái kế hoạch: đã dùng để thực thi **W0** ([W0 report](W0-FOUNDATION-REPORT.md)); các wave W1–W4 bên dưới là **khung lịch sử** đã được ánh xạ sang đợt D1–D5 trên Project (D0–D3 parent Hoàn thành; D4/D5 Đang làm tại sync 2026-10-17). Không đọc “Chưa triển khai W1” ở cuối file như trạng thái hiện tại.\
+Nguồn: [PRD](../../PRD.md), [Technical Design](../../TECHNICAL-DESIGN.md).\
 Mục tiêu: build web + iOS + NestJS bằng các wave nhỏ, tích hợp sớm và kiểm chứng invariants trước mở rộng.
 
 ## 1. Cấu hình nhóm ban đầu
@@ -45,7 +47,7 @@ Việc API bootstrap/import module phải có owner cụ thể trong task. Worke
 
 ## 3. Workspace và Git strategy
 
-**Lịch sử mở đầu:** tại thời điểm lập kế hoạch, thư mục chỉ có tài liệu/PDF, chưa là Git repository. Baseline Git và repo private đã có từ W0 trở đi; xem W0 report. Khi phát triển song song có package manifests, lockfile và schema, worktree isolation vẫn là lựa chọn đề xuất. GitHub Flow hiện tại: feature branch → PR → Cursor DoD review → CI → merge `main` (xem `.cursor/rules/git-workflow.mdc`).
+**Lịch sử mở đầu:** tại thời điểm lập kế hoạch, thư mục chỉ có tài liệu/PDF, chưa là Git repository. Baseline Git và repo private đã có từ W0 trở đi; xem W0 report. Khi phát triển song song có package manifests, lockfile và schema, worktree isolation vẫn là lựa chọn đề xuất. GitHub Flow hiện tại: feature branch → PR → Cursor DoD review → CI → merge `main` (xem `docs/agents/policies/git.md`).
 
 Trước khi launch implementation:
 
@@ -79,7 +81,7 @@ Nếu contract đổi: coordinator chốt thay đổi → publish snapshot mới
 
 ## 5. Flow phát triển theo wave
 
-Ánh xạ nhanh (kế hoạch → đợt Project): W0→D0, W1→D2 (+ D1 identity gate trước đó), W2→D3, W3→D4, W4→D5. Chi tiết Status/checkbox: [ROADMAP.md](./ROADMAP.md). Phân biệt **code complete** / **acceptance complete** / **pilot ready** như ROADMAP §1.1. UAT thiết bị thật và proof limits: ROADMAP §1.2.
+Ánh xạ nhanh (kế hoạch → đợt Project): W0→D0, W1→D2 (+ D1 identity gate trước đó), W2→D3, W3→D4, W4→D5. Chi tiết Status/checkbox: [ROADMAP.md](../../ROADMAP.md). Phân biệt **code complete** / **acceptance complete** / **pilot ready** như ROADMAP §1.1. UAT thiết bị thật và proof limits: ROADMAP §1.2.
 
 ### W0 — Bootstrap và nền móng *(đã thực thi → D0)*
 
@@ -184,7 +186,7 @@ Dependencies ở Task-level chỉ diễn tả ordering thật; không bắt iOS 
 Dùng supervised orchestration cho kế hoạch này: một Run cho milestone, Tasks là các phần việc, Dispatch là từng lần giao thực hiện. Không dùng terminal send làm cơ chế theo dõi task chính.
 
 1. Coordinator tạo self-contained task spec, ownership, base commit, dependencies và acceptance.
-2. Launch toàn bộ task ready trong wave trước khi chờ, dưới concurrent soft caps (`orca-parallel-workers.mdc`). Chọn agent + **Cost tier** (`cheap|standard`, trần standard) theo `orca-agent-routing-coordinator.mdc`; map `--model` trên fresh launch (không bịa model id; so sánh `launch.effective`). Không reuse pane `standard` cho Task `cheap` kế tiếp.
+2. Launch toàn bộ task ready trong wave trước khi chờ, dưới concurrent soft caps (`docs/agents/workflows/dispatch.md`). Chọn agent + **Cost tier** (`cheap|standard`, trần standard) theo `docs/agents/workflows/dispatch.md`; map `--model` trên fresh launch (không bịa model id; so sánh `launch.effective`). Không reuse pane `standard` cho Task `cheap` kế tiếp.
 3. Worker check follow-ups ở checkpoint; câu hỏi blocking gửi qua orchestration ask để coordinator trả lời.
 4. Coordinator xử lý thay đổi contract và questions, không để worker tự đoán các quyết định nghiệp vụ lớn.
 5. Worker báo `worker_done` với outcome và evidence; điều này chứng minh worker báo xong, chưa tự chứng minh branch đã integrated.

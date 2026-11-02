@@ -1,3 +1,5 @@
+> **Snapshot lịch sử, lưu ngày 03/11/2026 từ working tree trước khi dọn docs.** Chỉ giữ provenance/approval/evidence tại mốc ghi trong nội dung; không cấp quyền mới, không phải trạng thái live hoặc hướng dẫn thực thi. Nguồn hiện hành: [docs index](../../README.md). Các SHA/checks bên dưới giữ nghĩa lịch sử, không được coi là đã chạy lại.
+
 # W0 Foundation — delivery report
 
 Ngày: 2026-10-16. Repo private: https://github.com/hangndat/ticket-solution
@@ -38,7 +40,7 @@ Coordinator quản lý root config, shared contracts, lockfile và CI; các work
 - `pnpm --filter @ticket/web test:routes`: PASS, production HTTP kiểm tra đúng tenant và 404 cho sai cặp tenant/event.
 - `pnpm --filter @ticket/api openapi` và `git diff --exit-code -- apps/api/openapi.json`: PASS.
 - `CI=1 npx --yes expo-doctor@latest` trong app tích hợp: PASS 20/20.
-- iOS worker: local Xcode unsigned simulator compilation PASS, log có `BUILD SUCCEEDED`; xem [mobile report](../apps/mobile/W0-REPORT.md) cho lệnh và giới hạn.
+- iOS worker: local Xcode unsigned simulator compilation PASS, log có `BUILD SUCCEEDED`; xem [mobile report](../../../apps/mobile/W0-REPORT.md) cho lệnh và giới hạn.
 - CI có job check và database-isolation, chạy Node 24/Linux. Trạng thái theo từng commit xem [GitHub Actions](https://github.com/hangndat/ticket-solution/actions).
 
 Một lần test RLS độc lập ban đầu lỗi kết nối trước setup. Harness cũ có thể nhận nhầm temporary Unix-socket server lúc Docker init. Đã chuyển probe sang final TCP listener và kiểm tra connection/query có deadline trước chạy scenario. Không retry hoặc che lỗi các assertion RLS.

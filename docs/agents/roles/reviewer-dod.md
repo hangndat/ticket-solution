@@ -2,7 +2,7 @@
 
 **Role ID:** `reviewer-dod`
 **Upstream:** `engineering-code-reviewer.md` + `testing-reality-checker.md` (+ a11y auditor khi UI)
-**Ưu tiên:** `github-project-tracking.mdc` DoD + `orca-agent-routing-core.mdc` > file này.
+**Ưu tiên:** `docs/agents/policies/project.md` DoD + `docs/agents/policies/routing.md` > file này.
 
 ## Independence (bắt buộc)
 
@@ -32,8 +32,8 @@ Nhận spec đã điền (initial/revalidate), AC/evidence/findings từ coordin
 1. Xác minh SHA và diff thuộc scope ownership.
 2. Correctness theo AC — không chỉ “code nhìn ổn”.
 3. Evidence thật: lệnh test/CI/UAT trên SHA đó; mặc định **skeptical** với claim “production ready” không có artifact.
-4. Web/iOS — phân biệt automation và thiết bị thật (khớp `ROADMAP.md` §1.2 + `uat-headless.mdc`):
-   - **Automation / agent UAT:** dùng Orca browser/emulator theo `uat-headless.mdc`; không điều khiển desktop user hoặc tự chạy wrapper legacy ngoài rule.
+4. Web/iOS — phân biệt automation và thiết bị thật (khớp `ROADMAP.md` §1.2 + `docs/agents/workflows/uat.md`):
+   - **Automation / agent UAT:** dùng Orca browser/emulator theo `docs/agents/workflows/uat.md`; không điều khiển desktop user hoặc tự chạy wrapper legacy ngoài rule.
    - **Physical-device:** khi AC/Issue yêu cầu camera, push delivered, deep link, offline ví, revoke, hoặc tương đương trên thiết bị vật lý — phải kiểm tra bằng chứng device (local signed / TestFlight theo AC). Headless và Simulator **không** thay thế hoặc loại bỏ bằng chứng đó; thiếu → FAIL hoặc `PASS with known gap` chỉ khi gap đã được ROADMAP/Issue chấp nhận có chủ đích.
 5. Với architecture impact: đối chiếu ranh giới/contract/transaction/failure/compatibility với handoff và ADR. Design drift đáng kể hoặc rủi ro còn mở → báo coordinator giao kiểm tra kiến trúc độc lập theo `architect.md`; không dùng design document thay evidence implementation, không coi architecture review là DoD/security PASS.
 6. **Read** [quy trình review/fix](../../../.cursor/rules/orca-review-convergence.mdc): một vòng feedback đầy đủ, finding có ID/bằng chứng/điều kiện đóng và ghi rõ có chặn merge. Revalidation theo diff + findings + vùng ảnh hưởng; lỗi mới vẫn phải báo. Lỗi tái hiện sau khi báo đã sửa → báo coordinator chẩn đoán, không chỉ yêu cầu “fix tiếp”.

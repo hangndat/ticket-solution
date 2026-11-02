@@ -5,7 +5,7 @@
 - Checkout docs/coordinator: `/Users/admin/orca/workspaces/ticket-solution/portal-coordination`, branch `hangndat/portal-coordination`, base `c7e344847b1acf1688302fef513b277fc8f18973` (origin/main lúc mở Run).
 - Checkout `/main` đang có công việc khác; không đổi branch/reset/clean/stage mobile/infra hoặc các thay đổi ngoài PORTAL ở đó. 11 artifact nghiên cứu PORTAL được copy có giới hạn sang checkout này; không copy secrets/env.
 - Quyền: coding/feature branch/commit/push/PR/review/CI/coordinator integration trong Epic đã duyệt. Không production DNS/TLS/deploy/cutover/cloud/store. P1.2 hiện chỉ chuẩn bị và kiểm thử local/môi trường được phép.
-- Agent: `cursor` theo `.cursor/rules/orca-agent-routing-coordinator.mdc`; model/effort theo host mặc định. Tất cả worker depth 1; chỉ coordinator dispatch.
+- Agent: `cursor` theo `docs/agents/workflows/dispatch.md`; model/effort theo host mặc định. Tất cả worker depth 1; chỉ coordinator dispatch.
 
 ## Checkpoint ban đầu
 
@@ -15,11 +15,11 @@ Giao tiếp coordinator khác bằng đúng handle được `run-list` trả (`t
 
 ## Wave docs / handoff
 
-| Issue | Role / scope | Task / Dispatch | Output |
-| --- | --- | --- | --- |
-| #408 (Story #407) | Epic planner; không code/spawn | `task_5cd80d44ef3e` / `ctx_86fb71bf5406` | `PORTAL-IMPLEMENTATION-TASKS.md`, `portal-task-manifest.json` |
-| #409 | `architect`, `docs/agents/roles/architect.md`; Architecture impact Có | `task_fe3aadfcd481` / `ctx_0f85ebfd8721` | `docs/ops/ADR-20-PORTAL-ADMIN.md` |
-| #410 | `product-design`, `docs/agents/roles/product-design.md`; Architecture impact Không (theo gói đã duyệt) | `task_61a47c5c4685` / `ctx_32f71830742d` | `docs/design/PORTAL-IMPLEMENTATION-HANDOFF.md` |
+| Issue             | Role / scope                                                                                           | Task / Dispatch                          | Output                                                        |
+| ----------------- | ------------------------------------------------------------------------------------------------------ | ---------------------------------------- | ------------------------------------------------------------- |
+| #408 (Story #407) | Epic planner; không code/spawn                                                                         | `task_5cd80d44ef3e` / `ctx_86fb71bf5406` | `PORTAL-IMPLEMENTATION-TASKS.md`, `portal-task-manifest.json` |
+| #409              | `architect`, `docs/agents/roles/architect.md`; Architecture impact Có                                  | `task_fe3aadfcd481` / `ctx_0f85ebfd8721` | `docs/ops/ADR-20-PORTAL-ADMIN.md`                             |
+| #410              | `product-design`, `docs/agents/roles/product-design.md`; Architecture impact Không (theo gói đã duyệt) | `task_61a47c5c4685` / `ctx_32f71830742d` | `docs/design/PORTAL-IMPLEMENTATION-HANDOFF.md`                |
 
 Root tooling/CI/lockfile/shared contracts: coordinator; `apps/portal` và `apps/web` là cùng slice web, không hai coding Dispatch feature đồng thời. _(Supersession 26/10/2026 — [O25](../DECISION-LOG.md): hai slice riêng, mỗi slice ≤1 feature coding worker.)_ Backend scope riêng; reviewer độc lập theo exact SHA. Mọi Task unblocked được fill dưới capacity/WIP sau khi ownership rảnh.
 
@@ -41,19 +41,19 @@ Root tooling/CI/lockfile/shared contracts: coordinator; `apps/portal` và `apps/
 
 ### Lifecycle và evidence
 
-| Phạm vi | Task / Dispatch | Evidence |
-| --- | --- | --- |
+| Phạm vi                       | Task / Dispatch                          | Evidence                                                           |
+| ----------------------------- | ---------------------------------------- | ------------------------------------------------------------------ |
 | PR #411 security revalidation | `task_955e00468165` / `ctx_9274dac0cbc6` | PR comment + `/tmp/portal-pr411-reviewer-security-revalidation.md` |
-| PR #411 DoD revalidation | `task_30a28b2c2a8a` / `ctx_d6722c79b4d1` | PR comment + `/tmp/portal-pr411-reviewer-dod-revalidation.md` |
-| PR #444 DoD / security | `ctx_4945a5c4acc4` / `ctx_426e5e28edeb` | PR comments + `/tmp/portal-pr444-reviewer-*.md` |
-| #415 implement | `task_ff01b9ec8fe2` / `ctx_846cc7218f25` | PR #446; Docker DB tests; đã release |
-| #416 implement | `task_f5e661f1ba9a` / `ctx_bda0341291f4` | PR #449; đã release |
-| Architect import/privacy | `task_e7c7cd713a1a` / `ctx_57cfceac8c9e` | `docs/architecture/PORTAL-CONTRACT-HANDOFF.md`; đã release |
-| PR #447 DoD / security | `ctx_0c15b9e1f3a2` / `ctx_172c9b2e800a` | PR comments trên d203653; đã release |
-| #419 catalog | `task_8cee52c4f852` / `ctx_45c79aea21a1` | Checkout `portal-backend-catalog` |
-| PR #446 first DoD / security | `ctx_199cddd755a4` / `ctx_7af16ab79375` | PR comments + `/tmp/portal-pr446-reviewer-*.md`; đã release |
-| PR #446 fix | `task_9463581fc893` / `ctx_863978a814b7` | Checkout `portal-backend-members` |
-| PR #449 DoD / security | `ctx_3c854ff96bc5` / `ctx_3cde56938f89` | Checkout `portal-web-foundation` |
+| PR #411 DoD revalidation      | `task_30a28b2c2a8a` / `ctx_d6722c79b4d1` | PR comment + `/tmp/portal-pr411-reviewer-dod-revalidation.md`      |
+| PR #444 DoD / security        | `ctx_4945a5c4acc4` / `ctx_426e5e28edeb`  | PR comments + `/tmp/portal-pr444-reviewer-*.md`                    |
+| #415 implement                | `task_ff01b9ec8fe2` / `ctx_846cc7218f25` | PR #446; Docker DB tests; đã release                               |
+| #416 implement                | `task_f5e661f1ba9a` / `ctx_bda0341291f4` | PR #449; đã release                                                |
+| Architect import/privacy      | `task_e7c7cd713a1a` / `ctx_57cfceac8c9e` | `docs/architecture/PORTAL-CONTRACT-HANDOFF.md`; đã release         |
+| PR #447 DoD / security        | `ctx_0c15b9e1f3a2` / `ctx_172c9b2e800a`  | PR comments trên d203653; đã release                               |
+| #419 catalog                  | `task_8cee52c4f852` / `ctx_45c79aea21a1` | Checkout `portal-backend-catalog`                                  |
+| PR #446 first DoD / security  | `ctx_199cddd755a4` / `ctx_7af16ab79375`  | PR comments + `/tmp/portal-pr446-reviewer-*.md`; đã release        |
+| PR #446 fix                   | `task_9463581fc893` / `ctx_863978a814b7` | Checkout `portal-backend-members`                                  |
+| PR #449 DoD / security        | `ctx_3c854ff96bc5` / `ctx_3cde56938f89`  | Checkout `portal-web-foundation`                                   |
 
 Backpressure: ưu tiên review/fix/integration các PR đang mở. Không suy acceptance từ worker_done hoặc build. Bản ghi này là checkpoint, trạng thái động tiếp tục lấy Project #3.
 

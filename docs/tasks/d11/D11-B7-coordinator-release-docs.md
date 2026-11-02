@@ -6,7 +6,7 @@
 ## Vai trò chuyên môn
 
 - Coordinator (không gắn coding role catalog) · Agent: cursor
-- Path: `.cursor/rules/orca-epic-orchestrator.mdc` + ops docs ownership
+- Path: `docs/agents/workflows/dispatch.md` + ops docs ownership
 
 ## Mục tiêu
 
