@@ -254,11 +254,13 @@ jobs:
           - shard: membership-report
             files: test/membership.test.cjs test/reporting.test.cjs test/db02-identity-issuer-subject.test.cjs
           - shard: issue-gate
-            files: test/issue.test.cjs test/gate.test.cjs test/gate-acceptance.test.cjs test/gate-concurrency.test.cjs test/db04-db05-acceptance.test.cjs
+            files: test/issue.test.cjs test/gate.test.cjs test/gate-acceptance.test.cjs test/gate-concurrency.test.cjs test/db04-db05-acceptance.test.cjs test/db19-code-pepper-rotation.test.cjs
           - shard: account-deletion
             files: test/platform.test.cjs test/account-session-revoke.test.cjs test/account-ack-session-revoke.test.cjs test/account-idp-erasure.test.cjs
           - shard: approval-config-lifecycle
-            files: test/approval.test.cjs test/config-publish.test.cjs test/event-lifecycle.test.cjs test/form-consent.test.cjs
+            files: test/approval.test.cjs test/config-publish.test.cjs test/event-lifecycle.test.cjs test/form-consent.test.cjs test/db13-event-windows.test.cjs
+          - shard: o06-retention
+            files: test/o06-retention-db.test.cjs
           - shard: n1-email
             files: test/n1-email-mime.test.cjs
           - shard: branding
