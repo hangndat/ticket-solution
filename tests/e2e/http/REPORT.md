@@ -11,3 +11,11 @@ Diagnostic `mvxkyku6-2a175b` PASS 2/2 qua HTTPS API và Keycloak thật trên st
 Giới hạn cụ thể: SEC-01 thiếu matrix mọi resource; AUTH-03 thiếu browser UX và lookup/confirm; GATE-01 thiếu reopen same gate và actor assigned cả hai event; GATE-03 không có HTTP QR parser và chưa test revoked/cancelled; DB-03 thiếu concurrency nhiều actor, source counter, audit/outbox đối soát.
 
 Chạy: `node tests/e2e/http/entry.mjs --list`; với manifest: `E2E_MANIFEST=<private-path> NODE_EXTRA_CA_CERTS=<cert-path> NODE_OPTIONS='--require <dns-preload>' node tests/e2e/http/entry.mjs [--case DB-03]`.
+
+## GATE-03 signed credential — 02/11/2026
+
+Run `mvyisdk6-156618` trả `PASS` 1/1 cho selector HTTP trên source SHA `989e68394ac6a301f26c47a519264c05e5e105da`. Harness dựng stack cô lập thật với Keycloak, PostgreSQL và API; summary và log ở `tests/e2e/.artifacts/mvyisdk6-156618/`.
+
+Ca lấy JWS ES256 và mã manual qua `/me/tickets/:ticketId`, sau đó kiểm reserve/confirm hợp lệ, chữ ký bị sửa, context sai event và signed context sai tenant, version cũ, vé revoke, vé đã dùng, manual lookup và proof token dùng từ staff session khác. Các request từ chối kiểm tra reservation/check-in bất biến; các nhánh credential deny có `gate.reject` trong tenant tương ứng dưới RLS. Signing key ephemeral được tạo cho run; private key chỉ được seal bằng helper backend hiện có.
+
+Không nâng GATE-03 thành PASS toàn phần. Summary ghi `evidenceExactShaEligible: false` / `NON_EVIDENCE_DIRTY` vì worktree vẫn có `company/work-events.jsonl` cùng sáu báo cáo James đã tồn tại trước task; các file được giữ nguyên. Ma trận còn thiếu audience/kid/alg/hash, ticket cancelled, manual code/proof invalid, proof expiry/version stale và rate-limit. `coverage.json` vẫn giữ trạng thái `blocked`.
