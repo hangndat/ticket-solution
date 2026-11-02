@@ -268,11 +268,12 @@
   {
     "caseId": "GATE-07",
     "tests": [
-      "D:packages/backend/test/offline-sync-apply.test.cjs#offline sync: apply"
+      "D:packages/backend/test/offline-sync-apply.test.cjs#offline sync: apply",
+      "D:packages/backend/test/offline-sync-authz-retry.test.cjs#GATE-07 authz on retry"
     ],
     "layers": ["D"],
     "status": "blocked",
-    "reason": "D duplicate/conflict; thiếu H authz-on-retry và mixed batch audit."
+    "reason": "D: duplicate/conflict/REJECTED/CONFLICT idempotent audit (apply); authz-on-retry (authz-retry): retry DUPLICATE trước khi thu quyền là vô hại, sau khi thu event_assignments hoặc revoke staff session thì bị AuthzError/SESSION_NOT_ACTIVE và sổ cái offline_sync_events + checkins không đổi; đã kiểm đột biến bỏ từng kiểm tra. H không viết (AC giảm xuống D, xem ACCEPTANCE.md)."
   },
   {
     "caseId": "GATE-08",
