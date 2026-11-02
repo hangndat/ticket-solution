@@ -2,7 +2,12 @@
 import { spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { readFileSync, existsSync, writeFileSync } from 'node:fs';
-import { createHash, generateKeyPairSync, randomBytes } from 'node:crypto';
+import {
+  createHash,
+  generateKeyPairSync,
+  randomBytes,
+  randomUUID,
+} from 'node:crypto';
 import { resolve, dirname } from 'node:path';
 import {
   createRuntime,
@@ -19,13 +24,23 @@ import { validateManifest } from '../validation/validate.mjs';
 import { assertSourceProvenanceStable } from './source-provenance.mjs';
 
 const requireRoot = createRequire(resolve(ROOT, 'package.json'));
-const requireBackend = createRequire(resolve(ROOT, 'packages/backend/package.json'));
+const requireBackend = createRequire(
+  resolve(ROOT, 'packages/backend/package.json'),
+);
 const args = process.argv.slice(2);
 const mode = args.shift() || 'smoke';
 const skipBuild = args.includes('--skip-build');
 const publicReadDiagnostic = args.includes('--public-read-diagnostic');
-if (publicReadDiagnostic && (mode !== 'e2e' || !args.includes('--case=WEB-01,WEB-02,WEB-03,WEB-04,WEB-05,WEB-06,WEB-07,WEB-08,WEB-09,WEB-10,WEB-11,WEB-12,WEB-13'))) {
-  throw new Error('Public-read diagnostic requires e2e and the exact WEB-01–13 case list');
+if (
+  publicReadDiagnostic &&
+  (mode !== 'e2e' ||
+    !args.includes(
+      '--case=WEB-01,WEB-02,WEB-03,WEB-04,WEB-05,WEB-06,WEB-07,WEB-08,WEB-09,WEB-10,WEB-11,WEB-12,WEB-13',
+    ))
+) {
+  throw new Error(
+    'Public-read diagnostic requires e2e and the exact WEB-01–13 case list',
+  );
 }
 const smoke = [
   'AUTH-01',
@@ -116,23 +131,33 @@ async function exitCode(child) {
 }
 
 async function publicReadSnapshot(state, salt) {
-  if (state.project !== `e2e-${state.id}` || !Number.isInteger(state.ports.pg)) {
+  if (
+    state.project !== `e2e-${state.id}` ||
+    !Number.isInteger(state.ports.pg)
+  ) {
     throw new Error('BLOCKED: diagnostic requires the owned local database');
   }
   const requireApi = createRequire(resolve(ROOT, 'apps/api/package.json'));
   const { Client } = requireApi('pg');
   const client = new Client({
-    host: '127.0.0.1', port: state.ports.pg, database: 'e2e',
-    user: 'postgres', password: state.secrets.pg,
+    host: '127.0.0.1',
+    port: state.ports.pg,
+    database: 'e2e',
+    user: 'postgres',
+    password: state.secrets.pg,
   });
   await client.connect();
   try {
     const { rows } = await client.query(
-      "SELECT tenant_id, window_started_at, count FROM notification_rate_counters WHERE bucket_key = $1 ORDER BY window_started_at, tenant_id",
+      'SELECT tenant_id, window_started_at, count FROM notification_rate_counters WHERE bucket_key = $1 ORDER BY window_started_at, tenant_id',
       ['api.public.read'],
     );
     return rows.map((row) => ({
-      scopeHash: createHash('sha256').update(salt).update(row.tenant_id).digest('hex').slice(0, 16),
+      scopeHash: createHash('sha256')
+        .update(salt)
+        .update(row.tenant_id)
+        .digest('hex')
+        .slice(0, 16),
       windowStartedAt: row.window_started_at.toISOString(),
       count: row.count,
     }));
@@ -259,6 +284,8 @@ if (mode === 'list' || args.includes('--list')) {
         { kid: 'e2e', alg: 'ES256', publicKeyPem },
       ]);
       state.secrets.gateManualCodePepper = randomBytes(32).toString('hex');
+      state.secrets.gateCredentialAlgProofKey =
+        randomBytes(32).toString('base64url');
     }
     const { children, proxy, minio, ...seedState } = state;
     seedState.caseIds = caseIds;
@@ -279,8 +306,13 @@ if (mode === 'list' || args.includes('--list')) {
     );
     const rawManifest = JSON.parse(readFileSync(state.manifestPath, 'utf8'));
     if (caseIds.includes('GATE-03')) {
-      const { SignJWT, importPKCS8 } = await import(requireBackend.resolve('jose'));
-      const privateKey = await importPKCS8(gateCredentialPrivateKeyPem, 'ES256');
+      const { SignJWT, importPKCS8 } = await import(
+        requireBackend.resolve('jose')
+      );
+      const privateKey = await importPKCS8(
+        gateCredentialPrivateKeyPem,
+        'ES256',
+      );
       const gate = rawManifest.cases['GATE-03'];
       gate.data ??= {};
       const ticketClaims = {
@@ -290,6 +322,42 @@ if (mode === 'list' || args.includes('--list')) {
         ver: 1,
         jti: randomBytes(16).toString('hex'),
       };
+      const signGateCredential = (
+        claims,
+        kid = state.secrets.gateCredentialCurrentKeyId,
+      ) =>
+        new SignJWT(claims)
+          .setProtectedHeader({ alg: 'ES256', kid, typ: 'JWT' })
+          .setIssuer('vemoki-gate')
+          .setAudience('gate')
+          .setIssuedAt()
+          .sign(privateKey);
+      gate.data.unknownKidJws = await signGateCredential(
+        ticketClaims,
+        'unknown-e2e-key',
+      );
+      gate.data.unknownKidMissingTicketJws = await signGateCredential(
+        {
+          ...ticketClaims,
+          tkt: randomUUID(),
+          jti: randomBytes(16).toString('hex'),
+        },
+        'unknown-e2e-key',
+      );
+      const algProofKey = Buffer.from(
+        state.secrets.gateCredentialAlgProofKey,
+        'base64url',
+      );
+      gate.data.wrongAlgJws = await new SignJWT(ticketClaims)
+        .setProtectedHeader({
+          alg: 'HS256',
+          kid: state.secrets.gateCredentialCurrentKeyId,
+          typ: 'JWT',
+        })
+        .setIssuer('vemoki-gate')
+        .setAudience('gate')
+        .setIssuedAt()
+        .sign(algProofKey);
       gate.data.wrongAudienceJws = await new SignJWT(ticketClaims)
         .setProtectedHeader({
           alg: 'ES256',
@@ -299,20 +367,6 @@ if (mode === 'list' || args.includes('--list')) {
         .setIssuer('vemoki-gate')
         .setAudience('not-gate')
         .setIssuedAt()
-        .sign(privateKey);
-      gate.data.expiredManualProofToken = await new SignJWT({
-        ...ticketClaims,
-        sid: 'expired-e2e-session',
-      })
-        .setProtectedHeader({
-          alg: 'ES256',
-          kid: state.secrets.gateCredentialCurrentKeyId,
-          typ: 'JWT',
-        })
-        .setIssuer('vemoki-gate')
-        .setAudience('gate')
-        .setIssuedAt()
-        .setExpirationTime(Math.floor(Date.now() / 1000) - 1)
         .sign(privateKey);
     }
     if (rawManifest.cases['WEB-10'] || rawManifest.cases['PORT-08']) {
@@ -411,15 +465,18 @@ if (mode === 'list' || args.includes('--list')) {
       process.execPath,
       [resolve(ROOT, 'apps/api/dist/main.js')],
       {
-        ...common, PORT: String(state.ports.api),
-        ...(diagnostic ? {
-          NODE_OPTIONS: `${common.NODE_OPTIONS} --require ${resolve(E2E, 'harness/public-read-observer.cjs')}`,
-          E2E_PUBLIC_READ_DIAGNOSTIC: '1',
-          E2E_PUBLIC_READ_OUTPUT: diagnostic.output,
-          E2E_PUBLIC_READ_PHASE: diagnostic.phaseFile,
-          E2E_PUBLIC_READ_STOP: diagnostic.stopFile,
-          E2E_PUBLIC_READ_SALT: diagnostic.salt,
-        } : {}),
+        ...common,
+        PORT: String(state.ports.api),
+        ...(diagnostic
+          ? {
+              NODE_OPTIONS: `${common.NODE_OPTIONS} --require ${resolve(E2E, 'harness/public-read-observer.cjs')}`,
+              E2E_PUBLIC_READ_DIAGNOSTIC: '1',
+              E2E_PUBLIC_READ_OUTPUT: diagnostic.output,
+              E2E_PUBLIC_READ_PHASE: diagnostic.phaseFile,
+              E2E_PUBLIC_READ_STOP: diagnostic.stopFile,
+              E2E_PUBLIC_READ_SALT: diagnostic.salt,
+            }
+          : {}),
       },
     );
     startProcess(
@@ -434,7 +491,9 @@ if (mode === 'list' || args.includes('--list')) {
     );
     const httpNeedsFrontend =
       mode === 'http' &&
-      caseIds.some((id) => ['AUTH-03', 'SEC-02', 'SEC-03', 'SEC-05'].includes(id));
+      caseIds.some((id) =>
+        ['AUTH-03', 'SEC-02', 'SEC-03', 'SEC-05'].includes(id),
+      );
     if (mode !== 'http' || httpNeedsFrontend) {
       if (!skipBuild) {
         console.log('E2E: build Web/Portal production');
@@ -541,8 +600,12 @@ if (mode === 'list' || args.includes('--list')) {
       `E2E ${state.id}: runtime sẵn sàng; chạy ${mode}, ${caseIds.length} nhóm fixture`,
     );
     if (diagnostic) {
-      diagnostic.afterReadiness = await publicReadSnapshot(state, diagnostic.salt);
-      if (existsSync(diagnostic.stopFile)) throw new Error('BLOCKED: first public 429 during readiness');
+      diagnostic.afterReadiness = await publicReadSnapshot(
+        state,
+        diagnostic.salt,
+      );
+      if (existsSync(diagnostic.stopFile))
+        throw new Error('BLOCKED: first public 429 during readiness');
     }
     const results = [];
     const selectedHttp =
@@ -557,7 +620,17 @@ if (mode === 'list' || args.includes('--list')) {
           `http-${id}`,
           process.execPath,
           [entry, '--case', id],
-          common,
+          {
+            ...common,
+            ...(id === 'GATE-03'
+              ? {
+                  E2E_GATE_CREDENTIAL_PRIVATE_KEY_PEM:
+                    gateCredentialPrivateKeyPem,
+                  E2E_GATE_CREDENTIAL_ALG_PROOF_KEY:
+                    state.secrets.gateCredentialAlgProofKey,
+                }
+              : {}),
+          },
         );
         results.push({
           layer: 'HTTP',
@@ -567,21 +640,32 @@ if (mode === 'list' || args.includes('--list')) {
       }
     }
     if (mode !== 'http') {
-      if (diagnostic) writeFileSync(diagnostic.phaseFile, 'browser', { mode: 0o600 });
+      if (diagnostic)
+        writeFileSync(diagnostic.phaseFile, 'browser', { mode: 0o600 });
       const child = startProcess(
         state,
         'browser-tests',
         process.execPath,
         browserArgs(caseIds),
-        { ...common, ...(caseIds.includes('AUTH-07') ? { E2E_AUTH07_BFCACHE: '1' } : {}) },
+        {
+          ...common,
+          ...(caseIds.includes('AUTH-07') ? { E2E_AUTH07_BFCACHE: '1' } : {}),
+        },
       );
       const stoppedAt429 = diagnostic
         ? await exitAtFirst429(child, diagnostic.stopFile)
         : false;
-      results.push({ layer: 'browser', exitCode: diagnostic ? (child.exitCode ?? 1) : await exitCode(child) });
+      results.push({
+        layer: 'browser',
+        exitCode: diagnostic ? (child.exitCode ?? 1) : await exitCode(child),
+      });
       if (diagnostic) {
-        diagnostic.afterBrowser = await publicReadSnapshot(state, diagnostic.salt);
-        diagnostic.stoppedAt429 = stoppedAt429 || existsSync(diagnostic.stopFile);
+        diagnostic.afterBrowser = await publicReadSnapshot(
+          state,
+          diagnostic.salt,
+        );
+        diagnostic.stoppedAt429 =
+          stoppedAt429 || existsSync(diagnostic.stopFile);
         privateJson(resolve(state.dir, 'public-read-diagnostic.json'), {
           beforeApi: diagnostic.beforeApi,
           afterReadiness: diagnostic.afterReadiness,
@@ -590,7 +674,12 @@ if (mode === 'list' || args.includes('--list')) {
           observed: JSON.parse(readFileSync(diagnostic.output, 'utf8')),
           webObserved: existsSync(diagnostic.webOutput)
             ? JSON.parse(readFileSync(diagnostic.webOutput, 'utf8'))
-            : { role: 'web', observed: 0, counts: [], note: 'no web observer output' },
+            : {
+                role: 'web',
+                observed: 0,
+                counts: [],
+                note: 'no web observer output',
+              },
         });
       }
       if (mode === 'regression') {
@@ -613,7 +702,9 @@ if (mode === 'list' || args.includes('--list')) {
     );
     const status = diagnostic?.stoppedAt429
       ? 'ABORTED_429'
-      : results.some((result) => result.exitCode) ? 'FAIL' : 'PASS';
+      : results.some((result) => result.exitCode)
+        ? 'FAIL'
+        : 'PASS';
     privateJson(resolve(state.dir, 'summary.json'), {
       runId: state.id,
       mode,

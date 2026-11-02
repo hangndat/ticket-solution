@@ -4186,6 +4186,10 @@ for (const caseId of CASE_IDS) {
         'tkt',
         'ver',
       ]);
+      const claimsJson = JSON.stringify(claims);
+      const attendeeEmail = ctx.fixture.accounts?.attendee?.email;
+      if (attendeeEmail) assert.ok(!claimsJson.includes(attendeeEmail));
+      assert.doesNotMatch(claimsJson, /email|name|phone|address/i);
       assert.equal(headerClaims.alg, 'ES256');
       assert.equal(headerClaims.kid, 'e2e');
       assert.equal(claims.aud, 'gate');
@@ -4242,12 +4246,11 @@ for (const caseId of CASE_IDS) {
         body: { ...base, presented: { kind: 'qr', jws: tampered.join('.') } },
       });
 
-      const unknownKidHeader = {
-        ...headerClaims,
-        kid: 'unknown-e2e-key',
-      };
-      const unknownKidJws = `${Buffer.from(JSON.stringify(unknownKidHeader)).toString('base64url')}.${encodedClaims}.${jws.split('.')[2]}`;
-      await assertGateDenyNoMutation(ctx, f, {
+      const unknownKidJws = required(
+        f.data?.unknownKidJws,
+        'GATE-03 unknownKidJws',
+      );
+      const unknownKidExisting = await assertGateDenyNoMutation(ctx, f, {
         ticketId,
         token: scanner,
         path,
@@ -4256,7 +4259,74 @@ for (const caseId of CASE_IDS) {
         body: { ...base, presented: { kind: 'qr', jws: unknownKidJws } },
       });
 
-      const wrongAlgJws = `${Buffer.from(JSON.stringify({ ...headerClaims, alg: 'HS256' })).toString('base64url')}.${encodedClaims}.${jws.split('.')[2]}`;
+      const unknownKidMissingJws = required(
+        f.data?.unknownKidMissingTicketJws,
+        'GATE-03 unknownKidMissingTicketJws',
+      );
+      const unknownKidMissingClaims = JSON.parse(
+        Buffer.from(unknownKidMissingJws.split('.')[1], 'base64url').toString(
+          'utf8',
+        ),
+      );
+      const unknownKidMissing = await assertGateDenyNoMutation(ctx, f, {
+        ticketId: unknownKidMissingClaims.tkt,
+        token: scanner,
+        path,
+        status: 403,
+        code: 'CREDENTIAL_SIGNATURE_INVALID',
+        body: { ...base, presented: { kind: 'qr', jws: unknownKidMissingJws } },
+      });
+      const errorProjection = ({ status, body }) => ({
+        status,
+        code: body.code,
+        message: body.message,
+      });
+      assert.deepEqual(
+        errorProjection(unknownKidExisting),
+        errorProjection(unknownKidMissing),
+        'unknown kid must not expose whether its signed ticket id exists',
+      );
+      const rejectedProjectionJson = JSON.stringify(
+        errorProjection(unknownKidExisting),
+      );
+      for (const secretValue of [
+        ticketId,
+        unknownKidMissingClaims.tkt,
+        attendeeEmail,
+      ]) {
+        if (secretValue)
+          assert.ok(!rejectedProjectionJson.includes(secretValue));
+      }
+
+      const wrongAlgJws = required(f.data?.wrongAlgJws, 'GATE-03 wrongAlgJws');
+      const requireBackend = createRequire(
+        new URL('../../../packages/backend/package.json', import.meta.url),
+      );
+      const { jwtVerify } = await import(requireBackend.resolve('jose'));
+      const { verifyGateCredentialJws } = requireBackend(
+        './dist/gate-credential.js',
+      );
+      const algProofKey = Buffer.from(
+        required(
+          process.env.E2E_GATE_CREDENTIAL_ALG_PROOF_KEY,
+          'GATE-03 alg proof key',
+        ),
+        'base64url',
+      );
+      const validHsSignature = await jwtVerify(wrongAlgJws, algProofKey, {
+        issuer: 'vemoki-gate',
+        audience: 'gate',
+        algorithms: ['HS256'],
+      });
+      assert.equal(validHsSignature.payload.tkt, ticketId);
+      await assert.rejects(
+        () =>
+          verifyGateCredentialJws(wrongAlgJws, [
+            { kid: 'e2e', alg: 'ES256', key: algProofKey },
+          ]),
+        (error) => error.code === 'CREDENTIAL_SIGNATURE_INVALID',
+        'focused verifier proof must reject a valid HS256 signature under the ES256-only contract',
+      );
       await assertGateDenyNoMutation(ctx, f, {
         ticketId,
         token: scanner,
@@ -4437,6 +4507,49 @@ for (const caseId of CASE_IDS) {
         attendee,
       );
       expectStatus(revokedDetail, 200);
+      const activeBeforeCancel = await gateSnapshot(
+        f,
+        f.eventId,
+        revokedTicketId,
+        '',
+      );
+      assert.equal(activeBeforeCancel.ticket_state, 'ACTIVE');
+      assert.equal(Number(activeBeforeCancel.reservation_count), 0);
+      assert.equal(Number(activeBeforeCancel.checkin_count), 0);
+      const cancelled = await web04Query(
+        f,
+        f.tenantId,
+        `UPDATE tickets SET state = 'CANCELLED'
+         WHERE tenant_id = $1::uuid AND id = $2::uuid RETURNING id`,
+        [f.tenantId, revokedTicketId],
+      );
+      assert.equal(cancelled.length, 1, 'cancelled fixture remains RLS scoped');
+      try {
+        await assertGateDenyNoMutation(ctx, f, {
+          ticketId: revokedTicketId,
+          token: scanner,
+          path,
+          status: 409,
+          code: 'TICKET_NOT_ACTIVE',
+          body: {
+            ...base,
+            presented: {
+              kind: 'qr',
+              jws: revokedDetail.body.gateCredential.jws,
+            },
+          },
+        });
+      } finally {
+        const restored = await web04Query(
+          f,
+          f.tenantId,
+          `UPDATE tickets SET state = 'ACTIVE'
+           WHERE tenant_id = $1::uuid AND id = $2::uuid AND state = 'CANCELLED'
+           RETURNING id`,
+          [f.tenantId, revokedTicketId],
+        );
+        assert.equal(restored.length, 1, 'restore unused cancellation fixture');
+      }
       expectStatus(
         await request(
           ctx,
@@ -4480,6 +4593,82 @@ for (const caseId of CASE_IDS) {
       );
       expectStatus(lookup, 200);
       assert.equal(typeof lookup.body.proofToken, 'string');
+      const timedManualLookup = async (code, expectedStatus, expectedCode) => {
+        const started = performance.now();
+        const result = await request(
+          ctx,
+          'POST',
+          gatePath(f, 'manual-lookup'),
+          scanner,
+          { ...base, code },
+        );
+        const elapsedMs = performance.now() - started;
+        expectStatus(result, expectedStatus, expectedCode);
+        return elapsedMs;
+      };
+      const validLookupTimes = [];
+      const invalidLookupTimes = [];
+      for (let attempt = 0; attempt < 12; attempt += 1) {
+        const measureValid = async () =>
+          validLookupTimes.push(await timedManualLookup(manualCode, 200));
+        const measureInvalid = async () =>
+          invalidLookupTimes.push(
+            await timedManualLookup('ZZZZ-ZZZZ-ZZ', 404, 'MANUAL_CODE_INVALID'),
+          );
+        if (attempt % 2 === 0) {
+          await measureValid();
+          await measureInvalid();
+        } else {
+          await measureInvalid();
+          await measureValid();
+        }
+      }
+      const median = (values) => {
+        const sorted = [...values].sort((a, b) => a - b);
+        return sorted[Math.floor(sorted.length / 2)];
+      };
+      const pooledTimes = [...validLookupTimes, ...invalidLookupTimes];
+      const pooledMedian = median(pooledTimes);
+      const medianAbsoluteDeviation = median(
+        pooledTimes.map((value) => Math.abs(value - pooledMedian)),
+      );
+      const timingToleranceMs = Math.max(50, medianAbsoluteDeviation * 6);
+      const timingGapMs = Math.abs(
+        median(validLookupTimes) - median(invalidLookupTimes),
+      );
+      assert.ok(
+        timingGapMs <= timingToleranceMs,
+        `manual lookup timing gap ${timingGapMs.toFixed(1)}ms exceeds ${timingToleranceMs.toFixed(1)}ms (6× pooled MAD, 50ms local HTTPS/DB jitter floor)`,
+      );
+      const proofClaims = JSON.parse(
+        Buffer.from(lookup.body.proofToken.split('.')[1], 'base64url').toString(
+          'utf8',
+        ),
+      );
+      assert.equal(proofClaims.sid, session.body.sessionId);
+      const { SignJWT, importPKCS8 } = await import(
+        requireBackend.resolve('jose')
+      );
+      const testSigningKey = await importPKCS8(
+        required(
+          process.env.E2E_GATE_CREDENTIAL_PRIVATE_KEY_PEM,
+          'GATE-03 fixture signing key',
+        ),
+        'ES256',
+      );
+      const expiredProofForSession = await new SignJWT({
+        tid: proofClaims.tid,
+        eid: proofClaims.eid,
+        tkt: proofClaims.tkt,
+        sid: proofClaims.sid,
+        ver: proofClaims.ver,
+      })
+        .setProtectedHeader({ alg: 'ES256', kid: headerClaims.kid, typ: 'JWT' })
+        .setIssuer('vemoki-gate')
+        .setAudience('gate')
+        .setIssuedAt()
+        .setExpirationTime(Math.floor(Date.now() / 1000) - 60)
+        .sign(testSigningKey);
       await assertGateDenyNoMutation(ctx, f, {
         ticketId,
         token: scanner,
@@ -4490,10 +4679,7 @@ for (const caseId of CASE_IDS) {
           ...base,
           presented: {
             kind: 'manual',
-            proofToken: required(
-              f.data?.expiredManualProofToken,
-              'GATE-03 expiredManualProofToken',
-            ),
+            proofToken: expiredProofForSession,
           },
         },
       });
@@ -4579,27 +4765,6 @@ for (const caseId of CASE_IDS) {
         code: 'TICKET_NOT_ACTIVE',
         body: { ...base, presented: { kind: 'qr', jws } },
       });
-      const cancelled = await web04Query(
-        f,
-        f.tenantId,
-        `UPDATE tickets SET state = 'CANCELLED'
-         WHERE tenant_id = $1::uuid AND id = $2::uuid RETURNING id`,
-        [f.tenantId, ticketId],
-      );
-      assert.equal(
-        cancelled.length,
-        1,
-        'cancelled-ticket fixture remains RLS scoped',
-      );
-      await assertGateDenyNoMutation(ctx, f, {
-        ticketId,
-        token: scanner,
-        path,
-        status: 409,
-        code: 'TICKET_NOT_ACTIVE',
-        body: { ...base, presented: { kind: 'qr', jws } },
-      });
-
       let rateLimited = false;
       for (let attempt = 0; attempt < 65; attempt += 1) {
         const result = await request(
