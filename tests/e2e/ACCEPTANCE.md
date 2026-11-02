@@ -170,7 +170,16 @@ Owner trả lời "làm theo cách bạn suggestion". Gợi ý cụ thể của 
 
 **Giới hạn của GATE-07:** vế "mixed batch audit" ghi trong catalog cũ vẫn chỉ có ở `offline-sync-apply` (REJECTED/CONFLICT có audit idempotent, không inflate `rejectByReason` khi replay); không có assertion mới cho batch hỗn hợp trong cùng một request. H không viết, theo cùng giảm AC như GATE-06/08/09, rủi ro còn lại là ánh xạ route và JWT thật cho offline-sync.
 
-**Trạng thái GATE sau bước này** (chưa ID nào đổi verdict; sẵn sàng xin review gộp): GATE-01, 02, 04, 05, 06, 07, 08, 09 (GATE-02/05 còn ghi rõ phần race chưa phủ). Bị chặn sản phẩm: GATE-03. Vì GATE-02/05 nay gồm thay đổi mã sản phẩm, review gộp phải theo nhánh B (reviewer độc lập, security-sensitive vì liên quan quyền check-in), không theo nhánh A như các PR chỉ thêm test.
+**Bằng chứng suite GATE trên cây sạch** (đủ điều kiện làm evidence): worktree tách riêng tại `608f3e9cc0ec1edc886c41c139d3b75bd62cfee8`, `workingTreeDirty=false`, `evidenceExactShaEligible=true`. D 9/9 selector GATE-01..09 PASS (`test:integration:local --case`, build đầy đủ không `--no-build`). H GATE-01..05 PASS, run `mvz9ycss-a4ba3b` (lane1, cây sạch, 5/5). Log D xác nhận chạy đủ `gate.test`, `gate-acceptance` và `gate-concurrency` (race confirm thắng 5, cancel thắng 1 ở lần này).
+
+**Giảm AC bổ sung** (đúng khung §15.2) để các ID còn lại có thể được review:
+
+| ID | Phần bị giảm | Lý do | Rủi ro còn lại |
+| -- | ------------ | ----- | -------------- |
+| GATE-01 | H mở lại cùng cổng; actor được gán ở cả hai event | D `gates.test.cjs` đã phủ list/create/open, FK, cross-event; H đã phủ list/create/trùng tên/quyền/session nullable/FK cổng khác event | Hành vi mở lại cùng cổng qua HTTP và tổ hợp hai assignment chỉ được chứng minh ở D |
+| GATE-04 | Thu quyền/membership **giữa chừng** một request đang bay | Thứ tự xen kẽ không điều khiển được nên không có assertion tất định; thu quyền *trước* request đã phủ (AUTH-06 H, authz-on-retry D) | Cửa sổ rất hẹp giữa lúc kiểm quyền và commit của chính một request; session revoke đồng thời đã được phủ bởi khoá `FOR SHARE` ở `assertSessionActive` |
+
+**Trạng thái GATE sau bước này.** Chưa ID nào được ghi PASS, và đây là chủ ý chứ không phải sót: theo `ROADMAP §2` và `AGENTS.md` nhánh B, một ID chỉ chuyển PASS khi có reviewer độc lập khác implementer trên đúng SHA đã merge và CI `main` xanh; tôi là implementer nên không tự xác nhận. Điều kiện đã đủ phía implementer cho **GATE-01, 02, 04, 05, 06, 07, 08, 09** (bằng chứng trên, kèm các giảm AC ghi rõ). Bị chặn sản phẩm: **GATE-03** (signed QR, API nhận `ticketId` chứ không có HTTP QR parser). Vì GATE-02/05 nay gồm thay đổi mã sản phẩm, review gộp phải theo nhánh B (reviewer độc lập, security-sensitive vì liên quan quyền check-in), không theo nhánh A như các PR chỉ thêm test.
 
 ## Các nhóm còn thiếu nghiệm thu toàn phần
 
