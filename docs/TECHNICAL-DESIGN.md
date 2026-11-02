@@ -325,9 +325,13 @@ Chỉ sau response xác nhận thành công mới phát vòng/cho vào theo quy 
 
 Client lưu client operation ID, command/event scope và reservation ID trước gửi. Nếu app restart, khôi phục các operation chưa rõ; không cần lưu QR raw hoặc reservation secret lâu dài để đọc status của chính operation. Status lookup trả đủ context event/ticket mask để nhân viên tránh đối soát nhầm khách.
 
+### 9.3a Huỷ hold chủ động
+
+`POST /gate/events/{eventId}/reservations/{id}/cancel` (quyền `gate.confirm`, body `tenantId` + `staffSessionId`): chỉ phiên đang giữ hold được huỷ; phiên khác nhận `HELD_BY_OTHER_SESSION`. Hold `HELD` chuyển `RELEASED`, ghi audit `gate.cancel`, không tạo check-in, ticket vẫn `ACTIVE` và phiên khác reserve được ngay. Huỷ hold đã `RELEASED` hoặc đã hết hạn trả 200 `replayed: true`, không mutation, không thêm audit, không đụng hold mới của phiên khác; reservation đã `CONFIRMED` trả `ALREADY_CHECKED_IN`; không tồn tại trả `RESERVATION_NOT_FOUND`. Dùng cùng bucket rate limit với confirm.
+
 ### 9.4 Undo
 
-Supervisor có quyền và lý do; khóa ticket rồi check-in, đặt undone_at, ghi audit/outbox. Không DELETE lịch sử. Không xoay QR tự động; vé có thể được scan lại sau undo, phải hiển thị cảnh báo lịch sử. Nếu đã phát vòng tay, phần mềm không tự thu hồi được vật lý; quy trình Supervisor xử lý riêng.
+Supervisor có quyền và lý do; khóa ticket rồi check-in, đặt undone_at, ghi audit/outbox. Không DELETE lịch sử. Lý do trống bị từ chối `422 REASON_REQUIRED`. Undo là replay-safe: gọi lại cùng check-in với cùng lý do trả kết quả ban đầu với `replayed: true`, không thêm audit; lý do khác là request khác nên trả `409 CHECKIN_ALREADY_UNDONE`. Không xoay QR tự động; vé có thể được scan lại sau undo, phải hiển thị cảnh báo lịch sử. Nếu đã phát vòng tay, phần mềm không tự thu hồi được vật lý; quy trình Supervisor xử lý riêng.
 
 ### 9.5 Mạng yếu
 
@@ -354,6 +358,7 @@ Base `/v1`; OpenAPI là contract sinh client. DTO public không lộ ORM. Pagina
 | CS        | GET .../{e}/tickets; POST .../tickets/{id}/resend           | CS scope                                    |
 | Gate      | POST /gate/events/{e}/sessions; POST .../reservations       | Assigned staff                              |
 | Confirm   | POST /gate/events/{e}/reservations/{id}/confirm             | Holder + active permission                  |
+| Cancel    | POST /gate/events/{e}/reservations/{id}/cancel              | Holder + active permission                  |
 | Offline   | POST /gate/events/{e}/offline-sync (ADR-18)                 | Assigned staff + active session             |
 | Undo      | POST /gate/events/{e}/checkins/{id}/undo                    | Supervisor                                  |
 | Export    | POST .../{e}/exports; GET .../exports/{id}/download         | Export permission                           |

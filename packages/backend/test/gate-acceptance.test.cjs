@@ -28,6 +28,8 @@ const {
   unwrapReserveOutcome,
   unwrapConfirmOutcome,
   undoCheckin,
+  cancelReservation,
+  unwrapCancelOutcome,
 } = require('../dist');
 
 const docker = (...args) =>
@@ -98,7 +100,7 @@ async function startIsolatedPostgres() {
   }
 }
 
-const TICKET_CODES = ['GA-T1', 'GA-T2', 'GA-T3', 'GA-T4', 'GA-T5'];
+const TICKET_CODES = ['GA-T1', 'GA-T2', 'GA-T3', 'GA-T4', 'GA-T5', 'GA-T6', 'GA-T7'];
 
 test(
   'GATE-02/04/05 acceptance: hold, confirm and undo contracts',
@@ -208,6 +210,16 @@ test(
             eventId,
             reservationId: hold.reservationId,
             token,
+            staffSessionId: session.sessionId,
+            actorUserId: user.userId,
+          }),
+        );
+      const cancel = (hold, session, user) =>
+        withTenant(db, tenantId, (tx) =>
+          cancelReservation(tx, {
+            tenantId,
+            eventId,
+            reservationId: hold.reservationId,
             staffSessionId: session.sessionId,
             actorUserId: user.userId,
           }),
@@ -371,10 +383,13 @@ test(
         assert.equal(r.current, 1, 'denied undo must keep the check-in');
         assert.equal(r.state, 'USED');
 
-        // A blank reason is refused without mutation. The specific code is not
-        // pinned here: the domain raises CHECKIN_NOT_FOUND for a blank reason
-        // while reissue uses REASON_REQUIRED (recorded in ACCEPTANCE.md).
-        await assert.rejects(() => undo(done.checkinId, staffB, '   '), GateError);
+        // A blank reason is refused with REASON_REQUIRED and no mutation.
+        await assert.rejects(
+          () => undo(done.checkinId, staffB, '   '),
+          (error) =>
+            error instanceof GateError &&
+            error.code === GATE_ERROR_CODES.REASON_REQUIRED,
+        );
         r = await rows(t);
         assert.equal(r.current, 1, 'blank-reason undo must keep the check-in');
         assert.equal(await auditCount('gate.undo', done.checkinId), 0);
@@ -391,8 +406,17 @@ test(
         assert.equal(r.checkins[0].undone_by, staffB.userId);
         assert.equal(await auditCount('gate.undo', done.checkinId), 1);
 
-        // The domain does not replay an undo: a second one is refused and leaves
-        // exactly one audit row.
+        assert.equal(undone.replayed, false);
+        // Replay: the client lost the response and retries the same undo. It gets
+        // the original result back, with no second audit row and no state change.
+        const replay = await undo(done.checkinId, staffB, 'khách vào nhầm cổng');
+        assert.equal(replay.replayed, true);
+        assert.equal(replay.checkinId, done.checkinId);
+        assert.equal(replay.state, 'ACTIVE');
+        assert.equal(await auditCount('gate.undo', done.checkinId), 1);
+        r = await rows(t);
+        assert.equal(r.current, 0, 'replay must not change the ticket');
+        // A different reason is a different request, so it stays a conflict.
         await assert.rejects(
           () => undo(done.checkinId, staffB, 'undo again'),
           (error) =>
@@ -414,6 +438,67 @@ test(
         r = await rows(t);
         assert.equal(r.current, 1);
         assert.equal(r.checkins.length, 2, 're-entry keeps the undone row as history');
+      }
+
+      // ── GATE-02: a hold can be released on purpose ───────────────────────────
+      {
+        const t = tickets[5];
+        const hold = unwrapReserveOutcome(await reserve(t, sessB, staffB));
+        // Only the holding session may release it.
+        const foreign = await cancel(hold, sessScanner, scanner);
+        assert.equal(foreign.ok, false);
+        assert.equal(foreign.code, GATE_ERROR_CODES.HELD_BY_OTHER_SESSION);
+        let r = await rows(t);
+        assert.deepEqual(r.reservations.map((x) => x.status), ['HELD']);
+
+        const released = unwrapCancelOutcome(await cancel(hold, sessB, staffB));
+        assert.equal(released.status, 'RELEASED');
+        assert.equal(released.replayed, false);
+        r = await rows(t);
+        assert.deepEqual(r.reservations.map((x) => x.status), ['RELEASED']);
+        assert.equal(r.checkins.length, 0, 'cancel must not create a check-in');
+        assert.equal(r.state, 'ACTIVE');
+        assert.equal(await auditCount('gate.cancel', hold.reservationId), 1);
+
+        // The released hold cannot be confirmed any more.
+        const late = await confirm(hold, hold.token, sessB, staffB);
+        assert.equal(late.ok, false);
+        assert.equal(late.code, GATE_ERROR_CODES.RESERVATION_EXPIRED);
+
+        // Another session can take the ticket straight away.
+        const taken = unwrapReserveOutcome(await reserve(t, sessScanner, scanner));
+        assert.notEqual(taken.reservationId, hold.reservationId);
+
+        // Replay: cancelling the same hold again is harmless, adds no audit row and
+        // leaves the new holder's hold untouched.
+        const again = unwrapCancelOutcome(await cancel(hold, sessB, staffB));
+        assert.equal(again.replayed, true);
+        assert.equal(await auditCount('gate.cancel', hold.reservationId), 1);
+        r = await rows(t);
+        assert.deepEqual(
+          r.reservations.map((x) => x.status).sort(),
+          ['HELD', 'RELEASED'],
+        );
+
+        const unknown = await cancel(
+          { reservationId: randomUUID() },
+          sessB,
+          staffB,
+        );
+        assert.equal(unknown.ok, false);
+        assert.equal(unknown.code, GATE_ERROR_CODES.RESERVATION_NOT_FOUND);
+      }
+      {
+        // A confirmed reservation is a check-in, not a hold: it cannot be released.
+        const t = tickets[6];
+        const hold = unwrapReserveOutcome(await reserve(t, sessB, staffB));
+        unwrapConfirmOutcome(await confirm(hold, hold.token, sessB, staffB));
+        const denied = await cancel(hold, sessB, staffB);
+        assert.equal(denied.ok, false);
+        assert.equal(denied.code, GATE_ERROR_CODES.ALREADY_CHECKED_IN);
+        const r = await rows(t);
+        assert.equal(r.current, 1);
+        assert.deepEqual(r.reservations.map((x) => x.status), ['CONFIRMED']);
       }
     } finally {
       if (db) await db.$disconnect().catch(() => {});

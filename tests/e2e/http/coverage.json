@@ -87,7 +87,7 @@
     "tests": ["H:tests/e2e/http/live.test.mjs#[GATE-02]"],
     "layers": ["H"],
     "status": "blocked",
-    "reason": "H PASS run mvz7c12y-668d9f (cây dirty, chưa là evidence nghiệm thu): reserve không làm report checkInSuccessCount đổi; session khác 409 HELD_BY_OTHER_SESSION; retry cùng holder 200 cùng reservationId và token mới; token cũ confirm 409 RESERVATION_TOKEN_MISMATCH; hold bị ép hết hạn thì session khác reserve được và holder cũ confirm 409 RESERVATION_EXPIRED. Thiếu: huỷ hold chủ động (API chưa có)."
+    "reason": "H PASS run mvz7c12y-668d9f (cây dirty, chưa là evidence nghiệm thu): reserve không làm report checkInSuccessCount đổi; session khác 409 HELD_BY_OTHER_SESSION; retry cùng holder 200 cùng reservationId và token mới; token cũ confirm 409 RESERVATION_TOKEN_MISMATCH; hold bị ép hết hạn thì session khác reserve được và holder cũ confirm 409 RESERVATION_EXPIRED. Huỷ hold chủ động (run mvz9g6bj-1d59a1, cây dirty): phiên khác cancel 409 HELD_BY_OTHER_SESSION, holder cancel 200 RELEASED replayed=false và report không đổi, confirm hold đã huỷ 409 RESERVATION_EXPIRED, cancel lại 200 replayed=true không giải phóng hold mới của phiên khác, hold mới confirm 200 rồi cancel 409 ALREADY_CHECKED_IN."
   },
   {
     "caseId": "GATE-04",
@@ -101,7 +101,7 @@
     "tests": ["H:tests/e2e/http/live.test.mjs#[GATE-05]"],
     "layers": ["H"],
     "status": "blocked",
-    "reason": "H PASS run mvz7c12y-668d9f (cây dirty): Scanner undo 403, lý do trống 422 SCOPE_REQUIRED, Supervisor undo 201 và report về baseline, hàng check-in còn lại với undone_at/undo_reason, đúng một audit gate.undo, undo lần hai 409 CHECKIN_ALREADY_UNDONE, checkin lạ 404 CHECKIN_NOT_FOUND. Đột biến (cho Scanner undo) làm test fail đúng ở '201 !== 403' (run mvz7d7i0-fbb980). Thiếu: undo đồng thời với scan/revoke; idempotency kiểu replay chưa có contract."
+    "reason": "H PASS run mvz7c12y-668d9f (cây dirty): Scanner undo 403, lý do trống 422 REASON_REQUIRED, Supervisor undo 201 replayed=false và report về baseline, hàng check-in còn lại với undone_at/undo_reason, đúng một audit gate.undo, undo lại cùng lý do 201 replayed=true cùng checkinId và vẫn một audit, lý do khác 409 CHECKIN_ALREADY_UNDONE, checkin lạ 404 CHECKIN_NOT_FOUND (run mvz9g6bj-1d59a1, cây dirty). Đột biến (cho Scanner undo) làm test fail đúng ở '201 !== 403' (run mvz7d7i0-fbb980, trước thay đổi contract). Thiếu: undo đồng thời với scan/revoke."
   },
   {
     "caseId": "DB-01",
