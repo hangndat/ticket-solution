@@ -14,10 +14,15 @@ export async function seedWebEmailBudgets(state, manifest) {
   );
   if (!tenants.size) return;
   const url = new URL(state.databaseUrl);
+  // Lane dùng project cố định theo lane; database vẫn là của riêng run.
+  const ownedProject = state.lane
+    ? state.project === `e2e-${state.lane.name}` &&
+      url.pathname === `/${state.databaseName}`
+    : state.project === `e2e-${state.id}`;
   if (
     manifest.runId !== state.id ||
     manifest.runtime?.ownerRunId !== state.id ||
-    state.project !== `e2e-${state.id}` ||
+    !ownedProject ||
     !['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname) ||
     url.port !== String(state.ports.pg)
   ) {
