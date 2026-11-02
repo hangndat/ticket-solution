@@ -1174,6 +1174,9 @@ export async function revokeTicket(
     reason: string;
   },
 ): Promise<void> {
+  if (!input.reason.trim()) {
+    throw new GateError(GATE_ERROR_CODES.REASON_REQUIRED, 'Revoke reason is required');
+  }
   await requireTenantPermission(tx, {
     tenantId: input.tenantId,
     userId: input.actorUserId,

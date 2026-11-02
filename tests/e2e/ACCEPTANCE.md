@@ -154,10 +154,19 @@ Owner trả lời "làm theo cách bạn suggestion". Gợi ý cụ thể của 
 **Thay đổi hành vi sản phẩm theo quyết định của owner** (`packages/backend/src/gate.ts`, `apps/api/src/gate.ts`, `docs/TECHNICAL-DESIGN.md` §9.3a/§9.4, `apps/api/openapi.json` sinh lại):
 
 - **Cancel hold:** quyền `gate.confirm`, chỉ phiên đang giữ; phiên khác `HELD_BY_OTHER_SESSION`; `HELD`→`RELEASED` + audit `gate.cancel`, không tạo check-in; huỷ hold đã `RELEASED`/hết hạn là replay `200 replayed:true` không mutation; reservation `CONFIRMED` → `ALREADY_CHECKED_IN`; không có → `RESERVATION_NOT_FOUND`. Dùng chung bucket rate limit của confirm (không thêm bucket). Lock order giống confirm (ticket trước reservation).
-- **Undo:** phản hồi thêm trường `replayed` (chỉ thêm, client cũ không vỡ; mobile/portal không gọi undo). **Chỉ undo** đổi sang `REASON_REQUIRED`; `revoke` và `reissue` ở controller vẫn trả 422 `SCOPE_REQUIRED` cho lý do trống, chưa thống nhất vì chưa được yêu cầu.
+- **Undo:** phản hồi thêm trường `replayed` (chỉ thêm, client cũ không vỡ; mobile/portal không gọi undo). **Lý do trống đã thống nhất** (owner chọn "thống nhất đi"): undo, revoke và reissue đều trả 422 `REASON_REQUIRED` ở controller, và domain `revokeTicket` nay cũng kiểm lý do (trước đó chỉ controller chặn; reissue vốn đã kiểm ở domain). Cùng quy ước với các route Portal BFF đã dùng `REASON_REQUIRED`/422.
 - Test: D `gate-acceptance` thêm ca cancel và replay (vé GA-T6/T7); H GATE-02/05 cập nhật (run `mvz9g6bj-1d59a1`, 3/3 PASS, cây dirty); test contract route `apps/api/test/health.test.cjs` thêm route mới; `gate.test.cjs` cũ vẫn xanh; `@ticket/api test` 52/52. Đột biến: cancel bỏ kiểm holder → D fail; replay bỏ so lý do → D fail (`Missing expected rejection`).
 
-Các vế còn lại của GATE-02/05 vẫn chưa phủ: cancel đồng thời với confirm/hết hạn, undo đồng thời với scan/revoke.
+**Race đã phủ** (owner: "phủ đi"; `packages/backend/test/gate-concurrency.test.cjs`, D, hai kết nối PostgreSQL thật tranh cùng một vé, mỗi ca lặp nhiều vòng vì thứ tự xen kẽ không điều khiển được nên test khẳng định bất biến đúng với mọi thứ tự):
+
+| Race | Bất biến được khẳng định |
+| ---- | ------------------------ |
+| cancel vs confirm cùng một hold | Đúng một bên thắng: confirm thắng thì cancel nhận `ALREADY_CHECKED_IN`, vé `USED`, hold `CONFIRMED`, không audit `gate.cancel`; cancel thắng thì confirm nhận `RESERVATION_EXPIRED`, vé `ACTIVE`, hold `RELEASED`, một audit. Không bao giờ còn hold `HELD`, không quá một check-in hiện hành. Ba lần chạy cho các tỉ lệ thắng khác nhau (3/3, 5/1, 1/5) nên cả hai thứ tự đều được thực thi |
+| cancel vs hết hạn | Cancel hold đã hết hạn (còn đánh dấu `HELD`) không bao giờ lỗi; khi phiên khác reserve đồng thời thì cả hai đều thành công và còn đúng một hold `HELD`, chính là hold mới |
+| undo vs scan phiên khác | Undo luôn thành công, vé `ACTIVE`, không check-in hiện hành, hàng undone giữ làm lịch sử, đúng một audit `gate.undo`; scan thắng thì bị `ALREADY_CHECKED_IN` rồi scan lại được, scan thua thì có hold confirm được |
+| undo vs revoke | Không bên nào lỗi; vé luôn kết thúc `REVOKED` (undo không hồi sinh vé đã revoke, nhờ điều kiện `state = 'USED'`); một audit mỗi loại |
+
+Đột biến xác nhận test không rỗng: cho cancel giải phóng cả reservation `CONFIRMED` làm test fail; bỏ điều kiện `state = 'USED'` của undo làm test fail 3/3 lần. **Giới hạn:** thứ tự xen kẽ của hai transaction không được điều khiển nên không chứng minh *mọi* thứ tự; vế "revoke permission/membership giữa request đang bay" của GATE-04 vẫn chưa phủ.
 
 **Giới hạn của GATE-07:** vế "mixed batch audit" ghi trong catalog cũ vẫn chỉ có ở `offline-sync-apply` (REJECTED/CONFLICT có audit idempotent, không inflate `rejectByReason` khi replay); không có assertion mới cho batch hỗn hợp trong cùng một request. H không viết, theo cùng giảm AC như GATE-06/08/09, rủi ro còn lại là ánh xạ route và JWT thật cho offline-sync.
 
