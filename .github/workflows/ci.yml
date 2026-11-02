@@ -276,7 +276,7 @@ jobs:
           - shard: cs-export
             files: test/cs-export.test.cjs
           - shard: tenant-registration
-            files: test/tenant-registration.test.cjs test/role-presets.test.cjs test/portal-audit-codes.test.cjs
+            files: test/tenant-registration.test.cjs test/role-presets.test.cjs test/portal-audit-codes.test.cjs test/db17-role-escalation.test.cjs test/db17-tenant-limits-mutation.test.cjs
           - shard: demo-seed-rebrand
             files: test/demo-seed-rebrand.test.cjs
           - shard: backend-fences
