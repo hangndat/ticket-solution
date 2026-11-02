@@ -188,11 +188,13 @@
       "D:packages/backend/test/role-presets.test.cjs#P2-ROLES-PRESET",
       "D:packages/backend/test/tenant-registration.test.cjs#P2 self-serve PENDING registration",
       "D:packages/backend/test/event-quota-suspended.test.cjs#632 concurrent createEvent at max_events — one winner, one TENANT_LIMIT_REACHED",
-      "D:packages/backend/test/tenant-limits-usage.test.cjs#G-10 runtime role reads only authorized tenant counters and UTC day"
+      "D:packages/backend/test/tenant-limits-usage.test.cjs#G-10 runtime role reads only authorized tenant counters and UTC day",
+      "D:packages/backend/test/db17-role-escalation.test.cjs#DB-17: non-Owner cannot create/list role presets; catalogue stays the only grantable surface",
+      "D:packages/backend/test/db17-tenant-limits-mutation.test.cjs#DB-17: maxEvents/maxStaff enforced at mutation; usage reflects committed counts"
     ],
     "layers": ["D"],
     "status": "blocked",
-    "reason": "D presets/onboarding + tenant limit mutation/usage (event-quota-suspended #632 race, tenant-limits-usage). Thiếu H Keycloak/HTTP; escalation bằng preset của Manager chưa có assertion rõ (cần owner quyết định policy)."
+    "reason": "D presets/onboarding + tenant limit mutation/usage (event-quota-suspended #632 race, tenant-limits-usage) + non-Owner (Manager/Scanner) escalation deny qua PostgreSQL thật, arbitrary/invented permission rejected cho cả Owner (catalogue là surface duy nhất), cross-tenant preset 404; maxEvents/maxStaff enforced at mutation với rollback đầy đủ, readTenantLimitsUsage đúng committed counts, và race case xác định (2 concurrent createEvent tại maxEvents=1 qua FOR UPDATE lock trên tenant_limits — đúng 1 commit/1 TENANT_LIMIT_REACHED, không oversell; mutation-check xác nhận assertion bắt được regression khi gỡ lock/permission check). Vẫn thiếu H named presets/self-serve PENDING/operator activation qua HTTP+Keycloak thật — cần live stack (E2E_MANIFEST theo mẫu [DB-16] live HTTP trong tests/e2e/http/live.test.mjs), không có trong worktree này."
   },
   {
     "caseId": "DB-18",
