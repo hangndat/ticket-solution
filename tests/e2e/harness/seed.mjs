@@ -250,6 +250,10 @@ export async function seedRuntime(state, caseIds) {
         // Private, run-scoped control. The test uses ticket_runtime + tenant RLS.
         fixture.data.controlDatabaseUrl = state.databaseUrl;
       }
+      if (caseId === 'GATE-03') {
+        // Direct Postgres state checks stay inside the owned tenant under RLS.
+        fixture.data.controlDatabaseUrl = state.databaseUrl;
+      }
       if (
         [
           'AUTH-03',
@@ -863,6 +867,25 @@ export async function seedRuntime(state, caseIds) {
           const foreignGateId = randomUUID();
           await tx.$executeRaw`INSERT INTO gates (tenant_id, event_id, id, name, sort_order) VALUES (${tenantId}::uuid, ${foreignEventId}::uuid, ${foreignGateId}::uuid, 'Other gate', 0)`;
           fixture.data.foreignGateId = foreignGateId;
+        }
+        if (caseId === 'GATE-03') {
+          const foreignEventId = randomUUID();
+          await tx.event.create({
+            data: {
+              tenantId,
+              id: foreignEventId,
+              slug: 'other-gate-event',
+              name: `Other ${caseId}`,
+              status: 'PUBLISHED',
+            },
+          });
+          await backend.grantEventAssignment(tx, {
+            tenantId,
+            eventId: foreignEventId,
+            membershipId: memberships.scanner.membershipId,
+            permissions: backend.eventPermissionsForRole('Scanner'),
+          });
+          fixture.data.foreignEventId = foreignEventId;
         }
         if (caseId === 'WEB-04') {
           const expiredEventId = randomUUID();
