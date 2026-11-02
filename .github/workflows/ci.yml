@@ -281,6 +281,8 @@ jobs:
             files: test/outbox-fence.test.cjs test/event-quota-suspended.test.cjs test/apns-atleast-once.test.cjs test/apns-env-fallback.test.cjs
           - shard: minio-real
             files: test/minio-real.test.cjs
+          - shard: resend-caps
+            files: test/job04-resend-caps.test.cjs
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-pnpm
