@@ -257,7 +257,7 @@ test(
         });
 
       // ── cancel vs confirm on the same hold ────────────────────────────────────
-      const seen = { confirmWon: 0, cancelWon: 0 };
+      const seen = { confirmWon: 0, cancelWon: 0, undoFirst: 0, revokeFirst: 0 };
       for (let i = 0; i < ROUNDS; i++) {
         const ticket = await issue();
         const hold = unwrapReserveOutcome(await reserve(db, ticket, sessA, staffA));
@@ -376,6 +376,16 @@ test(
         for (const r of results) {
           assert.equal(r.status, 'fulfilled', 'neither side may fail under the race');
         }
+        // The undo result must tell the truth about the ticket at that moment:
+        // ACTIVE if the undo ran first (revoke then follows), REVOKED if the
+        // revoke ran first. Never any other state, and never a state the row
+        // did not have. Which one happened is recorded, not assumed.
+        const undoState = results[0].value.state;
+        assert.ok(
+          ['ACTIVE', 'REVOKED'].includes(undoState),
+          `unexpected undo state ${undoState}`,
+        );
+        seen[undoState === 'ACTIVE' ? 'undoFirst' : 'revokeFirst']++;
         const s = await snapshot(ticket);
         // Whatever the order, a revoked ticket must never come back to ACTIVE.
         assert.equal(s.state, 'REVOKED');
@@ -386,7 +396,7 @@ test(
       }
 
       console.log(
-        `cancel-vs-confirm interleavings: confirm won ${seen.confirmWon}, cancel won ${seen.cancelWon}`,
+        `interleavings: confirm won ${seen.confirmWon}, cancel won ${seen.cancelWon}; undo first ${seen.undoFirst}, revoke first ${seen.revokeFirst}`,
       );
     } finally {
       if (db) await db.$disconnect().catch(() => {});

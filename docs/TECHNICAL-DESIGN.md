@@ -331,7 +331,7 @@ Client lưu client operation ID, command/event scope và reservation ID trước
 
 ### 9.4 Undo
 
-Supervisor có quyền và lý do; khóa ticket rồi check-in, đặt undone_at, ghi audit/outbox. Không DELETE lịch sử. Lý do trống bị từ chối `422 REASON_REQUIRED`, cùng quy ước cho revoke và reissue vé (domain `revokeTicket` cũng kiểm, không chỉ controller). Undo là replay-safe: gọi lại cùng check-in với cùng lý do trả kết quả ban đầu với `replayed: true`, không thêm audit; lý do khác là request khác nên trả `409 CHECKIN_ALREADY_UNDONE`. Không xoay QR tự động; vé có thể được scan lại sau undo, phải hiển thị cảnh báo lịch sử. Nếu đã phát vòng tay, phần mềm không tự thu hồi được vật lý; quy trình Supervisor xử lý riêng.
+Supervisor có quyền và lý do; khóa ticket rồi check-in, đặt undone_at, ghi audit/outbox. Không DELETE lịch sử. Lý do trống bị từ chối `422 REASON_REQUIRED`, cùng quy ước cho revoke và reissue vé (domain `revokeTicket` cũng kiểm, không chỉ controller). Undo là replay-safe: gọi lại cùng check-in với cùng lý do trả kết quả ban đầu với `replayed: true`, không thêm audit; lý do khác là request khác nên trả `409 CHECKIN_ALREADY_UNDONE`. Phản hồi luôn mang trạng thái vé **thật** tại thời điểm trả lời (`ACTIVE` khi undo đưa vé `USED` về phục vụ; vé đã rời `USED`, ví dụ bị revoke đồng thời, giữ nguyên trạng thái của nó, và undo không hồi sinh vé đã revoke). Domain kiểm quyền trước, rồi mới kiểm lý do. Không xoay QR tự động; vé có thể được scan lại sau undo, phải hiển thị cảnh báo lịch sử. Nếu đã phát vòng tay, phần mềm không tự thu hồi được vật lý; quy trình Supervisor xử lý riêng.
 
 ### 9.5 Mạng yếu
 
