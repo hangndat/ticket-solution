@@ -4584,6 +4584,14 @@ for (const caseId of CASE_IDS) {
         code: 'MANUAL_CODE_INVALID',
         body: { ...base, code: 'ZZZZ-ZZZZ-ZZ' },
       });
+      await assertGateDenyNoMutation(ctx, f, {
+        ticketId,
+        token: scanner,
+        path: gatePath(f, 'manual-lookup'),
+        status: 404,
+        code: 'MANUAL_CODE_INVALID',
+        body: { ...base, code: 'INVALID' },
+      });
       const lookup = await request(
         ctx,
         'POST',
@@ -4751,6 +4759,45 @@ for (const caseId of CASE_IDS) {
           },
         },
       });
+      const tamperedProof = lookup.body.proofToken.split('.');
+      tamperedProof[2] = `${tamperedProof[2][0] === 'A' ? 'B' : 'A'}${tamperedProof[2].slice(1)}`;
+      await assertGateDenyNoMutation(ctx, f, {
+        ticketId,
+        token: scanner,
+        path,
+        status: 403,
+        code: 'MANUAL_PROOF_INVALID',
+        body: {
+          ...base,
+          presented: { kind: 'manual', proofToken: tamperedProof.join('.') },
+        },
+      });
+
+      const manualForeignProof = await new SignJWT({
+        tid: foreignTenantId,
+        eid: foreignTenantEventId,
+        tkt: ticketId,
+        sid: session.body.sessionId,
+        ver: proofClaims.ver,
+      })
+        .setProtectedHeader({ alg: 'ES256', kid: headerClaims.kid, typ: 'JWT' })
+        .setIssuer('vemoki-gate')
+        .setAudience('gate')
+        .setIssuedAt()
+        .setExpirationTime(Math.floor(Date.now() / 1000) + 60)
+        .sign(testSigningKey);
+      await assertGateDenyNoMutation(ctx, f, {
+        ticketId,
+        token: scanner,
+        path,
+        status: 409,
+        code: 'CREDENTIAL_CONTEXT_MISMATCH',
+        body: {
+          ...base,
+          presented: { kind: 'manual', proofToken: manualForeignProof },
+        },
+      });
+
       const secondSession = await request(
         ctx,
         'POST',
