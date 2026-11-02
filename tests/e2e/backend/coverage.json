@@ -210,11 +210,12 @@
     "tests": [
       "D:packages/backend/test/account-idp-erasure.test.cjs#SEC-2 B1:",
       "U:packages/backend/test/issue-unit.test.cjs#CODE_HMAC_PEPPER",
-      "D:packages/backend/test/db19-code-pepper-rotation.test.cjs#DB-19: code issued under v1 keeps resolving after v2 rotation; removed v1 fails closed; no plaintext"
+      "D:packages/backend/test/db19-code-pepper-rotation.test.cjs#DB-19: code issued under v1 keeps resolving after v2 rotation; removed v1 fails closed; no plaintext",
+      "D:packages/backend/test/db19-code-pepper-rotation.test.cjs#DB-19: consumed code cannot be re-issued after pepper rotation (fail-closed)"
     ],
     "layers": ["D", "U"],
     "status": "blocked",
-    "reason": "D code pepper rotation (v1 alias giữ sau rotate v2, removed v1 fail-closed, không lộ plaintext). QR credential rotation (credential-crypto key đơn, kid local-v1) chưa có versioned keyring — product gap cần owner. H chưa có."
+    "reason": "D code pepper rotation (v1 alias giữ sau rotate v2, removed v1 fail-closed, không lộ plaintext; consumed code không cấp lại sau rotation, mutation-verified). QR credential rotation (credential-crypto key đơn, kid local-v1) chưa có versioned keyring — product gap cần owner. H chưa có."
   },
   {
     "caseId": "GATE-01",
