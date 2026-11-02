@@ -282,7 +282,7 @@ jobs:
           - shard: backend-fences
             files: test/outbox-fence.test.cjs test/event-quota-suspended.test.cjs test/apns-atleast-once.test.cjs test/apns-env-fallback.test.cjs
           - shard: worker-budget
-            files: test/worker-db-cancel.test.cjs
+            files: test/worker-db-cancel.test.cjs ../../tests/e2e/backend/job-06-worker-budget.test.cjs
           - shard: minio-real
             files: test/minio-real.test.cjs
           - shard: resend-caps

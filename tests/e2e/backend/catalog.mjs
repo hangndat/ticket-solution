@@ -223,6 +223,7 @@ export const catalog = {
     w('worker-budget-fault', 'slow SMTP/APNs'),
     w('worker-relay-tick-timeout', 'hung tick step'),
     { file: 'tests/e2e/backend/job-06-worker-budget.test.cjs', name: '[JOB-06] R real worker process bounds a stuck step while reconciliation continues', layer: 'R' },
+    { file: 'tests/e2e/backend/job-06-worker-budget.test.cjs', name: '[JOB-06] R stalled SMTP after claim times out, then lease reclaim preserves finite tenant cap', layer: 'R' },
   ],
   'JOB-07': [
     b('cs-export', 'CS lookup/export/events'),
@@ -345,7 +346,7 @@ export const notes = {
   'JOB-04':
     'D/U/H cooldown+user/staff/recipient hourly cap+dedup+retry-vs-terminal emailNeedsCs; D tenant delivery-budget admission/settlement/reclaim added; tenant-wide resend cap BLOCKED chờ contract wiring (xem .artifacts/job04-report.md).',
   'JOB-05': 'U template; thiếu D/H preview/publish/reminder schedule.',
-  'JOB-06': 'D/U bounded timeout; R real worker timeout/overlap/reconcile/shutdown timing; tenant cap remains blocked.',
+  'JOB-06': 'D finite tenant cap under combined scheduler load (8 accepted, 4 deferred); R post-claim SMTP stall, timeout, shutdown and lease reclaim preserve cap; exact-SHA evidence pending.',
   'JOB-07': 'D object access; thiếu H signed URL authz/expiry across tenants.',
   'JOB-08':
     'OUT: không có HTTP callback/transport nhận provider event trong API hiện hành.',
