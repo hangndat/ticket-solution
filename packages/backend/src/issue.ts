@@ -456,6 +456,17 @@ async function runIssueBusiness(
       AND c.code_hmac = ANY(${codeHmacCandidates}::text[])
     FOR UPDATE OF c
   `;
+  if (codes.length > 1) {
+    // Same raw code resolves to more than one row in this tenant/event —
+    // a residual duplicate from re-import across a pepper rotation without
+    // the DB-10 routing registry (no global fingerprint to catch it). Which
+    // row is authoritative is ambiguous, so fail closed before any mutation
+    // rather than guess via unordered row order.
+    throw new IssueError(
+      ISSUE_ERROR_CODES.CODE_INVALID,
+      'Redemption code is invalid',
+    );
+  }
   const code = codes[0];
   if (!code) {
     throw new IssueError(
