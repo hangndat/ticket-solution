@@ -2,7 +2,7 @@
 import { spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { readFileSync, existsSync, writeFileSync } from 'node:fs';
-import { createHash, randomBytes } from 'node:crypto';
+import { createHash, generateKeyPairSync, randomBytes } from 'node:crypto';
 import { resolve, dirname } from 'node:path';
 import {
   createRuntime,
@@ -19,6 +19,7 @@ import { validateManifest } from '../validation/validate.mjs';
 import { assertSourceProvenanceStable } from './source-provenance.mjs';
 
 const requireRoot = createRequire(resolve(ROOT, 'package.json'));
+const requireBackend = createRequire(resolve(ROOT, 'packages/backend/package.json'));
 const args = process.argv.slice(2);
 const mode = args.shift() || 'smoke';
 const skipBuild = args.includes('--skip-build');
@@ -238,6 +239,24 @@ if (mode === 'list' || args.includes('--list')) {
       );
       if (await exitCode(core))
         throw new Error('BLOCKED: core build thất bại; xem core-build.log');
+    }
+    if (caseIds.includes('GATE-03')) {
+      const { privateKey, publicKey } = generateKeyPairSync('ec', {
+        namedCurve: 'prime256v1',
+      });
+      const privateKeyPem = privateKey.export({ type: 'pkcs8', format: 'pem' });
+      const publicKeyPem = publicKey.export({ type: 'spki', format: 'pem' });
+      const backend = requireBackend('./dist/index.js');
+      const sealed = backend.sealCredentialToken(
+        privateKeyPem,
+        backend.deriveGateSigningSealKey(state.secrets.credential),
+      );
+      state.secrets.gateCredentialCurrentKeyId = 'e2e';
+      state.secrets.gateCredentialSigningKeySealed = sealed.encryptedToken;
+      state.secrets.gateCredentialVerifyKeysJson = JSON.stringify([
+        { kid: 'e2e', alg: 'ES256', publicKeyPem },
+      ]);
+      state.secrets.gateManualCodePepper = randomBytes(32).toString('hex');
     }
     const { children, proxy, minio, ...seedState } = state;
     seedState.caseIds = caseIds;
