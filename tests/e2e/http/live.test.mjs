@@ -4508,6 +4508,32 @@ for (const caseId of CASE_IDS) {
       expectStatus(won, 200);
       const checkinId = required(won.body.checkinId, 'GATE-05 checkinId');
       assert.equal(await checkInCount(), baseline + 1);
+      // A blank reason is 422 REASON_REQUIRED on undo, revoke and reissue alike,
+      // and changes nothing.
+      expectStatus(
+        await request(
+          ctx,
+          'POST',
+          gatePath(f, `tickets/${ticketId}/revoke`),
+          supervisor,
+          { tenantId: f.tenantId, reason: '   ' },
+        ),
+        422,
+        'REASON_REQUIRED',
+      );
+      expectStatus(
+        await request(
+          ctx,
+          'POST',
+          gatePath(f, `tickets/${ticketId}/reissue`),
+          supervisor,
+          { tenantId: f.tenantId, reason: '   ' },
+          { 'Idempotency-Key': randomUUID() },
+        ),
+        422,
+        'REASON_REQUIRED',
+      );
+      assert.equal(await checkInCount(), baseline + 1);
       // Scanner holds gate.confirm but not gate.undo: no override.
       expectStatus(await undo(scanner, checkinId, 'scanner override'), 403);
       assert.equal(await checkInCount(), baseline + 1);

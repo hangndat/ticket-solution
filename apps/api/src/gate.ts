@@ -262,7 +262,7 @@ function scopeError(message: string): HttpException {
   );
 }
 
-/** 422 REASON_REQUIRED — same code the domain raises for a blank undo reason. */
+/** 422 REASON_REQUIRED — same code the domain raises for a blank undo/revoke/reissue reason. */
 function reasonRequired(): HttpException {
   return new HttpException(
     {
@@ -810,7 +810,7 @@ export class GateController {
     const event = requireUuid(eventId, 'eventId');
     const ticket = requireUuid(ticketId, 'ticketId');
     requireUuid(body?.tenantId, 'tenantId');
-    if (!body?.reason?.trim()) throw scopeError('reason is required');
+    if (!body?.reason?.trim()) throw reasonRequired();
     return this.run(async () => {
       await this.gate.revoke(authorization, event, ticket, body);
       return { status: 'REVOKED' as const, ticketId: ticket };
@@ -835,7 +835,7 @@ export class GateController {
     const ticket = requireUuid(ticketId, 'ticketId');
     requireUuid(body?.tenantId, 'tenantId');
     if (typeof body?.reason !== 'string' || !body.reason.trim()) {
-      throw scopeError('reason is required');
+      throw reasonRequired();
     }
     const key = requireUuid(idempotencyKey, 'Idempotency-Key');
     return this.run(() =>

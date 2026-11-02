@@ -122,15 +122,18 @@ export const catalog = {
   'GATE-02': [
     b('gate', 'gate: one confirm wins'),
     b('gate-acceptance', 'GATE-02/04/05 acceptance'),
+    b('gate-concurrency', 'GATE-02/04/05 concurrency'),
   ],
   'GATE-03': [b('gate', 'gate: one confirm wins')],
   'GATE-04': [
     b('gate', 'gate: one confirm wins'),
     b('gate-acceptance', 'GATE-02/04/05 acceptance'),
+    b('gate-concurrency', 'GATE-02/04/05 concurrency'),
   ],
   'GATE-05': [
     b('gate', 'gate: one confirm wins'),
     b('gate-acceptance', 'GATE-02/04/05 acceptance'),
+    b('gate-concurrency', 'GATE-02/04/05 concurrency'),
   ],
   'GATE-06': [
     b('offline-sync-apply', 'offline sync: apply'),
@@ -296,13 +299,13 @@ export const notes = {
   'DB-19': 'Keyring tombstone tests không chứng minh code/QR rotation.',
   'GATE-01': 'D gate FK/list/open; thiếu H permission và response contract.',
   'GATE-02':
-    'D hold/retry/expiry + huỷ hold chủ động + H; chưa phủ cancel đồng thời với confirm/expiry.',
+    'D hold/retry/expiry + huỷ hold chủ động + race cancel vs confirm/hết hạn + H.',
   'GATE-03':
     'Thiếu H QR audience/kid/version/hash/manual rejection và reject-audit.',
   'GATE-04':
-    'D confirm đồng thời, sai holder/token, session revoke, retry + H; thiếu revoke permission giữa request đang bay.',
+    'D confirm đồng thời, sai holder/token, session revoke, retry, race với cancel + H; thiếu revoke permission giữa request đang bay.',
   'GATE-05':
-    'D undo quyền/lý do (REASON_REQUIRED)/lịch sử/audit/replay-safe + H; thiếu undo đồng thời với scan/revoke.',
+    'D undo quyền/lý do (REASON_REQUIRED)/lịch sử/audit/replay-safe, race với scan và revoke + H.',
   'GATE-06':
     'D replay và U validation; thiếu H batch boundary, skew ±300s và mixed items.',
   'GATE-07':
