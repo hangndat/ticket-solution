@@ -286,3 +286,183 @@ test(
     }
   },
 );
+
+test(
+  'GATE-07 two sessions replay one ticket: exactly one current check-in',
+  { timeout: 240000 },
+  async () => {
+    let name;
+    let db;
+    let db2;
+    try {
+      const boot = await startIsolatedPostgres();
+      name = boot.name;
+      db = createDatabase(boot.url, 4);
+      db2 = createDatabase(boot.url, 4);
+      const users = createPrismaIdentityUserRepository(db);
+      const mkUser = (subject) =>
+        users.upsertFromVerifiedIdentity({
+          issuer: ISSUER,
+          subject,
+          email: `${subject}@example.com`,
+          emailVerified: true,
+        });
+      const guest = await mkUser('ts-guest');
+      const scannerA = await mkUser('ts-scanner-a');
+      const scannerB = await mkUser('ts-scanner-b');
+
+      const tenantId = 'dddddddd-1111-4ddd-8ddd-dddddddddddd';
+      const eventId = 'ffffffff-3333-4fff-8fff-ffffffffffff';
+      const ROUNDS = 4;
+      const codes = Array.from({ length: ROUNDS }, (_, i) => `TS-${i}`);
+      await withTenant(db, tenantId, async (tx) => {
+        await tx.tenant.create({
+          data: { id: tenantId, slug: 'off-two', name: 'Offline two sessions' },
+        });
+        await tx.event.create({
+          data: {
+            tenantId,
+            id: eventId,
+            slug: 'off-two-event',
+            name: 'Offline two sessions event',
+            status: 'PUBLISHED',
+          },
+        });
+        await seedEventInventory(tx, HMAC, {
+          tenantId,
+          eventId,
+          eventQuota: 10,
+          rawCodes: codes,
+        });
+        for (const user of [scannerA, scannerB]) {
+          const membership = await grantMembership(tx, {
+            tenantId,
+            userId: user.userId,
+            role: 'Scanner',
+            permissions: ['gate.confirm'],
+          });
+          await grantEventAssignment(tx, {
+            tenantId,
+            eventId,
+            membershipId: membership.membershipId,
+            permissions: ['gate.confirm'],
+          });
+        }
+      });
+
+      const open = (user) =>
+        withTenant(db, tenantId, (tx) =>
+          openStaffSession(tx, { tenantId, eventId, userId: user.userId }),
+        );
+      const sessA = await open(scannerA);
+      const sessB = await open(scannerB);
+      const deviceA = randomUUID();
+      const deviceB = randomUUID();
+      const now = Date.now();
+
+      const issue = async (code) =>
+        unwrapRedeemOutcome(
+          await withTenant(db, tenantId, (tx) =>
+            redeemAndIssueTicket(tx, HMAC, 'offline-two-cred-key', {
+              tenantId,
+              eventId,
+              actorUserId: guest.userId,
+              actorEmail: guest.email,
+              emailVerified: true,
+              rawCode: code,
+              idempotencyKey: randomUUID(),
+            }),
+          ),
+        );
+      const batch = (conn, user, session, deviceId, ticket, clientEventId) =>
+        withTenant(conn, tenantId, (tx) =>
+          applyOfflineSyncBatch(tx, {
+            pathEventId: eventId,
+            actorUserId: user.userId,
+            serverEpochMs: now,
+            body: {
+              tenantId,
+              staffSessionId: session.sessionId,
+              deviceId,
+              clientClockAt: new Date(now).toISOString(),
+              events: [
+                {
+                  clientEventId,
+                  type: 'CHECKIN_OFFLINE',
+                  eventId,
+                  ticketId: ticket.ticketId,
+                  clientOccurredAt: new Date(now - 5000).toISOString(),
+                  clientSeq: 0,
+                  payloadVersion: 1,
+                },
+              ],
+            },
+          }),
+        );
+      const currentCheckins = (ticket) =>
+        withTenant(db, tenantId, async (tx) => {
+          const r = await tx.$queryRaw`
+            SELECT id FROM checkins
+            WHERE ticket_id = ${ticket.ticketId}::uuid AND undone_at IS NULL`;
+          return r.map((row) => row.id);
+        });
+
+      const wins = { a: 0, b: 0 };
+      for (let i = 0; i < ROUNDS; i++) {
+        const ticket = await issue(codes[i]);
+        const eventA = randomUUID();
+        const eventB = randomUUID();
+        // Two devices, two sessions, two users replay the SAME ticket at once.
+        const [ra, rb] = await Promise.all([
+          batch(db, scannerA, sessA, deviceA, ticket, eventA),
+          batch(db2, scannerB, sessB, deviceB, ticket, eventB),
+        ]);
+        const a = ra.results[0];
+        const b = rb.results[0];
+        const statuses = [a.status, b.status].sort();
+        assert.deepEqual(
+          statuses,
+          ['APPLIED', 'CONFLICT'],
+          'exactly one session wins the ticket',
+        );
+        const winner = a.status === 'APPLIED' ? a : b;
+        const loser = a.status === 'APPLIED' ? b : a;
+        wins[a.status === 'APPLIED' ? 'a' : 'b']++;
+        // Both sides replayed offline, so the loser lost a replay race
+        // (OFFLINE_SYNC_CONFLICT_LOST); ALREADY_CHECKED_IN is the code when the
+        // winner was an online confirm (see offline-sync-apply.test.cjs).
+        assert.equal(loser.code, GATE_ERROR_CODES.OFFLINE_SYNC_CONFLICT_LOST);
+        assert.equal(
+          loser.winningCheckinId,
+          winner.checkinId,
+          'the loser is told which check-in won',
+        );
+        const current = await currentCheckins(ticket);
+        assert.deepEqual(current, [winner.checkinId], 'one current check-in, the winner');
+
+        // Replaying either batch again changes nothing.
+        const [ra2, rb2] = await Promise.all([
+          batch(db, scannerA, sessA, deviceA, ticket, eventA),
+          batch(db2, scannerB, sessB, deviceB, ticket, eventB),
+        ]);
+        assert.deepEqual(
+          [ra2.results[0].status, rb2.results[0].status].sort(),
+          ['CONFLICT', 'DUPLICATE'],
+          'the winner replays as DUPLICATE, the loser stays CONFLICT',
+        );
+        assert.deepEqual(await currentCheckins(ticket), [winner.checkinId]);
+      }
+      console.log(`two-session winners: A ${wins.a}, B ${wins.b}`);
+    } finally {
+      if (db) await db.$disconnect().catch(() => {});
+      if (db2) await db2.$disconnect().catch(() => {});
+      if (name) {
+        try {
+          docker('rm', '-f', '-v', name);
+        } catch {
+          /* best effort cleanup */
+        }
+      }
+    }
+  },
+);
