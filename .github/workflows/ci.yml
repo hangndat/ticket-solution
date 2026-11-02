@@ -104,6 +104,8 @@ jobs:
               - 'packages/backend/**'
               - 'packages/contracts/**'
               - 'tests/e2e/backend/**'
+              - 'tests/e2e/http/**'
+              - 'tests/e2e/harness/**'
             hardening:
               - 'scripts/d5-**'
               - 'scripts/load/scanner-context.*'
@@ -314,6 +316,11 @@ jobs:
       - name: POL-02 standard D command (catalog + retention-db)
         if: matrix.shard == 'o06-retention'
         run: pnpm test:integration:local --case POL-02 --suite D --no-build
+      - name: DB-18 live Keycloak and bearer HTTP
+        if: matrix.shard == 'account-deletion'
+        env:
+          E2E_LANES: '1'
+        run: pnpm test:e2e:http --lane --case=DB-18
 
   # D5 drills tách 3 job song song (ports/container name độc lập).
   d5-observability:
