@@ -79,6 +79,30 @@ Tổng 16 + 20 + 9 = 45; cộng 40 nhóm đã nghiệm thu và JOB-08 OUT = 86.
 
 **Giới hạn của quyết định này:** tầng 2 không chứng minh hành vi cookie/CSRF trong browser thật hoặc dây SSR/BFF cho các ID thuộc tầng — đúng phạm vi PLAN đã ghi (GATE không kiểm native UI; SEC-03/04/06 là H/D). Tầng 3 mang known gap vào gate pilot; không suy pilot ready từ việc F04 đóng tầng 1 và 2.
 
+## Thử nghiệm tầng 2 trên suite GATE — 02/11/2026
+
+Mục đích: kiểm tra cách làm "kiểm kê + một vòng chạy gộp" trên một suite trước khi áp cho 20 nhóm. Chạy trên worktree sạch tại `3fe83843` (`workingTreeDirty=false`, `evidenceExactShaEligible=true`): **D 9/9 selector PASS** (`test:integration:local --case GATE-0N`) và **H GATE-01/03 PASS** (run `mvz6hk43-198080`, lane1). Lần đầu GATE-09 báo FAIL vì tôi gọi `--no-build` nên bước build API bị bỏ qua (`Cannot find module '../dist/app'`); chạy lại không cờ đó PASS, không phải lỗi sản phẩm.
+
+**Hiệu chỉnh:** PLAN §15.3 và comment trên #1031 viết "thiếu là *verdict*, không phải *coverage*" cho tầng 2. Với GATE điều đó **sai**. Chạy xanh chưa phải phủ đủ: GATE-02, 03, 04, 05 cùng map vào đúng một test D (`gate: one confirm wins…`, `packages/backend/test/gate.test.cjs`), và lớp H mới tồn tại cho GATE-01/03.
+
+| ID | Đã có assertion (đã đọc) | Còn thiếu so với AC | Đánh giá |
+| -- | ------------------------ | ------------------- | -------- |
+| GATE-01 | D `gates.test.cjs` (list/create/open, RLS, cross-event); H `[GATE-01]` PASS: list/create/trùng tên/quyền/session nullable/FK cổng khác event | H mở lại cùng cổng; actor được gán ở cả hai event | **Gần đủ.** Có thể xin review gộp với phần thiếu ghi là giảm |
+| GATE-02 | D: `HELD_BY_OTHER_SESSION` (staff khác nhận HELD riêng) | Retry cùng holder; cancel giải phóng hold; không có check-in trước confirm; H | Thiếu assertion D, thiếu H |
+| GATE-03 | H `[GATE-03]`: ticket UUID sai/không tồn tại, thiếu assignment, reject-audit; D: `TICKET_NOT_ACTIVE` cho revoked/cancelled | QR giả/audience/kid/version/hash/event — **API Gate nhận `ticketId`, không có HTTP QR parser** | **Bị chặn bởi quyết định sản phẩm** (signed QR, handoff GATE-03), không bởi thiếu test |
+| GATE-04 | D: confirm đồng thời đúng một thắng (`ALREADY_CHECKED_IN`, 1 check-in), `RESERVATION_EXPIRED`, confirm vs revoke | Sai holder/token; revoke session/permission; H retry mất response | Thiếu assertion D, thiếu H |
+| GATE-05 | D: undo thành công, ticket về `ACTIVE` | Quyền + lý do bắt buộc; idempotency; Scanner không override; giữ lịch sử; undo vs scan/revoke; H | Chỉ có happy path |
+| GATE-06 | U: `validateOfflineSyncRequest` (skew, batch quá lớn); D: apply | H biên ±300 s và item hỗn hợp | Thiếu H |
+| GATE-07 | D: duplicate idempotent, conflict, không double-admit | H authz khi retry; audit batch hỗn hợp | Thiếu H |
+| GATE-08 | D: receipt matrix authz, states, closed window, read-only | H authz thật và cổng đã đóng | Thiếu H |
+| GATE-09 | D: matrix + PG evidence F02-EVID-01; U: 422 UUID sai; bucket rate GET tách POST | H ownership/authz/rate thật | Thiếu H |
+
+**Kết luận của lần thử:** trong 9 ID chỉ GATE-01 gần đóng được; 1 ID (GATE-03) bị chặn bởi quyết định sản phẩm; 7 ID thiếu lớp H hoặc assertion D. "Tầng 2 chỉ cần chạy gộp" đúng cho phần *chạy* (D 9 ID mất ~50 s, H 17–25 s) nhưng **không đúng cho phần *đủ AC***. Chưa ID nào đổi verdict; không ghi PASS cho ID nào ở mục này.
+
+**Hai hướng cho GATE, cần owner chọn** (AC được phép điều chỉnh nhưng đây là giảm lớp, không chỉ thu gọn ma trận):
+1. **Viết thêm** ~7 test H (và vài assertion D còn thiếu cho GATE-02/04/05) vào `live.test.mjs`; trung thực nhưng là công việc thật.
+2. **Giảm AC GATE xuống D**, ghi rõ ID · phần H bị bỏ · lý do · rủi ro còn lại (authz/route chỉ được chứng minh ở tầng domain, không qua JWT Keycloak thật).
+
 ## Các nhóm còn thiếu nghiệm thu toàn phần
 
 Các dòng này giữ BLOCKED ở mức AC; không có nghĩa tất cả đều đã chứng minh có bug. Có thể thiếu test, runtime evidence, review hoặc contract; không đổi expected outcome để lấy PASS.
