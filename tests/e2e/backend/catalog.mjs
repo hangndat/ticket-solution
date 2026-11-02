@@ -120,7 +120,25 @@ export const catalog = {
   ],
   'GATE-01': [b('gates', 'O31 gates:')],
   'GATE-02': [b('gate', 'gate: one confirm wins')],
-  'GATE-03': [b('gate', 'gate: one confirm wins')],
+  'GATE-03': [
+    b('gate', 'gate: one confirm wins'),
+    b(
+      'gate03-signed-qr-d',
+      'gate03 signed-QR D: reserve current/old version + confirm reissue-between-hold TOCTOU',
+    ),
+    b(
+      'gate03-signed-qr-d',
+      'gate03 signed-QR D: manual proof bound to staffSessionId and current version',
+    ),
+    b(
+      'gate03-signed-qr-d',
+      'gate03 signed-QR D: stale manual proof minted before reissue, used after',
+    ),
+    b(
+      'gate03-signed-qr-d',
+      'gate03 signed-QR D: keyring rotation — two kids verify, unknown kid denied',
+    ),
+  ],
   'GATE-04': [b('gate', 'gate: one confirm wins')],
   'GATE-05': [b('gate', 'gate: one confirm wins')],
   'GATE-06': [

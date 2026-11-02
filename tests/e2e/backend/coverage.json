@@ -227,10 +227,16 @@
   },
   {
     "caseId": "GATE-03",
-    "tests": ["D:packages/backend/test/gate.test.cjs#gate: one confirm wins"],
+    "tests": [
+      "D:packages/backend/test/gate.test.cjs#gate: one confirm wins",
+      "D:packages/backend/test/gate03-signed-qr-d.test.cjs#gate03 signed-QR D: reserve current/old version + confirm reissue-between-hold TOCTOU",
+      "D:packages/backend/test/gate03-signed-qr-d.test.cjs#gate03 signed-QR D: manual proof bound to staffSessionId and current version",
+      "D:packages/backend/test/gate03-signed-qr-d.test.cjs#gate03 signed-QR D: stale manual proof minted before reissue, used after",
+      "D:packages/backend/test/gate03-signed-qr-d.test.cjs#gate03 signed-QR D: keyring rotation — two kids verify, unknown kid denied"
+    ],
     "layers": ["D"],
     "status": "blocked",
-    "reason": "Thiếu H QR audience/kid/version/hash/manual rejection và reject-audit."
+    "reason": "D signed-QR credential matrix PASS PostgreSQL thật: reserve JWS current/old version, confirm TOCTOU sau reissue (không check-in), manual proof bound staffSessionId+version, stale proof trước/sau reissue, keyring rotation hai kid verify + unknown kid deny; mọi deny có row gate.reject audit và không mutate hold/check-in. Thiếu H QR audience/kid/version/hash/manual rejection và reject-audit qua HTTP/Keycloak thật."
   },
   {
     "caseId": "GATE-04",
