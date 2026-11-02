@@ -4182,8 +4182,8 @@ for (const caseId of CASE_IDS) {
         'iat',
         'iss',
         'jti',
-        'tkt',
         'tid',
+        'tkt',
         'ver',
       ]);
       assert.equal(headerClaims.alg, 'ES256');
