@@ -25,6 +25,7 @@ import {
   deleteRealms,
   dropRunDatabase,
   importRealms,
+  provisionErasureClient,
   provisionRunDatabase,
   removeRunObjectStorage,
 } from './lane-infra.mjs';
@@ -494,6 +495,19 @@ function realmConfig(state, caseIds) {
       },
     ],
   });
+  if (caseIds.includes('DB-18')) {
+    state.clientSecrets['e2e-erasure'] = randomBytes(24).toString('base64url');
+    realm.clients.push({
+      clientId: 'e2e-erasure',
+      enabled: true,
+      publicClient: false,
+      secret: state.clientSecrets['e2e-erasure'],
+      protocol: 'openid-connect',
+      standardFlowEnabled: false,
+      directAccessGrantsEnabled: false,
+      serviceAccountsEnabled: true,
+    });
+  }
   const realmPath = resolve(state.dir, 'realm.json');
   privateJson(realmPath, realm);
   return realmPath;
@@ -713,11 +727,12 @@ function startProxy(state) {
       const reqPath = String(req.url).split('?')[0];
       let faultMode;
       if (
-        route === 'api' &&
         state.faultControlPath &&
-        (state.faultPaths?.includes(reqPath) ||
-          reqPath.startsWith('/v1/operations/')) &&
-        existsSync(state.faultControlPath)
+        existsSync(state.faultControlPath) &&
+        ((route === 'api' && (state.faultPaths?.includes(reqPath) ||
+          reqPath.startsWith('/v1/operations/'))) ||
+          (route === 'auth' && req.method === 'DELETE' &&
+            reqPath.startsWith(`/admin/realms/${state.realm}/users/`)))
       ) {
         let fault;
         try {
@@ -726,7 +741,12 @@ function startProxy(state) {
           fault = null;
         }
         if (fault?.ownerRunId === state.id) {
-          faultMode = fault.routes?.[reqPath];
+          if (route === 'api') faultMode = fault.routes?.[reqPath];
+          if (route === 'auth' && fault.idpDelete?.path === reqPath &&
+              fault.idpDelete?.mode === 'unavailable') {
+            privateJson(state.idpFaultHitPath, { observed: true });
+            faultMode = 'unavailable';
+          }
         }
       }
       if (faultMode === 'unavailable' || faultMode === 'error500') {
@@ -979,9 +999,9 @@ function bootstrapMinio(state) {
         `${state.project}_default`,
         '--env',
         'MC_HOST_e2e',
-        ...(options.policyPath
-          ? ['--volume', `${options.policyPath}:/policy.json:ro`]
-          : []),
+        // The run dir is 0700 and mc runs as uid 65532 on Linux.
+        // Stream the policy instead of bind-mounting a private 0600 file.
+        ...(options.policyPath ? ['--interactive'] : []),
         '--entrypoint',
         'mc',
         image,
@@ -989,7 +1009,7 @@ function bootstrapMinio(state) {
       ],
       {
         env: { ...process.env, MC_HOST_e2e: host(identity) },
-        input: options.input,
+        input: options.policyPath ? readFileSync(options.policyPath) : options.input,
         stdio: ['pipe', 'pipe', 'pipe'],
       },
     );
@@ -1033,7 +1053,7 @@ function bootstrapMinio(state) {
     ]) {
       mc(
         root,
-        ['admin', 'policy', 'create', 'e2e', names[role], '/policy.json'],
+        ['admin', 'policy', 'create', 'e2e', names[role], '/dev/stdin'],
         { policyPath: path },
       );
     }
@@ -1237,6 +1257,7 @@ export async function createRuntime(caseIds, options = {}) {
         150_000,
       );
     }
+    if (caseIds.includes('DB-18')) await provisionErasureClient(state);
     await waitFor(
       'MinIO health',
       async () =>

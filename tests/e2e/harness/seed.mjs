@@ -272,6 +272,7 @@ export async function seedRuntime(state, caseIds) {
           'DB-11',
           'DB-12',
           'DB-14',
+          'DB-18',
           'JOB-04',
           'PLAT-03',
           'GATE-02',
@@ -2613,6 +2614,19 @@ export async function seedRuntime(state, caseIds) {
           fixture.data.auditCount = auditCount;
         });
       }
+      if (caseId === 'DB-18') {
+        await backend.withTenant(db, tenantId, (tx) => tx.$executeRaw`
+          INSERT INTO audit_logs (
+            tenant_id, event_id, id, actor_user_id, action,
+            resource_type, resource_id, reason, sanitized_diff, operation_id
+          ) VALUES (
+            ${tenantId}::uuid, ${eventId}::uuid, ${randomUUID()}::uuid,
+            ${accounts.owner.userId}::uuid, 'db18.erasure.proof',
+            'event', ${eventId}::uuid, 'retain for audit', '{}'::jsonb,
+            ${randomUUID()}::uuid
+          )
+        `);
+      }
       manifest.cases[caseId] = fixture;
     }
   } finally {
@@ -2628,6 +2642,12 @@ export async function seedRuntime(state, caseIds) {
     httpClientSecret: state.clientSecrets['e2e-http'],
     httpPlatformClientId: 'e2e-http-platform',
     httpPlatformClientSecret: state.clientSecrets['e2e-http-platform'],
+    ...(caseIds.includes('DB-18')
+      ? {
+          erasureClientId: 'e2e-erasure',
+          erasureClientSecret: state.clientSecrets['e2e-erasure'],
+        }
+      : {}),
     sourceProvenance: state.sourceProvenance,
     ...(state.secondaryRealm
       ? {
