@@ -128,6 +128,7 @@ export const catalog = {
     b('account-ack-session-revoke', 'SEC-R1'),
     b('account-session-revoke', 'session'),
     b('account-idp-erasure', 'SEC-2 T4/T14'),
+    b('account-idp-erasure', 'SEC-2 T5:'),
     b('account-idp-erasure', 'SEC-2 T6/T7/T8'),
     b('account-idp-erasure', 'SEC-2 T9/T11/T12/T13'),
     b('account-idp-erasure', 'SEC-2 T16'),
