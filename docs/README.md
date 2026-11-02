@@ -4,7 +4,7 @@
 
 - **Sản phẩm:** [PRD](PRD.md), [scope/gates](ROADMAP.md), [Decision Log](DECISION-LOG.md).
 - **Kiến trúc:** [baseline có bằng chứng](architecture/ar891-current-architecture.md), ADR trong ops; [technical proposal](TECHNICAL-DESIGN.md) giữ mục tiêu dài hạn. Baseline có SHA riêng, không tự đại diện HEAD/deployed hiện tại.
-- **Thiết kế:** [nguồn theo surface](design/README.md).
+- **Thiết kế:** [nguồn theo surface](design/README.md), [ràng buộc UI/contract Portal](design/portal-contract.md).
 - **Thực thi agent:** [AGENTS](../AGENTS.md), [bản đồ role/policy/workflow](agents/README.md).
 - **Vận hành:** [runbook](ops/RUNBOOK.md), [release contract](ops/IMMUTABLE-RELEASE.md), [pipeline](ops/DEPLOY-PIPELINE.md); production chỉ theo Task authorize.
 - **Kiểm chứng:** [evidence index và retention](reviews/README.md); F04 theo [acceptance matrix](../tests/e2e/ACCEPTANCE.md), Pilot theo [catalog](plans/PROD-LAUNCH-UAT.md).

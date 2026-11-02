@@ -1,6 +1,8 @@
+> **Bản lưu lịch sử — chuyển ngày 03/11/2026.** Nguồn: `docs/plans/PORTAL-IMPLEMENTATION-RUN.md` tại `36a594f62eca16b3307162d3598c40cb098a1a20`. Giữ approval, SHA và kết quả gốc; các nhãn Status, run/dispatch, lệnh và model bên dưới chỉ có giá trị tại thời điểm ghi. Công việc mới đọc [docs index](../../README.md). Bản lưu không xác nhận HEAD/runtime hoặc cấp quyền thực thi.
+
 # PORTAL — Điều phối triển khai P0 + P1
 
-- User duyệt gói ngày 18/10/2026; Epic [#406](https://github.com/hangndat/ticket-solution/issues/406), [roadmap primary](./PORTAL-ROADMAP.md), quyết định O16 và ADR-20.
+- User duyệt gói ngày 18/10/2026; Epic [#406](https://github.com/hangndat/ticket-solution/issues/406), [roadmap primary](../../plans/PORTAL-ROADMAP.md), quyết định O16 và ADR-20.
 - Run: `run_34fde1e32ed1`; coordinator gốc session `orca_session_id:codex_bcb66ba7_2f13_4e05_9b59_388347ec03c2`.
 - Checkout docs/coordinator: `/Users/admin/orca/workspaces/ticket-solution/portal-coordination`, branch `hangndat/portal-coordination`, base `c7e344847b1acf1688302fef513b277fc8f18973` (origin/main lúc mở Run).
 - Checkout `/main` đang có công việc khác; không đổi branch/reset/clean/stage mobile/infra hoặc các thay đổi ngoài PORTAL ở đó. 11 artifact nghiên cứu PORTAL được copy có giới hạn sang checkout này; không copy secrets/env.
@@ -21,7 +23,7 @@ Giao tiếp coordinator khác bằng đúng handle được `run-list` trả (`t
 | #409              | `architect`, `docs/agents/roles/architect.md`; Architecture impact Có                                  | `task_fe3aadfcd481` / `ctx_0f85ebfd8721` | `docs/ops/ADR-20-PORTAL-ADMIN.md`                             |
 | #410              | `product-design`, `docs/agents/roles/product-design.md`; Architecture impact Không (theo gói đã duyệt) | `task_61a47c5c4685` / `ctx_32f71830742d` | `docs/design/PORTAL-IMPLEMENTATION-HANDOFF.md`                |
 
-Root tooling/CI/lockfile/shared contracts: coordinator; `apps/portal` và `apps/web` là cùng slice web, không hai coding Dispatch feature đồng thời. _(Supersession 26/10/2026 — [O25](../DECISION-LOG.md): hai slice riêng, mỗi slice ≤1 feature coding worker.)_ Backend scope riêng; reviewer độc lập theo exact SHA. Mọi Task unblocked được fill dưới capacity/WIP sau khi ownership rảnh.
+Root tooling/CI/lockfile/shared contracts: coordinator; `apps/portal` và `apps/web` là cùng slice web, không hai coding Dispatch feature đồng thời. _(Supersession 26/10/2026 — [O25](../../DECISION-LOG.md): hai slice riêng, mỗi slice ≤1 feature coding worker.)_ Backend scope riêng; reviewer độc lập theo exact SHA. Mọi Task unblocked được fill dưới capacity/WIP sau khi ownership rảnh.
 
 ## Checks và giới hạn
 

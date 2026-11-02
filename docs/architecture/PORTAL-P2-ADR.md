@@ -2,9 +2,9 @@
 
 | Trường | Giá trị |
 | --- | --- |
-| Artifact | `docs/architecture/PORTAL-P2-ADR.md` (handoff; **không** tự cấp số ADR-ops — coordinator có thể promote sang `docs/ops/ADR-21-…` khi chấp nhận) |
+| Artifact | `docs/architecture/PORTAL-P2-ADR.md` (handoff thiết kế, không phải ADR-ops đã được chấp nhận; ADR-21 đã được dùng cho [prod demo seed](../ops/ADR-21-PROD-DEMO-SEED.md)) |
 | Ngày soạn | **2026-10-19** |
-| Trạng thái | **Đề xuất** — đủ để planner/ownership triển khai trong phạm vi Epic [#491](https://github.com/hangndat/ticket-solution/issues/491) gói **B**; chi tiết JTBD/AC ưu tiên theo BA [#499](https://github.com/hangndat/ticket-solution/issues/499) / PD [#500](https://github.com/hangndat/ticket-solution/issues/500) khi sẵn |
+| Trạng thái | **Handoff đề xuất tại ngày 19/10/2026** — O17 duyệt phạm vi gói B; không tự duyệt từng sketch API/schema hoặc xác nhận trạng thái implementation hiện tại |
 | Role | `architect` · [`docs/agents/roles/architect.md`](../agents/roles/architect.md) · Mode **Thiết kế** |
 | Issue / Story / Epic | [#501](https://github.com/hangndat/ticket-solution/issues/501) · Story [#493](https://github.com/hangndat/ticket-solution/issues/493) · Epic [#491](https://github.com/hangndat/ticket-solution/issues/491) |
 | Run / Task | `run_d04055a8969b` · `task_f68535ab698b` |
@@ -12,7 +12,19 @@
 | Decision Log | **O17** (mở lại OUT multi-event từ O12/O14) — xem [`DECISION-LOG.md`](../DECISION-LOG.md) |
 | Tiền đề | ADR-20 · O12 dictionary · O14 · O16 · [`PORTAL-ROADMAP.md`](../plans/PORTAL-ROADMAP.md) §P2 · [`PORTAL-PRODUCT-RESEARCH.md`](../plans/PORTAL-PRODUCT-RESEARCH.md) Wave 3 |
 
-Architecture impact: **Có**.
+Architecture impact: **Có** (bản thiết kế gốc; đợt làm rõ metadata 03/11/2026 chỉ sửa docs).
+
+## Cách dùng và trạng thái quyết định
+
+| Lớp | Nguồn / trạng thái |
+| --- | --- |
+| Phạm vi sản phẩm P2 | **Đã được mở theo O17** trong [Decision Log](../DECISION-LOG.md); không hiểu nhãn “đề xuất” của handoff là scope chưa được user duyệt |
+| API/schema/budget trong §3–§8 | **Đề xuất tại base SHA trên**; các sketch cần contract/Task đã được coordinator xác nhận trước khi dùng làm yêu cầu mới |
+| Implementation / acceptance | Theo Task/PR và evidence exact SHA; file này không kiểm chứng lại source hoặc production ngày 03/11/2026 |
+| Quyết định áp dụng sau handoff | O23 cho admission iOS Staff; bổ sung O26 cho UI Portal. Đọc [ràng buộc Portal](../design/portal-contract.md), không dùng mô tả Gate/component ở baseline làm policy hiện hành |
+| Số ADR | ADR-21 thuộc prod demo seed; nếu promote proposal này, coordinator chọn số chưa dùng khi ghi quyết định, không tái sử dụng ADR-21 |
+
+Run/task, source facts và câu “chưa có endpoint” bên dưới là provenance **19/10/2026**, không phải queue live hay inventory HEAD. Giữ nội dung contract đề xuất để truy vết; phần nào đã được Task/contract mới thay thế thì dùng nguồn mới có approval/evidence tương ứng.
 
 ---
 

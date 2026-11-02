@@ -1,9 +1,11 @@
+> **Bản lưu lịch sử — chuyển ngày 03/11/2026.** Nguồn: `docs/plans/PRODUCTION-READINESS-ARCHITECTURE.md` tại `36a594f62eca16b3307162d3598c40cb098a1a20`. Giữ approval, SHA và kết quả gốc; các nhãn Status, run/dispatch, lệnh và model bên dưới chỉ có giá trị tại thời điểm ghi. Công việc mới đọc [scope/gates](../../../ROADMAP.md), [Decision Log](../../../DECISION-LOG.md), [catalog UAT](../../../plans/PROD-LAUNCH-UAT.md). Bản lưu không xác nhận HEAD/runtime hoặc cấp quyền thực thi.
+
 # Production readiness — Architecture audit (Vemoki)
 
 | Trường | Giá trị |
 | --- | --- |
 | Ngày | 2026-10-18 |
-| Role | `architect` · [docs/agents/roles/architect.md](../agents/roles/architect.md) |
+| Role | `architect` · [docs/agents/roles/architect.md](../../../agents/roles/architect.md) |
 | Mode | Kiểm tra sự phù hợp + đề xuất ADR/handoff (không coding) |
 | Architecture impact | **Có** — readiness hệ thống, topology, ops gates |
 | Ownership duy nhất | File này (`docs/plans/PRODUCTION-READINESS-ARCHITECTURE.md`) |
@@ -12,7 +14,7 @@
 | Project #3 snapshot | 2026-10-18 · 126 items · `Hoàn thành` 114 · `Đang làm` 5 · `Sẵn sàng` 3 · `Chờ duyệt` 1 · `Bị chặn` 2 · `Chưa lên lịch` 1 |
 | Non-goals | Feature code · commit/push/PR/merge · deploy · cloud · store submit · EAS Cloud · sửa ADR/contracts/root tooling · spawn worker · benchmark/deploy prod |
 
-> **Errata (2026-10-18, [#373](https://github.com/hangndat/ticket-solution/issues/373)):** Snapshot research này **stale một phần**. Nguồn quyết định hiện tại: [`GAP-AUDIT-2026-10-18-INDEX.md`](../reviews/GAP-AUDIT-2026-10-18-INDEX.md). **Không còn mở như claim cũ:** D11 / [#254](https://github.com/hangndat/ticket-solution/issues/254) / ADR-19 triển khai public SoT **đã đóng board**; O06 **đã chốt**; `GET https://vemoki.com/privacy` → **HTTP 200**. **Còn mở:** Navigation O02 theo permission — [#368](https://github.com/hangndat/ticket-solution/issues/368)–[#371](https://github.com/hangndat/ticket-solution/issues/371). Ops release-verify (RLS/MFA/SMTP/restore/load) vẫn **U** khi claim pilot — xem INDEX GAP-OPS-REVAL.
+> **Errata (2026-10-18, [#373](https://github.com/hangndat/ticket-solution/issues/373)):** Snapshot research này **stale một phần**. Nguồn quyết định hiện tại: [`GAP-AUDIT-2026-10-18-INDEX.md`](../../../reviews/GAP-AUDIT-2026-10-18-INDEX.md). **Không còn mở như claim cũ:** D11 / [#254](https://github.com/hangndat/ticket-solution/issues/254) / ADR-19 triển khai public SoT **đã đóng board**; O06 **đã chốt**; `GET https://vemoki.com/privacy` → **HTTP 200**. **Còn mở:** Navigation O02 theo permission — [#368](https://github.com/hangndat/ticket-solution/issues/368)–[#371](https://github.com/hangndat/ticket-solution/issues/371). Ops release-verify (RLS/MFA/SMTP/restore/load) vẫn **U** khi claim pilot — xem INDEX GAP-OPS-REVAL.
 
 **Kết luận ngắn:** Hệ thống **chưa production ready**. Nhiều Epic D0–D10 **acceptance complete** trên Project #3; **pilot/production** còn thiếu evidence release-grade (backup/restore + load trên hạ tầng phát hành, SMTP outbound **chưa xác minh**, ADR-19 chưa đóng, O06 chưa chốt trước PII). **Không** miễn gate security (RLS/MFA) hay đảo O15 đã duyệt. D5 board Done → camera/APNs/MinIO = **revalidation trước release**, không mở lại như “chưa từng làm” nếu thiếu evidence ngược. Runtime VPS **không** chạm trong Task — nhiều mục **U**.
 
@@ -24,10 +26,10 @@
 
 ### 1.1 Đã đọc (bắt buộc)
 
-- `AGENTS.md`, [PRD](../PRD.md), [TECHNICAL-DESIGN](../TECHNICAL-DESIGN.md), [DECISION-LOG](../DECISION-LOG.md), [ROADMAP](../ROADMAP.md)
-- Ops: [RUNBOOK](../ops/RUNBOOK.md), [RELEASE-CHECKLIST](../ops/RELEASE-CHECKLIST.md), [ENV-MANIFEST](../ops/ENV-MANIFEST.md), [O06-OPTIONS](../ops/O06-OPTIONS.md), [R-INT-MATRIX](../ops/R-INT-MATRIX.md), [PLATFORM-POLICY](../ops/PLATFORM-POLICY.md), ADR-17/18/19
-- Deploy: [infra/deploy/README.md](../../infra/deploy/README.md), CI `.github/workflows/ci.yml`
-- Evidence tracked: [D5-ISSUE-25-EVIDENCE](../reviews/D5-ISSUE-25-EVIDENCE.md) (commit `54d267ae…`), [D4-TENANT2-PROD-UAT](../reviews/D4-TENANT2-PROD-UAT.md) (`ab68d3a1…`), [D5-APNS-DEVICE-UAT-STATUS](../reviews/D5-APNS-DEVICE-UAT-STATUS.md) (tracked)
+- `AGENTS.md`, [PRD](../../../PRD.md), [TECHNICAL-DESIGN](../../../TECHNICAL-DESIGN.md), [DECISION-LOG](../../../DECISION-LOG.md), [ROADMAP](../../../ROADMAP.md)
+- Ops: [RUNBOOK](../../../ops/RUNBOOK.md), [RELEASE-CHECKLIST](../../../ops/RELEASE-CHECKLIST.md), [ENV-MANIFEST](../../../ops/ENV-MANIFEST.md), [O06-OPTIONS](../../../ops/O06-OPTIONS.md), [R-INT-MATRIX](../../../ops/R-INT-MATRIX.md), [PLATFORM-POLICY](../../../ops/PLATFORM-POLICY.md), ADR-17/18/19
+- Deploy: [infra/deploy/README.md](../../../../infra/deploy/README.md), CI `.github/workflows/ci.yml`
+- Evidence tracked: [D5-ISSUE-25-EVIDENCE](../../../reviews/D5-ISSUE-25-EVIDENCE.md) (commit `54d267ae…`), [D4-TENANT2-PROD-UAT](../../../reviews/D4-TENANT2-PROD-UAT.md) (`ab68d3a1…`), [D5-APNS-DEVICE-UAT-STATUS](../../../reviews/D5-APNS-DEVICE-UAT-STATUS.md) (tracked)
 - Handoff local **untracked** (đọc, không sửa): ADR-19, `docs/architecture/*`, nhiều `docs/reviews/D11-*`, `D5-PUSH-APNS-WIRED.md`
 
 ### 1.2 Trạng thái working tree (evidence)
@@ -82,7 +84,7 @@ Nguồn PRD (baseline thiết kế/test, **chưa** phải SLA khách hàng đã 
 
 | Tiêu chí | Mục tiêu PRD | Evidence hiện có | Verdict |
 | --- | --- | --- | --- |
-| Pilot tải | 2 event × 20.000 vé; 50 scanner/event | [D5-ISSUE-25-EVIDENCE](../reviews/D5-ISSUE-25-EVIDENCE.md) + LOAD-SUMMARY: local Mac 14CPU/36GB, S3 sustained pass, `meetsPrdPilotWithoutCaveat=true` **local** | **Pass local harness** — **chưa** benchmark VPS/prod |
+| Pilot tải | 2 event × 20.000 vé; 50 scanner/event | [D5-ISSUE-25-EVIDENCE](../../../reviews/D5-ISSUE-25-EVIDENCE.md) + LOAD-SUMMARY: local Mac 14CPU/36GB, S3 sustained pass, `meetsPrdPilotWithoutCaveat=true` **local** | **Pass local harness** — **chưa** benchmark VPS/prod |
 | API p95 | ≤1s @ 50 issue/s + 20 confirm/s | issue p95 ~33ms · confirm ~19ms (cùng artifact) | Pass **môi trường đo** đã ghi; **không** claim prod SLO |
 | Tính đúng concurrency | 0 vượt quota / trùng | invariants ok trong load summary | Pass harness |
 | Availability | 99,9%/tháng mục tiêu | **Chưa xác minh** monitoring/SLA tháng | Gap |
@@ -115,7 +117,7 @@ Ký hiệu: **F** fact (path/SHA) · **I** inference · **R** recommendation · 
 | G05 | Load evidence **khớp tải phát hành** (không chỉ Mac) | D5-ISSUE-25 local pass; CI không full 2×20k (**F**) | Overcommit | **P0** | (1) `./scripts/d5-load-baseline.sh` (hoặc tương đương) trên env phát hành/staging đồng hình (2) Đạt baseline PRD §9 trên hardware ghi rõ (3) Không quảng cáo capacity ngoài số đo | ops + backend | Staging | Có/không gate cứng — **không** thay evidence |
 | G03 | SMTP outbound Internet **chưa xác minh** | deploy README ghi SMTP prod “chưa bật” / Mailpit path (**F** tài liệu lịch sử); R-INT R15 Unknown (**F**); **config VPS hiện tại U** — không khẳng định đang Mailpit | Email invite/ticket không deliver | **P0** | (1) Xác minh observed SMTP config (staging hoặc ops đọc env — ngoài Task này) (2) Outbound smoke: message rời MTA (3) SPF/DKIM nếu gửi `vemoki.com` | ops + backend | DNS | Postal vs Postfix nếu chưa có MTA |
 | G04 | ADR-19 public SoT chưa đóng triển khai | O15 **đã chốt** — không mở lại; #255 Chờ duyệt PR #261; #256/#257 Bị chặn (**F**) | Fixture ≠ server | **P0** | (1) DoD+merge #255 (2) Public GET seed 200 (3) Web∥iOS empty/error, không fixture fallback | BE → web∥iOS | OpenAPI | Chỉ lịch sóng — không đảo O15 |
-| G01 | O06 retention/region/SLA mở | [O06-OPTIONS](../ops/O06-OPTIONS.md) (**F**) | PII không policy | **P0 policy** | Chọn §8.1 → DECISION-LOG; trước ingest PII | product + legal | — | §8.1 |
+| G01 | O06 retention/region/SLA mở | [O06-OPTIONS](../../../ops/O06-OPTIONS.md) (**F**) | PII không policy | **P0 policy** | Chọn §8.1 → DECISION-LOG; trước ingest PII | product + legal | — | §8.1 |
 | G13 | Staging tách prod | TD §15.1 (**F**); đủ env **U** | Test đụng PII | **P1** | Checklist tách DB/OIDC/Redis/MinIO/secrets; load không trên DB user prod | ops | — | Bắt buộc staging? |
 | G10 | Metrics scrape + on-call release | `/metrics` code + local overlay (**F**); scrape/alert trên env phát hành **U** | Mù sự cố | **P1** | Bearer scrape 200; ≥1 alert→RUNBOOK; tên on-call P1 | ops | token | Ai on-call? |
 | G06 | Admission edge | RUNBOOK: Caddy example, “chưa deploy” (**F** docs); edge hiện tại **U** | Opening-shock | **P1** | 429+Retry-After qua edge; Gate bypass | ops | nginx | Bật trước burst? |

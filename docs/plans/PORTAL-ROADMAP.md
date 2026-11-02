@@ -9,12 +9,12 @@ Bản proposal, bảng Status và hồ sơ approval trước khi chuẩn hóa đ
 - Portal tại portal.vemoki.com, app Next riêng `apps/portal`; không gom vào attendee `apps/web`.
 - Tenant admin và Platform zone có client/audience/session/permission phù hợp; tenant Owner không tự có quyền Platform.
 - Gate scan/nhập tay/admission chỉ iOS Staff (O23). Portal Gate reporting là read-only theo quyền; GATE-STAY-APP là quyết định cũ đã superseded.
-- Stack UI và components theo [ADR-20](../ops/ADR-20-PORTAL-ADMIN.md), O18 và [handoff triển khai](../design/vemoki-unified-v1/VD-03-UI-IMPLEMENTATION-HANDOFF.md); không dùng option nghiên cứu cũ để tự đổi dependency.
+- Stack UI và components theo [ADR-20](../ops/ADR-20-PORTAL-ADMIN.md), bổ sung O26 và [ràng buộc UI Portal](../design/portal-contract.md); không dùng option nghiên cứu cũ để tự đổi dependency.
 - Scope/contract/DoD theo Task/Issue đã authorize. Research không cấp thêm quyền production DNS/deploy/cutover/cloud/store.
 
 ## 2. Nguồn thực thi theo công việc
 
-- Hoàn thiện sản phẩm/UX sau #406: [roadmap #914](VEMOKI-CORE-UX-ROADMAP-2026-10-26.md), [portal handoff VCX](../design/vcx/README.md), [Decision Log](../DECISION-LOG.md) O25–O28.
+- Hoàn thiện sản phẩm/UX sau #406: [roadmap #914](VEMOKI-CORE-UX-ROADMAP-2026-10-26.md), [portal handoff VCX](../design/vcx/README.md), [Decision Log](../DECISION-LOG.md) O25–O28 và bổ sung O26.
 - API/BFF/auth boundary: [Portal contract handoff](../architecture/PORTAL-CONTRACT-HANDOFF.md), ADR-20 và contract đã review.
 - Mẫu UI/visual budget: [design index](../design/README.md); không coi prototype là runtime.
 - F04 Portal regression: [acceptance matrix](../../tests/e2e/ACCEPTANCE.md). Pilot/UAT là [#1008/catalog riêng](PROD-LAUNCH-UAT.md), không tự mở từ roadmap này.

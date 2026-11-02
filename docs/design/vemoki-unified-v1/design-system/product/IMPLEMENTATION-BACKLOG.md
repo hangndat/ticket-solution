@@ -53,7 +53,7 @@
 ### Planning-first prompt
 
 ```text
-Read AGENTS.md, docs/PRD.md, docs/ROADMAP.md, docs/design/PORTAL-IMPLEMENTATION-HANDOFF.md, and this handoff's README.md, DESIGN-SYSTEM.md, FLOWS-AND-STATES.md, IMPLEMENTATION-BACKLOG.md and tokens.json.
+Read AGENTS.md, docs/PRD.md, docs/ROADMAP.md, docs/design/portal-contract.md, and this handoff's README.md, DESIGN-SYSTEM.md, FLOWS-AND-STATES.md, IMPLEMENTATION-BACKLOG.md and tokens.json.
 Create a proposed GitHub Project plan (Epics, Stories, Tasks) for all four product surfaces. Before coding, reconcile current main with design scope and record capability/route migrations.
 Hard requirement: Gate scan, manual admission and in-person check-in MUST be performed only in the authorized iOS Staff app. Attendee Web and Portal have no Gate scan surface. Portal may display read-only Gate reporting with report.read. Identify legacy /gate routes, migrations, tests and owner approvals.
 Do not assume the new design is implemented. Plan vertical slices, API/authorization proof, test matrix, dependency order, ownership boundaries, and acceptance criteria. Flag contradictions with old roadmap for explicit resolution. No feature coding until the plan is reviewed.
