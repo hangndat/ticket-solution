@@ -4625,20 +4625,88 @@ for (const caseId of CASE_IDS) {
       }
       const median = (values) => {
         const sorted = [...values].sort((a, b) => a - b);
-        return sorted[Math.floor(sorted.length / 2)];
+        const middle = Math.floor(sorted.length / 2);
+        return sorted.length % 2 === 0
+          ? (sorted[middle - 1] + sorted[middle]) / 2
+          : sorted[middle];
       };
-      const pooledTimes = [...validLookupTimes, ...invalidLookupTimes];
-      const pooledMedian = median(pooledTimes);
-      const medianAbsoluteDeviation = median(
-        pooledTimes.map((value) => Math.abs(value - pooledMedian)),
+      const estimateTimingParity = (validTimes, invalidTimes) => {
+        const expectedSamples = 12;
+        // Keep the accepted group gap fixed at the pre-existing 50 ms local
+        // HTTPS/DB allowance; cap within-group spread at half that budget so
+        // noisy measurements are inconclusive instead of widening tolerance.
+        const thresholdMs = 50;
+        const maxWithinGroupJitterMs = 25;
+        const complete =
+          validTimes.length === expectedSamples &&
+          invalidTimes.length === expectedSamples &&
+          [...validTimes, ...invalidTimes].every(Number.isFinite);
+        const validMedianMs = complete ? median(validTimes) : null;
+        const invalidMedianMs = complete ? median(invalidTimes) : null;
+        const validJitterMs = complete
+          ? Math.max(...validTimes) - Math.min(...validTimes)
+          : null;
+        const invalidJitterMs = complete
+          ? Math.max(...invalidTimes) - Math.min(...invalidTimes)
+          : null;
+        const jitterMs =
+          complete ? Math.max(validJitterMs, invalidJitterMs) : null;
+        const gapMs =
+          complete ? Math.abs(validMedianMs - invalidMedianMs) : null;
+        const verdict = !complete || jitterMs > maxWithinGroupJitterMs
+          ? 'inconclusive'
+          : gapMs <= thresholdMs
+            ? 'pass'
+            : 'fail';
+        return {
+          expectedSamplesPerGroup: expectedSamples,
+          sampleCounts: {
+            valid: validTimes.length,
+            invalid: invalidTimes.length,
+          },
+          validMedianMs,
+          invalidMedianMs,
+          validJitterMs,
+          invalidJitterMs,
+          jitterMs,
+          gapMs,
+          thresholdMs,
+          maxWithinGroupJitterMs,
+          verdict,
+        };
+      };
+      const equalTiming = estimateTimingParity(
+        Array(12).fill(10),
+        Array(12).fill(11),
       );
-      const timingToleranceMs = Math.max(50, medianAbsoluteDeviation * 6);
-      const timingGapMs = Math.abs(
-        median(validLookupTimes) - median(invalidLookupTimes),
+      assert.equal(equalTiming.verdict, 'pass');
+      const separatedTiming = estimateTimingParity(
+        Array(12).fill(10),
+        Array(12).fill(110),
+      );
+      assert.notEqual(
+        separatedTiming.verdict,
+        'pass',
+        'synthetic 10 ms vs 110 ms groups must fail the bounded estimator',
+      );
+      const timing = estimateTimingParity(
+        validLookupTimes,
+        invalidLookupTimes,
+      );
+      console.log(
+        `GATE-03 manual lookup timing ${JSON.stringify({
+          ...timing,
+          validSamplesMs: validLookupTimes,
+          invalidSamplesMs: invalidLookupTimes,
+          syntheticEqualVerdict: equalTiming.verdict,
+          syntheticSeparatedVerdict: separatedTiming.verdict,
+          toleranceBasis:
+            'fixed 50 ms maximum gap; spread over 25 ms in either group is inconclusive',
+        })}`,
       );
       assert.ok(
-        timingGapMs <= timingToleranceMs,
-        `manual lookup timing gap ${timingGapMs.toFixed(1)}ms exceeds ${timingToleranceMs.toFixed(1)}ms (6× pooled MAD, 50ms local HTTPS/DB jitter floor)`,
+        timing.verdict === 'pass',
+        `manual lookup timing ${timing.verdict}: gap=${timing.gapMs?.toFixed(1) ?? 'n/a'}ms (threshold ${timing.thresholdMs}ms), within-group jitter=${timing.jitterMs?.toFixed(1) ?? 'n/a'}ms (maximum ${timing.maxWithinGroupJitterMs}ms)`,
       );
       const proofClaims = JSON.parse(
         Buffer.from(lookup.body.proofToken.split('.')[1], 'base64url').toString(
