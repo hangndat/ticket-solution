@@ -821,6 +821,89 @@ async function web04Query(f, tenantId, statement, values) {
   }
 }
 
+async function gateSnapshot(
+  f,
+  eventId,
+  ticketId,
+  rejectReason,
+  tenantId = f.tenantId,
+) {
+  const [row] = await web04Query(
+    f,
+    tenantId,
+    `SELECT
+       (SELECT state FROM tickets WHERE tenant_id = $1::uuid AND id = $2::uuid) AS ticket_state,
+       (SELECT credential_version FROM tickets WHERE tenant_id = $1::uuid AND id = $2::uuid) AS credential_version,
+       (SELECT count(*) FROM checkin_reservations WHERE tenant_id = $1::uuid AND ticket_id = $2::uuid) AS reservation_count,
+       (SELECT count(*) FROM checkins WHERE tenant_id = $1::uuid AND ticket_id = $2::uuid) AS checkin_count,
+       (SELECT COALESCE(jsonb_agg(to_jsonb(r) ORDER BY r.id), '[]'::jsonb)
+          FROM checkin_reservations r WHERE r.tenant_id = $1::uuid AND r.ticket_id = $2::uuid) AS reservation_rows,
+       (SELECT COALESCE(jsonb_agg(to_jsonb(c) ORDER BY c.id), '[]'::jsonb)
+          FROM checkins c WHERE c.tenant_id = $1::uuid AND c.ticket_id = $2::uuid) AS checkin_rows,
+       (SELECT count(*) FROM audit_logs WHERE tenant_id = $1::uuid AND event_id = $3::uuid
+          AND action = 'gate.reject' AND reason = $4) AS reject_count`,
+    [tenantId, ticketId, eventId, rejectReason],
+  );
+  return row;
+}
+
+async function assertGateDenyNoMutation(ctx, f, input) {
+  const auditTenantId = input.auditTenantId ?? f.tenantId;
+  const snapshotTenantIds = [
+    ...new Set(input.snapshotTenantIds ?? [auditTenantId]),
+  ];
+  const snapshot = (tenantId) =>
+    gateSnapshot(
+      f,
+      input.auditEventId ?? f.eventId,
+      input.ticketId,
+      input.code,
+      tenantId,
+    );
+  const before = await Promise.all(snapshotTenantIds.map(snapshot));
+  const result = await request(
+    ctx,
+    'POST',
+    input.path,
+    input.token,
+    input.body,
+  );
+  expectStatus(result, input.status, input.code);
+  const after = await Promise.all(snapshotTenantIds.map(snapshot));
+  for (let index = 0; index < snapshotTenantIds.length; index += 1) {
+    for (const key of [
+      'ticket_state',
+      'credential_version',
+      'reservation_count',
+      'checkin_count',
+    ]) {
+      assert.equal(
+        after[index][key],
+        before[index][key],
+        `${input.code}: tenant ${snapshotTenantIds[index]} ${key} must not mutate`,
+      );
+    }
+    assert.deepEqual(
+      after[index].reservation_rows,
+      before[index].reservation_rows,
+      `${input.code}: tenant ${snapshotTenantIds[index]} reservation rows must not mutate`,
+    );
+    assert.deepEqual(
+      after[index].checkin_rows,
+      before[index].checkin_rows,
+      `${input.code}: tenant ${snapshotTenantIds[index]} check-in rows must not mutate`,
+    );
+  }
+  const auditSnapshot = after[snapshotTenantIds.indexOf(auditTenantId)];
+  const auditBefore = before[snapshotTenantIds.indexOf(auditTenantId)];
+  assert.equal(
+    Number(auditSnapshot.reject_count),
+    Number(auditBefore.reject_count) + 1,
+    `${input.code}: gate.reject must commit under tenant RLS`,
+  );
+  return result;
+}
+
 async function db03Query(f, statement, values) {
   const requireBackend = createRequire(
     new URL('../../../packages/backend/package.json', import.meta.url),
@@ -4073,6 +4156,44 @@ for (const caseId of CASE_IDS) {
       const attendee = await bearer(ctx, 'attendee');
       const owner = await bearer(ctx, 'owner');
       const ticketId = required(f.ticketId, 'GATE-03 ticketId');
+      const ticketResponse = await request(
+        ctx,
+        'GET',
+        `/me/tickets/${ticketId}?tenantId=${f.tenantId}`,
+        attendee,
+      );
+      expectStatus(ticketResponse, 200);
+      const qr = ticketResponse.body.gateCredential;
+      assert.equal(qr?.kind, 'ticket.gate_credential');
+      assert.equal(qr?.v, 1);
+      assert.equal(typeof qr?.jws, 'string');
+      const jws = qr.jws;
+      const [protectedHeader, encodedClaims] = jws.split('.');
+      const headerClaims = JSON.parse(
+        Buffer.from(protectedHeader, 'base64url').toString('utf8'),
+      );
+      const claims = JSON.parse(
+        Buffer.from(encodedClaims, 'base64url').toString('utf8'),
+      );
+      assert.deepEqual(Object.keys(qr).sort(), ['jws', 'kind', 'v']);
+      assert.deepEqual(Object.keys(claims).sort(), [
+        'aud',
+        'eid',
+        'iat',
+        'iss',
+        'jti',
+        'tid',
+        'tkt',
+        'ver',
+      ]);
+      const claimsJson = JSON.stringify(claims);
+      const attendeeEmail = ctx.fixture.accounts?.attendee?.email;
+      if (attendeeEmail) assert.ok(!claimsJson.includes(attendeeEmail));
+      assert.doesNotMatch(claimsJson, /email|name|phone|address/i);
+      assert.equal(headerClaims.alg, 'ES256');
+      assert.equal(headerClaims.kid, 'e2e');
+      assert.equal(claims.aud, 'gate');
+      assert.ok(!Object.hasOwn(claims, 'exp'), 'QR credentials do not expire');
       const session = await request(
         ctx,
         'POST',
@@ -4088,35 +4209,660 @@ for (const caseId of CASE_IDS) {
         tenantId: f.tenantId,
         staffSessionId: session.body.sessionId,
       };
+      const unchanged = async (eventId = f.eventId) => {
+        const row = await gateSnapshot(f, eventId, ticketId, '');
+        return {
+          ticket_state: row.ticket_state,
+          credential_version: row.credential_version,
+          reservation_count: row.reservation_count,
+          checkin_count: row.checkin_count,
+        };
+      };
+      const beforeMissing = await unchanged();
       expectStatus(
-        await request(ctx, 'POST', path, scanner, {
-          ...base,
-          ticketId: 'bad-qr',
-        }),
+        await request(ctx, 'POST', path, scanner, base),
         422,
-        'SCOPE_REQUIRED',
+        'CREDENTIAL_REQUIRED',
       );
-      expectStatus(
-        await request(ctx, 'POST', path, scanner, {
+      assert.deepEqual(await unchanged(), beforeMissing);
+
+      const beforeAttendeeDeny = await unchanged();
+      const attendeeDeny = await request(ctx, 'POST', path, attendee, {
+        ...base,
+        presented: { kind: 'qr', jws },
+      });
+      assert.equal(attendeeDeny.status, 403);
+      assert.deepEqual(await unchanged(), beforeAttendeeDeny);
+
+      const tampered = jws.split('.');
+      assert.equal(tampered.length, 3, 'gate credential must be compact JWS');
+      tampered[2] = `${tampered[2][0] === 'A' ? 'B' : 'A'}${tampered[2].slice(1)}`;
+      await assertGateDenyNoMutation(ctx, f, {
+        ticketId,
+        token: scanner,
+        path,
+        status: 403,
+        code: 'CREDENTIAL_SIGNATURE_INVALID',
+        body: { ...base, presented: { kind: 'qr', jws: tampered.join('.') } },
+      });
+
+      const unknownKidJws = required(
+        f.data?.unknownKidJws,
+        'GATE-03 unknownKidJws',
+      );
+      const unknownKidExisting = await assertGateDenyNoMutation(ctx, f, {
+        ticketId,
+        token: scanner,
+        path,
+        status: 403,
+        code: 'CREDENTIAL_SIGNATURE_INVALID',
+        body: { ...base, presented: { kind: 'qr', jws: unknownKidJws } },
+      });
+
+      const unknownKidMissingJws = required(
+        f.data?.unknownKidMissingTicketJws,
+        'GATE-03 unknownKidMissingTicketJws',
+      );
+      const unknownKidMissingClaims = JSON.parse(
+        Buffer.from(unknownKidMissingJws.split('.')[1], 'base64url').toString(
+          'utf8',
+        ),
+      );
+      const unknownKidMissing = await assertGateDenyNoMutation(ctx, f, {
+        ticketId: unknownKidMissingClaims.tkt,
+        token: scanner,
+        path,
+        status: 403,
+        code: 'CREDENTIAL_SIGNATURE_INVALID',
+        body: { ...base, presented: { kind: 'qr', jws: unknownKidMissingJws } },
+      });
+      const errorProjection = ({ status, body }) => ({
+        status,
+        code: body.code,
+        message: body.message,
+      });
+      assert.deepEqual(
+        errorProjection(unknownKidExisting),
+        errorProjection(unknownKidMissing),
+        'unknown kid must not expose whether its signed ticket id exists',
+      );
+      const rejectedProjectionJson = JSON.stringify(
+        errorProjection(unknownKidExisting),
+      );
+      for (const secretValue of [
+        ticketId,
+        unknownKidMissingClaims.tkt,
+        attendeeEmail,
+      ]) {
+        if (secretValue)
+          assert.ok(!rejectedProjectionJson.includes(secretValue));
+      }
+
+      const wrongAlgJws = required(f.data?.wrongAlgJws, 'GATE-03 wrongAlgJws');
+      const requireBackend = createRequire(
+        new URL('../../../packages/backend/package.json', import.meta.url),
+      );
+      const { jwtVerify } = await import(requireBackend.resolve('jose'));
+      const { verifyGateCredentialJws } = requireBackend(
+        './dist/gate-credential.js',
+      );
+      const algProofKey = Buffer.from(
+        required(
+          process.env.E2E_GATE_CREDENTIAL_ALG_PROOF_KEY,
+          'GATE-03 alg proof key',
+        ),
+        'base64url',
+      );
+      const validHsSignature = await jwtVerify(wrongAlgJws, algProofKey, {
+        issuer: 'vemoki-gate',
+        audience: 'gate',
+        algorithms: ['HS256'],
+      });
+      assert.equal(validHsSignature.payload.tkt, ticketId);
+      await assert.rejects(
+        () =>
+          verifyGateCredentialJws(wrongAlgJws, [
+            { kid: 'e2e', alg: 'ES256', key: algProofKey },
+          ]),
+        (error) => error.code === 'CREDENTIAL_SIGNATURE_INVALID',
+        'focused verifier proof must reject a valid HS256 signature under the ES256-only contract',
+      );
+      await assertGateDenyNoMutation(ctx, f, {
+        ticketId,
+        token: scanner,
+        path,
+        status: 403,
+        code: 'CREDENTIAL_SIGNATURE_INVALID',
+        body: { ...base, presented: { kind: 'qr', jws: wrongAlgJws } },
+      });
+
+      await assertGateDenyNoMutation(ctx, f, {
+        ticketId,
+        token: scanner,
+        path,
+        status: 403,
+        code: 'CREDENTIAL_SIGNATURE_INVALID',
+        body: {
           ...base,
-          ticketId: randomUUID(),
-        }),
-        404,
-        'TICKET_NOT_FOUND',
+          presented: {
+            kind: 'qr',
+            jws: required(f.data?.wrongAudienceJws, 'GATE-03 wrongAudienceJws'),
+          },
+        },
+      });
+
+      const foreignEventId = required(
+        f.data?.foreignEventId,
+        'GATE-03 foreignEventId',
       );
+      const foreignSession = await request(
+        ctx,
+        'POST',
+        `/gate/events/${foreignEventId}/sessions`,
+        scanner,
+        { tenantId: f.tenantId },
+      );
+      expectStatus(foreignSession, 200);
+      await assertGateDenyNoMutation(ctx, f, {
+        ticketId,
+        token: scanner,
+        path: `/gate/events/${foreignEventId}/reservations`,
+        auditEventId: foreignEventId,
+        status: 409,
+        code: 'CREDENTIAL_CONTEXT_MISMATCH',
+        body: {
+          tenantId: f.tenantId,
+          staffSessionId: foreignSession.body.sessionId,
+          presented: { kind: 'qr', jws },
+        },
+      });
+
+      const foreignTenantId = required(
+        f.data?.foreignTenantId,
+        'GATE-03 foreignTenantId',
+      );
+      const foreignTenantEventId = required(
+        f.data?.foreignTenantEventId,
+        'GATE-03 foreignTenantEventId',
+      );
+      const foreignTenantSession = await request(
+        ctx,
+        'POST',
+        `/gate/events/${foreignTenantEventId}/sessions`,
+        scanner,
+        { tenantId: foreignTenantId },
+      );
+      expectStatus(foreignTenantSession, 200);
+      await assertGateDenyNoMutation(ctx, f, {
+        ticketId,
+        token: scanner,
+        path: `/gate/events/${foreignTenantEventId}/reservations`,
+        auditEventId: foreignTenantEventId,
+        auditTenantId: foreignTenantId,
+        snapshotTenantIds: [f.tenantId, foreignTenantId],
+        status: 409,
+        code: 'CREDENTIAL_CONTEXT_MISMATCH',
+        body: {
+          tenantId: foreignTenantId,
+          staffSessionId: foreignTenantSession.body.sessionId,
+          presented: { kind: 'qr', jws },
+        },
+      });
+
+      const beforeWrongTenant = await Promise.all(
+        [f.tenantId, foreignTenantId].map((tenantId) =>
+          gateSnapshot(f, f.eventId, ticketId, '', tenantId),
+        ),
+      );
+      const wrongTenant = await request(ctx, 'POST', path, scanner, {
+        ...base,
+        tenantId: foreignTenantId,
+        presented: { kind: 'qr', jws },
+      });
+      assert.ok([403, 404].includes(wrongTenant.status));
+      const afterWrongTenant = await Promise.all(
+        [f.tenantId, foreignTenantId].map((tenantId) =>
+          gateSnapshot(f, f.eventId, ticketId, '', tenantId),
+        ),
+      );
+      for (let index = 0; index < beforeWrongTenant.length; index += 1) {
+        assert.equal(
+          afterWrongTenant[index].ticket_state,
+          beforeWrongTenant[index].ticket_state,
+        );
+        assert.equal(
+          afterWrongTenant[index].credential_version,
+          beforeWrongTenant[index].credential_version,
+        );
+        assert.deepEqual(
+          afterWrongTenant[index].reservation_rows,
+          beforeWrongTenant[index].reservation_rows,
+        );
+        assert.deepEqual(
+          afterWrongTenant[index].checkin_rows,
+          beforeWrongTenant[index].checkin_rows,
+        );
+      }
+
+      const stale = await web04Query(
+        f,
+        f.tenantId,
+        `UPDATE tickets SET credential_version = credential_version + 1
+         WHERE tenant_id = $1::uuid AND id = $2::uuid RETURNING credential_version`,
+        [f.tenantId, ticketId],
+      );
+      assert.equal(
+        stale.length,
+        1,
+        'GATE-03 must mutate only its RLS-scoped ticket',
+      );
+      try {
+        await assertGateDenyNoMutation(ctx, f, {
+          ticketId,
+          token: scanner,
+          path,
+          status: 409,
+          code: 'CREDENTIAL_VERSION_STALE',
+          body: { ...base, presented: { kind: 'qr', jws } },
+        });
+      } finally {
+        const restored = await web04Query(
+          f,
+          f.tenantId,
+          `UPDATE tickets SET credential_version = credential_version - 1
+           WHERE tenant_id = $1::uuid AND id = $2::uuid RETURNING credential_version`,
+          [f.tenantId, ticketId],
+        );
+        assert.equal(
+          restored.length,
+          1,
+          'restore the scoped credential version',
+        );
+      }
+
+      const secondCode = required(f.secondCode, 'GATE-03 secondCode');
+      const issued = await request(
+        ctx,
+        'POST',
+        redemptionPath(f),
+        attendee,
+        {
+          code: secondCode,
+          formVersion: 'form-v1',
+          termsVersion: 'terms-v1',
+          answers: f.data.answers,
+          termsAccepted: true,
+        },
+        { 'idempotency-key': randomUUID() },
+      );
+      expectStatus(issued, 201);
+      const revokedTicketId = required(
+        issued.body.ticketId,
+        'GATE-03 second ticketId',
+      );
+      const revokedDetail = await request(
+        ctx,
+        'GET',
+        `/me/tickets/${revokedTicketId}?tenantId=${f.tenantId}`,
+        attendee,
+      );
+      expectStatus(revokedDetail, 200);
+      const activeBeforeCancel = await gateSnapshot(
+        f,
+        f.eventId,
+        revokedTicketId,
+        '',
+      );
+      assert.equal(activeBeforeCancel.ticket_state, 'ACTIVE');
+      assert.equal(Number(activeBeforeCancel.reservation_count), 0);
+      assert.equal(Number(activeBeforeCancel.checkin_count), 0);
+      const cancelled = await web04Query(
+        f,
+        f.tenantId,
+        `UPDATE tickets SET state = 'CANCELLED'
+         WHERE tenant_id = $1::uuid AND id = $2::uuid RETURNING id`,
+        [f.tenantId, revokedTicketId],
+      );
+      assert.equal(cancelled.length, 1, 'cancelled fixture remains RLS scoped');
+      try {
+        await assertGateDenyNoMutation(ctx, f, {
+          ticketId: revokedTicketId,
+          token: scanner,
+          path,
+          status: 409,
+          code: 'TICKET_NOT_ACTIVE',
+          body: {
+            ...base,
+            presented: {
+              kind: 'qr',
+              jws: revokedDetail.body.gateCredential.jws,
+            },
+          },
+        });
+      } finally {
+        const restored = await web04Query(
+          f,
+          f.tenantId,
+          `UPDATE tickets SET state = 'ACTIVE'
+           WHERE tenant_id = $1::uuid AND id = $2::uuid AND state = 'CANCELLED'
+           RETURNING id`,
+          [f.tenantId, revokedTicketId],
+        );
+        assert.equal(restored.length, 1, 'restore unused cancellation fixture');
+      }
       expectStatus(
-        await request(ctx, 'POST', path, attendee, { ...base, ticketId }),
-        403,
+        await request(
+          ctx,
+          'POST',
+          `${gatePath(f, `tickets/${revokedTicketId}/revoke`)}`,
+          owner,
+          { tenantId: f.tenantId, reason: 'GATE-03 HTTP acceptance' },
+        ),
+        201,
+      );
+      await assertGateDenyNoMutation(ctx, f, {
+        ticketId: revokedTicketId,
+        token: scanner,
+        path,
+        status: 409,
+        code: 'TICKET_NOT_ACTIVE',
+        body: {
+          ...base,
+          presented: { kind: 'qr', jws: revokedDetail.body.gateCredential.jws },
+        },
+      });
+
+      const manualCode = required(
+        ticketResponse.body.manualEntryCode,
+        'GATE-03 manualEntryCode',
+      );
+      await assertGateDenyNoMutation(ctx, f, {
+        ticketId,
+        token: scanner,
+        path: gatePath(f, 'manual-lookup'),
+        status: 404,
+        code: 'MANUAL_CODE_INVALID',
+        body: { ...base, code: 'ZZZZ-ZZZZ-ZZ' },
+      });
+      const lookup = await request(
+        ctx,
+        'POST',
+        gatePath(f, 'manual-lookup'),
+        scanner,
+        { ...base, code: manualCode },
+      );
+      expectStatus(lookup, 200);
+      assert.equal(typeof lookup.body.proofToken, 'string');
+      const timedManualLookup = async (code, expectedStatus, expectedCode) => {
+        const started = performance.now();
+        const result = await request(
+          ctx,
+          'POST',
+          gatePath(f, 'manual-lookup'),
+          scanner,
+          { ...base, code },
+        );
+        const elapsedMs = performance.now() - started;
+        expectStatus(result, expectedStatus, expectedCode);
+        return elapsedMs;
+      };
+      const validLookupTimes = [];
+      const invalidLookupTimes = [];
+      for (let attempt = 0; attempt < 12; attempt += 1) {
+        const measureValid = async () =>
+          validLookupTimes.push(await timedManualLookup(manualCode, 200));
+        const measureInvalid = async () =>
+          invalidLookupTimes.push(
+            await timedManualLookup('ZZZZ-ZZZZ-ZZ', 404, 'MANUAL_CODE_INVALID'),
+          );
+        if (attempt % 2 === 0) {
+          await measureValid();
+          await measureInvalid();
+        } else {
+          await measureInvalid();
+          await measureValid();
+        }
+      }
+      const median = (values) => {
+        const sorted = [...values].sort((a, b) => a - b);
+        const middle = Math.floor(sorted.length / 2);
+        return sorted.length % 2 === 0
+          ? (sorted[middle - 1] + sorted[middle]) / 2
+          : sorted[middle];
+      };
+      const estimateTimingParity = (validTimes, invalidTimes) => {
+        const expectedSamples = 12;
+        // Keep the accepted group gap fixed at the pre-existing 50 ms local
+        // HTTPS/DB allowance; cap within-group spread at half that budget so
+        // noisy measurements are inconclusive instead of widening tolerance.
+        const thresholdMs = 50;
+        const maxWithinGroupJitterMs = 25;
+        const complete =
+          validTimes.length === expectedSamples &&
+          invalidTimes.length === expectedSamples &&
+          [...validTimes, ...invalidTimes].every(Number.isFinite);
+        const validMedianMs = complete ? median(validTimes) : null;
+        const invalidMedianMs = complete ? median(invalidTimes) : null;
+        const validJitterMs = complete
+          ? Math.max(...validTimes) - Math.min(...validTimes)
+          : null;
+        const invalidJitterMs = complete
+          ? Math.max(...invalidTimes) - Math.min(...invalidTimes)
+          : null;
+        const jitterMs =
+          complete ? Math.max(validJitterMs, invalidJitterMs) : null;
+        const gapMs =
+          complete ? Math.abs(validMedianMs - invalidMedianMs) : null;
+        const verdict = !complete || jitterMs > maxWithinGroupJitterMs
+          ? 'inconclusive'
+          : gapMs <= thresholdMs
+            ? 'pass'
+            : 'fail';
+        return {
+          expectedSamplesPerGroup: expectedSamples,
+          sampleCounts: {
+            valid: validTimes.length,
+            invalid: invalidTimes.length,
+          },
+          validMedianMs,
+          invalidMedianMs,
+          validJitterMs,
+          invalidJitterMs,
+          jitterMs,
+          gapMs,
+          thresholdMs,
+          maxWithinGroupJitterMs,
+          verdict,
+        };
+      };
+      const equalTiming = estimateTimingParity(
+        Array(12).fill(10),
+        Array(12).fill(11),
+      );
+      assert.equal(equalTiming.verdict, 'pass');
+      const separatedTiming = estimateTimingParity(
+        Array(12).fill(10),
+        Array(12).fill(110),
+      );
+      assert.notEqual(
+        separatedTiming.verdict,
+        'pass',
+        'synthetic 10 ms vs 110 ms groups must fail the bounded estimator',
+      );
+      const timing = estimateTimingParity(
+        validLookupTimes,
+        invalidLookupTimes,
+      );
+      console.log(
+        `GATE-03 manual lookup timing ${JSON.stringify({
+          ...timing,
+          validSamplesMs: validLookupTimes,
+          invalidSamplesMs: invalidLookupTimes,
+          syntheticEqualVerdict: equalTiming.verdict,
+          syntheticSeparatedVerdict: separatedTiming.verdict,
+          toleranceBasis:
+            'fixed 50 ms maximum gap; spread over 25 ms in either group is inconclusive',
+        })}`,
+      );
+      assert.ok(
+        timing.verdict === 'pass',
+        `manual lookup timing ${timing.verdict}: gap=${timing.gapMs?.toFixed(1) ?? 'n/a'}ms (threshold ${timing.thresholdMs}ms), within-group jitter=${timing.jitterMs?.toFixed(1) ?? 'n/a'}ms (maximum ${timing.maxWithinGroupJitterMs}ms)`,
+      );
+      const proofClaims = JSON.parse(
+        Buffer.from(lookup.body.proofToken.split('.')[1], 'base64url').toString(
+          'utf8',
+        ),
+      );
+      assert.equal(proofClaims.sid, session.body.sessionId);
+      const { SignJWT, importPKCS8 } = await import(
+        requireBackend.resolve('jose')
+      );
+      const testSigningKey = await importPKCS8(
+        required(
+          process.env.E2E_GATE_CREDENTIAL_PRIVATE_KEY_PEM,
+          'GATE-03 fixture signing key',
+        ),
+        'ES256',
+      );
+      const expiredProofForSession = await new SignJWT({
+        tid: proofClaims.tid,
+        eid: proofClaims.eid,
+        tkt: proofClaims.tkt,
+        sid: proofClaims.sid,
+        ver: proofClaims.ver,
+      })
+        .setProtectedHeader({ alg: 'ES256', kid: headerClaims.kid, typ: 'JWT' })
+        .setIssuer('vemoki-gate')
+        .setAudience('gate')
+        .setIssuedAt()
+        .setExpirationTime(Math.floor(Date.now() / 1000) - 60)
+        .sign(testSigningKey);
+      await assertGateDenyNoMutation(ctx, f, {
+        ticketId,
+        token: scanner,
+        path,
+        status: 403,
+        code: 'MANUAL_PROOF_INVALID',
+        body: {
+          ...base,
+          presented: {
+            kind: 'manual',
+            proofToken: expiredProofForSession,
+          },
+        },
+      });
+      const secondSession = await request(
+        ctx,
+        'POST',
+        gatePath(f, 'sessions'),
+        scanner,
+        { tenantId: f.tenantId },
+      );
+      expectStatus(secondSession, 200);
+      await assertGateDenyNoMutation(ctx, f, {
+        ticketId,
+        token: scanner,
+        path,
+        status: 403,
+        code: 'MANUAL_PROOF_INVALID',
+        body: {
+          ...base,
+          staffSessionId: secondSession.body.sessionId,
+          presented: { kind: 'manual', proofToken: lookup.body.proofToken },
+        },
+      });
+      const staleManual = await web04Query(
+        f,
+        f.tenantId,
+        `UPDATE tickets SET credential_version = credential_version + 1
+         WHERE tenant_id = $1::uuid AND id = $2::uuid RETURNING credential_version`,
+        [f.tenantId, ticketId],
+      );
+      assert.equal(staleManual.length, 1);
+      try {
+        await assertGateDenyNoMutation(ctx, f, {
+          ticketId,
+          token: scanner,
+          path,
+          status: 409,
+          code: 'CREDENTIAL_VERSION_STALE',
+          body: {
+            ...base,
+            presented: { kind: 'manual', proofToken: lookup.body.proofToken },
+          },
+        });
+      } finally {
+        const restored = await web04Query(
+          f,
+          f.tenantId,
+          `UPDATE tickets SET credential_version = credential_version - 1
+           WHERE tenant_id = $1::uuid AND id = $2::uuid RETURNING credential_version`,
+          [f.tenantId, ticketId],
+        );
+        assert.equal(restored.length, 1);
+      }
+      const manualReservation = await request(ctx, 'POST', path, scanner, {
+        ...base,
+        presented: { kind: 'manual', proofToken: lookup.body.proofToken },
+      });
+      expectStatus(manualReservation, 200);
+
+      const reservation = await request(ctx, 'POST', path, scanner, {
+        ...base,
+        presented: { kind: 'qr', jws },
+      });
+      expectStatus(reservation, 200);
+      assert.equal(reservation.body.ticketId, ticketId);
+      const confirmed = await request(
+        ctx,
+        'POST',
+        `${path}/${reservation.body.reservationId}/confirm`,
+        scanner,
+        {
+          ...base,
+          token: reservation.body.token,
+        },
+      );
+      expectStatus(confirmed, 200);
+
+      await assertGateDenyNoMutation(ctx, f, {
+        ticketId,
+        token: scanner,
+        path,
+        status: 409,
+        code: 'TICKET_NOT_ACTIVE',
+        body: { ...base, presented: { kind: 'qr', jws } },
+      });
+      let rateLimited = false;
+      for (let attempt = 0; attempt < 65; attempt += 1) {
+        const result = await request(
+          ctx,
+          'POST',
+          gatePath(f, 'manual-lookup'),
+          scanner,
+          { ...base, code: 'ZZZZ-ZZZZ-ZZ' },
+        );
+        if (result.status === 429) {
+          assertRateLimited(
+            result,
+            { code: 'RATE_LIMITED', retryable: true, noRetryAfter: true },
+            'GATE-03 manual lookup brute-force limit',
+          );
+          rateLimited = true;
+          break;
+        }
+        expectStatus(result, 404, 'MANUAL_CODE_INVALID');
+      }
+      assert.ok(
+        rateLimited,
+        'manual lookup must rate-limit repeated invalid codes',
       );
       const reportAfter = await request(ctx, 'GET', reportPath(f), owner);
       expectStatus(reportAfter, 200);
       assert.equal(
         reportAfter.body.checkInSuccessCount,
-        reportBefore.body.checkInSuccessCount,
-      );
-      assert.equal(
-        reportAfter.body.rejectByReason.TICKET_NOT_FOUND ?? 0,
-        (reportBefore.body.rejectByReason.TICKET_NOT_FOUND ?? 0) + 1,
+        reportBefore.body.checkInSuccessCount + 1,
+        'only the confirmed valid credential may create a check-in',
       );
       return;
     }
