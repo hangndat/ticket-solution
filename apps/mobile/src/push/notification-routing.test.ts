@@ -87,6 +87,8 @@ test('signed-out cold tap then login resumes one published ticket route', async 
               sourceId: 'src',
               state: 'ACTIVE',
               credentialVersion: 1,
+              gateCredential: { v: 1, kind: "ticket.gate_credential", jws: "header.payload.signature" } as const,
+              manualEntryCode: "ABCD-EFGH-JK",
               createdAt: '2026-01-01T00:00:00.000Z',
             },
           ],

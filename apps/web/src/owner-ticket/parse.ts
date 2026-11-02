@@ -1,3 +1,4 @@
+import type { GateCredentialEnvelope } from '@ticket/contracts';
 import type { OwnerTicketDetail, WalletTicketRow } from './types';
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -17,7 +18,23 @@ function readOptionalEventName(body: Record<string, unknown>): string | undefine
   return name.length > 0 ? name : undefined;
 }
 
-export function parseOwnerTicketDetail(raw: unknown): OwnerTicketDetail | null {
+function parseGateCredential(value: unknown): GateCredentialEnvelope | null {
+  const envelope = asRecord(value);
+  const jws = typeof envelope?.jws === 'string' ? envelope.jws.trim() : '';
+  if (
+    !envelope ||
+    envelope.v !== 1 ||
+    envelope.kind !== 'ticket.gate_credential' ||
+    !/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(jws)
+  ) {
+    return null;
+  }
+  return { v: 1, kind: 'ticket.gate_credential', jws };
+}
+
+type OwnerTicketMetadata = Omit<OwnerTicketDetail, 'gateCredential' | 'manualEntryCode'>;
+
+function parseOwnerTicketMetadata(raw: unknown): OwnerTicketMetadata | null {
   const body = asRecord(raw);
   if (!body) return null;
 
@@ -61,6 +78,21 @@ export function parseOwnerTicketDetail(raw: unknown): OwnerTicketDetail | null {
   };
 }
 
+export function parseOwnerTicketDetail(raw: unknown): OwnerTicketDetail | null {
+  const body = asRecord(raw);
+  const metadata = parseOwnerTicketMetadata(raw);
+  if (!body || !metadata) return null;
+  const rawManualEntryCode = body.manualEntryCode;
+  const manualEntryCode =
+    typeof rawManualEntryCode === 'string' ? rawManualEntryCode.trim() || null : null;
+
+  return {
+    ...metadata,
+    gateCredential: parseGateCredential(body.gateCredential),
+    manualEntryCode,
+  };
+}
+
 /** Fail-closed parse of Nest GET /v1/me/tickets (aggregate or scoped). */
 export function parseMeTicketsResponse(raw: unknown): WalletTicketRow[] | null {
   const body = asRecord(raw);
@@ -69,7 +101,9 @@ export function parseMeTicketsResponse(raw: unknown): WalletTicketRow[] | null {
   for (const item of body.tickets) {
     const row = asRecord(item);
     if (!row) return null;
-    const base = parseOwnerTicketDetail(row);
+    // The aggregate wallet needs ticket metadata only; discard bearer proof and
+    // manual codes so they stay scoped to the authenticated ticket detail view.
+    const base = parseOwnerTicketMetadata(row);
     if (!base) return null;
     const eventName = readOptionalEventName(row);
     tickets.push(eventName ? { ...base, eventName } : base);

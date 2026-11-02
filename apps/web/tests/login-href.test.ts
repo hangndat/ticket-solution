@@ -3,7 +3,7 @@ import test from 'node:test';
 import { loginHref } from '../src/oidc/login-href';
 import { sanitizePostLoginPath } from '../src/oidc/post-login';
 import { authNoticeFromParam } from '../src/oidc/auth-notice';
-import { buildDisplayQrPayload } from '../src/owner-ticket/display-payload';
+import { gateCredentialQrValue } from '../src/owner-ticket/gate-credential-payload';
 import { encodeQrModules } from '../src/owner-ticket/qr-matrix';
 
 test('loginHref uses allowlisted return paths (AC-S2)', () => {
@@ -38,8 +38,8 @@ test('authNoticeFromParam maps OIDC cancel/fail (AC-S1)', () => {
   assert.equal(authNoticeFromParam('admin_denied'), null);
 });
 
-test('display QR payload encodes modules (AC-T1)', () => {
-  const payload = buildDisplayQrPayload({
+test('signed QR payload encodes the exact gate credential envelope (AC-T1)', () => {
+  const payload = gateCredentialQrValue({
     ticketId: '97f77680-4d65-4b6d-baf3-b3f699a006a6',
     tenantId: '11111111-1111-4111-8111-111111111111',
     eventId: '22222222-2222-4222-8222-222222222201',
@@ -47,9 +47,23 @@ test('display QR payload encodes modules (AC-T1)', () => {
     sourceId: 's',
     state: 'ACTIVE',
     credentialVersion: 1,
+    gateCredential: {
+      v: 1,
+      kind: 'ticket.gate_credential',
+      jws: 'header.payload.signature',
+    },
+    manualEntryCode: 'ABCD2345EFGH6789',
     createdAt: '2026-01-01T00:00:00.000Z',
   });
-  assert.ok(payload.includes('ticket.display'));
+  assert.equal(
+    payload,
+    '{"v":1,"kind":"ticket.gate_credential","jws":"header.payload.signature"}',
+  );
+  assert.deepEqual(JSON.parse(payload!), {
+    v: 1,
+    kind: 'ticket.gate_credential',
+    jws: 'header.payload.signature',
+  });
   const modules = encodeQrModules(payload);
   assert.ok(modules.length > 10);
   assert.equal(modules.length, modules[0]?.length);

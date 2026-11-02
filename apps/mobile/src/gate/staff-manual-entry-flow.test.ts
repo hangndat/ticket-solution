@@ -8,6 +8,7 @@ import {
 const ticketId = '11111111-1111-4111-8111-111111111111';
 const tenantId = '22222222-2222-4222-8222-222222222222';
 const eventId = '33333333-3333-4333-8333-333333333333';
+const manualCode = 'ABCD-EFGH-JK';
 
 describe('staff-manual-entry-flow', () => {
   it('rejects empty input', () => {
@@ -22,22 +23,23 @@ describe('staff-manual-entry-flow', () => {
     }
   });
 
-  it('parses bare UUID with gate scope fallback', () => {
-    const result = checkManualEntryCode(ticketId, {
+  it('accepts a manual code without resolving a ticket on the device', () => {
+    const result = checkManualEntryCode(manualCode, {
       tenantId,
       eventId,
       name: 'MFest',
     });
     assert.equal(result.ok, true);
     if (result.ok) {
-      assert.equal(result.parsed.ticketId, ticketId);
+      assert.equal(result.code, manualCode);
       assert.match(result.previewLine, /MFest/);
-      assert.match(result.previewLine, /11111111/);
+      assert.match(result.previewLine, /trực tuyến/);
+      assert.doesNotMatch(result.previewLine, new RegExp(manualCode));
     }
   });
 
   it('rejects unreadable codes', () => {
-    const result = checkManualEntryCode('not-a-uuid', {
+    const result = checkManualEntryCode(ticketId, {
       tenantId,
       eventId,
       name: 'MFest',
@@ -46,25 +48,14 @@ describe('staff-manual-entry-flow', () => {
   });
 
   it('builds preview with fallback event label', () => {
-    const line = buildManualEntryPreviewLine(null, {
-      ticketId,
-      tenantId,
-      eventId,
-    });
+    const line = buildManualEntryPreviewLine(null);
     assert.match(line, /Sự kiện đang chọn/);
   });
 
-  it('builds preview with ticket type and guest when present in JSON', () => {
-    const line = buildManualEntryPreviewLine('MFest', {
-      ticketId,
-      tenantId,
-      eventId,
-      displayHints: {
-        ticketTypeLabel: 'Vé phổ thông',
-        attendeeName: 'Minh Anh',
-      },
-    });
-    assert.equal(line, 'MFest · Vé phổ thông · Minh Anh');
+  it('does not include the submitted code in the preview', () => {
+    const line = buildManualEntryPreviewLine('MFest');
+    assert.equal(line, 'MFest · Mã sẽ được kiểm tra trực tuyến');
     assert.doesNotMatch(line, new RegExp(ticketId));
+    assert.doesNotMatch(line, new RegExp(manualCode));
   });
 });
