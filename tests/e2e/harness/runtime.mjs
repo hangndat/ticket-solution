@@ -1113,7 +1113,12 @@ export async function createRuntime(caseIds, options = {}) {
   const state = {
     id,
     lane: lane
-      ? { name: lane.name, laneId: lane.laneId, tlsPort: lane.tlsPort }
+      ? {
+          name: lane.name,
+          laneId: lane.laneId,
+          tlsPort: lane.tlsPort,
+          composePath: lane.composePath,
+        }
       : null,
     project: lane ? lane.project : `e2e-${id}`,
     realm: lane ? lane.realm : `e2e-${id}`,
