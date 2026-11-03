@@ -1004,7 +1004,7 @@ function bootstrapMinio(state) {
     exports: `e2e-${state.id}-exports`,
   };
   const identities = Object.fromEntries(
-    ['shared', 'exports'].map((role) => [
+    ['shared', 'exports', 'observer'].map((role) => [
       role,
       {
         accessKey: `e2e-${role}-${randomBytes(8).toString('hex')}`,
@@ -1064,9 +1064,12 @@ function bootstrapMinio(state) {
   const exportsPolicy = policy('o06-exports-writer.json', {
     'vemoki-exports': buckets.exports,
   });
+  const observerPolicy = resolve(state.dir, 'imports-observer-policy.json');
+  privateJson(observerPolicy, { Version: '2012-10-17', Statement: [{ Effect: 'Allow', Action: ['s3:ListBucket'], Resource: [`arn:aws:s3:::${buckets.imports}`] }] });
   const names = {
     shared: `e2e-shared-${state.id}`,
     exports: `e2e-exports-${state.id}`,
+    observer: `e2e-observer-${state.id}`,
   };
   let stage = 'buckets';
   try {
@@ -1076,6 +1079,7 @@ function bootstrapMinio(state) {
     for (const [role, path] of [
       ['shared', sharedPolicy],
       ['exports', exportsPolicy],
+      ['observer', observerPolicy],
     ]) {
       mc(
         root,
@@ -1084,7 +1088,7 @@ function bootstrapMinio(state) {
       );
     }
     stage = 'users';
-    for (const role of ['shared', 'exports']) {
+    for (const role of ['shared', 'exports', 'observer']) {
       const identity = identities[role];
       mc(root, [
         'admin',
@@ -1135,7 +1139,8 @@ function bootstrapMinio(state) {
       .replace(/https?:\/\/[^\s@]+@/g, 'http://[redacted]@')
       .replaceAll(root.secretKey, '[redacted]')
       .replaceAll(identities.shared.secretKey, '[redacted]')
-      .replaceAll(identities.exports.secretKey, '[redacted]');
+      .replaceAll(identities.exports.secretKey, '[redacted]')
+      .replaceAll(identities.observer.secretKey, '[redacted]');
     writeFileSync(
       resolve(state.dir, 'minio-bootstrap.log'),
       `${stage}\n${detail}`,

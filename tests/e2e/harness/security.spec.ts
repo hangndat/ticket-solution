@@ -10,6 +10,7 @@ import {
 } from '../portal/helpers';
 import { readImportBusinessSnapshot } from '../portal/import-db';
 import { readEventConfigMutationSnapshot } from '../portal/lifecycle-db';
+import { importObjects } from './import-objects.mjs';
 
 test('[SEC-02] OAuth cookies stay on their HTTPS host and missing Origin fails closed', async ({
   context,
@@ -60,6 +61,7 @@ test('[SEC-05] multipart byte boundary through authenticated Portal BFF', async 
   expect(accepted.status).toBe(201);
   expect((accepted.json as { fileId?: string }).fileId).toBeTruthy();
   const afterControl = await readImportBusinessSnapshot(f);
+  const objectsAfterControl = await importObjects();
   expect(afterControl).toEqual({
     ...before,
     import_files: before.import_files + 1,
@@ -73,7 +75,51 @@ test('[SEC-05] multipart byte boundary through authenticated Portal BFF', async 
   );
   expect(rejected.status).toBe(422);
   expect((rejected.json as { code?: string }).code).toBe('IMPORT_ROW_LIMIT');
+  const duplicate = await page.evaluate(
+    async (url) => {
+      const csrf =
+        document.cookie.match(/(?:^|;\s*)portal_csrf=([^;]+)/)?.[1] ?? '';
+      const form = new FormData();
+      form.set('kind', 'CODES');
+      form.append(
+        'file',
+        new File(['code\nA\n'], 'a.csv', { type: 'text/csv' }),
+      );
+      form.append(
+        'file',
+        new File(['code\nB\n'], 'b.csv', { type: 'text/csv' }),
+      );
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'x-portal-csrf': decodeURIComponent(csrf) },
+        body: form,
+      });
+      return { status: response.status, body: await response.json() };
+    },
+    portalUrl(m, path),
+  );
+  expect(duplicate.status).toBe(422);
+  expect(duplicate.body.code).toBe('IMPORT_FILE_INVALID');
   expect(await readImportBusinessSnapshot(f)).toEqual(afterControl);
+  expect(await importObjects()).toEqual(objectsAfterControl);
+});
+
+test('[SEC-05] Portal denies upload without event permission', async ({
+  page,
+}) => {
+  const m = loadManifest();
+  const f = fixtureFor(m, 'SEC-05');
+  const before = await readImportBusinessSnapshot(f);
+  await login(page, m, 'SEC-05', 'scanner');
+  await page.goto(portalUrl(m, eventPath(f, '/config')));
+  const denied = await bffUploadCsv(
+    page,
+    m,
+    eventBff(f, '/imports/upload'),
+    'code\nA\n',
+  );
+  expect(denied.status).toBe(403);
+  expect(await readImportBusinessSnapshot(f)).toEqual(before);
 });
 
 test('[SEC-05] rejected rich text remains absent from real Web and Portal surfaces', async ({
@@ -149,6 +195,64 @@ test('[SEC-05] rejected rich text remains absent from real Web and Portal surfac
   } finally {
     await web.close();
   }
+});
+
+test('[SEC-05] stored encoded iframe payload renders as inert text in Portal preview', async ({
+  page,
+  context,
+}) => {
+  const m = loadManifest();
+  const f = fixtureFor(m, 'SEC-05');
+  await context.addInitScript(() => {
+    (window as unknown as { sec05Executed: boolean }).sec05Executed = false;
+  });
+  await login(page, m, 'SEC-05', 'owner');
+  await page.goto(portalUrl(m, eventPath(f, '/config')));
+  const path = eventBff(f, '/config-versions');
+  const versions = await bffGet(page, m, path);
+  expect(versions.status).toBe(200);
+  const latest = (versions.json as { items: Array<{ version: number }> })
+    .items[0].version;
+  const preview = await bffGet(page, m, `${path}/${latest}/preview`);
+  expect(preview.status).toBe(200);
+  const payload = structuredClone(
+    (
+      preview.json as {
+        payload: { sections: Array<{ kind: string; body: { text?: string } }> };
+      }
+    ).payload,
+  );
+  const hero = payload.sections.find((section) => section.kind === 'hero');
+  expect(hero).toBeTruthy();
+  const probe =
+    '<iframe srcdoc="&#60;script&#62;parent.sec05Executed=true&#60;/script&#62;"></iframe> SEC05-STORED';
+  hero!.body.text = probe;
+  const saved = await bffMutate(page, path, {
+    payload,
+    schemaVersion: 1,
+    expectedVersion: latest,
+  });
+  expect([200, 201]).toContain(saved.status);
+  const version = (saved.json as { version: number }).version;
+  const savedSnapshot = await readEventConfigMutationSnapshot(f);
+  const stored = await bffGet(page, m, `${path}/${version}/preview`);
+  expect(JSON.stringify(stored.json)).toContain('SEC05-STORED');
+  const response = await page.reload();
+  const csp = response?.headers()['content-security-policy'] ?? '';
+  expect(csp).toMatch(/object-src 'none'/);
+  expect(csp).toMatch(/script-src 'self' 'unsafe-inline'/);
+  expect(csp).not.toMatch(/unsafe-eval/);
+  const section = page.locator('section').filter({ hasText: 'SEC05-STORED' });
+  await expect(section).toBeVisible();
+  await expect(section).toContainText(probe);
+  await expect(section.locator('iframe, script')).toHaveCount(0);
+  await expect(section).toContainText('E2E SEC-05');
+  expect(
+    await page.evaluate(
+      () => (window as unknown as { sec05Executed: boolean }).sec05Executed,
+    ),
+  ).toBe(false);
+  expect(await readEventConfigMutationSnapshot(f)).toEqual(savedSnapshot);
 });
 
 test('[SEC-05] CSP and nosniff on web and portal home responses', async ({

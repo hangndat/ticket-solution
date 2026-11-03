@@ -531,6 +531,8 @@ if (mode === 'list' || args.includes('--list')) {
       MINIO_BUCKET_IMPORTS: state.minio.buckets.imports,
       MINIO_BUCKET_EXPORTS: state.minio.buckets.exports,
       MINIO_REGION: 'us-east-1',
+      E2E_MINIO_OBSERVER_ACCESS_KEY: state.minio.identities.observer.accessKey,
+      E2E_MINIO_OBSERVER_SECRET_KEY: state.minio.identities.observer.secretKey,
       API_BASE_URL: state.origins.api,
       MARKETING_HOSTS: state.suffix,
       PUBLIC_HOME_TENANT_SLUGS: homeCatalogSlugs.join(','),
