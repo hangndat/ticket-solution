@@ -739,6 +739,9 @@ if (mode === 'list' || args.includes('--list')) {
             ...(id === 'JOB-07' && process.env.E2E_JOB07_EXPIRY === '1'
               ? { E2E_JOB07_EXPIRY: '1' }
               : {}),
+            ...(id === 'JOB-07' && process.env.E2E_JOB07_API_EXPIRY === '1'
+              ? { E2E_JOB07_API_EXPIRY: '1' }
+              : {}),
             ...(id === 'GATE-03'
               ? {
                   E2E_GATE_CREDENTIAL_PRIVATE_KEY_PEM:
