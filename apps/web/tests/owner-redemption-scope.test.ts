@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { fetchOwnerRedemptionStatus } from '../src/redeem/owner-status';
-import { ownerRefreshPlan } from '../src/redeem/owner-refresh';
+import {
+  ownerRefreshPlan,
+  refreshOwnerRedemption,
+} from '../src/redeem/owner-refresh';
 import { GET } from '../app/api/bff/redemptions/[requestId]/route';
 
 const requestId = '55555555-5555-4555-8555-555555555555';
@@ -97,4 +100,76 @@ test('owner status authorization failure is preserved as unauthorized', async ()
     async () => new Response(null, { status: 401 }),
   );
   assert.deepEqual(result, { status: 'unauthorized' });
+});
+
+test('refresh ignores a response after the form generation changes', async () => {
+  let release!: (response: Response) => void;
+  let current = true;
+  const response = new Promise<Response>((resolve) => {
+    release = resolve;
+  });
+  const pending = refreshOwnerRedemption({
+    requestId,
+    tenantId,
+    locale: 'en',
+    isCurrent: () => current,
+    fetchImpl: async () => response,
+  });
+  current = false;
+  release(new Response(null, { status: 401 }));
+  assert.deepEqual(await pending, { kind: 'stale' });
+});
+
+test('refresh interprets unauthorized without changing ticket state', async () => {
+  const outcome = await refreshOwnerRedemption({
+    requestId,
+    tenantId,
+    locale: 'en',
+    isCurrent: () => true,
+    fetchImpl: async () => new Response(null, { status: 403 }),
+  });
+  assert.equal(outcome.kind, 'ready');
+  if (outcome.kind !== 'ready') return;
+  assert.equal(outcome.ux.kind, 'auth');
+  assert.equal(outcome.plan, undefined);
+  assert.equal(outcome.raw, undefined);
+});
+
+test('refresh clears a terminal request but preserves a pending one', async () => {
+  for (const status of ['PENDING_REVIEW', 'REJECTED'] as const) {
+    const body =
+      status === 'PENDING_REVIEW'
+        ? {
+            status,
+            requestId,
+            eventId: requestId,
+            ticketTypeId: requestId,
+            sourceId: requestId,
+            expiresAt: null,
+            submittedAt: '2026-10-26T00:00:00Z',
+          }
+        : {
+            status,
+            requestId,
+            eventId: requestId,
+            ticketTypeId: requestId,
+            sourceId: requestId,
+            reason: null,
+            decidedAt: '2026-10-26T00:00:00Z',
+          };
+    const outcome = await refreshOwnerRedemption({
+      requestId,
+      tenantId,
+      locale: 'en',
+      isCurrent: () => true,
+      fetchImpl: async () => Response.json(body),
+    });
+    assert.equal(outcome.kind, 'ready');
+    if (outcome.kind !== 'ready') continue;
+    assert.equal(
+      outcome.plan?.clearPendingRequest,
+      status === 'REJECTED' ? true : undefined,
+    );
+    assert.equal(outcome.raw, JSON.stringify(body, null, 2));
+  }
 });
