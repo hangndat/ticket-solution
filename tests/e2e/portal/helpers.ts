@@ -20,7 +20,7 @@ export function eventBff(f: CaseFixture, leaf = ''): string {
   return `/api/bff/tenants/${encodeURIComponent(f.tenantId)}/events/${encodeURIComponent(f.eventId)}${leaf}`;
 }
 
-function totp(secret: string, epochMs: number): string {
+export function totp(secret: string, epochMs: number): string {
   const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
   const normalized = secret.toUpperCase().replace(/[^A-Z2-7]/g, '');
   let bits = 0;

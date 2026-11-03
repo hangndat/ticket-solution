@@ -2830,6 +2830,7 @@ export async function seedRuntime(state, caseIds) {
     httpClientSecret: state.clientSecrets['e2e-http'],
     httpPlatformClientId: 'e2e-http-platform',
     httpPlatformClientSecret: state.clientSecrets['e2e-http-platform'],
+    ...(caseIds.includes('SEC-02') ? { staffMfaClientSecret: state.clientSecrets['e2e-staff-mfa'] } : {}),
     ...(caseIds.includes('DB-18')
       ? {
           erasureClientId: 'e2e-erasure',
