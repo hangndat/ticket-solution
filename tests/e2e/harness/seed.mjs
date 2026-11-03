@@ -275,6 +275,7 @@ export async function seedRuntime(state, caseIds) {
       if (
         [
           'AUTH-03',
+          'AUTH-08',
           'WEB-04',
           'WEB-05',
           'DB-03',
