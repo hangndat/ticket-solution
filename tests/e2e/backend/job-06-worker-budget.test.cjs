@@ -519,7 +519,7 @@ test(
         [tenantId, secondOutboxId],
       );
       assert.equal(secondRowBefore.rows[0].status, 'PENDING');
-      const activeTransactions = await admin.query(
+      const readIdleTransactions = () => admin.query(
         `SELECT pid, application_name, state, wait_event_type, wait_event,
                 round(extract(epoch FROM clock_timestamp() - xact_start)::numeric, 3) AS transaction_age_seconds,
                 CASE
@@ -534,6 +534,7 @@ test(
          WHERE datname = current_database() AND usename = 'e2e_login'
            AND state = 'idle in transaction'`,
       );
+      const activeTransactions = await readIdleTransactions();
       if (activeTransactions.rows.length !== 0)
         console.error(JSON.stringify({ event: 'job06_idle_transaction_diagnostic', sessions: activeTransactions.rows }));
       assert.equal(
@@ -541,6 +542,13 @@ test(
         0,
         'stalled SMTP must not hold a worker transaction open',
       );
+      const observed = [];
+      for (let sample = 0; sample < 30; sample++) {
+        await delay(10);
+        const idle = await readIdleTransactions();
+        if (idle.rows.length) observed.push({ sample, sessions: idle.rows });
+      }
+      console.log(JSON.stringify({ event: 'job06_idle_transaction_samples', samples: 30, observed }));
 
       const shutdownAt = performance.now();
       const closedA = await stopWorker(workerA);
