@@ -82,24 +82,104 @@ test(
         leaseOwner: `pol01-boundary-${randomUUID()}`,
       });
       assert.equal(result.completed, 1);
-      // Anchor requested_at to the actual DB terminal timestamp, without JS millisecond rounding.
-      await admin.query(
-        `UPDATE account_deletion_requests SET requested_at = idp_deleted_at - interval '30 days' WHERE id = $1`,
-        [ack.requestId],
-      );
       const terminal = await admin.query(
-        `SELECT state, pg_applied_at <= requested_at + interval '30 days' AS pg_on_time,
-      idp_deleted_at = requested_at + interval '30 days' AS idp_at_deadline,
+        `SELECT state, requested_at = '2026-01-01T00:00:00Z'::timestamptz AS request_unchanged,
+      pg_applied_at > requested_at + interval '30 days' AS pg_late,
+      idp_deleted_at > requested_at + interval '30 days' AS idp_late,
       public.account_deletion_overdue_count_at(idp_deleted_at) AS overdue
       FROM account_deletion_requests WHERE id = $1`,
         [ack.requestId],
       );
       assert.deepEqual(terminal.rows[0], {
         state: 'COMPLETED',
-        pg_on_time: true,
-        idp_at_deadline: true,
+        request_unchanged: true,
+        pg_late: true,
+        idp_late: true,
         overdue: 0,
       });
+    } finally {
+      await admin.end().catch(() => {});
+      await db.$disconnect().catch(() => {});
+      pg.stop();
+    }
+  },
+);
+
+test(
+  '[POL-01] terminal timestamp fixtures preserve historical deadline evidence',
+  { timeout: 240000 },
+  async () => {
+    const pg = await startPostgres();
+    const db = createDatabase(pg.url, 4);
+    const admin = new Client({ connectionString: pg.adminUrl });
+    try {
+      await admin.connect();
+      const users = createPrismaIdentityUserRepository(db, { env });
+      const requests = [];
+      for (let i = 0; i < 5; i++) {
+        const subject = randomUUID();
+        const user = await users.upsertFromVerifiedIdentity({
+          issuer,
+          subject,
+          email: `${subject}@example.test`,
+          emailVerified: true,
+        });
+        const ack = await createAccountDeletionRequest(db, {
+          userId: user.userId,
+          confirmation: true,
+        });
+        requests.push(ack.requestId);
+      }
+      // Set request time while open; terminal timestamps below are synthetic DB
+      // fixtures, not a controlled production clock or execution of the finalizer.
+      await admin.query(
+        `UPDATE account_deletion_requests SET requested_at = '2026-01-01 00:00:00+00'
+      WHERE id = ANY($1::uuid[])`,
+        [requests],
+      );
+      for (const [index, pgOffset, idpOffset] of [
+        [0, -2, -1],
+        [1, -1, 0],
+        [2, -1, 1],
+        [3, 1, 2],
+      ]) {
+        await admin.query(
+          `UPDATE account_deletion_requests SET state = 'COMPLETED', idp_status = 'DELETED',
+        pg_applied_at = requested_at + interval '30 days' + $2::integer * interval '1 microsecond',
+        idp_deleted_at = requested_at + interval '30 days' + $3::integer * interval '1 microsecond',
+        original_issuer = NULL, original_subject = NULL WHERE id = $1 AND state = 'REQUESTED'`,
+          [requests[index], pgOffset, idpOffset],
+        );
+      }
+      const rows = await admin.query(
+        `SELECT id,
+      requested_at = '2026-01-01 00:00:00+00'::timestamptz AS request_unchanged,
+      pg_applied_at <= requested_at + interval '30 days' AS pg_on_time,
+      idp_deleted_at <= requested_at + interval '30 days' AS idp_on_time
+      FROM account_deletion_requests WHERE id = ANY($1::uuid[])`,
+        [requests.slice(0, 4)],
+      );
+      const byId = new Map(rows.rows.map(({ id, ...rest }) => [id, rest]));
+      assert.deepEqual(
+        requests.slice(0, 4).map((id) => byId.get(id)),
+        [
+          { request_unchanged: true, pg_on_time: true, idp_on_time: true },
+          { request_unchanged: true, pg_on_time: true, idp_on_time: true },
+          { request_unchanged: true, pg_on_time: true, idp_on_time: false },
+          { request_unchanged: true, pg_on_time: false, idp_on_time: false },
+        ],
+      );
+      const gauge = await admin.query(
+        `SELECT public.account_deletion_overdue_count_at('2026-01-31 00:00:00+00') AS n`,
+      );
+      assert.equal(
+        gauge.rows[0].n,
+        1,
+        'only the still-open positive control is counted',
+      );
+      const visible =
+        await db.$queryRaw`SELECT count(*)::int AS n FROM account_deletion_requests`;
+      assert.equal(visible[0].n, 0, 'runtime RLS still hides other actors');
     } finally {
       await admin.end().catch(() => {});
       await db.$disconnect().catch(() => {});
