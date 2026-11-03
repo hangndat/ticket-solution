@@ -20,6 +20,7 @@ import {
   assertRedemptionStateUnchanged,
 } from './redemption-db';
 import { login as portalLogin, portalUrl } from '../portal/helpers';
+import { readOpenDeletions } from './account-deletion-db';
 
 type WebRuntime = {
   httpPlatformClientId?: string;
@@ -1407,15 +1408,19 @@ test('[AUTH-08] account deletion needs consent and acknowledges one request', as
 }) => {
   const manifest = loadManifest();
   fixtureFor(manifest, 'AUTH-08');
-  await login(
-    page,
-    manifest,
-    accountFor(manifest, 'AUTH-08', 'attendee'),
-    '/account',
-  );
+  const actor = accountFor(manifest, 'AUTH-08', 'attendee');
+  expect(await readOpenDeletions(actor.userId)).toEqual([]);
+  await login(page, manifest, actor, '/account');
   await page.goto(webUrl(manifest, '/account'));
   await page.locator('summary').filter({ hasText: 'Xóa tài khoản' }).click();
   await expect(page.getByTestId('account-load-empty')).toBeVisible();
+  expect(
+    (
+      await page.request.get(
+        webUrl(manifest, '/api/bff/me/account-deletion-requests'),
+      )
+    ).status(),
+  ).toBe(200);
   const submit = page.getByRole('button', {
     name: 'Gửi yêu cầu xóa tài khoản',
   });
@@ -1429,6 +1434,9 @@ test('[AUTH-08] account deletion needs consent and acknowledges one request', as
       posts.push(request.url());
   });
   expect(posts).toHaveLength(0);
+  await submit.click({ force: true });
+  expect(posts).toHaveLength(0);
+  expect(await readOpenDeletions(actor.userId)).toEqual([]);
   await page
     .getByLabel('Tôi đã đọc và muốn gửi yêu cầu xóa tài khoản.')
     .check();
@@ -1445,6 +1453,9 @@ test('[AUTH-08] account deletion needs consent and acknowledges one request', as
   const ack = (await response.json()) as { requestId?: string; state?: string };
   expect(ack.requestId).toBeTruthy();
   expect(ack.state).toBe('REQUESTED');
+  expect(await readOpenDeletions(actor.userId)).toEqual([
+    { id: ack.requestId, state: 'REQUESTED' },
+  ]);
   await expect(page.getByTestId('account-deletion-result')).toContainText(
     'Đã tiếp nhận yêu cầu',
   );
@@ -1452,4 +1463,78 @@ test('[AUTH-08] account deletion needs consent and acknowledges one request', as
   await expect(page.getByTestId('account-deletion-result')).toContainText(
     'chưa phải xóa dữ liệu ngay',
   );
+});
+
+test('[AUTH-08] lost response retries the same attempt without a duplicate', async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  const manifest = loadManifest();
+  const actor = accountFor(manifest, 'AUTH-08', 'otherAttendee');
+  expect(await readOpenDeletions(actor.userId)).toEqual([]);
+  await login(page, manifest, actor, '/account');
+  await page.goto(webUrl(manifest, '/account'));
+  await page.locator('summary').filter({ hasText: 'Xóa tài khoản' }).click();
+  await expect(page.getByTestId('account-load-empty')).toBeVisible();
+  await page
+    .getByLabel('Tôi đã đọc và muốn gửi yêu cầu xóa tài khoản.')
+    .check();
+  const bodies: { confirmation: boolean; idempotencyKey: string }[] = [];
+  let ack: { requestId?: string; state?: string } | undefined;
+  await page.route('**/api/bff/me/account-deletion-requests', async (route) => {
+    if (route.request().method() !== 'POST') return route.continue();
+    bodies.push(route.request().postDataJSON());
+    const upstream = await route.fetch();
+    if (bodies.length === 1) {
+      expect([200, 201, 202]).toContain(upstream.status());
+      ack = await upstream.json();
+      // Hold the real committed response past the client's 20-second timeout.
+      await new Promise((resolve) => setTimeout(resolve, 21_000));
+      await route.abort('failed');
+    } else {
+      await route.fulfill({ response: upstream });
+    }
+  });
+  const started = Date.now();
+  await page.getByRole('button', { name: 'Gửi yêu cầu xóa tài khoản' }).click();
+  await expect(page.getByTestId('account-deletion-result')).toContainText(
+    'Chưa xác nhận được yêu cầu',
+    { timeout: 30_000 },
+  );
+  expect(Date.now() - started).toBeGreaterThanOrEqual(19_000);
+  expect(ack?.state).toBe('REQUESTED');
+  expect(ack?.requestId).toBeTruthy();
+  expect(await readOpenDeletions(actor.userId)).toEqual([
+    { id: ack?.requestId, state: 'REQUESTED' },
+  ]);
+  const retry = page.waitForResponse(
+    (response) =>
+      response.request().method() === 'POST' &&
+      response.url().endsWith('/api/bff/me/account-deletion-requests'),
+  );
+  await page.getByRole('button', { name: 'Gửi lại cùng yêu cầu' }).click();
+  const response = await retry;
+  expect(response.status()).toBe(401);
+  expect(bodies).toHaveLength(2);
+  expect(bodies[0].confirmation).toBe(true);
+  expect(bodies[0].idempotencyKey).toBeTruthy();
+  expect(bodies[1]).toEqual(bodies[0]);
+  expect(await readOpenDeletions(actor.userId)).toEqual([
+    { id: ack?.requestId, state: 'REQUESTED' },
+  ]);
+  const current = page.waitForResponse(
+    (res) =>
+      res.request().method() === 'GET' &&
+      res.url().endsWith('/api/bff/me/account-deletion-requests'),
+  );
+  await page.reload();
+  expect((await current).status()).toBe(401);
+  await page.locator('summary').filter({ hasText: 'Xóa tài khoản' }).click();
+  await expect(page.getByTestId('account-load-error')).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Gửi yêu cầu xóa tài khoản' }),
+  ).toBeDisabled();
+  expect(await readOpenDeletions(actor.userId)).toEqual([
+    { id: ack?.requestId, state: 'REQUESTED' },
+  ]);
 });

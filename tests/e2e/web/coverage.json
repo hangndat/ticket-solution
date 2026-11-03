@@ -75,9 +75,9 @@
   {
     "caseId": "AUTH-08",
     "tests": ["auth.spec.ts › [AUTH-08]"],
-    "layers": ["B"],
+    "layers": ["B", "H", "D"],
     "status": "blocked",
-    "reason": "Có consent, một POST browser, HTTP ACK 200/201/202 với requestId/REQUESTED và copy không hứa xóa ngay; thiếu DB one-open-request, retry sau unknown, revoke/job/IdP failure."
+    "reason": "Browser kiểm consent, ACK, double click, timeout sau commit và retry cùng key; PostgreSQL đối soát một open request, reload bị identity gate chặn. Còn thiếu reauth, bằng chứng session revoke và job erasure/IdP failure cho AUTH-08; DB-18 có luồng worker/IdP liên quan nhưng không thay full AC của ID này."
   },
   {
     "caseId": "WEB-01",
