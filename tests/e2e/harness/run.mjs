@@ -603,11 +603,32 @@ if (mode === 'list' || args.includes('--list')) {
           [entry, '--case', id],
           common,
         );
+        const childExitCode = await exitCode(child);
         results.push({
           layer: 'HTTP',
           caseId: id,
-          exitCode: await exitCode(child),
+          exitCode: childExitCode,
         });
+        if (id === 'DB-17' && childExitCode) {
+          const log = readFileSync(resolve(state.dir, 'http-DB-17.log'), 'utf8');
+          // Only fixed, bounded fields leave the private log. It may contain
+          // browser, API, or authentication details on other failure paths.
+          const sourceLines = [...new Set(
+            [...log.matchAll(/live\.test\.mjs:(\d{1,6}):\d{1,4}/g)]
+              .map((match) => Number(match[1])),
+          )].slice(0, 4);
+          const diagnostic = {
+            caseId: id,
+            exitCode: childExitCode,
+            sourceLines,
+            errorType: log.match(/\b(AssertionError|TimeoutError|TypeError)\b/)?.[1] ?? null,
+            httpStatus: Number(log.match(/\bHTTP (\d{3}); code=/)?.[1]) || null,
+            actual: Number(log.match(/\bactual: (\d{1,3})\b/)?.[1]) || null,
+            expected: Number(log.match(/\bexpected: (\d{1,3})\b/)?.[1]) || null,
+          };
+          privateJson(resolve(state.dir, 'db17-failure.json'), diagnostic);
+          console.error(`DB-17 failure diagnostic: ${JSON.stringify(diagnostic)}`);
+        }
       }
     }
     if (mode !== 'http') {

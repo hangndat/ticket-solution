@@ -336,6 +336,14 @@ jobs:
         env:
           E2E_LANES: '1'
         run: pnpm test:e2e:http --lane --case=DB-17
+      - name: DB-17 sanitized failure diagnostic
+        if: failure() && matrix.shard == 'tenant-registration'
+        uses: actions/upload-artifact@v4
+        with:
+          name: db17-http-failure
+          path: tests/e2e/.artifacts/*/db17-failure.json
+          retention-days: 1
+          if-no-files-found: ignore
 
   # D5 drills tách 3 job song song (ports/container name độc lập).
   d5-observability:
