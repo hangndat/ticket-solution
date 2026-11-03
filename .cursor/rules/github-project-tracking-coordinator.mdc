@@ -1,8 +1,0 @@
----
-description: Project #3 — reviewer spawn, WIP, milestone gates, gh (leader Read)
-alwaysApply: false
----
-
-# Adapter Cursor
-
-Đọc và áp dụng [nguồn chuẩn](../../docs/agents/policies/project-coordinator.md) khi rule được kích hoạt. Chỉnh policy tại nguồn chuẩn; metadata host giữ ở adapter này.

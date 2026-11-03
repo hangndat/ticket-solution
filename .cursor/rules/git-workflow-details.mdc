@@ -1,8 +1,0 @@
----
-description: GitHub Flow for commits — feature branch, conventional commits, PR, exact-SHA DoD evidence
-alwaysApply: false
----
-
-# Adapter Cursor
-
-Đọc và áp dụng [nguồn chuẩn](../../docs/agents/policies/git-details.md) khi rule được kích hoạt. Chỉnh policy tại nguồn chuẩn; metadata host giữ ở adapter này.

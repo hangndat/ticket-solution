@@ -2,7 +2,7 @@
 
 Khám phá namespace CRG được cấu hình trên host; không suy tên server từ agent vendor. Mọi stats/build/query phải truyền repo_root tuyệt đối của Git worktree hiện tại.
 
-Hook có thể hỗ trợ cập nhật graph của checkout, nhưng agent vẫn phải kiểm stats và thực hiện graph query liên quan trong session/worktree/HEAD hiện tại. Source và tests là authoritative; không thay graph của checkout khác.
+Repo không tự build/update graph ở sessionStart, beforeSubmitPrompt hoặc afterFileEdit. Agent kiểm stats, cập nhật khi stale và thực hiện graph query liên quan trong session/worktree/HEAD hiện tại; sau sửa source phải kiểm freshness trước khi dựa vào graph. Guard global trên host đã cài kiểm quy trình này, không được dùng CRG_READY từ hook cũ làm bằng chứng. Source và tests là authoritative; không thay graph của checkout khác.
 
 ## Readiness gate (bắt buộc)
 
