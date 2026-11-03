@@ -100,6 +100,14 @@ async function main() {
         ledger: result.ledger,
         idempotent_replaced: result.idempotent,
         join_ambiguous: result.joinAmbiguous,
+        join_source: result.event.attrs.join_source,
+        join_reason: result.event.attrs.join_reason,
+        token_delta_reason: result.event.attrs.token_delta_reason,
+        provider_usage_reason: result.event.attrs.provider_usage_reason,
+        effective_route: result.event.attrs.effective_route,
+        requested_route: result.event.attrs.requested_route,
+        tokens_session_total: result.event.attrs.tokens_provider?.tokens ?? null,
+        usage_scope: result.event.attrs.tokens_provider ? 'provider_session' : null,
         transcript: result.event.attrs.transcript
           ? {
               sourceExact: result.event.attrs.transcript.sourceExact,
