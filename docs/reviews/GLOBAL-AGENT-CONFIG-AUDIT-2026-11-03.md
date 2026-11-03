@@ -64,3 +64,12 @@ Preamble shell khuyến nghị native `ls -1` và các reader, trong khi policy 
 - Hook `deny` của Cursor và các knob archive/loop chưa có bằng chứng gây lỗi; không đổi chúng chỉ dựa trên tên setting. Các nghi ngờ này không được ghi là đã tái hiện hoặc đã fix.
 - Backup config ban đầu: `/Users/admin/.config/agent-context-policy/backups/global-fix-20261103-022120/`; các lần sửa rules/trust tiếp theo có backup riêng cùng prefix `global-fix-`. Sync policy backup: `backups/20261103-022235-123713/`.
 - Chưa commit/push. `.codex` hooks là cấu hình local, không xuất hiện trong diff tracked của repo.
+
+## Dọn legacy Cursor trong repo — follow-up 03/11/2026
+
+- Theo yêu cầu user, giảm `.cursor/rules` từ 11 xuống 1 adapter `project.mdc`; routing theo hành động nằm trong `docs/agents/README.md`, gồm cả provider fallback và LeanCTX troubleshooting. Không còn phụ thuộc UAT globs riêng của Cursor.
+- Giảm `.cursor/hooks` từ 6 xuống 2 script telemetry. Bỏ bốn script CRG eager build/update, marker readiness và namespace pin cũ; gỡ registration tương ứng. Giữ auto-join và stop/afterAgentResponse với dedupe generation. Giữ symlink skills.
+- CRG scope `/Users/admin/SideProject/ticket-solution/main-2`, base HEAD `08f3578c062e7885595ca4a8f1255245b243650c`: incremental minimal build, stats khớp HEAD, query `file_summary` cho `crg-ensure-ready.sh`; đã đọc bốn script và tìm consumer trước khi xóa.
+- Cập nhật setup/context docs và pointer UAT còn dùng; evidence lịch sử không viết lại. Máy chưa cài guard global vẫn phải làm readiness theo policy, không được coi telemetry hooks là enforcement.
+- Validation: `pnpm agent:workflow:test` **85/85 PASS**, gồm hook log privacy và dedupe; cấu hình JSON, 3 event registrations, 2 script targets, symlink skills và **33 documentation links PASS**; `git diff --check` PASS. Chưa smoke-test phiên Cursor UI mới.
+- Phần follow-up đang ở nhánh `hangndat/tooling-cursor-legacy-cleanup`, chưa commit/push.

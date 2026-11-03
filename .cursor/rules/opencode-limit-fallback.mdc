@@ -1,8 +1,0 @@
----
-description: OpenCode lỗi/limit — chuyển thẳng Codex Luna theo chỉ định user
-alwaysApply: false
----
-
-# Adapter Cursor
-
-Đọc và áp dụng [nguồn chuẩn](../../docs/agents/policies/provider-fallback.md) khi rule được kích hoạt. Chỉnh policy tại nguồn chuẩn; metadata host giữ ở adapter này.
