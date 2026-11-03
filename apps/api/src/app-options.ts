@@ -1,6 +1,7 @@
 import {
   IdentityError,
   type CodeHmacConfig,
+  type CredentialKeyInput,
   type IdentityUserRepository,
   type OidcVerifier,
   type PrismaClient,
@@ -24,5 +25,5 @@ export type CreateAppOptions = {
   /** Inject DB for redeem/tickets (tests). */
   database?: PrismaClient;
   hmac?: CodeHmacConfig;
-  credentialKey?: string;
+  credentialKey?: CredentialKeyInput;
 };

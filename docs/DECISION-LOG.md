@@ -49,7 +49,7 @@ Owner chốt trên Epic [#914](https://github.com/hangndat/ticket-solution/issue
 | 3 | Guest IA | **Không** `NativeTabs` cho attendee khi chưa đăng nhập: không tab Sự kiện, không Tài khoản, không Vé. Một stack: **Đăng nhập** + **Đổi mã**. Không section thông báo/phiên trống khi logged out. Login = CTA header kiểu staff (`person.circle`), **không** tab Tài khoản. |
 | 4 | Verified attendee | Tabs **Sự kiện** + **Vé của tôi** only. Account qua nút header (cùng pattern staff). **Không** tab Tài khoản. |
 | 5 | Headers | Attendee dùng cùng native large-title chrome như staff History/Manual (`tabRootStackScreenOptions`). |
-| 6 | USB / máy thật | Hai mode (prod extras vs local API) trong [`.cursor/skills/ios-usb-device/SKILL.md`](../.cursor/skills/ios-usb-device/SKILL.md). Không EAS Cloud Build. |
+| 6 | USB / máy thật | Hai mode (prod extras vs local API) trong [`.agents/skills/ios-usb-device/SKILL.md`](../.agents/skills/ios-usb-device/SKILL.md). Không EAS Cloud Build. |
 | 7 | Staff đổi sự kiện | Scan và tab staff khác dùng `StaffGateScreenChrome`: bộ đổi sự kiện **chỉ trên header**, icon SF (không text-only). **Bỏ** picker sự kiện trùng trong body. |
 | 8 | Banner sự kiện | Banner **đơn giản, theo từng sự kiện** (ảnh hoặc brand token của event đó). Catalog **không** tô cả list bằng event đầu. List / detail / ticket dùng **một** nhịp banner khiêm tốn. |
 
@@ -258,7 +258,7 @@ Chỉ mở redemption / Gate / admin tenant **sau khi**:
 
 ## UX-11 — Guest redeem auth MVP (18/10/2026)
 
-Gap audit [PRODUCTION-READINESS-UX §6 UX-11](./plans/PRODUCTION-READINESS-UX.md): PRD §2/M02 mô tả OTP/magic link, runtime/PD pin D1 = Keycloak login + `email_verified`. **Chốt Option A** (khớp tip D11 / AC-A3) — không mở Task OTP/IdP mới trong MVP.
+Gap audit [PRODUCTION-READINESS-UX §6 UX-11](archive/research/production-readiness/PRODUCTION-READINESS-UX.md): PRD §2/M02 mô tả OTP/magic link, runtime/PD pin D1 = Keycloak login + `email_verified`. **Chốt Option A** (khớp tip D11 / AC-A3) — không mở Task OTP/IdP mới trong MVP.
 
 | # | Quyết định | Chi tiết MVP |
 | - | ---------- | ------------ |

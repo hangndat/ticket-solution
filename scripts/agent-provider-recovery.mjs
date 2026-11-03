@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/** CLI: status | check | record-limit | route — provider recovery preflight for coordinators. */
+/** CLI: status | check | record-limit | route — optional non-coding selection; pinned starts check only their provider. */
 import { readFileSync } from 'node:fs';
 import { resolve, join, dirname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -107,7 +107,8 @@ export function main(argv = process.argv.slice(2)) {
         '  status --provider claude|codex --model PIN [--effort LEVEL] [--root DIR] [--codex-snapshot PATH]\n' +
         '  check --provider claude|codex --model PIN [--effort LEVEL] [--force] [--codex-snapshot PATH] [--essential true]\n' +
         '  record-limit --provider claude|codex --model PIN --limited-at ISO [--reset-at ISO] [--effort LEVEL] [--reason TEXT]\n' +
-        '  route --cost-tier focused|advanced|high [--force] [--codex-snapshot PATH] [--essential true]',
+        '  route --cost-tier focused|advanced|high [--force] [--codex-snapshot PATH] [--essential true]\n' +
+        '  route is only for unassigned non-coding work; coding follows the cost catalog. Do not probe alternatives after selecting a route.',
     );
     return;
   }

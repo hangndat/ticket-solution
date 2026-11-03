@@ -99,6 +99,7 @@ async function startIsolatedPostgres() {
   return {
     name,
     url: 'postgresql://d3_login:' + password + '@127.0.0.1:' + port + '/d3_gate_test',
+    adminUrl: 'postgresql://postgres:' + password + '@127.0.0.1:' + port + '/d3_gate_test',
   };
   } finally {
     await admin.end().catch(() => {});
@@ -112,6 +113,7 @@ test(
     let name;
     let db;
     let db2;
+    let admin;
     try {
       const boot = await startIsolatedPostgres();
       name = boot.name;
@@ -187,7 +189,7 @@ test(
 
       const issued = unwrapRedeemOutcome(
         await withTenant(db, tenantId, (tx) =>
-          redeemAndIssueTicket(tx, HMAC, 'd3-cred-key', {
+          redeemAndIssueTicket(tx, HMAC, 'd3-cred-key-material-at-least-16', {
             tenantId,
             eventId,
             actorUserId: guest.userId,
@@ -210,7 +212,7 @@ test(
         SELECT manual_entry_code_sealed FROM tickets
         WHERE tenant_id = ${tenantId}::uuid AND id = ${issued.ticketId}::uuid
       `);
-      const manualCode = openManualEntryCode(codeRows[0].manual_entry_code_sealed, 'd3-cred-key');
+      const manualCode = openManualEntryCode(codeRows[0].manual_entry_code_sealed, 'd3-cred-key-material-at-least-16');
       const forgedJws = await signedQr({ tenantId, eventId, ticketId: issued.ticketId });
       const [forgedHeader, forgedPayload, forgedSignature] = forgedJws.split('.');
       const signatureBytes = Buffer.from(forgedSignature, 'base64url');
@@ -277,7 +279,7 @@ test(
         idempotencyKey: reissueKey,
       };
       const rotated = await withTenant(db, tenantId, (tx) =>
-        reissueTicketCredential(tx, 'd3-cred-key', reissueInput),
+        reissueTicketCredential(tx, 'd3-cred-key-material-at-least-16', reissueInput),
       );
       assert.deepEqual(rotated, {
         ok: true, ticketId: issued.ticketId, credentialVersion: 2, replayed: false,
@@ -302,7 +304,7 @@ test(
         ['credentialVersion', 'ok', 'replayed', 'ticketId']);
       await assert.rejects(
         () => withTenant(db, tenantId, (tx) =>
-          reissueTicketCredential(tx, 'd3-cred-key', {
+          reissueTicketCredential(tx, 'd3-cred-key-material-at-least-16', {
             ...reissueInput, actorUserId: cs.userId, idempotencyKey: randomUUID(),
           }),
         ),
@@ -327,7 +329,7 @@ test(
         });
         await assert.rejects(
           () => withTenant(db, tenantId, (tx) =>
-            reissueTicketCredential(tx, 'd3-cred-key', {
+            reissueTicketCredential(tx, 'd3-cred-key-material-at-least-16', {
               ...reissueInput, actorUserId: actor.userId,
               idempotencyKey: randomUUID(),
             }),
@@ -336,12 +338,12 @@ test(
         );
       }
       const replay = await withTenant(db2, tenantId, (tx) =>
-        reissueTicketCredential(tx, 'd3-cred-key', reissueInput),
+        reissueTicketCredential(tx, 'd3-cred-key-material-at-least-16', reissueInput),
       );
       assert.deepEqual(replay, { ...rotated, replayed: true });
       await assert.rejects(
         () => withTenant(db, tenantId, (tx) =>
-          reissueTicketCredential(tx, 'd3-cred-key', {
+          reissueTicketCredential(tx, 'd3-cred-key-material-at-least-16', {
             ...reissueInput, reason: 'different reason',
           }),
         ),
@@ -495,7 +497,7 @@ test(
 
       const second = unwrapRedeemOutcome(
         await withTenant(db, tenantId, (tx) =>
-          redeemAndIssueTicket(tx, HMAC, 'd3-cred-key', {
+          redeemAndIssueTicket(tx, HMAC, 'd3-cred-key-material-at-least-16', {
             tenantId,
             eventId,
             actorUserId: guest.userId,
@@ -577,7 +579,7 @@ test(
           WHERE tenant_id = ${tenantId}::uuid AND id = ${second.ticketId}::uuid
         `);
         const denied = await withTenant(db, tenantId, (tx) =>
-          reissueTicketCredential(tx, 'd3-cred-key', {
+          reissueTicketCredential(tx, 'd3-cred-key-material-at-least-16', {
             tenantId, eventId, ticketId: second.ticketId,
             actorUserId: staff.userId, reason: 'must deny non-active ticket',
             idempotencyKey: randomUUID(),
@@ -589,7 +591,7 @@ test(
 
       const third = unwrapRedeemOutcome(
         await withTenant(db, tenantId, (tx) =>
-          redeemAndIssueTicket(tx, HMAC, 'd3-cred-key', {
+          redeemAndIssueTicket(tx, HMAC, 'd3-cred-key-material-at-least-16', {
             tenantId, eventId, actorUserId: guest.userId,
             actorEmail: guest.email, emailVerified: true,
             rawCode: 'GATE-REISSUE-RACE', idempotencyKey: randomUUID(),
@@ -602,7 +604,7 @@ test(
         WHERE tenant_id = ${tenantId}::uuid AND id = ${eventId}::uuid
       `);
       const cancelledEventRotate = await withTenant(db, tenantId, (tx) =>
-        reissueTicketCredential(tx, 'd3-cred-key', {
+        reissueTicketCredential(tx, 'd3-cred-key-material-at-least-16', {
           tenantId, eventId, ticketId: third.ticketId,
           actorUserId: staff.userId, reason: 'event cancelled but ticket active',
           idempotencyKey: randomUUID(),
@@ -616,7 +618,7 @@ test(
         backfillManualEntryCodes(tx, {
           tenantId,
           manualCodePepper: manualPepper,
-          credentialKeyMaterial: 'd3-cred-key',
+        credentialKeyMaterial: 'd3-cred-key-material-at-least-16',
           batchSize: 1,
         }),
       );
@@ -641,7 +643,7 @@ test(
         WHERE tenant_id = ${tenantId}::uuid AND id = ${third.ticketId}::uuid
       `);
       const reissueFirst = await withTenant(db, tenantId, async (tx) => {
-        const reissue = await reissueTicketCredential(tx, 'd3-cred-key', {
+        const reissue = await reissueTicketCredential(tx, 'd3-cred-key-material-at-least-16', {
           tenantId, eventId, ticketId: third.ticketId, actorUserId: staff.userId,
           reason: 'reissue before manual-code backfill', idempotencyKey: randomUUID(),
         });
@@ -671,7 +673,7 @@ test(
       const backfillFirst = await runBackfill();
       assert.equal(backfillFirst.minted, 1);
       const reissueAfterBackfill = await withTenant(db, tenantId, (tx) =>
-        reissueTicketCredential(tx, 'd3-cred-key', {
+        reissueTicketCredential(tx, 'd3-cred-key-material-at-least-16', {
           tenantId, eventId, ticketId: third.ticketId, actorUserId: staff.userId,
           reason: 'reissue after manual-code backfill', idempotencyKey: randomUUID(),
         }),
@@ -683,14 +685,96 @@ test(
           WHERE tenant_id = ${tenantId}::uuid AND id = ${third.ticketId}::uuid`;
         return rows[0];
       });
-      const finalRawCode = openManualEntryCode(finalCode.manual_entry_code_sealed, 'd3-cred-key');
+      const finalRawCode = openManualEntryCode(finalCode.manual_entry_code_sealed, 'd3-cred-key-material-at-least-16');
       assert.equal(finalCode.credential_version, reissueAfterBackfill.credentialVersion);
       assert.equal(finalCode.manual_entry_code_hash,
         hashManualCode(manualPepper, tenantId, eventId, finalRawCode));
 
+      // Sequence increments survive savepoint rollback, so the trigger can force an
+      // exact number of real unique-index collisions without controlling random minting.
+      admin = new Client({ connectionString: boot.adminUrl });
+      await admin.connect();
+      await admin.query('CREATE SEQUENCE gate_test_manual_collision_attempt');
+      await admin.query('GRANT USAGE ON SEQUENCE gate_test_manual_collision_attempt TO ticket_runtime');
+      await admin.query(`
+        CREATE FUNCTION gate_test_manual_collision() RETURNS trigger
+        LANGUAGE plpgsql AS $$
+        BEGIN
+          IF NEW.id = TG_ARGV[0]::uuid
+             AND nextval('gate_test_manual_collision_attempt') <= TG_ARGV[1]::integer THEN
+            SELECT manual_entry_code_hash INTO NEW.manual_entry_code_hash
+            FROM tickets
+            WHERE id = TG_ARGV[2]::uuid
+              AND tenant_id = NEW.tenant_id AND event_id = NEW.event_id;
+          END IF;
+          RETURN NEW;
+        END $$
+      `);
+      const readManualRow = async (ticketId) => withTenant(db, tenantId, async (tx) => {
+        const rows = await tx.$queryRaw`SELECT tenant_id, event_id, state,
+          credential_version, manual_entry_code_hash, manual_entry_code_sealed
+          FROM tickets WHERE tenant_id = ${tenantId}::uuid AND id = ${ticketId}::uuid`;
+        return rows[0];
+      });
+      const installCollisionTrigger = async (limit) => {
+        await admin.query('DROP TRIGGER IF EXISTS gate_test_manual_collision ON tickets');
+        await admin.query('ALTER SEQUENCE gate_test_manual_collision_attempt RESTART WITH 1');
+        // Ticket IDs come from the database; validate before embedding in DDL.
+        assert.match(third.ticketId, /^[0-9a-f-]{36}$/i);
+        assert.match(issued.ticketId, /^[0-9a-f-]{36}$/i);
+        await admin.query(`CREATE TRIGGER gate_test_manual_collision
+          BEFORE UPDATE OF manual_entry_code_hash ON tickets
+          FOR EACH ROW EXECUTE FUNCTION gate_test_manual_collision(
+            '${third.ticketId}', '${limit}', '${issued.ticketId}')`);
+      };
+      try {
+        const donorBefore = await readManualRow(issued.ticketId);
+        assert.ok(donorBefore.manual_entry_code_hash);
+        await withTenant(db, tenantId, (tx) => tx.$executeRaw`
+          UPDATE tickets SET manual_entry_code_hash = NULL, manual_entry_code_sealed = NULL
+          WHERE tenant_id = ${tenantId}::uuid AND id = ${third.ticketId}::uuid
+        `);
+        const beforeRetry = await readManualRow(third.ticketId);
+        await installCollisionTrigger(1);
+        const retried = await runBackfill();
+        assert.equal(retried.minted, 1);
+        assert.equal(retried.complete, true);
+        const retryAttempts = await admin.query('SELECT last_value FROM gate_test_manual_collision_attempt');
+        assert.equal(Number(retryAttempts.rows[0].last_value), 2);
+        const afterRetry = await readManualRow(third.ticketId);
+        assert.equal(afterRetry.tenant_id, tenantId);
+        assert.equal(afterRetry.event_id, eventId);
+        assert.equal(afterRetry.state, beforeRetry.state);
+        assert.equal(afterRetry.credential_version, beforeRetry.credential_version);
+      const retriedCode = openManualEntryCode(afterRetry.manual_entry_code_sealed, 'd3-cred-key-material-at-least-16');
+        assert.equal(afterRetry.manual_entry_code_hash,
+          hashManualCode(manualPepper, tenantId, eventId, retriedCode));
+        assert.notEqual(afterRetry.manual_entry_code_hash, donorBefore.manual_entry_code_hash);
+        assert.deepEqual(await readManualRow(issued.ticketId), donorBefore);
+
+        await admin.query('DROP TRIGGER gate_test_manual_collision ON tickets');
+        await withTenant(db, tenantId, (tx) => tx.$executeRaw`
+          UPDATE tickets SET manual_entry_code_hash = NULL, manual_entry_code_sealed = NULL
+          WHERE tenant_id = ${tenantId}::uuid AND id = ${third.ticketId}::uuid
+        `);
+        const beforeExhaustion = await readManualRow(third.ticketId);
+        await installCollisionTrigger(5);
+        await assert.rejects(runBackfill, /tickets_manual_code_hmac_unique/);
+        const exhaustedAttempts = await admin.query('SELECT last_value FROM gate_test_manual_collision_attempt');
+        assert.equal(Number(exhaustedAttempts.rows[0].last_value), 5);
+        assert.deepEqual(await readManualRow(third.ticketId), beforeExhaustion);
+        assert.equal(beforeExhaustion.manual_entry_code_hash, null);
+        assert.equal(beforeExhaustion.manual_entry_code_sealed, null);
+        assert.deepEqual(await readManualRow(issued.ticketId), donorBefore);
+      } finally {
+        await admin.query('DROP TRIGGER IF EXISTS gate_test_manual_collision ON tickets');
+        await admin.query('DROP FUNCTION IF EXISTS gate_test_manual_collision()');
+        await admin.query('DROP SEQUENCE IF EXISTS gate_test_manual_collision_attempt');
+      }
+
       const race = await Promise.allSettled([
         withTenant(db, tenantId, (tx) =>
-          reissueTicketCredential(tx, 'd3-cred-key', {
+          reissueTicketCredential(tx, 'd3-cred-key-material-at-least-16', {
             tenantId, eventId, ticketId: third.ticketId,
             actorUserId: staff.userId, reason: 'race with revoke',
             idempotencyKey: randomUUID(),
@@ -745,6 +829,7 @@ test(
           error.code === GATE_ERROR_CODES.SESSION_NOT_ACTIVE,
       );
     } finally {
+      if (admin) await admin.end();
       if (db) await db.$disconnect();
       if (db2) await db2.$disconnect();
       if (name) {

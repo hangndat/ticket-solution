@@ -1,6 +1,6 @@
-# MCP cho agent Vemoki (Cursor / Claude Code)
+# MCP cho agent Vemoki — đa host
 
-Cấu hình **local** — không commit secrets. File `.cursor/mcp.json` **gitignored**; mỗi máy tự tạo.
+Cấu hình **local** theo host — không commit secrets. Cursor dùng `.cursor/mcp.json` (gitignored); Codex, Claude và OpenCode dùng MCP config của chính host. Không yêu cầu host khác đọc cấu hình Cursor.
 
 ## Server cần (ticket-solution)
 
@@ -12,13 +12,13 @@ Cấu hình **local** — không commit secrets. File `.cursor/mcp.json` **gitig
 ### code-review-graph-ticket
 
 - Cài CLI `code-review-graph` trên PATH.
-- Trong `mcp.json`, server thường truyền `--repo` trỏ checkout **`main`** (integration) của repo — graph MCP đọc DB tại repo đó.
-- Hook `crg-ensure-ready.sh` vẫn build/update graph trong **worktree đang mở**; kết quả MCP có thể lệch branch worktree → **source wins**, xem `.cursor/rules/code-review-graph-ready.mdc`.
+- Mọi stats/build/query truyền `repo_root` tuyệt đối của **Git worktree đang làm task**, kể cả khi server có `--repo` mặc định. Xác minh graph khớp HEAD; không dùng checkout main thay branch của task.
+- Hook có thể cập nhật graph nhưng không thay readiness check và query trong session; xem `docs/agents/policies/context.md`.
 
 ### lean-ctx
 
-- Cấu hình theo skill `lean-ctx` / user rule; gọi qua `CallDynamicTool` namespace `lean-ctx` (không top-level `ctx_call`).
-- Khi `Tool ctx_call was not found` hoặc Grep/Glob denied → Read `.cursor/rules/lean-ctx-mcp-cursor.mdc`.
+- Khám phá tên/schema MCP thực sự trên host. `CallDynamicTool` chỉ dành cho Cursor; Codex/Claude/OpenCode dùng cơ chế gọi tool của host hiện tại.
+- Chỉ trên Cursor, khi `Tool ctx_call was not found` hoặc Grep/Glob denied → đọc `docs/agents/setup/leanctx-cursor.md`. Host khác kiểm tool/schema và lỗi cụ thể, không đi qua adapter Cursor.
 
 ## Tham chiếu
 
@@ -42,7 +42,7 @@ git -C <task-checkout> rev-parse --show-toplevel
 git -C <task-checkout> rev-parse HEAD
 ```
 
-Truyền root tuyệt đối cho `ctx_compose`, scope `ctx_search` vào đúng checkout và dùng đường dẫn tuyệt đối cho `ctx_read`. CRG MCP trỏ checkout khác chỉ là gợi ý: xác minh source ở worktree/SHA của task trước khi kết luận impact hoặc review. Không dùng graph main để khẳng định branch không có symbol.
+Truyền root tuyệt đối cho `ctx_compose`, scope `ctx_search` vào đúng checkout và dùng đường dẫn tuyệt đối cho `ctx_read`. CRG phải trả graph của đúng worktree/SHA task; sai root/HEAD thì sửa tham số hoặc cập nhật graph rồi xác minh lại. Không dùng graph main để kết luận cho branch khác. Lỗi tool thật theo fallback có giới hạn trong policy context.
 
 ## Scope và output trong monorepo
 

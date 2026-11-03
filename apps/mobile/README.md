@@ -62,7 +62,7 @@ Fixture id `demo-mfest` / slug `mfest` stays on main; do not rename to hide test
 
 ## Simulator UAT (Orca emulator — agent sessions)
 
-Trong Orca/agent: **chỉ** `orca emulator` — attach device, `ax`, `tap`/`type`/`gesture`, `exec` serve-sim. Không `axe` trực tiếp, không Computer Use trên Simulator.app user. Skill: `orca-emulator`; rule: `.cursor/rules/uat-headless.mdc`.
+Trong Orca/agent: **chỉ** `orca emulator` — attach device, `ax`, `tap`/`type`/`gesture`, `exec` serve-sim. Không `axe` trực tiếp, không Computer Use trên Simulator.app user. Skill: `orca-emulator`; rule: `docs/agents/workflows/uat.md`.
 
 ```bash
 orca emulator attach "iPhone 17 Pro" --worktree active --json

@@ -15,23 +15,12 @@ import {
   Typography,
 } from 'antd';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type {
-  InvitationSummary,
-  StaffPendingRedemptionItem,
-} from '@ticket/contracts';
 import { portalGet } from '../client/portal-fetch';
 import { isMessageKey, usePortalLocale, type PortalLocale } from '../i18n';
 import { bffEventAction } from '../prep/bff-urls';
-import { interpretInvitationList } from '../ops/invitation';
-import {
-  interpretCsDetail,
-  interpretCsList,
-  type CsTicketDetail,
-  type CsTicketSummary,
-} from '../ops/cs';
+import { interpretCsDetail, type CsTicketDetail } from '../ops/cs';
 import {
   TICKET_ID_UUID,
-  buildGuestListQueryPath,
   defaultGuestListKind,
   guestListKindFromHash,
   guestListKindToHash,
@@ -41,20 +30,10 @@ import {
   validateInvitationIdSearch,
   validateTicketIdSearch,
 } from './guest-list-query';
+import { useGuestListPage } from './use-guest-list-page';
+import type { GuestListRow as Row } from './guest-list-page';
 
 type Kind = GuestListKind;
-type Row = {
-  key: string;
-  state: string;
-  email: string | null;
-  sourceId: string;
-  ticketTypeId: string;
-  at: string;
-  checkInAt?: string | null;
-  notification?: CsTicketSummary['notification'];
-  timeline: { at: string; kind: string; summary: string }[];
-};
-type Page = { rows: Row[]; nextCursor: string | null };
 type Props = {
   tenantId: string;
   eventId: string;
@@ -84,102 +63,6 @@ function formatAt(
       }).format(date);
 }
 
-function validPage(
-  value: unknown,
-): value is { items: unknown[]; nextCursor: string | null } {
-  if (!value || typeof value !== 'object') return false;
-  const body = value as Record<string, unknown>;
-  return (
-    Array.isArray(body.items) &&
-    (body.nextCursor === null || typeof body.nextCursor === 'string')
-  );
-}
-
-function requestRow(value: unknown): Row | null {
-  if (!value || typeof value !== 'object') return null;
-  const item = value as Partial<StaffPendingRedemptionItem> &
-    Record<string, unknown>;
-  if (
-    'email' in item ||
-    'actorEmail' in item ||
-    'phone' in item ||
-    'token' in item
-  )
-    return null;
-  if (
-    typeof item.requestId !== 'string' ||
-    item.status !== 'PENDING_REVIEW' ||
-    typeof item.sourceId !== 'string' ||
-    typeof item.ticketTypeId !== 'string' ||
-    typeof item.submittedAt !== 'string' ||
-    (item.actorEmailMasked !== null &&
-      typeof item.actorEmailMasked !== 'string')
-  )
-    return null;
-  return {
-    key: item.requestId,
-    state: item.status,
-    email: item.actorEmailMasked,
-    sourceId: item.sourceId,
-    ticketTypeId: item.ticketTypeId,
-    at: item.submittedAt,
-    timeline: [
-      {
-        at: item.submittedAt,
-        kind: 'request',
-        summary: 'guests.timeline.redemptionSubmitted',
-      },
-    ],
-  };
-}
-
-function readPage(
-  kind: Kind,
-  status: number,
-  body: unknown,
-  networkError: boolean,
-): Page | null {
-  if (networkError || status !== 200) return null;
-  if (kind === 'invitations') {
-    const view = interpretInvitationList(status, body, false);
-    if (view.kind !== 'list') return null;
-    return {
-      rows: view.items.map((item: InvitationSummary) => ({
-        key: item.invitationId,
-        state: item.state,
-        email: item.invitedEmailMasked,
-        sourceId: item.sourceId,
-        ticketTypeId: item.ticketTypeId,
-        at: item.expiresAt,
-        timeline: [],
-      })),
-      nextCursor: view.nextCursor,
-    };
-  }
-  if (kind === 'tickets') {
-    const view = interpretCsList(status, body, false);
-    if (view.kind !== 'list') return null;
-    return {
-      rows: view.items.map((item) => ({
-        key: item.ticketId,
-        state: item.state,
-        email: item.ownerEmailMasked,
-        sourceId: item.sourceId,
-        ticketTypeId: item.ticketTypeId,
-        at: item.createdAt,
-        checkInAt: item.lastCheckInAt,
-        notification: item.notification,
-        timeline: [],
-      })),
-      nextCursor: view.cursor,
-    };
-  }
-  if (!validPage(body)) return null;
-  const rows = body.items.map(requestRow);
-  if (rows.some((row) => row === null)) return null;
-  return { rows: rows as Row[], nextCursor: body.nextCursor };
-}
-
 export function GuestWorkspace({ tenantId, eventId, permissions }: Props) {
   const { t, locale } = usePortalLocale();
   const allowed = useMemo(
@@ -203,11 +86,8 @@ export function GuestWorkspace({ tenantId, eventId, permissions }: Props) {
   const [state, setState] = useState('');
   const [draft, setDraft] = useState('');
   const [search, setSearch] = useState('');
-  const [page, setPage] = useState<Page>({ rows: [], nextCursor: null });
   const [cursors, setCursors] = useState<(string | null)[]>([null]);
   const [index, setIndex] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [revision, setRevision] = useState(0);
   const [selected, setSelected] = useState<Row | null>(null);
   const [detail, setDetail] = useState<CsTicketDetail | null>(null);
@@ -233,51 +113,25 @@ export function GuestWorkspace({ tenantId, eventId, permissions }: Props) {
     return () => window.removeEventListener('hashchange', syncKindFromHash);
   }, [allowed]);
 
-  useEffect(() => {
-    if (!allowed.some((tab) => tab.key === kind)) return;
-    let active = true;
-    queueMicrotask(() => {
-      if (active) {
-        setLoading(true);
-        setError(null);
-      }
-    });
-    void portalGet(
-      buildGuestListQueryPath(
-        tenantId,
-        eventId,
-        kind,
-        cursor,
-        state,
-        search,
-      ),
-    ).then((result) => {
-      if (!active) return;
-      const next = readPage(
-        kind,
-        result.status,
-        result.json,
-        result.networkError,
-      );
-      if (next) setPage(next);
-      else
-        setError(
-          result.status === 403
-            ? t('guests.list.forbidden')
-            : t('guests.list.loadFailed'),
-        );
-      setLoading(false);
-    });
-    return () => {
-      active = false;
-    };
-  }, [tenantId, eventId, kind, cursor, state, search, revision, allowed, t]);
+  const list = useGuestListPage({
+    tenantId,
+    eventId,
+    kind,
+    cursor,
+    state,
+    search,
+    revision,
+    allowed: allowed.some((tab) => tab.key === kind),
+    forbiddenMessage: t('guests.list.forbidden'),
+    loadFailedMessage: t('guests.list.loadFailed'),
+  });
+  const { page, loading, error, setError, reset: resetPage } = list;
 
   const reset = useCallback(() => {
     setCursors([null]);
     setIndex(0);
-    setPage({ rows: [], nextCursor: null });
-  }, []);
+    resetPage();
+  }, [resetPage]);
   const open = useCallback(
     (row: Row) => {
       const request = ++detailRequest.current;
@@ -483,7 +337,11 @@ export function GuestWorkspace({ tenantId, eventId, permissions }: Props) {
                 setRevision((current) => current + 1);
                 return;
               }
-              if (kind === 'redemptions' && next && !TICKET_ID_UUID.test(next)) {
+              if (
+                kind === 'redemptions' &&
+                next &&
+                !TICKET_ID_UUID.test(next)
+              ) {
                 setError(t('guests.search.redemptionIdHint'));
                 return;
               }
@@ -542,9 +400,7 @@ export function GuestWorkspace({ tenantId, eventId, permissions }: Props) {
           pagination={false}
           scroll={{ x: 1000 }}
           locale={{
-            emptyText: (
-              <Empty description={t('guests.empty.filtered')} />
-            ),
+            emptyText: <Empty description={t('guests.empty.filtered')} />,
           }}
         />
       ) : null}
@@ -560,9 +416,7 @@ export function GuestWorkspace({ tenantId, eventId, permissions }: Props) {
             {t('guests.page.current', { page: index + 1 })}
           </Typography.Text>
           <Button
-            disabled={
-              loading || !page.nextCursor || uuidLookupActive
-            }
+            disabled={loading || !page.nextCursor || uuidLookupActive}
             onClick={() => {
               if (!page.nextCursor || uuidLookupActive) return;
               setCursors((value) => [

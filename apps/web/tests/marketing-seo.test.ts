@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { salesMetadata } from '../src/marketing/seo/metadata';
+import { trustedRequestHost } from '../src/marketing/hosts';
 import {
   marketingDisallowPaths,
   marketingSitemapEntries,
@@ -29,6 +30,31 @@ describe('marketing SEO robots/sitemap', () => {
     const policy = robotsForProductHost();
     assert.deepEqual(policy.rules[0]?.disallow, '/');
     assert.equal(resolveSitemapEntries('app.vemoki.com').length, 0);
+  });
+
+  it('uses product policy when a direct upstream request for app forges marketing forwarded host', () => {
+    const host = trustedRequestHost(new Headers({
+      host: 'app.vemoki.com',
+      'x-forwarded-host': 'vemoki.com',
+    }));
+    assert.equal(resolveRobotsPolicy(host).rules[0]?.disallow, '/');
+    assert.equal(resolveRobotsPolicy(host).sitemap, undefined);
+    assert.deepEqual(resolveSitemapEntries(host), []);
+  });
+
+  it('keeps marketing policy when forwarded host claims product, and fails closed without Host', () => {
+    const marketingHost = trustedRequestHost(new Headers({
+      host: 'vemoki.com',
+      'x-forwarded-host': 'app.vemoki.com',
+    }));
+    assert.equal(resolveRobotsPolicy(marketingHost).rules[0]?.allow, '/');
+    assert.ok(resolveSitemapEntries(marketingHost).length > 0);
+
+    const missingHost = trustedRequestHost(new Headers({
+      'x-forwarded-host': 'vemoki.com',
+    }));
+    assert.equal(resolveRobotsPolicy(missingHost).rules[0]?.disallow, '/');
+    assert.deepEqual(resolveSitemapEntries(missingHost), []);
   });
 
   it('sitemap lists public VI/EN marketing URLs only', () => {

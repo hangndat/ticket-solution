@@ -162,8 +162,18 @@ test('[AUTH-01] staff (owner/manager) OIDC login bounces to Portal with its own 
       // surface's jar (ADR-20 §3.2).
       const portalCookies = await context.cookies(manifest.origins.portal);
       const webCookies = await context.cookies(manifest.origins.web);
+      // ADR-23: Portal staff token cookies carry the session's actor epoch in
+      // their name (`<base>__<epoch>`), so a late refresh from an older epoch
+      // cannot overwrite the current session. Bind the name to the epoch cookie
+      // instead of matching a bare name that no longer exists.
+      const staffEpoch = portalCookies.find(
+        (cookie) => cookie.name === 'portal_staff_epoch',
+      )?.value;
+      expect(staffEpoch).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+      );
       const portalIdToken = portalCookies.find(
-        (cookie) => cookie.name === 'oidc_id_token',
+        (cookie) => cookie.name === `oidc_id_token__${staffEpoch}`,
       );
       expect(portalIdToken).toBeTruthy();
       const idPayload = decodeJwtPayload(portalIdToken!.value);
@@ -174,7 +184,9 @@ test('[AUTH-01] staff (owner/manager) OIDC login bounces to Portal with its own 
       expect(idPayload.email).toBe(actor.username);
       expect(
         portalCookies.some(
-          (cookie) => cookie.name === 'oidc_access_token' && cookie.httpOnly,
+          (cookie) =>
+            cookie.name === `oidc_access_token__${staffEpoch}` &&
+            cookie.httpOnly,
         ),
       ).toBe(true);
       for (const cookie of [...portalCookies, ...webCookies]) {
@@ -373,7 +385,7 @@ test('[AUTH-02] a correctly-signed, correct-audience token from a different issu
   const payload = decodeJwtPayload(wrongIssuerToken);
   expect(payload.iss).toBe(secondaryIssuer);
   expect(payload.iss).not.toBe(
-    `${manifest.origins.auth}/realms/e2e-${manifest.runId}`,
+    `${manifest.origins.auth}/realms/${(manifest.runtime?.realm as string | undefined) ?? `e2e-${manifest.runId}`}`,
   );
   // The audience is the real API audience. This realm has its own signing key,
   // so rejection cannot isolate issuer validation from JWKS/signature checks.
@@ -799,7 +811,7 @@ test('[AUTH-05] revoked Keycloak refresh fails closed and actors stay isolated',
       Buffer.from(access!.value.split('.')[1], 'base64url').toString('utf8'),
     ) as { exp: number };
     const tokenUrl = new URL(
-      `/realms/e2e-${manifest.runId}/protocol/openid-connect/revoke`,
+      `/realms/${(manifest.runtime?.realm as string | undefined) ?? `e2e-${manifest.runId}`}/protocol/openid-connect/revoke`,
       manifest.origins.auth,
     );
     const revoke = await secondPage.request.post(tokenUrl.toString(), {

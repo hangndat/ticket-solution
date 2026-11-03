@@ -10,7 +10,7 @@ import {
   completeOperation,
   requireIdempotencyKey,
 } from './event-operations';
-import { sealCredentialToken } from './credential-crypto';
+import { sealCredentialToken, type CredentialKeyInput } from './credential-crypto';
 import type { CodeHmacConfig } from './code-hmac';
 import {
   verifyGateCredentialJws,
@@ -116,8 +116,38 @@ export function unwrapConfirmOutcome(outcome: ConfirmOutcome): ConfirmResult {
 export type UndoResult = {
   checkinId: string;
   ticketId: string;
-  state: 'ACTIVE';
+  /**
+   * The ticket's real state after the undo. It is `ACTIVE` when the undo
+   * returned a `USED` ticket to service; a ticket that had already left `USED`
+   * (e.g. revoked in a race) keeps its own state, so the result never claims a
+   * state the row does not have.
+   */
+  state: string;
+  /** True when the same undo (same check-in, same reason) was already applied. */
+  replayed: boolean;
 };
+
+export type CancelResult = {
+  reservationId: string;
+  ticketId: string;
+  status: 'RELEASED';
+  /** True when the hold was already released or had already expired. */
+  replayed: boolean;
+};
+
+export type CancelOutcome = ({ ok: true } & CancelResult) | GateDenyOutcome;
+
+export function unwrapCancelOutcome(outcome: CancelOutcome): CancelResult {
+  if (!outcome.ok) {
+    throw new GateError(outcome.code, outcome.message);
+  }
+  return {
+    reservationId: outcome.reservationId,
+    ticketId: outcome.ticketId,
+    status: outcome.status,
+    replayed: outcome.replayed,
+  };
+}
 
 export type ReissueResult = {
   ticketId: string;
@@ -1035,20 +1065,25 @@ export async function undoCheckin(
     reason: string;
   },
 ): Promise<UndoResult> {
-  const reason = input.reason.trim();
-  if (!reason) {
-    throw new GateError(GATE_ERROR_CODES.CHECKIN_NOT_FOUND, 'Undo reason is required');
-  }
   await requireTenantPermission(tx, {
     tenantId: input.tenantId,
     userId: input.actorUserId,
     permission: PERMISSION_UNDO,
     eventId: input.eventId,
   });
+  const reason = input.reason.trim();
+  if (!reason) {
+    throw new GateError(GATE_ERROR_CODES.REASON_REQUIRED, 'Undo reason is required');
+  }
   const rows = await tx.$queryRaw<
-    Array<{ id: string; ticket_id: string; undone_at: Date | null }>
+    Array<{
+      id: string;
+      ticket_id: string;
+      undone_at: Date | null;
+      undo_reason: string | null;
+    }>
   >`
-    SELECT id, ticket_id, undone_at
+    SELECT id, ticket_id, undone_at, undo_reason
     FROM checkins
     WHERE tenant_id = ${input.tenantId}::uuid
       AND event_id = ${input.eventId}::uuid
@@ -1060,12 +1095,37 @@ export async function undoCheckin(
     throw new GateError(GATE_ERROR_CODES.CHECKIN_NOT_FOUND, 'Check-in not found');
   }
   if (checkin.undone_at) {
+    // Replay: a client that lost the response retries the same undo. The same
+    // reason returns the original result with no second audit row; a different
+    // reason is a different request and stays a conflict.
+    if (checkin.undo_reason === reason) {
+      // Report the ticket's state now, not the state at the first call: it may
+      // have been re-admitted or revoked since. Same lock order as a first undo
+      // (check-in row, then ticket).
+      const current = await lockTicket(
+        tx,
+        input.tenantId,
+        input.eventId,
+        checkin.ticket_id,
+      );
+      return {
+        checkinId: checkin.id,
+        ticketId: checkin.ticket_id,
+        state: current.state,
+        replayed: true,
+      };
+    }
     throw new GateError(
       GATE_ERROR_CODES.CHECKIN_ALREADY_UNDONE,
       'Check-in was already undone',
     );
   }
-  await lockTicket(tx, input.tenantId, input.eventId, checkin.ticket_id);
+  const ticket = await lockTicket(
+    tx,
+    input.tenantId,
+    input.eventId,
+    checkin.ticket_id,
+  );
   await tx.$executeRaw`
     UPDATE checkins
     SET undone_at = clock_timestamp(),
@@ -1089,7 +1149,147 @@ export async function undoCheckin(
     reason,
   });
   metricsInc('gate_recovery_total', { kind: 'undo' });
-  return { checkinId: checkin.id, ticketId: checkin.ticket_id, state: 'ACTIVE' };
+  return {
+    checkinId: checkin.id,
+    ticketId: checkin.ticket_id,
+    // The UPDATE above only moves a USED ticket. Any other state (REVOKED,
+    // CANCELLED...) was left alone and is reported as it is.
+    state: ticket.state === 'USED' ? 'ACTIVE' : ticket.state,
+    replayed: false,
+  };
+}
+
+/**
+ * Release a live hold on purpose (e.g. the guest walked away). Only the session
+ * that holds it may release it. Releasing an already released or expired hold is
+ * a replay, not an error, so a lost response is safe to retry.
+ */
+export async function cancelReservation(
+  tx: Prisma.TransactionClient,
+  input: {
+    tenantId: string;
+    eventId: string;
+    reservationId: string;
+    staffSessionId: string;
+    actorUserId: string;
+  },
+): Promise<CancelOutcome> {
+  await requireTenantPermission(tx, {
+    tenantId: input.tenantId,
+    userId: input.actorUserId,
+    permission: PERMISSION_CONFIRM,
+    eventId: input.eventId,
+  });
+  await assertOpenForGate(tx, input.tenantId, input.eventId);
+  await assertSessionActive(
+    tx,
+    input.tenantId,
+    input.eventId,
+    input.staffSessionId,
+    input.actorUserId,
+  );
+  const peeked = await tx.$queryRaw<
+    Array<{ ticket_id: string; event_id: string }>
+  >`
+    SELECT ticket_id, event_id
+    FROM checkin_reservations
+    WHERE tenant_id = ${input.tenantId}::uuid
+      AND id = ${input.reservationId}::uuid
+  `;
+  const peekedRow = peeked[0];
+  if (!peekedRow || peekedRow.event_id !== input.eventId) {
+    return denyGate(tx, {
+      tenantId: input.tenantId,
+      eventId: input.eventId,
+      actorUserId: input.actorUserId,
+      code: GATE_ERROR_CODES.RESERVATION_NOT_FOUND,
+      message: 'Reservation not found',
+      resourceType: 'checkin_reservation',
+      resourceId: input.reservationId,
+    });
+  }
+  // Same lock order as confirm: ticket first, then the reservation row.
+  const ticket = await lockTicket(
+    tx,
+    input.tenantId,
+    input.eventId,
+    peekedRow.ticket_id,
+  );
+  const rows = await tx.$queryRaw<
+    Array<{ status: string; staff_session_id: string }>
+  >`
+    SELECT status, staff_session_id
+    FROM checkin_reservations
+    WHERE tenant_id = ${input.tenantId}::uuid
+      AND id = ${input.reservationId}::uuid
+      AND ticket_id = ${ticket.id}::uuid
+    FOR UPDATE
+  `;
+  const row = rows[0];
+  if (!row) {
+    return denyGate(tx, {
+      tenantId: input.tenantId,
+      eventId: input.eventId,
+      actorUserId: input.actorUserId,
+      code: GATE_ERROR_CODES.RESERVATION_NOT_FOUND,
+      message: 'Reservation not found',
+      resourceType: 'ticket',
+      resourceId: ticket.id,
+    });
+  }
+  if (row.staff_session_id !== input.staffSessionId) {
+    return denyGate(tx, {
+      tenantId: input.tenantId,
+      eventId: input.eventId,
+      actorUserId: input.actorUserId,
+      code: GATE_ERROR_CODES.HELD_BY_OTHER_SESSION,
+      message: 'Reservation belongs to another session',
+      resourceType: 'ticket',
+      resourceId: ticket.id,
+    });
+  }
+  if (row.status === 'CONFIRMED') {
+    return denyGate(tx, {
+      tenantId: input.tenantId,
+      eventId: input.eventId,
+      actorUserId: input.actorUserId,
+      code: GATE_ERROR_CODES.ALREADY_CHECKED_IN,
+      message: 'Reservation was already confirmed',
+      resourceType: 'ticket',
+      resourceId: ticket.id,
+    });
+  }
+  if (row.status !== 'HELD') {
+    return {
+      ok: true,
+      reservationId: input.reservationId,
+      ticketId: ticket.id,
+      status: 'RELEASED',
+      replayed: true,
+    };
+  }
+  await tx.$executeRaw`
+    UPDATE checkin_reservations
+    SET status = 'RELEASED'
+    WHERE tenant_id = ${input.tenantId}::uuid
+      AND id = ${input.reservationId}::uuid
+      AND status = 'HELD'
+  `;
+  await writeAudit(tx, {
+    tenantId: input.tenantId,
+    eventId: input.eventId,
+    actorUserId: input.actorUserId,
+    action: 'gate.cancel',
+    resourceType: 'checkin_reservation',
+    resourceId: input.reservationId,
+  });
+  return {
+    ok: true,
+    reservationId: input.reservationId,
+    ticketId: ticket.id,
+    status: 'RELEASED',
+    replayed: false,
+  };
 }
 
 export async function revokeTicket(
@@ -1108,6 +1308,9 @@ export async function revokeTicket(
     permission: PERMISSION_REVOKE,
     eventId: input.eventId,
   });
+  if (!input.reason.trim()) {
+    throw new GateError(GATE_ERROR_CODES.REASON_REQUIRED, 'Revoke reason is required');
+  }
   const ticket = await lockTicket(
     tx,
     input.tenantId,
@@ -1155,7 +1358,7 @@ export async function revokeTicket(
  */
 export async function reissueTicketCredential(
   tx: Prisma.TransactionClient,
-  credentialKeyMaterial: string,
+  credentialKeyMaterial: CredentialKeyInput,
   input: {
     tenantId: string;
     eventId: string;
@@ -1166,14 +1369,6 @@ export async function reissueTicketCredential(
     manualCodePepper?: CodeHmacConfig;
   },
 ): Promise<ReissueOutcome> {
-  const reason = input.reason.trim();
-  if (!reason) {
-    throw new GateError(
-      GATE_ERROR_CODES.REASON_REQUIRED,
-      'Reissue reason is required',
-    );
-  }
-
   const { membership } = await requireTenantPermission(tx, {
     tenantId: input.tenantId,
     userId: input.actorUserId,
@@ -1184,6 +1379,15 @@ export async function reissueTicketCredential(
     throw new AuthzError(
       AUTHZ_ERROR_CODES.PERMISSION_DENIED,
       'Ticket reissue requires Owner or Supervisor role',
+    );
+  }
+  // Authorize first, then validate the body: an unauthorized caller learns
+  // nothing about what the endpoint validates.
+  const reason = input.reason.trim();
+  if (!reason) {
+    throw new GateError(
+      GATE_ERROR_CODES.REASON_REQUIRED,
+      'Reissue reason is required',
     );
   }
 
@@ -1383,7 +1587,7 @@ async function writeManualCode(
     eventId: string;
     ticketId: string;
     pepper: CodeHmacConfig;
-    credentialKeyMaterial: string;
+    credentialKeyMaterial: CredentialKeyInput;
     onlyIfEmpty: boolean;
   },
 ): Promise<boolean> {
@@ -1425,7 +1629,7 @@ export async function assignManualEntryCode(
     eventId: string;
     ticketId: string;
     manualCodePepper: CodeHmacConfig;
-    credentialKeyMaterial: string;
+    credentialKeyMaterial: CredentialKeyInput;
   },
 ): Promise<void> {
   const assigned = await writeManualCode(tx, {
@@ -1556,7 +1760,7 @@ export async function backfillManualEntryCodes(
   input: {
     tenantId: string;
     manualCodePepper: CodeHmacConfig;
-    credentialKeyMaterial: string;
+    credentialKeyMaterial: CredentialKeyInput;
     afterTicketId?: string | null;
     batchSize?: number;
   },

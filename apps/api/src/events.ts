@@ -29,16 +29,13 @@ import {
   EVENT_ERROR_CODES,
   IdentityError,
   IDENTITY_ERROR_CODES,
+  PlatformError,
   archiveEvent,
   cancelEvent,
   cloneEvent,
   createEvent,
-  createIssuanceSource,
-  createTicketType,
   getEvent,
   listEvents,
-  listIssuanceSources,
-  listTicketTypes,
   previewEventImpact,
   updateEvent,
   withTenant,
@@ -46,7 +43,17 @@ import {
   type OidcVerifier,
   type PrismaClient,
 } from '@ticket/backend';
+import {
+  CreateSourceBodyDto,
+  CreateTicketTypeBodyDto,
+  EventCatalogService,
+  PortalSourcesPageDto,
+  PortalTicketTypesPageDto,
+  SourceCreatedDto,
+  TicketTypeCreatedDto,
+} from './event-catalog';
 import { identityErrorHttpStatus } from './identity-http-status';
+import { platformRouteFail } from './platform/platform-errors';
 
 const UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -130,57 +137,6 @@ class ImpactPreviewBodyDto implements EventImpactPreviewRequest {
   endsAt?: string | null;
   @ApiProperty({ required: false, nullable: true, type: Object })
   venue?: { name: string; address: string } | null;
-}
-
-
-class CreateTicketTypeBodyDto {
-  @ApiProperty() label!: string;
-  @ApiProperty({ required: false })
-  entitlementSnapshot?: Record<string, unknown>;
-}
-
-class TicketTypeCreatedDto {
-  @ApiProperty({ format: 'uuid' }) ticketTypeId!: string;
-  @ApiProperty() label!: string;
-}
-
-class CreateSourceBodyDto {
-  @ApiProperty() name!: string;
-  @ApiProperty({ enum: ['AUTO', 'MANUAL'] }) approvalMode!: 'AUTO' | 'MANUAL';
-  @ApiProperty({ format: 'uuid' }) ticketTypeId!: string;
-}
-
-class SourceCreatedDto {
-  @ApiProperty({ format: 'uuid' }) sourceId!: string;
-  @ApiProperty() name!: string;
-  @ApiProperty({ enum: ['AUTO', 'MANUAL'] }) approvalMode!: 'AUTO' | 'MANUAL';
-  @ApiProperty({ format: 'uuid' }) ticketTypeId!: string;
-}
-
-class PortalTicketTypeSummaryDto {
-  @ApiProperty({ format: 'uuid' }) ticketTypeId!: string;
-  @ApiProperty() label!: string;
-  @ApiProperty({ type: 'object', additionalProperties: true })
-  entitlementSnapshot!: Record<string, unknown>;
-}
-
-class PortalTicketTypesPageDto {
-  @ApiProperty({ type: [PortalTicketTypeSummaryDto] })
-  items!: PortalTicketTypeSummaryDto[];
-  @ApiProperty({ nullable: true, type: String }) nextCursor!: string | null;
-}
-
-class PortalSourceSummaryDto {
-  @ApiProperty({ format: 'uuid' }) sourceId!: string;
-  @ApiProperty() name!: string;
-  @ApiProperty({ enum: ['AUTO', 'MANUAL'] }) approvalMode!: 'AUTO' | 'MANUAL';
-  @ApiProperty({ type: [String], format: 'uuid' }) ticketTypeIds!: string[];
-}
-
-class PortalSourcesPageDto {
-  @ApiProperty({ type: [PortalSourceSummaryDto] })
-  items!: PortalSourceSummaryDto[];
-  @ApiProperty({ nullable: true, type: String }) nextCursor!: string | null;
 }
 
 type Deps = {
@@ -377,89 +333,18 @@ export class EventAdminService {
       }),
     );
   }
-
-  async ticketType(
-    authorization: string | undefined,
-    tenantId: string,
-    eventId: string,
-    body: CreateTicketTypeBodyDto,
-  ) {
-    const user = await this.actor(authorization);
-    return withTenant(this.deps.db!, tenantId, (tx) =>
-      createTicketType(tx, {
-        tenantId,
-        eventId,
-        actorUserId: user.userId,
-        label: body.label,
-        entitlementSnapshot: body.entitlementSnapshot,
-      }),
-    );
-  }
-
-  async listTicketTypes(
-    authorization: string | undefined,
-    tenantId: string,
-    eventId: string,
-    cursor?: string,
-    limit?: number,
-  ) {
-    const user = await this.actor(authorization);
-    return withTenant(this.deps.db!, tenantId, (tx) =>
-      listTicketTypes(tx, {
-        tenantId,
-        eventId,
-        actorUserId: user.userId,
-        cursor,
-        limit,
-      }),
-    );
-  }
-
-  async source(
-    authorization: string | undefined,
-    tenantId: string,
-    eventId: string,
-    body: CreateSourceBodyDto,
-  ) {
-    const user = await this.actor(authorization);
-    return withTenant(this.deps.db!, tenantId, (tx) =>
-      createIssuanceSource(tx, {
-        tenantId,
-        eventId,
-        actorUserId: user.userId,
-        name: body.name,
-        approvalMode: body.approvalMode,
-        ticketTypeId: body.ticketTypeId,
-      }),
-    );
-  }
-
-  async listSources(
-    authorization: string | undefined,
-    tenantId: string,
-    eventId: string,
-    cursor?: string,
-    limit?: number,
-  ) {
-    const user = await this.actor(authorization);
-    return withTenant(this.deps.db!, tenantId, (tx) =>
-      listIssuanceSources(tx, {
-        tenantId,
-        eventId,
-        actorUserId: user.userId,
-        cursor,
-        limit,
-      }),
-    );
-  }
 }
 
 @ApiTags('events')
 @Controller()
 export class EventAdminController {
-  constructor(private readonly events: EventAdminService) {}
+  constructor(
+    private readonly events: EventAdminService,
+    private readonly catalog: EventCatalogService,
+  ) {}
 
   private fail(error: unknown): never {
+    if (error instanceof PlatformError) platformRouteFail(error);
     if (error instanceof IdentityError) {
       throw new HttpException(
         {
@@ -650,7 +535,7 @@ export class EventAdminController {
     const tenant = requireUuid(tenantId, 'tenantId');
     const event = requireUuid(eventId, 'eventId');
     const parsedLimit = limit ? Number(limit) : undefined;
-    return this.events
+    return this.catalog
       .listTicketTypes(authorization, tenant, event, cursor, parsedLimit)
       .catch((error) => this.fail(error));
   }
@@ -666,7 +551,7 @@ export class EventAdminController {
   ) {
     const tenant = requireUuid(tenantId, 'tenantId');
     const event = requireUuid(eventId, 'eventId');
-    return this.events
+    return this.catalog
       .ticketType(authorization, tenant, event, body)
       .catch((error) => this.fail(error));
   }
@@ -684,7 +569,7 @@ export class EventAdminController {
     const tenant = requireUuid(tenantId, 'tenantId');
     const event = requireUuid(eventId, 'eventId');
     const parsedLimit = limit ? Number(limit) : undefined;
-    return this.events
+    return this.catalog
       .listSources(authorization, tenant, event, cursor, parsedLimit)
       .catch((error) => this.fail(error));
   }
@@ -700,7 +585,7 @@ export class EventAdminController {
   ) {
     const tenant = requireUuid(tenantId, 'tenantId');
     const event = requireUuid(eventId, 'eventId');
-    return this.events
+    return this.catalog
       .source(authorization, tenant, event, body)
       .catch((error) => this.fail(error));
   }

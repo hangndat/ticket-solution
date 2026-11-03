@@ -42,7 +42,7 @@
 
 ## Orca
 
-- Agent: `--agent cursor`.
+- Agent/model/effort theo [routing](../policies/routing.md) và [cost catalog](../cost-catalog.md); giữ chỉ định user và route của Task, không chọn provider theo tên role.
 - Coordinator spawn song song với `web` / `ios` / BA/PD / reviewers khác PR khi unblocked; không chờ Story khác đóng.
 - Một lúc chỉ một feature coding Dispatch trên slice BE (tránh conflict).
 - Reviewer DoD/security: session khác; exact SHA.

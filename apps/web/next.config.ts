@@ -46,6 +46,18 @@ const config: NextConfig = {
   allowedDevOrigins: ['127.0.0.1', 'localhost', 'marketing.localhost'],
   async headers() {
     return [
+      // Host-based routing and auth responses must not be shared across hosts.
+      ...[
+        '/',
+        '/auth',
+        '/api/auth/:path*',
+        '/robots.txt',
+        '/sitemap.xml',
+        '/api/marketing/events',
+      ].map((source) => ({
+        source,
+        headers: [{ key: 'Cache-Control', value: 'private, no-store' }],
+      })),
       {
         source: '/wallet',
         headers: [{ key: 'Cache-Control', value: 'private, no-store' }],

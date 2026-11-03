@@ -13,7 +13,7 @@ export function webUrl(manifest: E2EManifest, path: string): string {
 
 export function realmTokenUrl(manifest: E2EManifest): string {
   return new URL(
-    `/realms/e2e-${manifest.runId}/protocol/openid-connect/token`,
+    `/realms/${(manifest.runtime?.realm as string | undefined) ?? `e2e-${manifest.runId}`}/protocol/openid-connect/token`,
     manifest.origins.auth,
   ).toString();
 }

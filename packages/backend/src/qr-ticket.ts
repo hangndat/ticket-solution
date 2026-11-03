@@ -1,5 +1,9 @@
 import QRCode from 'qrcode';
-import { hashCredentialToken, openCredentialToken } from './credential-crypto';
+import {
+  hashCredentialToken,
+  openCredentialToken,
+  type CredentialKeyInput,
+} from './credential-crypto';
 
 export type TicketGateCredentialQrPayload = {
   v: 1;
@@ -62,13 +66,18 @@ export async function renderCredentialQrPng(
   });
 }
 
-/** @deprecated Legacy fixture/tooling only; never use the opened token as Gate proof. */
+/** Validate the stored credential; the opened token is never Gate proof. */
 export function openCurrentCredentialForQr(input: {
   encryptedToken: string;
-  credentialKeyMaterial: string;
+  kid?: string;
+  credentialKeyMaterial: CredentialKeyInput;
   expectedTokenHash: string;
 }): { token: string; tokenHash: string } {
-  const token = openCredentialToken(input.encryptedToken, input.credentialKeyMaterial);
+  const token = openCredentialToken(
+    input.encryptedToken,
+    input.credentialKeyMaterial,
+    input.kid ?? 'local-v1',
+  );
   const tokenHash = hashCredentialToken(token);
   if (tokenHash !== input.expectedTokenHash) {
     throw new Error('credential token hash mismatch');

@@ -14,7 +14,12 @@ import {
   bffReminderPreview,
   bffReminders,
 } from '../src/prep/bff-urls';
-import { notificationEndpointTemplates } from '../src/ops/notifications';
+import {
+  buildReminderCreateBody,
+  notificationEndpointTemplates,
+  notificationRetryUpstreamPath,
+  resolveNotificationIdempotencyKey,
+} from '../src/ops/notifications';
 
 const TENANT = '11111111-1111-4111-8111-111111111111';
 const EVENT = '22222222-2222-4222-8222-222222222222';
@@ -53,7 +58,10 @@ describe('portal C-N BFF paths', () => {
       PORTAL_UPSTREAM.notificationTemplatePublish(TENANT, EVENT),
       /notification-templates\/publish$/,
     );
-    assert.match(PORTAL_UPSTREAM.reminderPreview(TENANT, EVENT), /reminders\/preview$/);
+    assert.match(
+      PORTAL_UPSTREAM.reminderPreview(TENANT, EVENT),
+      /reminders\/preview$/,
+    );
     assert.match(PORTAL_UPSTREAM.reminders(TENANT, EVENT), /\/reminders$/);
     assert.match(
       PORTAL_UPSTREAM.reminderCancel(
@@ -67,8 +75,44 @@ describe('portal C-N BFF paths', () => {
 
   it('documents portal endpoint templates', () => {
     const endpoints = notificationEndpointTemplates();
-    assert.match(endpoints.templatePreview, /tenants\/:tenantId\/events\/:eventId/);
+    assert.match(
+      endpoints.templatePreview,
+      /tenants\/:tenantId\/events\/:eventId/,
+    );
     assert.match(endpoints.reminderCancel, /reminders\/:reminderId\/cancel/);
+  });
+
+  it('keeps retry inside the event scope and encodes a supplied identifier', () => {
+    const path = notificationRetryUpstreamPath(
+      { tenantId: TENANT, eventId: EVENT },
+      'id/with?separator',
+    );
+    assert.equal(
+      path,
+      `/v1/tenants/${TENANT}/events/${EVENT}/notifications/id%2Fwith%3Fseparator/retry`,
+    );
+  });
+
+  it('reuses an uncertain mutation key only for the same fingerprint', () => {
+    const existing = {
+      key: IDEM,
+      fingerprint: 'tenant|event|revision',
+      unclear: true,
+    };
+    let freshCalls = 0;
+    const fresh = () => {
+      freshCalls += 1;
+      return 'new-key';
+    };
+    assert.deepEqual(
+      resolveNotificationIdempotencyKey(existing, existing.fingerprint, fresh),
+      { key: IDEM, reused: true },
+    );
+    assert.deepEqual(
+      resolveNotificationIdempotencyKey(existing, 'changed-revision', fresh),
+      { key: 'new-key', reused: false },
+    );
+    assert.equal(freshCalls, 1);
   });
 });
 
@@ -137,5 +181,11 @@ describe('portal notification-bff-body parsers', () => {
     });
     assert.ok(!(ok instanceof Response));
     assert.equal(ok.payload.audience, 'TICKET_OWNERS');
+    const client = buildReminderCreateBody({
+      expectedEventRevision: 2,
+      scheduledAt: '2026-12-01T10:00:00Z',
+    });
+    assert.equal(client.audience, ok.payload.audience);
+    assert.equal(client.kind, ok.payload.kind);
   });
 });

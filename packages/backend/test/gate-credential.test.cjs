@@ -23,6 +23,27 @@ function keyringEntry(pair, format) {
   };
 }
 
+test('manual codes remain readable across credential key rotation and reject unknown kids', () => {
+  const oldMaterial = 'manual-code-old-test-key-material';
+  const currentMaterial = 'manual-code-current-test-key-material';
+  const legacy = backend.sealManualEntryCode('ABCD-EFGH-JK', oldMaterial);
+  const oldRing = { currentKid: 'manual-v1', keys: { 'manual-v1': oldMaterial } };
+  const versioned = backend.sealManualEntryCode('MNPQ-RSTV-WX', oldRing);
+  const rotated = {
+    currentKid: 'manual-v2',
+    keys: { 'local-v1': oldMaterial, 'manual-v1': oldMaterial, 'manual-v2': currentMaterial },
+  };
+  assert.equal(backend.openManualEntryCode(legacy, oldMaterial), 'ABCD-EFGH-JK');
+  assert.equal(backend.openManualEntryCode(legacy, rotated), 'ABCD-EFGH-JK');
+  assert.equal(backend.openManualEntryCode(versioned, rotated), 'MNPQ-RSTV-WX');
+  const fresh = backend.sealManualEntryCode('0123-4567-89', rotated);
+  assert.ok(fresh.startsWith('manual-v2:'));
+  assert.equal(backend.openManualEntryCode(fresh, rotated), '0123-4567-89');
+  assert.throws(() => backend.openManualEntryCode(versioned, { currentKid: 'manual-v2', keys: { 'manual-v2': currentMaterial } }));
+  assert.throws(() => backend.openManualEntryCode(fresh.replace('manual-v2:', 'unknown:'), rotated));
+  assert.throws(() => backend.openCredentialToken(fresh.split(':')[1], rotated, 'manual-v2'));
+});
+
 test('gate verify keyring accepts public PEM and JWK and retains older signing kids', async () => {
   const old = keyPair('gate-old');
   const current = keyPair('gate-current');
@@ -41,6 +62,18 @@ test('gate verify keyring accepts public PEM and JWK and retains older signing k
   };
 
   const config = await backend.readGateCredentialConfig(env, credentialKeyMaterial);
+  const rotatedStorageKeys = {
+    currentKid: 'storage-v2',
+    keys: { 'storage-v1': credentialKeyMaterial, 'storage-v2': 'new-gate-test-storage-key-material' },
+  };
+  const afterRotation = await backend.readGateCredentialConfig(env, rotatedStorageKeys);
+  assert.equal(afterRotation.signingPrivateKeyPem, config.signingPrivateKeyPem);
+  await assert.rejects(backend.readGateCredentialConfig(env, {
+    currentKid: 'storage-v2', keys: { 'storage-v2': 'new-gate-test-storage-key-material' },
+  }));
+  await assert.rejects(backend.readGateCredentialConfig(env, {
+    currentKid: 'unknown', keys: { 'storage-v1': credentialKeyMaterial },
+  }));
   const currentJws = await backend.signGateCredentialJws({
     claims: { tid: 'tenant', eid: 'event', tkt: 'ticket', ver: 1 },
     privateKeyPem: config.signingPrivateKeyPem,
