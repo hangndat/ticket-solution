@@ -5522,6 +5522,22 @@ for (const caseId of CASE_IDS) {
       assert.equal(reopened.body.gateId, created.body.id);
       assert.equal(reopened.body.gateName, name);
       assert.notEqual(reopened.body.sessionId, bound.body.sessionId);
+      const assignedEventId = required(f.data?.assignedEventId, 'GATE-01 assignedEventId');
+      const assignedGateId = required(f.data?.assignedGateId, 'GATE-01 assignedGateId');
+      const assignedGates = await request(ctx, 'GET',
+        `/gate/events/${assignedEventId}/gates?tenantId=${f.tenantId}`, scanner);
+      expectStatus(assignedGates, 200);
+      assert.deepEqual(assignedGates.body.gates.map((gate) => gate.id), [assignedGateId]);
+      const assignedSession = await request(ctx, 'POST',
+        `/gate/events/${assignedEventId}/sessions`, scanner,
+        { tenantId: f.tenantId, gateId: assignedGateId });
+      expectStatus(assignedSession, 200);
+      assert.equal(assignedSession.body.gateId, assignedGateId);
+      assert.notEqual(assignedSession.body.sessionId, bound.body.sessionId);
+      const crossEventBefore = await snapshot();
+      expectStatus(await request(ctx, 'POST', sessions, scanner,
+        { tenantId: f.tenantId, gateId: assignedGateId }), 404, 'GATE_NOT_FOUND');
+      assert.deepEqual(await snapshot(), crossEventBefore, 'assigned gate from another event must not create a session');
       const foreignGateId = required(
         f.data?.foreignGateId,
         'GATE-01 foreignGateId',
