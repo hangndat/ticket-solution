@@ -291,6 +291,7 @@ export async function seedRuntime(state, caseIds) {
           'DB-19',
           'DB-17',
           'JOB-04',
+          'JOB-07',
           'PLAT-03',
           'GATE-02',
           'GATE-05',
@@ -2679,6 +2680,32 @@ export async function seedRuntime(state, caseIds) {
         });
         fixture.data.foreignTenantId = foreignTenantId;
         fixture.data.foreignEventId = foreignEventId;
+      }
+      if (caseId === 'JOB-07') {
+        const recovery = await backend.withTenant(db, tenantId, async (tx) => {
+          const job = await backend.createExportJob(tx, {
+            tenantId, eventId, actorUserId: accounts.owner.userId,
+            clientKey: `job07-recovery-${state.id}`, filter: { states: ['ACTIVE'] }, ttlSeconds: 3600,
+          });
+          const changed = await tx.$queryRaw`UPDATE exports SET status='PROCESSING',
+            lease_owner='job07-dead-worker', lease_expires_at=clock_timestamp()-interval '1 minute'
+            WHERE tenant_id=${tenantId}::uuid AND id=${job.exportId}::uuid
+            RETURNING status, lease_owner, lease_expires_at < clock_timestamp() AS expired`;
+          if (changed.length !== 1 || changed[0].status !== 'PROCESSING' ||
+              changed[0].lease_owner !== 'job07-dead-worker' || !changed[0].expired) {
+            throw new Error('JOB-07 recovery fixture must have an expired lease');
+          }
+          const live = await backend.createExportJob(tx, {
+            tenantId, eventId, actorUserId: accounts.owner.userId,
+            clientKey: `job07-live-${state.id}`, filter: { states: ['ACTIVE'] }, ttlSeconds: 3600,
+          });
+          await tx.$executeRaw`UPDATE exports SET status='PROCESSING',
+            lease_owner='job07-live-worker', lease_expires_at=clock_timestamp()+interval '1 hour'
+            WHERE tenant_id=${tenantId}::uuid AND id=${live.exportId}::uuid`;
+          return { expiredId: job.exportId, liveId: live.exportId };
+        });
+        fixture.data.recoveryExportId = recovery.expiredId;
+        fixture.data.liveExportId = recovery.liveId;
       }
       if (caseId === 'SEC-06') {
         fixture.data.controlDatabaseUrl = state.databaseUrl;

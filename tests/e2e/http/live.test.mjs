@@ -4229,6 +4229,18 @@ for (const caseId of CASE_IDS) {
       const scanner = await bearer(ctx, 'scanner');
       const foreignTenant = required(f.data.foreignTenantId, 'JOB-07 foreign tenant');
       const foreignEvent = required(f.data.foreignEventId, 'JOB-07 foreign event');
+      const recoveryId = required(f.data.recoveryExportId, 'JOB-07 recovery export');
+      await waitExportReady(ctx, f, owner, recoveryId);
+      assert.ok((await downloadExportCsv(ctx, f, owner, recoveryId)).includes('ownerEmailMasked'));
+      const [recovered] = await web04Query(f, f.tenantId, `SELECT status, lease_owner, lease_expires_at
+        FROM exports WHERE tenant_id=$1::uuid AND event_id=$2::uuid AND id=$3::uuid`,
+        [f.tenantId, f.eventId, recoveryId]);
+      assert.deepEqual(recovered, { status: 'READY', lease_owner: null, lease_expires_at: null });
+      const [liveLease] = await web04Query(f, f.tenantId, `SELECT status, lease_owner,
+        lease_expires_at > clock_timestamp() AS live FROM exports
+        WHERE tenant_id=$1::uuid AND event_id=$2::uuid AND id=$3::uuid`,
+        [f.tenantId, f.eventId, required(f.data.liveExportId, 'JOB-07 live lease export')]);
+      assert.deepEqual(liveLease, { status: 'PROCESSING', lease_owner: 'job07-live-worker', live: true });
       const assetPath = `/tenants/${f.tenantId}/events/${f.eventId}/assets/upload-init`;
       const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/aS0AAAAASUVORK5CYII=', 'base64');
       const assetBody = { filename: 'job07.png', contentType: 'image/png', byteLength: png.length };
