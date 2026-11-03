@@ -5354,13 +5354,30 @@ for (const caseId of CASE_IDS) {
     if (caseId === 'GATE-01') {
       const owner = await bearer(ctx, 'owner');
       const scanner = await bearer(ctx, 'scanner');
+      const attendee = await bearer(ctx, 'attendee');
+      const dbFixture = {
+        ...f,
+        data: { ...f.data, controlDatabaseUrl: required(process.env.DATABASE_URL, 'run-owned DATABASE_URL') },
+      };
+      const snapshot = () => web04Query(dbFixture, f.tenantId,
+        `SELECT (SELECT count(*)::int FROM gates WHERE tenant_id=$1) AS gates,
+                (SELECT count(*)::int FROM staff_sessions WHERE tenant_id=$1) AS sessions`,
+        [f.tenantId]);
       const gates = gatePath(f, 'gates');
       const listPath = `${gates}?tenantId=${f.tenantId}`;
       const before = await request(ctx, 'GET', listPath, scanner);
       expectStatus(before, 200);
       assert.ok(Array.isArray(before.body.gates));
+      assert.equal(before.body.gates.length, 0);
+      expectStatus(await request(ctx, 'GET', listPath, attendee), 403);
+      const noGate = await request(ctx, 'POST', gatePath(f, 'sessions'), scanner, { tenantId: f.tenantId });
+      expectStatus(noGate, 200);
+      assert.ok(noGate.body.sessionId);
+      assert.equal(noGate.body.gateId, null);
+      assert.equal(noGate.body.gateName, null);
       const name = required(f.data?.gateName, 'GATE-01 gateName');
       assert.ok(!before.body.gates.some((gate) => gate.name === name));
+      const beforeDeniedCreate = await snapshot();
       expectStatus(
         await request(ctx, 'POST', gates, scanner, {
           tenantId: f.tenantId,
@@ -5368,6 +5385,7 @@ for (const caseId of CASE_IDS) {
         }),
         403,
       );
+      assert.deepEqual(await snapshot(), beforeDeniedCreate, 'denied create must not mutate gates or sessions');
       const created = await request(ctx, 'POST', gates, owner, {
         tenantId: f.tenantId,
         name,
@@ -5404,10 +5422,18 @@ for (const caseId of CASE_IDS) {
       expectStatus(bound, 200);
       assert.equal(bound.body.gateId, created.body.id);
       assert.equal(bound.body.gateName, name);
+      const reopened = await request(ctx, 'POST', sessions, scanner, {
+        tenantId: f.tenantId, gateId: created.body.id,
+      });
+      expectStatus(reopened, 200);
+      assert.equal(reopened.body.gateId, created.body.id);
+      assert.equal(reopened.body.gateName, name);
+      assert.notEqual(reopened.body.sessionId, bound.body.sessionId);
       const foreignGateId = required(
         f.data?.foreignGateId,
         'GATE-01 foreignGateId',
       );
+      const beforeDeniedSession = await snapshot();
       expectStatus(
         await request(ctx, 'POST', sessions, scanner, {
           tenantId: f.tenantId,
@@ -5416,6 +5442,7 @@ for (const caseId of CASE_IDS) {
         404,
         'GATE_NOT_FOUND',
       );
+      assert.deepEqual(await snapshot(), beforeDeniedSession, 'foreign gate denial must not create a session');
       const foreignEventId = required(
         f.data?.foreignEventId,
         'GATE-01 foreignEventId',
@@ -5437,6 +5464,7 @@ for (const caseId of CASE_IDS) {
           { tenantId: f.tenantId, name: `${name} foreign` },
         ),
       );
+      assert.deepEqual(await snapshot(), beforeDeniedSession, 'foreign event denials must not mutate gates or sessions');
       return;
     }
     if (caseId === 'GATE-03') {
