@@ -2643,6 +2643,7 @@ export async function seedRuntime(state, caseIds) {
         caseId === 'SEC-01' ||
         caseId === 'SEC-02' ||
         caseId === 'DB-01' ||
+        caseId === 'JOB-07' ||
         caseId === 'PLAT-03'
       ) {
         const foreignTenantId = randomUUID();
