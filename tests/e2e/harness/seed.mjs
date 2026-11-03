@@ -2802,6 +2802,20 @@ export async function seedRuntime(state, caseIds) {
           fixture.data.auditCount = auditCount;
         });
       }
+      if (caseId === 'AUTH-07') {
+        const marker = `auth07.audit.${randomUUID()}`;
+        fixture.data.auditMarker = marker;
+        await backend.withTenant(db, tenantId, (tx) => tx.$executeRaw`
+          INSERT INTO audit_logs (
+            tenant_id, event_id, id, actor_user_id, action,
+            resource_type, resource_id, sanitized_diff
+          ) VALUES (
+            ${tenantId}::uuid, ${eventId}::uuid, ${randomUUID()}::uuid,
+            ${accounts.owner.userId}::uuid, ${marker},
+            'event', ${eventId}::uuid, '{}'::jsonb
+          )
+        `);
+      }
       if (caseId === 'DB-18') {
         await backend.withTenant(db, tenantId, (tx) => tx.$executeRaw`
           INSERT INTO audit_logs (

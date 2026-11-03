@@ -1585,10 +1585,10 @@ for (const caseId of CASE_IDS) {
         for (const surface of [
           { origin: ctx.web, other: ctx.portal, a: 'attendee', b: 'otherAttendee',
             identity: '/api/auth/identity', path: `/api/bff/tickets/${required(f.ticketId, 'AUTH-07 ticketId')}?tenantId=${f.tenantId}`,
-            actorHeader: 'x-actor-id', epochHeader: 'x-auth-epoch' },
+            actorHeader: 'x-actor-id', epochHeader: 'x-auth-epoch', marker: f.ticketId },
           { origin: ctx.portal, other: ctx.web, a: 'owner', b: 'scanner',
             identity: '/api/auth/identity?surface=staff', path: `/api/bff/tenants/${f.tenantId}/events/${f.eventId}/audit`,
-            actorHeader: 'x-portal-actor-id', epochHeader: 'x-portal-auth-epoch' },
+            actorHeader: 'x-portal-actor-id', epochHeader: 'x-portal-auth-epoch', marker: required(f.data?.auditMarker, 'AUTH-07 auditMarker') },
         ]) {
           const session = (actor) => oidcBrowserSession(browser, ctx, surface.origin, surface.other,
             '/api/auth/login?return=/', '/api/bff/me/tenants', actor);
@@ -1618,15 +1618,15 @@ for (const caseId of CASE_IDS) {
           assert.notEqual(actorA.actorId, actorB.actorId);
           assert.notEqual(actorA.authEpoch, actorB.authEpoch);
           const denied = await get(surface.path, cookiesB);
-          assert.ok([403, 404].includes(denied.status));
+          if (surface.origin === ctx.portal) assert.equal(denied.status, 403);
+          else assert.ok([403, 404].includes(denied.status));
           noStore(denied);
           const deniedBody = await denied.text();
-          assert.ok(!deniedBody.includes(f.ticketId));
+          assert.ok(!deniedBody.includes(surface.marker));
           assert.equal(denied.headers.get(surface.actorHeader), actorB.actorId);
           assert.equal(denied.headers.get(surface.epochHeader), actorB.authEpoch);
           const oldBody = await pendingA.text();
-          assert.ok(oldBody.length > 0, 'A positive control must return a body');
-          if (surface.origin === ctx.web) assert.ok(oldBody.includes(f.ticketId));
+          assert.ok(oldBody.includes(surface.marker), 'A response must contain its fixture marker');
         }
       } finally {
         await browser.close();
