@@ -1,5 +1,6 @@
 import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
+import type { Page } from 'playwright/test';
 import {
   test,
   expect,
@@ -7,19 +8,37 @@ import {
   fixtureFor,
   accountFor,
 } from '../harness/fixtures';
-import {
-  bffGet,
-  bffMutate,
-  eventBff,
-  eventPath,
-  login,
-  portalUrl,
-} from './helpers';
+import { bffGet, eventBff, eventPath, login, portalUrl } from './helpers';
 
 const requireBackend = createRequire(
   resolve(process.cwd(), 'packages/backend/package.json'),
 );
 const { Client } = requireBackend('pg');
+
+async function postGate(
+  page: Page,
+  origin: string,
+  path: string,
+  name: string,
+  mismatch = false,
+) {
+  const cookie = (await page.context().cookies(origin)).find(
+    (item) => item.name === 'portal_csrf',
+  );
+  expect(cookie?.value.length).toBeGreaterThanOrEqual(32);
+  return page.evaluate(
+    async ({ path, name, token }) => {
+      const response = await fetch(path, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json', 'x-portal-csrf': token },
+        body: JSON.stringify({ name }),
+      });
+      return { status: response.status, json: await response.json() };
+    },
+    { path, name, token: mismatch ? 'invalid-csrf' : cookie!.value },
+  );
+}
 
 test('[AUTH-06] attendee staff-client login does not grant a staff workspace', async ({
   page,
@@ -27,9 +46,12 @@ test('[AUTH-06] attendee staff-client login does not grant a staff workspace', a
 }) => {
   const m = loadManifest();
   const f = fixtureFor(m, 'AUTH-06');
-  const attendeeId = accountFor(m, 'AUTH-06', 'attendee').userId;
+  const attendee = accountFor(m, 'AUTH-06', 'attendee') as ReturnType<
+    typeof accountFor
+  > & { subject?: string };
+  const attendeeId = attendee.userId;
   const databaseUrl = f.data?.controlDatabaseUrl;
-  if (!attendeeId || typeof databaseUrl !== 'string')
+  if (!attendeeId || !attendee.subject || typeof databaseUrl !== 'string')
     throw new Error('BLOCKED: AUTH-06 fixture control missing');
   const db = new Client({ connectionString: databaseUrl });
   await db.connect();
@@ -77,6 +99,14 @@ test('[AUTH-06] attendee staff-client login does not grant a staff workspace', a
     await expect(
       section.getByRole('cell', { name: 'AUTH06 staff control' }),
     ).toBeVisible();
+    const ownerPost = await postGate(
+      staffPage,
+      m.origins.portal,
+      eventBff(f, '/gates'),
+      'AUTH06 csrf positive',
+    );
+    expect(ownerPost.status).toBe(201);
+    expect(ownerPost.json.name).toBe('AUTH06 csrf positive');
 
     const gateCount = async () =>
       (
@@ -89,7 +119,7 @@ test('[AUTH-06] attendee staff-client login does not grant a staff workspace', a
     await login(page, m, 'AUTH-06', 'attendee');
     const subject = await bffGet(page, m, '/api/bff/me/subject');
     expect(subject.status).toBe(200);
-    expect((subject.json as { userId: string }).userId).toBeTruthy();
+    expect((subject.json as { userId: string }).userId).toBe(attendee.subject);
     const tenants = await bffGet(page, m, '/api/bff/me/tenants');
     expect(tenants.status).toBe(200);
     const items = (
@@ -112,13 +142,23 @@ test('[AUTH-06] attendee staff-client login does not grant a staff workspace', a
     expect(JSON.stringify(deniedGates.json)).not.toContain(
       'AUTH06 staff control',
     );
-    expect(
-      (
-        await bffMutate(page, eventBff(f, '/gates'), {
-          name: 'AUTH06 attendee denied',
-        })
-      ).status,
-    ).toBe(403);
+    const csrfNegative = await postGate(
+      page,
+      m.origins.portal,
+      eventBff(f, '/gates'),
+      'AUTH06 csrf negative',
+      true,
+    );
+    expect(csrfNegative.status).toBe(403);
+    expect(csrfNegative.json.code).toBe('CSRF_TOKEN_MISMATCH');
+    const deniedPost = await postGate(
+      page,
+      m.origins.portal,
+      eventBff(f, '/gates'),
+      'AUTH06 attendee denied',
+    );
+    expect(deniedPost.status).toBe(403);
+    expect(deniedPost.json.code).toBe('MEMBERSHIP_REQUIRED');
     await page.goto(portalUrl(m, eventPath(f, '/gate')));
     await expect(
       page.getByText('Portal quản trị chỉ dành cho nhân sự'),
