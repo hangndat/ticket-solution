@@ -22,6 +22,7 @@ const CASE_IDS = [
   'GATE-03',
   'GATE-04',
   'GATE-05',
+  'GATE-07',
   'DB-01',
   'DB-02',
   'DB-03',
@@ -6431,6 +6432,53 @@ for (const caseId of CASE_IDS) {
         reportBefore.body.checkInSuccessCount + 1,
         'only the confirmed valid credential may create a check-in',
       );
+      return;
+    }
+    if (caseId === 'GATE-07') {
+      const scanner = await bearer(ctx, 'scanner');
+      const supervisor = await bearer(ctx, 'supervisor');
+      const owner = await bearer(ctx, 'owner');
+      const open = async (token) => {
+        const response = await request(ctx, 'POST', gatePath(f, 'sessions'), token, { tenantId: f.tenantId });
+        expectStatus(response, 200);
+        return response.body.sessionId;
+      };
+      const scannerSession = await open(scanner);
+      const supervisorSession = await open(supervisor);
+      const event = {
+        clientEventId: randomUUID(), type: 'CHECKIN_OFFLINE', eventId: f.eventId,
+        ticketId: required(f.ticketId, 'GATE-07 ticketId'),
+        clientOccurredAt: new Date().toISOString(), clientSeq: 0, payloadVersion: 1,
+      };
+      const body = { tenantId: f.tenantId, staffSessionId: scannerSession,
+        deviceId: randomUUID(), clientClockAt: new Date().toISOString(), events: [event] };
+      const sync = (token, payload) => request(ctx, 'POST', gatePath(f, 'offline-sync'), token, payload);
+      const first = await sync(scanner, body);
+      expectStatus(first, 201);
+      assert.equal(first.body.results[0].status, 'APPLIED');
+      const replay = await sync(scanner, body);
+      expectStatus(replay, 201);
+      assert.equal(replay.body.results[0].status, 'DUPLICATE');
+      assert.equal(replay.body.results[0].checkinId, first.body.results[0].checkinId);
+      const altered = await sync(scanner, { ...body, events: [{ ...event, ticketId: randomUUID() }] });
+      expectStatus(altered, 201);
+      assert.equal(altered.body.results[0].status, 'REJECTED');
+      assert.equal(altered.body.results[0].code, 'OFFLINE_SYNC_IDEMPOTENCY_CONFLICT');
+      const other = await sync(supervisor, { ...body, staffSessionId: supervisorSession,
+        deviceId: randomUUID(), events: [{ ...event, clientEventId: randomUUID() }] });
+      expectStatus(other, 201);
+      assert.equal(other.body.results[0].status, 'CONFLICT');
+      assert.equal(other.body.results[0].winningCheckinId, first.body.results[0].checkinId);
+      const ledger = async () => db03Query(f,
+        `SELECT (SELECT count(*)::int FROM checkins WHERE tenant_id=$1::uuid AND event_id=$2::uuid AND undone_at IS NULL) AS checkins,
+                (SELECT count(*)::int FROM offline_sync_events WHERE tenant_id=$1::uuid AND event_id=$2::uuid) AS events`,
+        [f.tenantId, f.eventId]);
+      const beforeRevoke = await ledger();
+      assert.equal(beforeRevoke[0].checkins, 1, 'two sessions must leave one current check-in');
+      expectStatus(await request(ctx, 'POST', gatePath(f, 'sessions/revoke'), owner,
+        { tenantId: f.tenantId, staffSessionId: scannerSession }), 201);
+      expectStatus(await sync(scanner, body), 409, 'SESSION_NOT_ACTIVE');
+      assert.deepEqual(await ledger(), beforeRevoke, 'denied replay must not mutate the ledger');
       return;
     }
     if (caseId === 'GATE-02' || caseId === 'GATE-04' || caseId === 'GATE-05') {
