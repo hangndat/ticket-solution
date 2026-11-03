@@ -1463,6 +1463,30 @@ test('[AUTH-08] account deletion needs consent and acknowledges one request', as
   await expect(page.getByTestId('account-deletion-result')).toContainText(
     'chưa phải xóa dữ liệu ngay',
   );
+
+  await page.goto(webUrl(manifest, '/api/auth/logout'));
+  await page.goto(webUrl(manifest, '/account'));
+  await page.reload();
+  expect((await page.request.get(webUrl(manifest, '/api/bff/me'))).status()).toBe(401);
+  await page.goto(webUrl(manifest, '/api/auth/login?return=%2Faccount'));
+  await expect(page).toHaveURL(new RegExp(`^${manifest.origins.auth.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
+  await page.locator('#username').fill(actor.username);
+  await page.locator('#password').fill(actor.password);
+  await page.locator('#kc-login').click();
+  await page.waitForURL((url) => url.origin === manifest.origins.web && !url.pathname.startsWith('/api/auth/'));
+  expect((await page.request.get(webUrl(manifest, '/api/bff/me'))).status()).toBe(401);
+  await page.goto(webUrl(manifest, '/account'));
+  await page.reload();
+  await page.locator('summary').filter({ hasText: 'Xóa tài khoản' }).click();
+  await expect(page.getByTestId('account-load-error')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Gửi yêu cầu xóa tài khoản' })).toBeDisabled();
+  await expect(page.getByTestId('account-deletion-result')).toHaveCount(0);
+  await expect(page.getByText(actor.username, { exact: true })).toHaveCount(0);
+  await expect(page.getByText('Yêu cầu đã hoàn tất')).toHaveCount(0);
+  expect(posts).toHaveLength(1);
+  expect(await readOpenDeletions(actor.userId)).toEqual([
+    { id: ack.requestId, state: 'REQUESTED' },
+  ]);
 });
 
 test('[AUTH-08] lost response retries the same attempt without a duplicate', async ({
