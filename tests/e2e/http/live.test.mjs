@@ -1590,6 +1590,30 @@ for (const caseId of CASE_IDS) {
         } catch (error) { await client.query('ROLLBACK'); throw error; }
       };
       try {
+        const scanner = await bearer(ctx, 'scanner');
+        const session = await request(ctx, 'POST', gatePath(f, 'sessions'), scanner, { tenantId: f.tenantId });
+        expectStatus(session, 200);
+        const ticket = await request(ctx, 'GET', `/me/tickets/${f.ticketId}?tenantId=${f.tenantId}`, access);
+        expectStatus(ticket, 200);
+        const reservation = await request(ctx, 'POST', gatePath(f, 'reservations'), scanner, {
+          tenantId: f.tenantId, staffSessionId: session.body.sessionId,
+          presented: { kind: 'qr', jws: required(ticket.body.gateCredential?.jws, 'AUTH-08 signed QR') },
+        });
+        expectStatus(reservation, 200);
+        const confirmed = await request(ctx, 'POST', `${gatePath(f, 'reservations')}/${reservation.body.reservationId}/confirm`, scanner, {
+          tenantId: f.tenantId, staffSessionId: session.body.sessionId, token: reservation.body.token,
+        });
+        expectStatus(confirmed, 200);
+        const snapshot = (tenantId) => web04Query(f, tenantId, `SELECT
+          (SELECT jsonb_agg(jsonb_build_array(id, state) ORDER BY id) FROM tickets) AS tickets,
+          (SELECT jsonb_agg(jsonb_build_array(id, ticket_id, undone_at) ORDER BY id) FROM checkins) AS checkins,
+          (SELECT jsonb_agg(id ORDER BY id) FROM audit_logs) AS audits`, []);
+        const before = await snapshot(f.tenantId);
+        const otherBefore = await snapshot(f.data.otherTenantId);
+        assert.ok(before[0].tickets?.some(([id]) => id === f.ticketId));
+        assert.ok(before[0].checkins?.some(([id]) => id === confirmed.body.checkinId));
+        assert.ok(before[0].audits?.length > 0);
+        assert.ok(otherBefore[0].tickets?.length > 0);
         const faultPath = required(ctx.runtime.faultControlPath, 'AUTH-08 faultControlPath');
         const hitPath = required(ctx.runtime.idpFaultHitPath, 'AUTH-08 idpFaultHitPath');
         const fault = JSON.parse(readFileSync(faultPath, 'utf8'));
@@ -1639,6 +1663,8 @@ for (const caseId of CASE_IDS) {
         assert.deepEqual(state, { state: 'COMPLETED', idp_status: 'DELETED', pg_applied: true, subject_cleared: true });
         const user = await client.query('SELECT email, subject FROM users WHERE id = $1', [actor.userId]);
         assert.deepEqual(user.rows, [{ email: null, subject: `anon:${id}` }]);
+        assert.deepEqual(await snapshot(f.tenantId), before);
+        assert.deepEqual(await snapshot(f.data.otherTenantId), otherBefore);
       } finally { await client.end(); }
       return;
     }

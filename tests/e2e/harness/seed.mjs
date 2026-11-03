@@ -1662,6 +1662,7 @@ export async function seedRuntime(state, caseIds) {
       if (
         [
           'AUTH-07',
+          'AUTH-08',
           'AUTH-06',
           'WEB-09',
           'WEB-11',
@@ -1705,7 +1706,7 @@ export async function seedRuntime(state, caseIds) {
         );
         const ticket = backend.unwrapRedeemOutcome(outcome);
         fixture.ticketId = ticket.ticketId;
-        if (caseId === 'WEB-09') {
+        if (caseId === 'WEB-09' || caseId === 'AUTH-08') {
           fixture.requestId = ticket.requestId;
           fixture.data.operationKey = operationKey;
           const otherTenantId = randomUUID();
@@ -2803,14 +2804,14 @@ export async function seedRuntime(state, caseIds) {
           fixture.data.auditCount = auditCount;
         });
       }
-      if (caseId === 'DB-18') {
+      if (caseId === 'DB-18' || caseId === 'AUTH-08') {
         await backend.withTenant(db, tenantId, (tx) => tx.$executeRaw`
           INSERT INTO audit_logs (
             tenant_id, event_id, id, actor_user_id, action,
             resource_type, resource_id, reason, sanitized_diff, operation_id
           ) VALUES (
             ${tenantId}::uuid, ${eventId}::uuid, ${randomUUID()}::uuid,
-            ${accounts.owner.userId}::uuid, 'db18.erasure.proof',
+            ${(caseId === 'AUTH-08' ? accounts.attendee : accounts.owner).userId}::uuid, 'db18.erasure.proof',
             'event', ${eventId}::uuid, 'retain for audit', '{}'::jsonb,
             ${randomUUID()}::uuid
           )
