@@ -4315,6 +4315,13 @@ for (const caseId of CASE_IDS) {
       assert.equal(file.status, 200);
       assert.match(file.headers.get('cache-control') ?? '', /private.*no-store/i);
       assert.ok((await file.text()).includes('ownerEmailMasked'));
+      if (process.env.E2E_JOB07_API_EXPIRY === '1') {
+        await new Promise((resolve) => setTimeout(resolve, Math.max(0, expiry - Date.now()) + 2000));
+        const expired = await fetch(signed, { method: 'PUT', headers: { 'content-type': 'image/png' }, body: png });
+        assert.equal(expired.status, 403, 'API-issued signed PUT must expire in object storage');
+        assert.match(await expired.text(), /expired/i);
+        t.diagnostic(JSON.stringify({ job07ApiExpiryVerified: true, ttlSeconds: 900, expiredStatus: expired.status }));
+      }
       return;
     }
     if (caseId === 'SEC-05') {
