@@ -148,13 +148,6 @@ const caseIds = match
     : mode === 'smoke'
       ? smoke
       : allBrowserCases;
-const orcaAuth06 = args.includes('--orca-auth06');
-if (
-  orcaAuth06 &&
-  (mode !== 'e2e' || caseIds.length !== 1 || caseIds[0] !== 'AUTH-06' || !useLane || skipBuild)
-) {
-  throw new Error('--orca-auth06 requires e2e --case=AUTH-06 --lane and a verified build');
-}
 if (caseIds.includes('DB-19') && (mode !== 'http' || caseIds.length !== 1)) {
   throw new Error('DB-19 rotation fixture requires isolated HTTP run: --case=DB-19');
 }
@@ -720,11 +713,6 @@ if (mode === 'list' || args.includes('--list')) {
     console.log(
       `E2E ${state.id}: runtime sẵn sàng; chạy ${mode}, ${caseIds.length} nhóm fixture`,
     );
-    if (orcaAuth06) {
-      console.log(`Orca AUTH-06 ready: ${state.id}; manifest: ${state.manifestPath}; stop with SIGTERM to clean up`);
-      // Retain the run-owned resources and locks until the existing signal cleanup.
-      await new Promise(() => {});
-    }
     if (diagnostic) {
       diagnostic.afterReadiness = await publicReadSnapshot(
         state,
