@@ -3855,14 +3855,13 @@ for (const caseId of CASE_IDS) {
           staffSessionId: session.body.sessionId,
           deviceId: randomUUID(),
           clientClockAt: new Date().toISOString(),
-          events: [],
+          events: [{ clientEventId: randomUUID(), type: 'CHECKIN_OFFLINE', eventId: f.eventId,
+            ticketId: randomUUID(), clientOccurredAt: new Date().toISOString(), clientSeq: 0, payloadVersion: 1 }],
         },
       );
-      assert.notEqual(
-        offlineProbe.status,
-        429,
-        'POST offline-sync budget must stay isolated from receipt read bucket',
-      );
+      expectStatus(offlineProbe, 201);
+      assert.equal(offlineProbe.body.results[0].status, 'REJECTED');
+      assert.equal(offlineProbe.body.results[0].code, 'TICKET_NOT_FOUND');
       const supervisor = await bearer(ctx, 'supervisor');
       const supervisorSession = await request(ctx, 'POST', gatePath(f, 'sessions'), supervisor,
         { tenantId: f.tenantId });
