@@ -32,13 +32,9 @@ const docker = (...args) =>
 
 async function startStalledSmtp() {
   let connections = 0;
-  let connectedAtMs;
   const sockets = new Set();
   const server = createNetServer((socket) => {
     connections += 1;
-    // Date.now truncates sub-millisecond precision; round the boundary up so
-    // a transaction begun in the same millisecond cannot escape the probe.
-    connectedAtMs ??= Date.now() + 1;
     sockets.add(socket);
     socket.on('close', () => sockets.delete(socket));
     socket.write('220 job06-stall ESMTP\r\n');
@@ -51,9 +47,6 @@ async function startStalledSmtp() {
     get connections() {
       return connections;
     },
-    get connectedAtMs() {
-      return connectedAtMs;
-    },
     close() {
       for (const socket of sockets) socket.destroy();
       server.close();
@@ -61,15 +54,6 @@ async function startStalledSmtp() {
   };
 }
 
-async function transactionsStartedBefore(admin, timestampMs) {
-  return admin.query(
-    `SELECT pid FROM pg_stat_activity
-     WHERE datname = current_database() AND usename = 'e2e_login'
-       AND xact_start IS NOT NULL
-       AND xact_start <= to_timestamp($1::double precision / 1000)`,
-    [timestampMs],
-  );
-}
 
 async function startMailpit() {
   const name = `ticket-job06-mailpit-${randomBytes(5).toString('hex')}`;
@@ -130,6 +114,7 @@ function spawnWorker(pgUrl, smtpUrl, output) {
     env: {
       PATH: process.env.PATH,
       NODE_ENV: 'test',
+      NODE_OPTIONS: `--require=${require('node:path').resolve(__dirname, 'job-06-one-connection.cjs')}`,
       DATABASE_URL: pgUrl,
       SMTP_URL: smtpUrl,
       SMTP_FROM: 'tickets@job06.example.test',
@@ -410,7 +395,7 @@ test(
       await admin.query(
         `INSERT INTO redemption_requests
           (tenant_id, event_id, id, actor_user_id, redemption_code_id, status, expires_at)
-         VALUES($1, $2, $3, $4, $5, 'PENDING_REVIEW', clock_timestamp() - interval '2 seconds')`,
+         VALUES($1, $2, $3, $4, $5, 'PENDING_REVIEW', clock_timestamp() + interval '1 day')`,
         [tenantId, eventId, requestId, userId, codeId],
       );
       const insertInvite = (outboxId, inviteId, ageSeconds) =>
@@ -435,26 +420,6 @@ test(
         );
       await insertInvite(firstOutboxId, firstInviteId, 3);
       await insertInvite(secondOutboxId, secondInviteId, 2);
-      // A transaction held across the SMTP connection must be visible to the
-      // same probe used below; a later independent transaction must not be.
-      const control = new Client({ connectionString: pg.url });
-      await control.connect();
-      try {
-        await control.query('BEGIN');
-        const controlPid = (await control.query('SELECT pg_backend_pid() AS pid')).rows[0].pid;
-        await delay(20);
-        const boundary = Date.now();
-        assert.ok((await transactionsStartedBefore(admin, boundary)).rows.some((row) => row.pid === controlPid),
-          'probe must detect a transaction held across the SMTP boundary');
-        await control.query('ROLLBACK');
-        await delay(20);
-        await control.query('BEGIN');
-        assert.ok(!(await transactionsStartedBefore(admin, boundary)).rows.some((row) => row.pid === controlPid),
-          'probe must exclude a transaction started after the SMTP boundary');
-        await control.query('ROLLBACK');
-      } finally {
-        await control.end();
-      }
       stalledSmtp = await startStalledSmtp();
       workerA = spawnWorker(pg.url, stalledSmtp.smtpUrl, outputA);
 
@@ -464,6 +429,7 @@ test(
       let requestState;
       let sawTimeout = false;
       let sawOverlapFence = false;
+      let expiredAfterSmtp = false;
       while (Date.now() < deadline) {
         assert.equal(
           workerA.exitCode,
@@ -478,6 +444,13 @@ test(
           [tenantId, firstOutboxId],
         );
         firstRow = rows.rows[0];
+        if (stalledSmtp.connections === 1 && !expiredAfterSmtp) {
+          await admin.query(
+            `UPDATE redemption_requests SET expires_at = clock_timestamp() - interval '2 seconds'
+             WHERE tenant_id = $1 AND id = $2`, [tenantId, requestId],
+          );
+          expiredAfterSmtp = true;
+        }
         const requests = await admin.query(
           `SELECT rr.status, rc.status AS code_status
            FROM redemption_requests rr
@@ -556,13 +529,10 @@ test(
         [tenantId, secondOutboxId],
       );
       assert.equal(secondRowBefore.rows[0].status, 'PENDING');
-      assert.ok(stalledSmtp.connectedAtMs, 'SMTP connection time must be recorded');
-      const activeTransactions = await transactionsStartedBefore(admin, stalledSmtp.connectedAtMs);
-      assert.equal(
-        activeTransactions.rows.length,
-        0,
-        'stalled SMTP must not hold a worker transaction open',
-      );
+      assert.ok(expiredAfterSmtp, 'reconciliation must become due after SMTP connects');
+      assert.ok(workerEvents(outputA.value).some((event) =>
+        event.event === 'job06_test_pool_limit' && event.max === 1),
+      'the real worker must use the single-connection test pool');
       await admin.query('BEGIN');
       try {
         await admin.query('SELECT id FROM outbox WHERE tenant_id=$1 AND id=$2 FOR UPDATE NOWAIT', [tenantId, firstOutboxId]);
@@ -671,7 +641,7 @@ test(
           dailySentCount: usage.sent_count,
           dailyHeldCount: usage.held_count,
           deferredCount: 1,
-        preSmtpWorkerTransactions: activeTransactions.rows.length,
+        workerPoolSize: 1,
           replacementShutdown: shutdownB.signal,
         }),
       );
