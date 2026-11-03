@@ -34,7 +34,16 @@ export function readCredentialKeyringEnvironment(
   let legacy: unknown = {};
   if (env['TICKET_CREDENTIAL_LEGACY_KEYS']?.trim()) {
     try {
-      legacy = JSON.parse(env['TICKET_CREDENTIAL_LEGACY_KEYS']!);
+      const raw = env['TICKET_CREDENTIAL_LEGACY_KEYS']!;
+      // Inspect flat-map property names before JSON.parse overwrites duplicates.
+      const strings = raw.match(/"(?:\\.|[^"\\])*"/g) ?? [];
+      const seen = new Set<string>();
+      for (let index = 0; index < strings.length; index += 2) {
+        const kid = JSON.parse(strings[index]!);
+        if (seen.has(kid)) throw new Error('duplicate credential key id');
+        seen.add(kid);
+      }
+      legacy = JSON.parse(raw);
     } catch {
       throw new Error('ticket credential keyring is invalid');
     }

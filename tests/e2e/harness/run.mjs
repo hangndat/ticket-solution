@@ -464,7 +464,7 @@ if (mode === 'list' || args.includes('--list')) {
             KEYCLOAK_ERASURE_CLIENT_ID: 'e2e-erasure',
             KEYCLOAK_ERASURE_CLIENT_SECRET: state.clientSecrets['e2e-erasure'],
           }
-        : common,
+        : caseIds.includes('DB-19') ? { ...common, OUTBOX_POLL_MS: '0' } : common,
     );
     await waitFor('API health', () =>
       getLocalJson(state, state.origins.api, '/v1/health'),
