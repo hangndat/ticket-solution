@@ -4,6 +4,7 @@ import {
   marketingHostsFromEnv,
   marketingOriginFromEnv,
   normalizeHost,
+  trustedRequestHost,
 } from '../hosts';
 
 export const MAX_ANALYTICS_BODY_BYTES = 4096;
@@ -52,9 +53,7 @@ export function checkMarketingAnalyticsRequest(
   request: Request,
   env: GuardEnv = process.env,
 ): MarketingRequestViolation | null {
-  const host = normalizeHost(
-    request.headers.get('x-forwarded-host') ?? request.headers.get('host'),
-  );
+  const host = normalizeHost(trustedRequestHost(request.headers));
   const hosts = marketingHostsFromEnv(hostsEnv(env));
   const hostOk =
     isMarketingHost(host, hosts) ||
