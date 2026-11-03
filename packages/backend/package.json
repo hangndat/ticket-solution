@@ -26,6 +26,7 @@
     "test:reissue-db": "node --test test/gate.test.cjs test/ticket-reissue-grants.test.cjs test/rls-catalog.test.cjs",
     "test:credential-keyring": "node --test test/credential-keyring-unit.test.cjs test/db19-code-pepper-rotation.test.cjs",
     "test:o06-offline": "pnpm build && node --test test/o06-retention-db.test.cjs test/cs-export.test.cjs test/export-offline-unit.test.cjs",
+    "test:pol02-capacity": "pnpm build && node --test --test-name-pattern='O06 POL-02 50k attendee' test/o06-retention-db.test.cjs",
     "test:export-barrier": "node --test test/export-offline-unit.test.cjs",
     "test:o06-operator": "node --test test/o06-offline-purge.test.cjs",
     "test:o06-operator-minio": "node --test test/o06-offline-minio.test.cjs",
