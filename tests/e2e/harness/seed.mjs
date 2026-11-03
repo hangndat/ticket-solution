@@ -2580,6 +2580,12 @@ export async function seedRuntime(state, caseIds) {
           );
           await primeUserRateCounter(
             prime,
+            accounts.supervisor.userId,
+            API_RATE_BUCKETS.gateOfflineSync,
+            API_RATE_LIMITS.gateOfflineSyncPerUser,
+          );
+          await primeUserRateCounter(
+            prime,
             accounts.owner.userId,
             API_RATE_BUCKETS.importJobsList,
             API_RATE_LIMITS.importJobsListPerUser,
