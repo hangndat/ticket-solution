@@ -154,6 +154,7 @@ export const catalog = {
     b('db19-code-pepper-rotation', 'DB-19: code issued under v1 keeps resolving after v2 rotation; removed v1 fails closed; no plaintext'),
     b('db19-code-pepper-rotation', 'DB-19: consumed code cannot be re-issued after pepper rotation (fail-closed)'),
     b('db19-code-pepper-rotation', 'DB-19: duplicate rows for the same raw code across a pepper rotation fail closed with zero mutation'),
+    b('credential-keyring-unit', 'DB-19 QR keyring: old credential opens after rotation and unknown key fails closed', 'U'),
   ],
   'GATE-01': [b('gates', 'O31 gates:')],
   'GATE-02': [

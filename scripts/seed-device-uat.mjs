@@ -9,7 +9,7 @@ import {
   grantEventAssignment,
   createPrismaIdentityUserRepository,
   readCodeHmacEnvironment,
-  readCredentialKeyEnvironment,
+  readCredentialKeyringEnvironment,
 } from "/app/packages/backend/dist/index.js";
 
 const TENANT_ID = "a1111111-1111-4111-8111-111111111111";
@@ -21,7 +21,7 @@ const STAFF_SUB = "d206e999-2de7-4b6d-9aaa-09099c9f25ff";
 
 const db = createDatabase(process.env.DATABASE_URL, 2);
 const hmac = readCodeHmacEnvironment(process.env);
-const credKey = readCredentialKeyEnvironment(process.env);
+const credKey = readCredentialKeyringEnvironment(process.env);
 const users = createPrismaIdentityUserRepository(db);
 
 const attendee = await users.upsertFromVerifiedIdentity({

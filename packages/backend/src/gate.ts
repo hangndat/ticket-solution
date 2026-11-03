@@ -10,7 +10,7 @@ import {
   completeOperation,
   requireIdempotencyKey,
 } from './event-operations';
-import { sealCredentialToken } from './credential-crypto';
+import { sealCredentialToken, type CredentialKeyInput } from './credential-crypto';
 import { AuthzError, AUTHZ_ERROR_CODES } from './authz-error';
 
 const PERMISSION_CONFIRM = 'gate.confirm';
@@ -1252,7 +1252,7 @@ export async function revokeTicket(
  */
 export async function reissueTicketCredential(
   tx: Prisma.TransactionClient,
-  credentialKeyMaterial: string,
+  credentialKeyMaterial: CredentialKeyInput,
   input: {
     tenantId: string;
     eventId: string;
