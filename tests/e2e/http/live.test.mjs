@@ -4273,6 +4273,7 @@ for (const caseId of CASE_IDS) {
         const expired = await fetch(shortUrl, { method: 'PUT', headers: { 'content-type': 'image/png' }, body: png });
         assert.equal(expired.status, 403, 'expired signed PUT must be rejected by storage');
         assert.match(await expired.text(), /expired/i);
+        t.diagnostic(JSON.stringify({ job07ExpiryVerified: true, ttlSeconds: 60, expiredStatus: expired.status }));
       }
       const exportsPath = `/tenants/${f.tenantId}/events/${f.eventId}/exports`;
       const created = await request(ctx, 'POST', exportsPath, owner, { format: 'csv', filter: { states: ['ACTIVE'] } },
