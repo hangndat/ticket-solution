@@ -62,6 +62,16 @@ test('DB-19 QR keyring: invalid configuration is rejected without exposing mater
       TICKET_CREDENTIAL_KID: 'local-v2',
       TICKET_CREDENTIAL_LEGACY_KEYS: JSON.stringify({ 'local-v2': OLD }),
     },
+    {
+      TICKET_CREDENTIAL_KEY: NEW,
+      TICKET_CREDENTIAL_KID: 'local-v2',
+      TICKET_CREDENTIAL_LEGACY_KEYS: `{"local-v1":"${OLD}","local-v1":"${NEW}"}`,
+    },
+    {
+      TICKET_CREDENTIAL_KEY: NEW,
+      TICKET_CREDENTIAL_KID: 'local-v2',
+      TICKET_CREDENTIAL_LEGACY_KEYS: `{"local-v1":"${OLD}","local\\u002dv1":"${NEW}"}`,
+    },
   ]) {
     assert.throws(
       () => readCredentialKeyringEnvironment(env),

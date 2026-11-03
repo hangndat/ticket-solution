@@ -266,7 +266,7 @@ test(
 
       const issued = unwrapRedeemOutcome(
         await withTenant(db, tenantId, (tx) =>
-          redeemAndIssueTicket(tx, HMAC, 'd13-cred-key', {
+          redeemAndIssueTicket(tx, HMAC, 'd13-cred-key-material-at-least-16', {
             tenantId,
             eventId,
             actorUserId: guest.userId,
@@ -362,7 +362,7 @@ test(
       // Gate assertSessionActive path rejects revoked session (fresh ticket, no prior hold).
       const issued2 = unwrapRedeemOutcome(
         await withTenant(db, tenantId, (tx) =>
-          redeemAndIssueTicket(tx, HMAC, 'd13-cred-key', {
+          redeemAndIssueTicket(tx, HMAC, 'd13-cred-key-material-at-least-16', {
             tenantId,
             eventId,
             actorUserId: guest.userId,
