@@ -88,6 +88,7 @@ const httpCases = [
   'DB-14',
   'DB-15',
   'DB-16',
+  'DB-17',
   'DB-18',
   'JOB-04',
   'PLAT-03',
@@ -133,7 +134,7 @@ if (caseIds.includes('DB-19') && (mode !== 'http' || caseIds.length !== 1)) {
 const laneNeedsFrontend =
   mode !== 'http' ||
   caseIds.some((id) =>
-    ['AUTH-03', 'SEC-02', 'SEC-03', 'SEC-05', 'PLAT-03'].includes(id),
+    ['AUTH-03', 'SEC-02', 'SEC-03', 'SEC-05', 'DB-17', 'PLAT-03'].includes(id),
   );
 if (
   !['smoke', 'e2e', 'http', 'regression', 'list'].includes(mode) ||
@@ -387,6 +388,19 @@ if (mode === 'list' || args.includes('--list')) {
       requiredCaseIds: caseIds,
       runDir: state.dir,
     });
+    const homeCatalogSlugs = [
+      ...new Set(
+        ['WEB-01', 'WEB-10', 'AUTH-07']
+          .map((id) => rawManifest.cases[id]?.tenantSlug)
+          .filter(Boolean),
+      ),
+    ];
+    if (homeCatalogSlugs.length === 0) {
+      const seedSlug = Object.values(rawManifest.cases).find(
+        (fixture) => fixture.tenantSlug,
+      )?.tenantSlug;
+      if (seedSlug) homeCatalogSlugs.push(seedSlug);
+    }
     const common = processEnvironment(state, {
       ...Object.fromEntries(
         Object.entries(process.env).filter(([key]) =>
@@ -404,9 +418,7 @@ if (mode === 'list' || args.includes('--list')) {
       MINIO_REGION: 'us-east-1',
       API_BASE_URL: state.origins.api,
       MARKETING_HOSTS: state.suffix,
-      PUBLIC_HOME_TENANT_SLUGS: Object.values(rawManifest.cases)
-        .map((fixture) => fixture.tenantSlug)
-        .join(','),
+      PUBLIC_HOME_TENANT_SLUGS: homeCatalogSlugs.join(','),
       E2E_MANIFEST: state.manifestPath,
       E2E_RUN_DIR: state.dir,
       E2E_TLS_SPKI: state.spki,
@@ -464,14 +476,14 @@ if (mode === 'list' || args.includes('--list')) {
             KEYCLOAK_ERASURE_CLIENT_ID: 'e2e-erasure',
             KEYCLOAK_ERASURE_CLIENT_SECRET: state.clientSecrets['e2e-erasure'],
           }
-        : common,
+        : caseIds.includes('DB-19') ? { ...common, OUTBOX_POLL_MS: '0' } : common,
     );
     await waitFor('API health', () =>
       getLocalJson(state, state.origins.api, '/v1/health'),
     );
     const httpNeedsFrontend =
       mode === 'http' &&
-      caseIds.some((id) => ['AUTH-03', 'SEC-02', 'SEC-03', 'SEC-05', 'PLAT-03'].includes(id));
+      caseIds.some((id) => ['AUTH-03', 'SEC-02', 'SEC-03', 'SEC-05', 'DB-17', 'PLAT-03'].includes(id));
     if (mode !== 'http' || httpNeedsFrontend) {
       if (needsBuild) {
         // `.next` sắp bị ghi đè: marker cũ không còn mô tả đúng nó nữa.
@@ -602,11 +614,32 @@ if (mode === 'list' || args.includes('--list')) {
           [entry, '--case', id],
           common,
         );
+        const childExitCode = await exitCode(child);
         results.push({
           layer: 'HTTP',
           caseId: id,
-          exitCode: await exitCode(child),
+          exitCode: childExitCode,
         });
+        if (id === 'DB-17' && childExitCode) {
+          const log = readFileSync(resolve(state.dir, 'http-DB-17.log'), 'utf8');
+          // Only fixed, bounded fields leave the private log. It may contain
+          // browser, API, or authentication details on other failure paths.
+          const sourceLines = [...new Set(
+            [...log.matchAll(/live\.test\.mjs:(\d{1,6}):\d{1,4}/g)]
+              .map((match) => Number(match[1])),
+          )].slice(0, 4);
+          const diagnostic = {
+            caseId: id,
+            exitCode: childExitCode,
+            sourceLines,
+            errorType: log.match(/\b(AssertionError|TimeoutError|TypeError)\b/)?.[1] ?? null,
+            httpStatus: Number(log.match(/\bHTTP (\d{3}); code=/)?.[1]) || null,
+            actual: Number(log.match(/\bactual: (\d{1,3})\b/)?.[1]) || null,
+            expected: Number(log.match(/\bexpected: (\d{1,3})\b/)?.[1]) || null,
+          };
+          privateJson(resolve(state.dir, 'db17-failure.json'), diagnostic);
+          console.error(`DB-17 failure diagnostic: ${JSON.stringify(diagnostic)}`);
+        }
       }
     }
     if (mode !== 'http') {

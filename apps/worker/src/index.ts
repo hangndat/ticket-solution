@@ -7,12 +7,13 @@ import {
   createDatabase,
   createSmtpEmailAdapter,
   isApnsEnabled,
-  readCredentialKeyEnvironment,
+  readCredentialKeyringEnvironment,
   readEmailEnvironment,
   readProcessEnvironment,
   type ApnsAdapter,
   type EmailAdapter,
   type PrismaClient,
+  type CredentialKeyInput,
 } from '@ticket/backend';
 import { WorkerRelay } from './worker-relay';
 import { logCredentialKeyMisconfigured } from './worker-tick-log';
@@ -111,9 +112,9 @@ export async function createWorker(
       ? Number(env['OUTBOX_POLL_MS'])
       : 2000);
 
-  let credentialKeyMaterial = '';
+  let credentialKeyMaterial: CredentialKeyInput = '';
   try {
-    credentialKeyMaterial = readCredentialKeyEnvironment(env);
+    credentialKeyMaterial = readCredentialKeyringEnvironment(env);
   } catch (error) {
     logCredentialKeyMisconfigured(
       error instanceof Error ? error.message : 'TICKET_CREDENTIAL_KEY invalid',

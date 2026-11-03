@@ -1,8 +1,0 @@
----
-description: Review/fix có giới hạn — findings xuyên suốt, revalidation theo diff, chẩn đoán khi không tiến triển
-alwaysApply: false
----
-
-# Adapter Cursor
-
-Đọc và áp dụng [nguồn chuẩn](../../docs/agents/workflows/review.md) khi rule được kích hoạt. Chỉnh policy tại nguồn chuẩn; metadata host giữ ở adapter này.

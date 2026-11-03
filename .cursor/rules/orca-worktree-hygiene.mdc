@@ -1,8 +1,0 @@
----
-description: "[coordinator-only] Orca worktree link/comment, task DAG + decision gates, fleet hygiene, automations"
-alwaysApply: false
----
-
-# Adapter Cursor
-
-Đọc và áp dụng [nguồn chuẩn](../../docs/agents/workflows/worktree.md) khi rule được kích hoạt. Chỉnh policy tại nguồn chuẩn; metadata host giữ ở adapter này.

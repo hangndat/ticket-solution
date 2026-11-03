@@ -190,11 +190,12 @@
       "D:packages/backend/test/event-quota-suspended.test.cjs#632 concurrent createEvent at max_events — one winner, one TENANT_LIMIT_REACHED",
       "D:packages/backend/test/tenant-limits-usage.test.cjs#G-10 runtime role reads only authorized tenant counters and UTC day",
       "D:packages/backend/test/db17-role-escalation.test.cjs#DB-17: non-Owner cannot create/list role presets; catalogue stays the only grantable surface",
-      "D:packages/backend/test/db17-tenant-limits-mutation.test.cjs#DB-17: maxEvents/maxStaff enforced at mutation; usage reflects committed counts"
+      "D:packages/backend/test/db17-tenant-limits-mutation.test.cjs#DB-17: maxEvents/maxStaff enforced at mutation; usage reflects committed counts",
+      "H:tests/e2e/http/live.test.mjs#[DB-17] live HTTP"
     ],
-    "layers": ["D"],
-    "status": "blocked",
-    "reason": "D presets/onboarding + tenant limit mutation/usage (event-quota-suspended #632 race, tenant-limits-usage) + non-Owner (Manager/Scanner) escalation deny qua PostgreSQL thật, arbitrary/invented permission rejected cho cả Owner (catalogue là surface duy nhất), cross-tenant preset 404; maxEvents/maxStaff enforced at mutation với rollback đầy đủ, readTenantLimitsUsage đúng committed counts, và race case xác định (2 concurrent createEvent tại maxEvents=1 qua FOR UPDATE lock trên tenant_limits — đúng 1 commit/1 TENANT_LIMIT_REACHED, không oversell; mutation-check xác nhận assertion bắt được regression khi gỡ lock/permission check). Vẫn thiếu H named presets/self-serve PENDING/operator activation qua HTTP+Keycloak thật — cần live stack (E2E_MANIFEST theo mẫu [DB-16] live HTTP trong tests/e2e/http/live.test.mjs), không có trong worktree này."
+    "layers": ["D", "H"],
+    "status": "implemented",
+    "reason": "D presets/onboarding, tenant limit mutation/usage, race và deny-by-default; H Keycloak bearer/API/PG thêm Manager/Scanner deny, invalid permission, named preset version, PENDING replay + 503, Operator MFA activation, maxEvents race 1 commit/1 TENANT_LIMIT_REACHED 409, maxStaff invite 409 và usage. Chờ clean exact-SHA D/H run và review."
   },
   {
     "caseId": "DB-18",
@@ -213,7 +214,7 @@
     ],
     "layers": ["D"],
     "status": "blocked",
-    "reason": "Kiểm kê đầy đủ (2026-11-03): ACK-time session revoke + REJECTED giữ REVOKED + mở lại sau REJECTED và re-ACK thu hồi session mới (account-ack-session-revoke SEC-1 ACK); race ACK vs uncommitted raw INSERT qua advisory lock (SEC-R1, deterministic — chặn bằng lock_user_session_mutation, không sleep-as-sync); apply-time revoke cross-tenant + Gate SESSION_NOT_ACTIVE (account-session-revoke); IdP DELETE → COMPLETED (T4/T14), NOT_FOUND → COMPLETED (T5), path404/disable/503-retry giữ REQUESTED không bypass (T6/T7/T8); upsert deny + lease + issuer allowlist + no fuzzy lookup (T9/T11/T12/T13); OIDC maxTokenAge>24h reject (T16); lease fencing chống double-complete (SEC-D-05); fault >48h giữ digest tới terminal (SEC-D-01); PII anonymize (email/subject→anon:<requestId>) + audit_logs count không đổi qua ACK→apply (platform.test.cjs); audit_logs count không đổi qua apply→REJECTED→re-ACK→apply lại (account-ack-session-revoke.test.cjs). Mutation-check thủ công: tắt revoke_sessions_for_user tại nhánh ACK đầu tiên trong account-deletion.ts → cả 3 test trong account-ack-session-revoke.test.cjs fail đúng như kỳ vọng (revert ngay sau, không còn diff). Vẫn thiếu H: live Keycloak Admin erasure (DELETE user thật) + bearer HTTP qua /v1/me/account-deletion-requests — hạ tầng tests/e2e/http/live.test.mjs + harness chưa có case DB-18/fixture erasure client (infra/keycloak/realm-ticket.json không có vemoki-erasure client); build case này đụng harness dùng chung nhiều ID khác, ngoài scope Task DB-18-only — cần Task/Dispatch riêng do coordinator mở."
+    "reason": "DB-18 D: ACK/apply revoke sessions, race ACK/INSERT, IdP retry/tombstone/lease, PII scrub, audit retained; account-ack-session-revoke SEC-1 ACK còn kiểm membership ACTIVE theo PLAN §15.2, hai tenant không bị xóa nhầm, ticket/check-in và event report quota/ticket/check-in giữ nguyên sau apply. Mutation-check đổi tạm ticket ACTIVE→REVOKED làm aggregate assertion fail rồi hoàn nguyên. H live.test.mjs đã có Keycloak Admin DELETE và bearer HTTP, đang chờ run trên SHA sạch; không ghi H PASS từ inventory này. O06 TTL 365/730 ngày thuộc POL, không suy từ DB-18."
   },
   {
     "caseId": "DB-19",
@@ -496,11 +497,12 @@
     "tests": [
       "D:packages/backend/test/portal-audit-codes.test.cjs#H-A1/H-C1/H-P-AUDIT",
       "D:packages/backend/test/o06-retention-db.test.cjs#O06 DB clocks",
-      "D:packages/backend/test/o06-retention-db.test.cjs#O06 PII writer"
+      "D:packages/backend/test/o06-retention-db.test.cjs#O06 PII writer",
+      "R:packages/backend/test/o06-retention-db.test.cjs#O06 POL-02 50k attendee worker process"
     ],
-    "layers": ["D"],
+    "layers": ["D", "R"],
     "status": "blocked",
-    "reason": "D POL-02 kiểm biên 365 ngày, ends_at NULL, CANCELLED lấy cancelled_at, PII writer/sweep hai thứ tự row lock, tenant isolation, replay và giữ ticket/check-in/KPI input. Owner giảm AC theo PLAN §15.2: xóa audit vật lý 730 ngày và restore re-sweep chuyển task riêng; còn rủi ro audit cũ vẫn nằm trong DB và PII có thể hồi sinh sau restore. Cần ops đo event lớn."
+    "reason": "D POL-02 kiểm biên 365 ngày, ends_at NULL, CANCELLED lấy cancelled_at, PII writer/sweep hai thứ tự row lock, tenant isolation, replay và giữ ticket/check-in/KPI input. R đo worker process local với 50k attendee/request và kiểm PII, tenant khác, ticket/check-in/KPI. Audit 729 ngày hiện, 731 ngày ẩn. Owner giảm AC theo PLAN §15.2: xóa audit vật lý 730 ngày và restore re-sweep chuyển task riêng; audit cũ vẫn nằm trong DB và PII có thể hồi sinh sau restore. Chưa đo VPS đích."
   },
   {
     "caseId": "POL-03",

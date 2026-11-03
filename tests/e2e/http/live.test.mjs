@@ -37,6 +37,7 @@ const CASE_IDS = [
   'DB-19',
   'DB-15',
   'DB-16',
+  'DB-17',
   'JOB-04',
   'PLAT-03',
   'WEB-04',
@@ -1554,10 +1555,132 @@ for (const caseId of CASE_IDS) {
         afterBoth,
         'rotation must not resurrect consumed code',
       );
+      const credentialsBefore = await db03Query(f,
+        'SELECT version, kid, status, token_hash, encrypted_token FROM ticket_credentials WHERE tenant_id=$1::uuid AND ticket_id=$2::uuid ORDER BY version',
+        [f.tenantId, issued.body.ticketId]);
+      assert.equal(credentialsBefore.length, 1);
+      assert.equal(credentialsBefore[0].kid, 'local-v2', 'HTTP issuance must use current credential key');
+      assert.equal(credentialsBefore[0].status, 'ACTIVE');
+      assert.ok(!credentialsBefore[0].encrypted_token.includes(issued.body.ticketId));
       const runDir = required(process.env.E2E_RUN_DIR, 'DB-19 E2E_RUN_DIR');
       const privateState = JSON.parse(readFileSync(`${runDir}/seed-state.json`, 'utf8'));
+      const requireBackend = createRequire(new URL('../../../packages/backend/package.json', import.meta.url));
+      const backend = requireBackend('./dist');
+      // Model a still-active credential minted before rotation in the live DB.
+      const legacy = backend.sealCredentialToken('db19-legacy-opaque-token', privateState.secrets.credentialLegacy);
+      await db03Query(f,
+        'UPDATE ticket_credentials SET kid=$3, token_hash=$4, encrypted_token=$5 WHERE tenant_id=$1::uuid AND ticket_id=$2::uuid AND status=\'ACTIVE\'',
+        [f.tenantId, issued.body.ticketId, legacy.kid, legacy.tokenHash, legacy.encryptedToken]);
+      const ring = backend.readCredentialKeyringEnvironment({
+        TICKET_CREDENTIAL_KEY: privateState.secrets.credential,
+        TICKET_CREDENTIAL_KID: 'local-v2',
+        TICKET_CREDENTIAL_LEGACY_KEYS: JSON.stringify({ 'local-v1': privateState.secrets.credentialLegacy }),
+      });
+      assert.equal(backend.openCurrentCredentialForQr({
+        encryptedToken: legacy.encryptedToken, expectedTokenHash: legacy.tokenHash,
+        kid: legacy.kid, credentialKeyMaterial: ring,
+      }).token, 'db19-legacy-opaque-token');
+      await db03Query(f,
+        'INSERT INTO tenant_limits (tenant_id, email_per_day) VALUES ($1::uuid, 100) ON CONFLICT (tenant_id) DO UPDATE SET email_per_day=100',
+        [f.tenantId]);
+      // Exercise the worker's real claim/render/ack path against the live DB.
+      const relayDb = backend.createDatabase(process.env.DATABASE_URL, 3);
+      const delivered = [];
+      const email = {
+        async sendTicketIssued(payload) {
+          delivered.push(payload);
+          return { providerRef: `db19:${delivered.length}`, providerStatus: 'ACCEPTED' };
+        },
+      };
+      try {
+        const firstRelay = await backend.relayOutboxOnce(relayDb, email, 'db19-h-relay', 10, {
+          credentialKeyMaterial: ring, env: process.env, apns: undefined,
+        });
+        assert.ok(firstRelay.completed >= 1,
+          `old-kid ACTIVE credential must be delivered: ${JSON.stringify(firstRelay)}`);
+        const oldMail = delivered.find((item) => item.ticketId === issued.body.ticketId);
+        assert.ok(oldMail, 'outbox must emit the old-kid QR');
+        assert.equal(oldMail.credentialTokenHash, legacy.tokenHash);
+        assert.deepEqual(oldMail.qrPng, await backend.renderCredentialQrPng({
+          tenantId: f.tenantId, eventId: f.eventId,
+          ticketId: issued.body.ticketId, credentialVersion: 1,
+          token: 'db19-legacy-opaque-token',
+        }));
+        // A supported ciphertext under an unknown kid must not reach email.
+        const unsupported = backend.sealCredentialToken('db19-unsupported-token', ring);
+        await db03Query(f,
+          'UPDATE ticket_credentials SET kid=$3, token_hash=$4, encrypted_token=$5 WHERE tenant_id=$1::uuid AND ticket_id=$2::uuid AND status=\'ACTIVE\'',
+          [f.tenantId, current.body.ticketId, 'retired-kid', unsupported.tokenHash, unsupported.encryptedToken]);
+        // The second issuance may already have relayed; reissue it over HTTP to queue another outbox row.
+        const unsupportedReissue = await request(ctx, 'POST',
+          gatePath(f, `tickets/${current.body.ticketId}/reissue`), owner,
+          { tenantId: f.tenantId, reason: 'DB-19 unsupported key' },
+          { 'idempotency-key': randomUUID() });
+        expectStatus(unsupportedReissue, 200);
+        await db03Query(f,
+          'UPDATE ticket_credentials SET kid=$3 WHERE tenant_id=$1::uuid AND ticket_id=$2::uuid AND status=\'ACTIVE\'',
+          [f.tenantId, current.body.ticketId, 'retired-kid']);
+        const sentBeforeUnsupported = delivered.length;
+        const unsupportedRelay = await backend.relayOutboxOnce(relayDb, email, 'db19-h-relay', 10, {
+          credentialKeyMaterial: ring, env: process.env, apns: undefined,
+        });
+        assert.ok(unsupportedRelay.claimed >= 1 && unsupportedRelay.failed >= 1,
+          'worker must process and reject the unsupported kid');
+        assert.equal(delivered.length, sentBeforeUnsupported,
+          'unsupported kid must not emit QR');
+      } finally {
+        await relayDb.$disconnect();
+      }
+      const rotated = await request(ctx, 'POST',
+        gatePath(f, `tickets/${issued.body.ticketId}/reissue`), owner,
+        { tenantId: f.tenantId, reason: 'DB-19 credential rotation' },
+        { 'idempotency-key': randomUUID() });
+      expectStatus(rotated, 200);
+      const credentialsAfter = await db03Query(f,
+        'SELECT version, kid, status FROM ticket_credentials WHERE tenant_id=$1::uuid AND ticket_id=$2::uuid ORDER BY version',
+        [f.tenantId, issued.body.ticketId]);
+      assert.deepEqual(credentialsAfter.map((c) => c.status), ['REVOKED', 'ACTIVE']);
+      assert.deepEqual(credentialsAfter.map((c) => c.kid), ['local-v1', 'local-v2']);
+      const revokedVersionCount = delivered.filter((item) =>
+        item.ticketId === issued.body.ticketId && item.credentialVersion === 1).length;
+      const reissueDb = backend.createDatabase(process.env.DATABASE_URL, 3);
+      try {
+        const reissueRelay = await backend.relayOutboxOnce(reissueDb, email, 'db19-h-reissue', 10, {
+          credentialKeyMaterial: ring, env: process.env, apns: undefined,
+        });
+        assert.ok(reissueRelay.completed >= 1, 'current reissue must be delivered');
+      } finally {
+        await reissueDb.$disconnect();
+      }
+      assert.equal(delivered.filter((item) =>
+        item.ticketId === issued.body.ticketId && item.credentialVersion === 1).length,
+      revokedVersionCount, 'revoked old credential must not emit another QR');
+      assert.ok(delivered.some((item) =>
+        item.ticketId === issued.body.ticketId && item.credentialVersion === 2),
+      'HTTP reissue must emit the current credential QR');
+      const revokeBeforeRelay = await request(ctx, 'POST',
+        gatePath(f, `tickets/${issued.body.ticketId}/reissue`), owner,
+        { tenantId: f.tenantId, reason: 'DB-19 revoke before relay' },
+        { 'idempotency-key': randomUUID() });
+      expectStatus(revokeBeforeRelay, 200);
+      await db03Query(f,
+        'UPDATE ticket_credentials SET status=\'REVOKED\' WHERE tenant_id=$1::uuid AND ticket_id=$2::uuid AND version=3',
+        [f.tenantId, issued.body.ticketId]);
+      const beforeRevokedRelay = delivered.length;
+      const revokedDb = backend.createDatabase(process.env.DATABASE_URL, 3);
+      try {
+        const revokedRelay = await backend.relayOutboxOnce(revokedDb, email, 'db19-h-revoked', 10, {
+          credentialKeyMaterial: ring, env: process.env, apns: undefined,
+        });
+        assert.ok(revokedRelay.claimed >= 1 && revokedRelay.failed >= 1,
+          'worker must process and reject the revoked credential');
+      } finally {
+        await revokedDb.$disconnect();
+      }
+      assert.equal(delivered.length, beforeRevokedRelay,
+        'revoked current credential must not emit QR');
       const exposed = JSON.stringify([issued.body, current.body]) + readFileSync(`${runDir}/api.log`, 'utf8');
-      for (const material of [privateState.secrets.hmacLegacy, privateState.secrets.hmac, privateState.secrets.credential]) {
+      for (const material of [privateState.secrets.hmacLegacy, privateState.secrets.hmac, privateState.secrets.credential, privateState.secrets.credentialLegacy]) {
         assert.ok(!exposed.includes(material), 'DB-19 API response/log must not reveal key material');
       }
       return;
@@ -1612,6 +1735,23 @@ for (const caseId of CASE_IDS) {
         };
         const auditBefore = await auditCount();
         assert.equal(auditBefore, 1, 'DB-18 audit proof seeded');
+        const membershipState = async () => {
+          await client.query('BEGIN');
+          try {
+            await client.query('SET LOCAL ROLE ticket_runtime');
+            await client.query("SELECT set_config('app.tenant_id', $1, true)", [f.tenantId]);
+            const result = await client.query(
+              'SELECT activated_at IS NOT NULL AS active, revoked_at FROM memberships WHERE user_id = $1',
+              [actor.userId],
+            );
+            await client.query('COMMIT');
+            return result.rows;
+          } catch (error) {
+            await client.query('ROLLBACK');
+            throw error;
+          }
+        };
+        assert.deepEqual(await membershipState(), [{ active: true, revoked_at: null }]);
         const faultControlPath = required(ctx.runtime.faultControlPath, 'DB-18 faultControlPath');
         const faultHitPath = required(ctx.runtime.idpFaultHitPath, 'DB-18 idpFaultHitPath');
         const fault = JSON.parse(readFileSync(faultControlPath, 'utf8'));
@@ -1648,6 +1788,7 @@ for (const caseId of CASE_IDS) {
         assert.equal(row.subject_cleared, false, 'DB-18 retry retains original subject');
         expectStatus(await request(ctx, 'GET', '/me/account-deletion-requests/current', access), 401, 'UNAUTHENTICATED');
         assert.equal((await adminUser(adminToken)).status, 200, 'DB-18 IdP user remains after 503');
+        assert.deepEqual(await membershipState(), [{ active: true, revoked_at: null }]);
         console.log('DB-18: live IdP DELETE 503; REQUESTED and bearer denied');
         delete fault.idpDelete;
         writeFileSync(faultControlPath, JSON.stringify(fault), { mode: 0o600 });
@@ -1672,6 +1813,7 @@ for (const caseId of CASE_IDS) {
         assert.equal(user.rows[0].email, null);
         assert.equal(user.rows[0].subject, `anon:${requestId}`);
         assert.equal(await auditCount(), auditBefore, 'DB-18 audit retained');
+        assert.deepEqual(await membershipState(), [{ active: true, revoked_at: null }]);
         console.log('DB-18: retry DELETE completed; PG scrub and audit verified');
         return;
       } finally {
@@ -1865,6 +2007,321 @@ for (const caseId of CASE_IDS) {
         { ...afterCancel, asOf: null },
         { ...finalFailure, asOf: null },
       );
+      return;
+    }
+    if (caseId === 'DB-17') {
+      const control = {
+        ...f,
+        data: { ...f.data, controlDatabaseUrl: process.env.DATABASE_URL },
+      };
+      const owner = await bearer(ctx, 'owner');
+      const manager = await bearer(ctx, 'manager');
+      const scanner = await bearer(ctx, 'scanner');
+      const attendee = await bearer(ctx, 'attendee');
+      const presetsPath = `/tenants/${f.tenantId}/role-presets`;
+      const presetBody = {
+        name: `DB17 ${randomUUID()}`,
+        tenantPermissions: ['members.manage'],
+        eventPermissions: ['report.read'],
+      };
+      const snapshot = (tenantId = f.tenantId) =>
+        web04Query(
+          control,
+          tenantId,
+          `SELECT
+            (SELECT count(*)::int FROM role_presets WHERE tenant_id=$1::uuid) AS presets,
+            (SELECT count(*)::int FROM events WHERE tenant_id=$1::uuid) AS events,
+            (SELECT count(*)::int FROM membership_invites WHERE tenant_id=$1::uuid) AS invites`,
+          [tenantId],
+        );
+      const beforeDeny = (await snapshot())[0];
+      for (const token of [manager, scanner]) {
+        deny(await request(ctx, 'GET', presetsPath, token));
+        deny(await request(ctx, 'POST', presetsPath, token, presetBody));
+      }
+      expectStatus(
+        await request(ctx, 'POST', presetsPath, owner, {
+          ...presetBody,
+          tenantPermissions: ['platform.operator'],
+        }),
+        422,
+        'INVALID_INPUT',
+      );
+      expectStatus(
+        await request(ctx, 'POST', `/tenants/${f.tenantId}/invites`, owner, {
+          email: `forged-${randomUUID()}@example.test`,
+          role: 'Scanner',
+          permissions: ['members.manage'],
+        }, { 'idempotency-key': randomUUID() }),
+        422,
+        'INVALID_INPUT',
+      );
+      assert.deepEqual((await snapshot())[0], beforeDeny);
+      const created = await request(
+        ctx,
+        'POST',
+        presetsPath,
+        owner,
+        presetBody,
+      );
+      expectStatus(created, 201);
+      assert.equal(created.body.name, presetBody.name);
+      assert.equal(created.body.schemaVersion, 2);
+      assert.deepEqual(
+        created.body.tenantPermissions,
+        presetBody.tenantPermissions,
+      );
+      const listed = await request(ctx, 'GET', presetsPath, owner);
+      expectStatus(listed, 200);
+      assert.ok(
+        listed.body.items.some(
+          (item) => item.presetId === created.body.presetId,
+        ),
+      );
+      const preset = await request(
+        ctx,
+        'GET',
+        `${presetsPath}/${created.body.presetId}`,
+        owner,
+      );
+      expectStatus(preset, 200);
+      assert.deepEqual(preset.body, created.body);
+
+      const setPresetVersion = (version) =>
+        web04Query(
+          control,
+          f.tenantId,
+          `UPDATE role_presets SET schema_version=$1
+           WHERE tenant_id=$2::uuid AND id=$3::uuid`,
+          [version, f.tenantId, created.body.presetId],
+        );
+      const invitesPath = `/tenants/${f.tenantId}/invites`;
+      const presetInviteBody = {
+        email: f.accounts.attendee.username,
+        role: { presetId: created.body.presetId },
+      };
+      await setPresetVersion(1);
+      const beforeStaleInvite = (await snapshot())[0];
+      expectStatus(
+        await request(ctx, 'POST', invitesPath, owner, presetInviteBody, {
+          'idempotency-key': randomUUID(),
+        }),
+        422,
+        'INVALID_INPUT',
+      );
+      assert.deepEqual((await snapshot())[0], beforeStaleInvite);
+      await setPresetVersion(2);
+      const presetInvite = await request(
+        ctx,
+        'POST',
+        invitesPath,
+        owner,
+        presetInviteBody,
+        { 'idempotency-key': randomUUID() },
+      );
+      expectStatus(presetInvite, 201);
+      const [inviteToken] = await web04Query(
+        control,
+        f.tenantId,
+        `SELECT payload->>'token' AS token FROM outbox
+         WHERE tenant_id=$1::uuid AND type='MembershipInvite'
+           AND aggregate_id=$2::uuid`,
+        [f.tenantId, presetInvite.body.inviteId],
+      );
+      assert.ok(inviteToken?.token);
+      await setPresetVersion(1);
+      const [beforeStaleAccept] = await web04Query(
+        control,
+        f.tenantId,
+        `SELECT count(*)::int AS memberships FROM memberships
+         WHERE tenant_id=$1::uuid AND user_id=$2::uuid`,
+        [f.tenantId, f.accounts.attendee.userId],
+      );
+      expectStatus(
+        await request(ctx, 'POST', '/me/membership-invites/accept', attendee, {
+          token: inviteToken.token,
+        }),
+        422,
+        'INVITE_INVALID_OR_EXPIRED',
+      );
+      const [afterStaleAccept] = await web04Query(
+        control,
+        f.tenantId,
+        `SELECT accepted_at,
+          (SELECT count(*)::int FROM memberships
+           WHERE tenant_id=$1::uuid AND user_id=$2::uuid) AS memberships
+         FROM membership_invites
+         WHERE tenant_id=$1::uuid AND id=$3::uuid`,
+        [f.tenantId, f.accounts.attendee.userId, presetInvite.body.inviteId],
+      );
+      assert.equal(afterStaleAccept.accepted_at, null);
+      assert.equal(afterStaleAccept.memberships, beforeStaleAccept.memberships);
+      await setPresetVersion(2);
+
+      const registrationKey = randomUUID();
+      const registrationBody = {
+        slug: `db17-${registrationKey}`,
+        name: 'DB17 Pending Tenant',
+      };
+      const register = () =>
+        request(
+          ctx,
+          'POST',
+          '/public/tenant-registrations',
+          attendee,
+          registrationBody,
+          {
+            'idempotency-key': registrationKey,
+          },
+        );
+      const pending = await register();
+      expectStatus(pending, 201);
+      assert.equal(pending.body.status, 'PENDING');
+      const replay = await register();
+      expectStatus(replay, 201);
+      assert.deepEqual(replay.body, pending.body);
+      const pendingPath = `/tenants/${pending.body.tenantId}/events`;
+      const pendingCreate = await request(
+        ctx,
+        'POST',
+        pendingPath,
+        attendee,
+        {
+          slug: 'before-activation',
+          name: 'Before activation',
+        },
+        { 'idempotency-key': randomUUID() },
+      );
+      expectStatus(pendingCreate, 503, 'TENANT_PENDING');
+      const pendingRows = await web04Query(
+        control,
+        pending.body.tenantId,
+        'SELECT count(*)::int AS events FROM events WHERE tenant_id=$1::uuid',
+        [pending.body.tenantId],
+      );
+      assert.equal(pendingRows[0].events, 0);
+
+      const suffix = required(process.env.E2E_HOST_SUFFIX, 'E2E_HOST_SUFFIX');
+      const trust = required(process.env.E2E_TLS_SPKI, 'E2E_TLS_SPKI');
+      const browser = await chromium.launch({
+        headless: true,
+        args: [
+          `--host-resolver-rules=MAP *.${suffix} 127.0.0.1, MAP ${suffix} 127.0.0.1`,
+          `--ignore-certificate-errors-spki-list=${trust}`,
+        ],
+      });
+      let operator;
+      try {
+        operator = await realPlatformMfaToken(browser, ctx);
+      } finally {
+        await browser.close();
+      }
+      const pendingDetail = await request(
+        ctx,
+        'GET',
+        `/platform/tenants/${pending.body.tenantId}`,
+        operator,
+      );
+      expectStatus(pendingDetail, 200);
+      assert.equal(pendingDetail.body.status, 'PENDING');
+      const activated = await request(
+        ctx,
+        'POST',
+        `/platform/tenants/${pending.body.tenantId}/status`,
+        operator,
+        {
+          status: 'ACTIVE',
+          reason: 'DB17 activation',
+          expectedVersion: pendingDetail.body.version,
+        },
+      );
+      expectStatus(activated, 201);
+      assert.equal(activated.body.status, 'ACTIVE');
+      const afterActivation = await request(
+        ctx,
+        'POST',
+        pendingPath,
+        attendee,
+        {
+          slug: 'after-activation',
+          name: 'After activation',
+        },
+        { 'idempotency-key': randomUUID() },
+      );
+      expectStatus(afterActivation, 201);
+
+      const detail = await request(
+        ctx,
+        'GET',
+        `/platform/tenants/${pending.body.tenantId}`,
+        operator,
+      );
+      expectStatus(detail, 200);
+      const limitsPath = `/platform/tenants/${pending.body.tenantId}/limits`;
+      const maxEvents = detail.body.usage.events + 1;
+      const [limitsVersion] = await web04Query(
+        control,
+        pending.body.tenantId,
+        'SELECT version FROM tenant_limits WHERE tenant_id=$1::uuid',
+        [pending.body.tenantId],
+      );
+      const limit = await request(ctx, 'PUT', limitsPath, operator, {
+        limits: {
+          ...detail.body.limits,
+          maxEvents,
+          maxStaff: detail.body.usage.staffActive,
+        },
+        flags: detail.body.flags,
+        reason: 'DB17 limit probe',
+        expectedVersion: limitsVersion.version,
+      });
+      expectStatus(limit, 200);
+      const race = await Promise.all(
+        ['a', 'b'].map((label) =>
+          request(
+            ctx,
+            'POST',
+            pendingPath,
+            attendee,
+            {
+              slug: `db17-race-${label}-${registrationKey}`,
+              name: `DB17 race ${label}`,
+            },
+            { 'idempotency-key': randomUUID() },
+          ),
+        ),
+      );
+      assert.deepEqual(
+        race.map((result) => [result.status, result.body.code ?? null]).sort(),
+        [
+          [201, null],
+          [409, 'TENANT_LIMIT_REACHED'],
+        ],
+      );
+      const usage = await request(
+        ctx,
+        'GET',
+        `/tenants/${pending.body.tenantId}/limits`,
+        attendee,
+      );
+      expectStatus(usage, 200);
+      assert.equal(usage.body.limits.maxEvents, maxEvents);
+      assert.equal(usage.body.usage.events, maxEvents);
+      assert.equal(usage.body.limits.maxStaff, detail.body.usage.staffActive);
+      const beforeInviteDeny = (await snapshot(pending.body.tenantId))[0];
+      const invite = await request(
+        ctx,
+        'POST',
+        `/tenants/${pending.body.tenantId}/invites`,
+        attendee,
+        {
+          email: `db17-${registrationKey}@example.test`,
+          role: 'Scanner',
+        },
+        { 'idempotency-key': randomUUID() },
+      );
+      expectStatus(invite, 409, 'TENANT_LIMIT_REACHED');
+      assert.deepEqual((await snapshot(pending.body.tenantId))[0], beforeInviteDeny);
       return;
     }
     if (caseId === 'DB-16') {

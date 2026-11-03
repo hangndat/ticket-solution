@@ -1,8 +1,0 @@
----
-description: "Request when lean-ctx MCP fails (Tool ctx_call was not found) or native Grep/Glob denied — CallDynamicTool + hook repair"
-alwaysApply: false
----
-
-# Adapter Cursor
-
-Đọc và áp dụng [nguồn chuẩn](../../docs/agents/setup/leanctx-cursor.md) khi rule được kích hoạt. Chỉnh policy tại nguồn chuẩn; metadata host giữ ở adapter này.

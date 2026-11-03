@@ -1,11 +1,11 @@
 import {
-  createCipheriv,
   createHash,
   randomBytes,
   randomUUID,
 } from 'node:crypto';
 import type { Prisma } from './generated/prisma/client';
 import { ApprovalError, APPROVAL_ERROR_CODES } from './approval-error';
+import { sealCredentialToken, type CredentialKeyInput } from './credential-crypto';
 import {
   assertOpenForIssuance,
   dbClock,
@@ -118,25 +118,6 @@ function commandFor(decision: ApprovalDecision): string {
   return decision === 'approve' ? APPROVE_COMMAND : DENY_COMMAND;
 }
 
-function sealCredentialToken(
-  token: string,
-  keyMaterial: string,
-): { tokenHash: string; encryptedToken: string; kid: string } {
-  const tokenHash = createHash('sha256').update(token).digest('hex');
-  const key = createHash('sha256').update(keyMaterial).digest();
-  const iv = randomBytes(12);
-  const cipher = createCipheriv('aes-256-gcm', key, iv);
-  const ciphertext = Buffer.concat([
-    cipher.update(token, 'utf8'),
-    cipher.final(),
-  ]);
-  const tag = cipher.getAuthTag();
-  const encryptedToken = Buffer.concat([iv, tag, ciphertext]).toString(
-    'base64url',
-  );
-  return { tokenHash, encryptedToken, kid: 'local-v1' };
-}
-
 function storedRejection(
   response: Prisma.JsonValue | null,
 ): Omit<ApprovalRejection, 'operationId'> | null {
@@ -211,7 +192,7 @@ export async function holdCodeForReview(
  */
 export async function decideRedemption(
   tx: Prisma.TransactionClient,
-  credentialKeyMaterial: string,
+  credentialKeyMaterial: CredentialKeyInput,
   input: DecideRedemptionInput,
 ): Promise<ApprovalOutcome> {
   await requireTenantPermission(tx, {
@@ -369,7 +350,7 @@ export function unwrapApprovalOutcome(outcome: ApprovalOutcome): ApprovalResult 
 
 async function applyDecision(
   tx: Prisma.TransactionClient,
-  credentialKeyMaterial: string,
+  credentialKeyMaterial: CredentialKeyInput,
   input: DecideRedemptionInput,
   operationId: string,
 ): Promise<Omit<ApprovalResult, 'replayed'>> {
@@ -641,7 +622,7 @@ async function denyPending(
 
 async function approvePending(
   tx: Prisma.TransactionClient,
-  credentialKeyMaterial: string,
+  credentialKeyMaterial: CredentialKeyInput,
   input: DecideRedemptionInput,
   request: RequestRow,
   operationId: string,
