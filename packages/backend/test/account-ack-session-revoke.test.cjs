@@ -312,7 +312,7 @@ test(
 
       const issued = unwrapRedeemOutcome(
         await withTenant(db, tenantId, (tx) =>
-          redeemAndIssueTicket(tx, HMAC, 'd13-ack-cred', {
+          redeemAndIssueTicket(tx, HMAC, 'd13-ack-cred-material-at-least-16', {
             tenantId,
             eventId,
             actorUserId: guest.userId,
