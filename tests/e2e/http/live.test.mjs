@@ -4253,6 +4253,28 @@ for (const caseId of CASE_IDS) {
       unsigned.search = '';
       const direct = await fetch(unsigned);
       assert.equal(direct.status, 403, 'unsigned object read must be private');
+      if (process.env.E2E_JOB07_EXPIRY === '1') {
+        const requireBackend = createRequire(new URL('../../../packages/backend/package.json', import.meta.url));
+        const { createPresignedPutUrl } = requireBackend('./dist');
+        const bucket = required(process.env.MINIO_BUCKET_ASSETS, 'isolated asset bucket');
+        const pathPrefix = `/${encodeURIComponent(bucket)}/`;
+        assert.ok(signed.pathname.startsWith(pathPrefix), 'asset capability must target isolated bucket');
+        const short = createPresignedPutUrl({
+          endpoint: required(process.env.MINIO_ENDPOINT, 'isolated MinIO endpoint'),
+          accessKey: required(process.env.MINIO_ACCESS_KEY, 'isolated MinIO access key'),
+          secretKey: required(process.env.MINIO_SECRET_KEY, 'isolated MinIO secret key'),
+          bucket, region: required(process.env.MINIO_REGION, 'isolated MinIO region'),
+        }, { objectKey: decodeURIComponent(signed.pathname.slice(pathPrefix.length)),
+          contentType: 'image/png', expiresSeconds: 60 });
+        const shortUrl = new URL(short.uploadUrl);
+        assert.equal(shortUrl.searchParams.get('X-Amz-Expires'), '60');
+        assert.equal((await fetch(shortUrl, { method: 'PUT', headers: { 'content-type': 'image/png' }, body: png })).status, 200);
+        await new Promise((resolve) => setTimeout(resolve, Math.max(0, short.expiresAt.getTime() - Date.now()) + 2000));
+        const expired = await fetch(shortUrl, { method: 'PUT', headers: { 'content-type': 'image/png' }, body: png });
+        assert.equal(expired.status, 403, 'expired signed PUT must be rejected by storage');
+        assert.match(await expired.text(), /expired/i);
+        t.diagnostic(JSON.stringify({ job07ExpiryVerified: true, ttlSeconds: 60, expiredStatus: expired.status }));
+      }
       const exportsPath = `/tenants/${f.tenantId}/events/${f.eventId}/exports`;
       const created = await request(ctx, 'POST', exportsPath, owner, { format: 'csv', filter: { states: ['ACTIVE'] } },
         { 'idempotency-key': randomUUID() });
