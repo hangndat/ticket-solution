@@ -195,6 +195,35 @@ export async function importRealms(state, realmPaths) {
   }
 }
 
+/** Grant only the run-scoped erasure service account Keycloak user management. */
+export async function provisionErasureClient(state) {
+  const token = await keycloakAdminToken(state);
+  const realm = encodeURIComponent(state.realm);
+  const get = async (path) => {
+    const response = await adminRequest(state, token, path);
+    if (!response.ok)
+      throw new Error(`BLOCKED: Keycloak erasure setup HTTP ${response.status}`);
+    return response.json();
+  };
+  const client = (await get(`/realms/${realm}/clients?clientId=e2e-erasure`))
+    .find((item) => item.clientId === 'e2e-erasure');
+  const management = (await get(`/realms/${realm}/clients?clientId=realm-management`))
+    .find((item) => item.clientId === 'realm-management');
+  if (!client?.id || !management?.id)
+    throw new Error('BLOCKED: Keycloak erasure/realm-management client missing');
+  const service = await get(`/realms/${realm}/clients/${client.id}/service-account-user`);
+  const role = await get(`/realms/${realm}/clients/${management.id}/roles/manage-users`);
+  if (!service?.id || !role?.id)
+    throw new Error('BLOCKED: Keycloak erasure service account/role missing');
+  const granted = await adminRequest(
+    state, token,
+    `/realms/${realm}/users/${service.id}/role-mappings/clients/${management.id}`,
+    { method: 'POST', body: JSON.stringify([role]) },
+  );
+  if (!granted.ok)
+    throw new Error(`BLOCKED: Keycloak erasure role grant HTTP ${granted.status}`);
+}
+
 export async function deleteRealms(state, names) {
   const token = await keycloakAdminToken(state);
   for (const name of names.filter(Boolean)) {

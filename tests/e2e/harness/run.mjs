@@ -84,9 +84,11 @@ const httpCases = [
   'DB-10',
   'DB-11',
   'DB-12',
+  'DB-13',
   'DB-14',
   'DB-15',
   'DB-16',
+  'DB-18',
   'JOB-04',
   'PLAT-03',
   'WEB-04',
@@ -124,6 +126,9 @@ const caseIds = match
     : mode === 'smoke'
       ? smoke
       : allBrowserCases;
+if (caseIds.includes('DB-19') && (mode !== 'http' || caseIds.length !== 1)) {
+  throw new Error('DB-19 rotation fixture requires isolated HTTP run: --case=DB-19');
+}
 // Khớp điều kiện `httpNeedsFrontend` bên dưới: HTTP thuần không đụng `.next`.
 const laneNeedsFrontend =
   mode !== 'http' ||
@@ -334,7 +339,7 @@ if (mode === 'list' || args.includes('--list')) {
       JSON.parse(readFileSync(resolve(state.dir, 'seed-result.json'), 'utf8')),
     );
     const rawManifest = JSON.parse(readFileSync(state.manifestPath, 'utf8'));
-    if (rawManifest.cases['WEB-10'] || rawManifest.cases['PORT-08']) {
+    if (rawManifest.cases['WEB-10'] || rawManifest.cases['PORT-08'] || rawManifest.cases['DB-18']) {
       const web10 = rawManifest.cases['WEB-10'];
       const catalogListPaths = web10
         ? [
@@ -368,6 +373,10 @@ if (mode === 'list' || args.includes('--list')) {
         routes: {},
       });
       rawManifest.runtime.faultControlPath = state.faultControlPath;
+      if (rawManifest.cases['DB-18']) {
+        state.idpFaultHitPath = resolve(state.dir, 'idp-delete-fault-hit.json');
+        rawManifest.runtime.idpFaultHitPath = state.idpFaultHitPath;
+      }
     }
     if (state.origins.faultPortal) {
       rawManifest.cases['PLAT-05'].data.unconfiguredPortalOrigin =
@@ -446,7 +455,16 @@ if (mode === 'list' || args.includes('--list')) {
       'worker',
       process.execPath,
       [resolve(ROOT, 'apps/worker/dist/main.js')],
-      common,
+      caseIds.includes('DB-18')
+        ? {
+            ...common,
+            KEYCLOAK_ERASURE_ENABLED: '1',
+            KEYCLOAK_BASE_URL: state.origins.auth,
+            KEYCLOAK_REALM: state.realm,
+            KEYCLOAK_ERASURE_CLIENT_ID: 'e2e-erasure',
+            KEYCLOAK_ERASURE_CLIENT_SECRET: state.clientSecrets['e2e-erasure'],
+          }
+        : common,
     );
     await waitFor('API health', () =>
       getLocalJson(state, state.origins.api, '/v1/health'),

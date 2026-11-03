@@ -1,5 +1,7 @@
 # HTTP fixture contract
 
+DB-18 dùng owner riêng, `data.controlDatabaseUrl` của run và service account `e2e-erasure` chỉ có Keycloak `realm-management/manage-users`. Case H gọi POST bằng bearer thật, kiểm bearer bị revoke, IdP user 200→404, trạng thái COMPLETED/DELETED, PII được scrub và audit được giữ.
+
 Runner dùng `E2E_MANIFEST` schemaVersion 1 và chỉ đọc `cases[ID].accounts` của từng ca. `runtime.httpClientId` = `e2e-http`, `runtime.httpClientSecret` do harness cấp trong manifest private. Token lấy bằng confidential password grant từ Keycloak realm `e2e-<runId>`; runner không in credential/token/manifest. API và Auth origins phải HTTPS. TLS trust và DNS preload do coordinator cấp cho process Node.
 
 | Case    | Fixture bắt buộc                                                                                                                                                                                                                                                            |
