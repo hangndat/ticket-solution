@@ -294,6 +294,7 @@ export const catalog = {
     b('portal-audit-codes', 'H-A1/H-C1/H-P-AUDIT'),
     b('o06-retention-db', 'O06 DB clocks'),
     b('o06-retention-db', 'O06 PII writer'),
+    b('o06-retention-db', 'O06 POL-02 50k attendee'),
   ],
   'POL-03': [
     b('minio-real', 'MinIO'),
@@ -381,7 +382,7 @@ export const notes = {
   'POL-01':
     'D scrub/retry/tombstone đạt; metric slaOverdue fail 0 vs admin count 1 do runtime RLS; chưa đủ kết luận toàn bộ SLA.',
   'POL-02':
-    'D biên 365 ngày, ends_at NULL, CANCELLED dùng cancelled_at, PII writer/sweep row lock hai thứ tự, tenant isolation, replay và giữ ticket/check-in/KPI input. Owner giảm AC: xóa audit vật lý 730 ngày và restore re-sweep chuyển task riêng; cần ops đo event lớn.',
+    'D biên 365 ngày, ends_at NULL, CANCELLED dùng cancelled_at, PII writer/sweep row lock hai thứ tự, tenant isolation, replay và giữ ticket/check-in/KPI input. Probe 50k attendee/request đo apply local dưới 60s; audit 729 ngày hiện, 731 ngày ẩn. Owner giảm AC: xóa audit vật lý 730 ngày và restore re-sweep chuyển task riêng; chưa đo worker process/VPS đích.',
   'POL-03':
     'D clock ends_at + 90 ngày kể cả CANCELLED, event fence, lease/reclaim, delete 404 và token cũ không finalize. F01 còn mở: stale PUT sau purge có thể tái tạo bytes; thiếu MinIO barrier/object-store write fence, signed URL expiry và ops restore.',
   'POL-04': 'Privacy copy và restore/RPO/RTO cần bằng chứng browser/ops riêng.',
