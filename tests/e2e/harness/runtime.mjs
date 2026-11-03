@@ -934,6 +934,14 @@ export function processEnvironment(state, extra = {}) {
         }
       : {}),
     TICKET_CREDENTIAL_KEY: state.secrets.credential,
+    ...(state.caseIds.includes('DB-19')
+      ? {
+          TICKET_CREDENTIAL_KID: 'local-v2',
+          TICKET_CREDENTIAL_LEGACY_KEYS: JSON.stringify({
+            'local-v1': state.secrets.credentialLegacy,
+          }),
+        }
+      : {}),
     ACCOUNT_DELETION_TOMBSTONE_CURRENT_KEY_ID: 'e2e',
     ACCOUNT_DELETION_TOMBSTONE_KEYRING_JSON: JSON.stringify([
       {
@@ -1162,6 +1170,7 @@ export async function createRuntime(caseIds, options = {}) {
       hmac: randomBytes(32).toString('hex'),
       hmacLegacy: randomBytes(32).toString('hex'),
       credential: randomBytes(24).toString('hex'),
+      credentialLegacy: randomBytes(24).toString('hex'),
     },
   };
   state.dir = resolve(E2E, '.artifacts', id);

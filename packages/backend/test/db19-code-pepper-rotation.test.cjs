@@ -25,6 +25,9 @@ const {
   unwrapRedeemOutcome,
   IssueError,
   ISSUE_ERROR_CODES,
+  readCredentialKeyringEnvironment,
+  sealCredentialToken,
+  openCurrentCredentialForQr,
 } = require('../dist');
 
 const docker = (...args) =>
@@ -38,6 +41,7 @@ const MIGRATIONS = migrationFiles();
 const PEPPER_V1 = 'db19-pepper-v1-16bytes-min!';
 const PEPPER_V2 = 'db19-pepper-v2-16bytes-min!';
 const CRED_KEY = 'db19-credential-key-material';
+const CRED_KEY_V2 = 'db19-credential-key-material-v2';
 
 async function startIsolatedPostgres() {
   const name = 'ticket-db19-' + randomBytes(4).toString('hex');
@@ -285,6 +289,57 @@ test(
         ),
       );
       assert.equal(issued.state, 'ACTIVE');
+
+      // The persisted kid selects the old key after rotation. Removing that
+      // key or revoking the row must never resurrect an admissible credential.
+      const credentials = await withTenant(db, tenantId, (tx) => tx.$queryRaw`
+        SELECT kid, token_hash, encrypted_token, status
+        FROM ticket_credentials
+        WHERE tenant_id=${tenantId}::uuid AND ticket_id=${issued.ticketId}::uuid
+      `);
+      assert.equal(credentials.length, 1);
+      const oldCredential = credentials[0];
+      assert.equal(oldCredential.kid, 'local-v1');
+      assert.equal(oldCredential.status, 'ACTIVE');
+      const rotatedRing = readCredentialKeyringEnvironment({
+        TICKET_CREDENTIAL_KEY: CRED_KEY_V2,
+        TICKET_CREDENTIAL_KID: 'local-v2',
+        TICKET_CREDENTIAL_LEGACY_KEYS: JSON.stringify({ 'local-v1': CRED_KEY }),
+      });
+      const opened = openCurrentCredentialForQr({
+        encryptedToken: oldCredential.encrypted_token,
+        expectedTokenHash: oldCredential.token_hash,
+        kid: oldCredential.kid,
+        credentialKeyMaterial: rotatedRing,
+      });
+      assert.equal(opened.tokenHash, oldCredential.token_hash);
+      assert.equal(sealCredentialToken('new-token', rotatedRing).kid, 'local-v2');
+      for (const ring of [
+        readCredentialKeyringEnvironment({ TICKET_CREDENTIAL_KEY: CRED_KEY_V2, TICKET_CREDENTIAL_KID: 'local-v2' }),
+        { currentKid: 'local-v2', keys: { 'local-v2': CRED_KEY_V2, 'local-v1': 'wrong-old-key-material' } },
+      ]) {
+        assert.throws(() => openCurrentCredentialForQr({
+          encryptedToken: oldCredential.encrypted_token,
+          expectedTokenHash: oldCredential.token_hash,
+          kid: oldCredential.kid,
+          credentialKeyMaterial: ring,
+        }));
+      }
+      assert.throws(() => readCredentialKeyringEnvironment({
+        TICKET_CREDENTIAL_KEY: CRED_KEY_V2,
+        TICKET_CREDENTIAL_KID: 'local-v2',
+        TICKET_CREDENTIAL_LEGACY_KEYS: JSON.stringify({ 'local-v2': CRED_KEY }),
+      }), /invalid/);
+      await withTenant(db, tenantId, (tx) => tx.$executeRaw`
+        UPDATE ticket_credentials SET status='REVOKED'
+        WHERE tenant_id=${tenantId}::uuid AND ticket_id=${issued.ticketId}::uuid
+      `);
+      const active = await withTenant(db, tenantId, (tx) => tx.$queryRaw`
+        SELECT kid FROM ticket_credentials
+        WHERE tenant_id=${tenantId}::uuid AND ticket_id=${issued.ticketId}::uuid
+          AND status='ACTIVE'
+      `);
+      assert.equal(active.length, 0);
 
       // Same pepper: a consumed code is rejected with CODE_CONSUMED, never
       // re-issued into a second ticket.

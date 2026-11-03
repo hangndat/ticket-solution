@@ -1554,10 +1554,132 @@ for (const caseId of CASE_IDS) {
         afterBoth,
         'rotation must not resurrect consumed code',
       );
+      const credentialsBefore = await db03Query(f,
+        'SELECT version, kid, status, token_hash, encrypted_token FROM ticket_credentials WHERE tenant_id=$1::uuid AND ticket_id=$2::uuid ORDER BY version',
+        [f.tenantId, issued.body.ticketId]);
+      assert.equal(credentialsBefore.length, 1);
+      assert.equal(credentialsBefore[0].kid, 'local-v2', 'HTTP issuance must use current credential key');
+      assert.equal(credentialsBefore[0].status, 'ACTIVE');
+      assert.ok(!credentialsBefore[0].encrypted_token.includes(issued.body.ticketId));
       const runDir = required(process.env.E2E_RUN_DIR, 'DB-19 E2E_RUN_DIR');
       const privateState = JSON.parse(readFileSync(`${runDir}/seed-state.json`, 'utf8'));
+      const requireBackend = createRequire(new URL('../../../packages/backend/package.json', import.meta.url));
+      const backend = requireBackend('./dist');
+      // Model a still-active credential minted before rotation in the live DB.
+      const legacy = backend.sealCredentialToken('db19-legacy-opaque-token', privateState.secrets.credentialLegacy);
+      await db03Query(f,
+        'UPDATE ticket_credentials SET kid=$3, token_hash=$4, encrypted_token=$5 WHERE tenant_id=$1::uuid AND ticket_id=$2::uuid AND status=\'ACTIVE\'',
+        [f.tenantId, issued.body.ticketId, legacy.kid, legacy.tokenHash, legacy.encryptedToken]);
+      const ring = backend.readCredentialKeyringEnvironment({
+        TICKET_CREDENTIAL_KEY: privateState.secrets.credential,
+        TICKET_CREDENTIAL_KID: 'local-v2',
+        TICKET_CREDENTIAL_LEGACY_KEYS: JSON.stringify({ 'local-v1': privateState.secrets.credentialLegacy }),
+      });
+      assert.equal(backend.openCurrentCredentialForQr({
+        encryptedToken: legacy.encryptedToken, expectedTokenHash: legacy.tokenHash,
+        kid: legacy.kid, credentialKeyMaterial: ring,
+      }).token, 'db19-legacy-opaque-token');
+      await db03Query(f,
+        'INSERT INTO tenant_limits (tenant_id, email_per_day) VALUES ($1::uuid, 100) ON CONFLICT (tenant_id) DO UPDATE SET email_per_day=100',
+        [f.tenantId]);
+      // Exercise the worker's real claim/render/ack path against the live DB.
+      const relayDb = backend.createDatabase(process.env.DATABASE_URL, 3);
+      const delivered = [];
+      const email = {
+        async sendTicketIssued(payload) {
+          delivered.push(payload);
+          return { providerRef: `db19:${delivered.length}`, providerStatus: 'ACCEPTED' };
+        },
+      };
+      try {
+        const firstRelay = await backend.relayOutboxOnce(relayDb, email, 'db19-h-relay', 10, {
+          credentialKeyMaterial: ring, env: process.env, apns: undefined,
+        });
+        assert.ok(firstRelay.completed >= 1,
+          `old-kid ACTIVE credential must be delivered: ${JSON.stringify(firstRelay)}`);
+        const oldMail = delivered.find((item) => item.ticketId === issued.body.ticketId);
+        assert.ok(oldMail, 'outbox must emit the old-kid QR');
+        assert.equal(oldMail.credentialTokenHash, legacy.tokenHash);
+        assert.deepEqual(oldMail.qrPng, await backend.renderCredentialQrPng({
+          tenantId: f.tenantId, eventId: f.eventId,
+          ticketId: issued.body.ticketId, credentialVersion: 1,
+          token: 'db19-legacy-opaque-token',
+        }));
+        // A supported ciphertext under an unknown kid must not reach email.
+        const unsupported = backend.sealCredentialToken('db19-unsupported-token', ring);
+        await db03Query(f,
+          'UPDATE ticket_credentials SET kid=$3, token_hash=$4, encrypted_token=$5 WHERE tenant_id=$1::uuid AND ticket_id=$2::uuid AND status=\'ACTIVE\'',
+          [f.tenantId, current.body.ticketId, 'retired-kid', unsupported.tokenHash, unsupported.encryptedToken]);
+        // The second issuance may already have relayed; reissue it over HTTP to queue another outbox row.
+        const unsupportedReissue = await request(ctx, 'POST',
+          gatePath(f, `tickets/${current.body.ticketId}/reissue`), owner,
+          { tenantId: f.tenantId, reason: 'DB-19 unsupported key' },
+          { 'idempotency-key': randomUUID() });
+        expectStatus(unsupportedReissue, 200);
+        await db03Query(f,
+          'UPDATE ticket_credentials SET kid=$3 WHERE tenant_id=$1::uuid AND ticket_id=$2::uuid AND status=\'ACTIVE\'',
+          [f.tenantId, current.body.ticketId, 'retired-kid']);
+        const sentBeforeUnsupported = delivered.length;
+        const unsupportedRelay = await backend.relayOutboxOnce(relayDb, email, 'db19-h-relay', 10, {
+          credentialKeyMaterial: ring, env: process.env, apns: undefined,
+        });
+        assert.ok(unsupportedRelay.claimed >= 1 && unsupportedRelay.failed >= 1,
+          'worker must process and reject the unsupported kid');
+        assert.equal(delivered.length, sentBeforeUnsupported,
+          'unsupported kid must not emit QR');
+      } finally {
+        await relayDb.$disconnect();
+      }
+      const rotated = await request(ctx, 'POST',
+        gatePath(f, `tickets/${issued.body.ticketId}/reissue`), owner,
+        { tenantId: f.tenantId, reason: 'DB-19 credential rotation' },
+        { 'idempotency-key': randomUUID() });
+      expectStatus(rotated, 200);
+      const credentialsAfter = await db03Query(f,
+        'SELECT version, kid, status FROM ticket_credentials WHERE tenant_id=$1::uuid AND ticket_id=$2::uuid ORDER BY version',
+        [f.tenantId, issued.body.ticketId]);
+      assert.deepEqual(credentialsAfter.map((c) => c.status), ['REVOKED', 'ACTIVE']);
+      assert.deepEqual(credentialsAfter.map((c) => c.kid), ['local-v1', 'local-v2']);
+      const revokedVersionCount = delivered.filter((item) =>
+        item.ticketId === issued.body.ticketId && item.credentialVersion === 1).length;
+      const reissueDb = backend.createDatabase(process.env.DATABASE_URL, 3);
+      try {
+        const reissueRelay = await backend.relayOutboxOnce(reissueDb, email, 'db19-h-reissue', 10, {
+          credentialKeyMaterial: ring, env: process.env, apns: undefined,
+        });
+        assert.ok(reissueRelay.completed >= 1, 'current reissue must be delivered');
+      } finally {
+        await reissueDb.$disconnect();
+      }
+      assert.equal(delivered.filter((item) =>
+        item.ticketId === issued.body.ticketId && item.credentialVersion === 1).length,
+      revokedVersionCount, 'revoked old credential must not emit another QR');
+      assert.ok(delivered.some((item) =>
+        item.ticketId === issued.body.ticketId && item.credentialVersion === 2),
+      'HTTP reissue must emit the current credential QR');
+      const revokeBeforeRelay = await request(ctx, 'POST',
+        gatePath(f, `tickets/${issued.body.ticketId}/reissue`), owner,
+        { tenantId: f.tenantId, reason: 'DB-19 revoke before relay' },
+        { 'idempotency-key': randomUUID() });
+      expectStatus(revokeBeforeRelay, 200);
+      await db03Query(f,
+        'UPDATE ticket_credentials SET status=\'REVOKED\' WHERE tenant_id=$1::uuid AND ticket_id=$2::uuid AND version=3',
+        [f.tenantId, issued.body.ticketId]);
+      const beforeRevokedRelay = delivered.length;
+      const revokedDb = backend.createDatabase(process.env.DATABASE_URL, 3);
+      try {
+        const revokedRelay = await backend.relayOutboxOnce(revokedDb, email, 'db19-h-revoked', 10, {
+          credentialKeyMaterial: ring, env: process.env, apns: undefined,
+        });
+        assert.ok(revokedRelay.claimed >= 1 && revokedRelay.failed >= 1,
+          'worker must process and reject the revoked credential');
+      } finally {
+        await revokedDb.$disconnect();
+      }
+      assert.equal(delivered.length, beforeRevokedRelay,
+        'revoked current credential must not emit QR');
       const exposed = JSON.stringify([issued.body, current.body]) + readFileSync(`${runDir}/api.log`, 'utf8');
-      for (const material of [privateState.secrets.hmacLegacy, privateState.secrets.hmac, privateState.secrets.credential]) {
+      for (const material of [privateState.secrets.hmacLegacy, privateState.secrets.hmac, privateState.secrets.credential, privateState.secrets.credentialLegacy]) {
         assert.ok(!exposed.includes(material), 'DB-19 API response/log must not reveal key material');
       }
       return;

@@ -336,7 +336,7 @@ type Deps = {
   users: IdentityUserRepository | null;
   bootError: IdentityError | null;
   hmac: CodeHmacConfig | null;
-  credentialKey?: string | null;
+  credentialKey?: import('@ticket/backend').CredentialKeyInput | null;
   env?: NodeJS.ProcessEnv;
   objectStore?: ObjectStore | null;
 };
