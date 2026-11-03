@@ -16,6 +16,7 @@ import {
   MC_IMAGE,
   ROOT,
 } from '../harness/runtime.mjs';
+import { finalizeRun } from '../harness/finalize-run.mjs';
 
 // Explicit opt-in: this test creates and destroys only a previously absent lane16.
 test(
@@ -72,7 +73,7 @@ test(
     });
     let state;
     try {
-      for (const outcome of ['success', 'failure']) {
+      for (const outcome of ['success', 'failure', 'cleanup-failure']) {
         state = await createRuntime(['SEC-05'], { lane: held });
         const observer = state.minio.identities.observer;
         const bucket = state.minio.buckets.imports;
@@ -135,12 +136,49 @@ test(
           0,
           'observer cannot write objects',
         );
+        if (outcome === 'cleanup-failure') {
+          // A nonexistent run-owned user forces a real mc cleanup failure;
+          // all real resources must still be removed by the remaining steps.
+          state.minio.created.identities.push({
+            accessKey: `e2e-${state.id}-missing`,
+          });
+        }
+        const completedState = state;
+        state = undefined;
         try {
           if (outcome === 'failure') throw new Error('synthetic run failure');
         } catch (error) {
           assert.equal(error.message, 'synthetic run failure');
         } finally {
-          await destroyRuntime(state);
+          const result = await finalizeRun(
+            {
+              status: outcome === 'failure' ? 'FAIL' : 'PASS',
+              results: [{ exitCode: outcome === 'failure' ? 1 : 0 }],
+              sourceProvenance: { evidenceExactShaEligible: true },
+            },
+            () => destroyRuntime(completedState),
+          );
+          assert.equal(
+            result.summary.status,
+            outcome === 'success' ? 'PASS' : 'FAIL',
+          );
+          assert.equal(
+            result.summary.results[0].exitCode,
+            outcome === 'failure' ? 1 : 0,
+          );
+          assert.equal(
+            result.summary.cleanup.status,
+            outcome === 'cleanup-failure' ? 'FAIL' : 'PASS',
+          );
+          assert.equal(
+            result.exitCode,
+            outcome === 'success' ? 0 : outcome === 'failure' ? 1 : 2,
+          );
+          if (outcome === 'cleanup-failure')
+            assert.equal(
+              result.summary.sourceProvenance.evidenceExactShaEligible,
+              false,
+            );
         }
         assert.equal(
           mc(root, ['admin', 'user', 'list', 'e2e']).status,
@@ -168,17 +206,87 @@ test(
           'run bucket removed',
         );
         assert.equal(
-          existsSync(join(state.dir, 'lane-object-cleanup.log')),
-          false,
+          existsSync(join(completedState.dir, 'lane-object-cleanup.log')),
+          outcome === 'cleanup-failure',
           'object cleanup reported no failures',
         );
         assert.equal(
-          existsSync(join(state.dir, 'lane-cleanup.log')),
-          false,
+          existsSync(join(completedState.dir, 'lane-cleanup.log')),
+          outcome === 'cleanup-failure',
           'lane cleanup reported no failures',
         );
         state = undefined;
       }
+      let partial;
+      await assert.rejects(
+        createRuntime(['SEC-05'], {
+          lane: held,
+          onMinioProvisioned(candidate, role) {
+            if (role === 'observer') {
+              partial = candidate;
+              throw new Error('synthetic mid-bootstrap failure');
+            }
+          },
+        }),
+        (error) => {
+          assert.match(error.message, /BLOCKED: MinIO/);
+          assert.ok(error.runtimeState === partial);
+          assert.equal(partial.cleanupAttempted, true);
+          assert.equal(partial.cleanupError, null);
+          return true;
+        },
+      );
+      assert.ok(
+        partial.minio.created.identities.some(
+          (identity) => identity === partial.minio.identities.observer,
+        ),
+      );
+      assert.equal(
+        existsSync(join(partial.dir, 'lane-object-cleanup.log')),
+        false,
+      );
+      assert.equal(existsSync(join(partial.dir, 'lane-cleanup.log')), false);
+      const admin = (args) =>
+        docker(
+          [
+            'run',
+            '--rm',
+            '--network',
+            `${lane.project}_default`,
+            '--env',
+            'MC_HOST_e2e',
+            '--entrypoint',
+            'mc',
+            MC_IMAGE,
+            ...args,
+          ],
+          {
+            env: {
+              ...process.env,
+              MC_HOST_e2e: `http://e2e-access:${laneSecrets(lane).minio}@minio:9000`,
+            },
+          },
+        );
+      assert.equal(admin(['admin', 'user', 'list', 'e2e']).status, 0);
+      assert.notEqual(
+        admin([
+          'admin',
+          'user',
+          'info',
+          'e2e',
+          partial.minio.identities.observer.accessKey,
+        ]).status,
+        0,
+      );
+      assert.notEqual(
+        admin(['admin', 'policy', 'info', 'e2e', `e2e-observer-${partial.id}`])
+          .status,
+        0,
+      );
+      assert.notEqual(
+        admin(['stat', `e2e/${partial.minio.buckets.imports}`]).status,
+        0,
+      );
     } finally {
       if (state) await destroyRuntime(state);
       if (existsSync(lane.composePath)) {

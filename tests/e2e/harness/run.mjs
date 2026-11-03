@@ -32,6 +32,7 @@ import {
 } from './lane.mjs';
 import { validateManifest } from '../validation/validate.mjs';
 import { assertSourceProvenanceStable } from './source-provenance.mjs';
+import { finalizeRun } from './finalize-run.mjs';
 
 const requireRoot = createRequire(resolve(ROOT, 'package.json'));
 const requireBackend = createRequire(
@@ -280,15 +281,22 @@ if (mode === 'list' || args.includes('--list')) {
   let cleaning;
   let laneHeld = null;
   let frontendHeld = null;
+  let summary;
   // Lock chỉ được nhả sau khi tài nguyên của run đã bị xoá.
   const cleanup = () =>
     (cleaning ||= (async () => {
+      const failures = [];
       try {
-        if (state) await destroyRuntime(state);
+        if (state?.cleanupAttempted) {
+          if (state.cleanupError) failures.push(state.cleanupError);
+        } else if (state) await destroyRuntime(state);
+      } catch {
+        failures.push('runtime cleanup failed; see private cleanup logs');
       } finally {
-        if (frontendHeld) releaseFrontend(frontendHeld);
-        if (laneHeld) releaseLane(laneHeld);
+        try { if (frontendHeld) releaseFrontend(frontendHeld); } catch { failures.push('frontend lock release failed'); }
+        try { if (laneHeld) releaseLane(laneHeld); } catch { failures.push('lane lock release failed'); }
       }
+      return failures.length ? failures.join('; ') : null;
     })());
   const interrupt = async () => {
     process.exitCode = 130;
@@ -852,7 +860,7 @@ if (mode === 'list' || args.includes('--list')) {
       : results.some((result) => result.exitCode)
         ? 'FAIL'
         : 'PASS';
-    privateJson(resolve(state.dir, 'summary.json'), {
+    summary = {
       runId: state.id,
       lane: state.lane ? state.lane.name : null,
       mode,
@@ -866,19 +874,10 @@ if (mode === 'list' || args.includes('--list')) {
         commitStable: provenanceEnd.stable,
         evidenceExactShaEligible: provenanceEnd.evidenceExactShaEligible,
       },
-    });
-    console.log(
-      JSON.stringify({
-        runId: state.id,
-        lane: state.lane ? state.lane.name : null,
-        mode,
-        status,
-        results,
-        report: `tests/e2e/.artifacts/${state.id}/summary.json`,
-      }),
-    );
+    };
     process.exitCode = status === 'PASS' ? 0 : 1;
   } catch (error) {
+    if (!state && error.runtimeState) state = error.runtimeState;
     process.exitCode = 2;
     // No full error stack, env, manifest or command argv in the shared report.
     const message = String(error.message || 'setup_failed').replace(
@@ -908,7 +907,7 @@ if (mode === 'list' || args.includes('--list')) {
           provenanceError: String(provenanceError.message || provenanceError),
         };
       }
-      privateJson(resolve(state.dir, 'summary.json'), {
+      summary = {
         runId: state.id,
         lane: state.lane ? state.lane.name : null,
         mode,
@@ -916,10 +915,21 @@ if (mode === 'list' || args.includes('--list')) {
         status: 'BLOCKED',
         reason: message,
         sourceProvenance,
-      });
+      };
     }
   } finally {
-    await cleanup();
+    const finalized = await finalizeRun(summary, cleanup);
+    const { cleanupError } = finalized;
+    summary = finalized.summary;
+    if (summary || cleanupError) process.exitCode = finalized.exitCode;
+    if (cleanupError) {
+      process.exitCode = 2;
+      console.error(`BLOCKED: cleanup failed; see private cleanup logs`);
+    }
+    if (summary && state) {
+      privateJson(resolve(state.dir, 'summary.json'), summary);
+      console.log(JSON.stringify({ runId: state.id, lane: state.lane?.name ?? null, mode, status: summary.status, results: summary.results, report: `tests/e2e/.artifacts/${state.id}/summary.json` }));
+    }
     process.removeListener('SIGINT', interrupt);
     process.removeListener('SIGTERM', interrupt);
   }
