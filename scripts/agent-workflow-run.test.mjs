@@ -14,9 +14,12 @@ function fixture(fn) {
  writeFileSync(orca,`#!/usr/bin/env node
 const fs=require('node:fs'),a=process.argv.slice(2);fs.appendFileSync(process.env.FIX_LOG,JSON.stringify(a)+'\\n');
 const value=flag=>a[a.indexOf(flag)+1];
+if(a[1]==='worker-start' && process.env.FIX_BLOCK_HANDOFF){const path=require('node:path');for(const dir of fs.readdirSync(path.join(process.cwd(),'receipts')))fs.mkdirSync(path.join(process.cwd(),'receipts',dir,'handoff.json'));}
 if(a[1]==='worker-start' && a.includes('--display-name') && !['new-child','new-top-level'].includes(value('--worktree'))) {console.log(JSON.stringify({ok:false,error:{code:'creation_flag_for_existing_worktree'}}));process.exit(1);}
 let result={};if(a[1]==='worker-start')result={runId:'run1',taskId:'task1',dispatchId:'ctx1',state:process.env.FIX_START||'ready',launch:{effective:process.env.FIX_EFFECTIVE_JSON?JSON.parse(process.env.FIX_EFFECTIVE_JSON):{agent:value('--agent'),model:value('--model'),effort:a.includes('--effort')?value('--effort'):null}}};
 if(a[1]==='worker-show')result={dispatch:{id:'ctx1',taskId:'task1',runId:process.env.FIX_RUN||'run1',status:process.env.FIX_STATUS||'completed'}};
+if(a[1]==='worker-show' && process.env.FIX_FLAT)result={dispatchId:process.env.FIX_DISPATCH||'ctx1',taskId:'task1',runId:process.env.FIX_RUN||'run1',state:process.env.FIX_STATUS||'succeeded',stage:'settled',terminalState:'reclaimable'};
+if(a[1]==='worker-start' && !a.includes('--full'))delete result.launch;
 if(a[1]==='worker-release')result={state:process.env.FIX_RELEASE||'released'};
 console.log(JSON.stringify({ok:true,result}));
 `,{mode:0o700});
@@ -32,6 +35,62 @@ console.log(JSON.stringify({ok:true,result}));
 }
 const start=['start','--task','task1','--run-id','run1','--role-id','coordinator','--cost-tier','standard','--agent','cursor','--model','composer-2.5','--employee','minh','--task-title','Minh · wave'];
 const settle=['settle','--dispatch-id','ctx1','--run-id','run1','--role-id','coordinator'];
+test('real flat Orca settlement accepts succeeded but rejects wrong identity and active state',()=>fixture(({run,calls})=>{
+ const r=run(settle,{FIX_FLAT:'1'});assert.equal(r.status,0,r.stderr);
+ const result=JSON.parse(readFileSync(JSON.parse(r.stdout).resultPath,'utf8'));
+ assert.equal(result.executionStatus,'complete');
+ const before=calls().filter(a=>a[0]==='collect').length;
+ for(const extra of [{FIX_RUN:'other'},{FIX_DISPATCH:'other'},{FIX_STATUS:'ready'}]) {
+  assert.equal(run([...settle,'--release'],{FIX_FLAT:'1',...extra}).status,1);
+ }
+ assert.equal(calls().filter(a=>a[0]==='collect').length,before);
+ assert.equal(calls().filter(a=>a[1]==='worker-release').length,0);
+}));
+test('artifact failure after launch preserves dispatch and does not restart worker',()=>fixture(({run,calls})=>{
+ const r=run(start,{FIX_BLOCK_HANDOFF:'1'});assert.equal(r.status,1,r.stderr);
+ const output=JSON.parse(r.stdout);assert.equal(output.dispatchId,'ctx1');
+ assert.equal(output.artifactStatus,'degraded');assert.equal(output.handoffPath,null);
+ assert.equal(output.nextAction,'repair_artifacts_do_not_restart_worker');
+ assert.equal(calls().filter(a=>a[1]==='worker-start').length,1);
+}));
+test('manifest and handoff add evidence without extra Orca calls or task completion claims',()=>fixture(({run,calls})=>{
+ const launched=run(start);assert.equal(launched.status,0,launched.stderr);
+ const output=JSON.parse(launched.stdout);
+ const manifest=JSON.parse(readFileSync(join(output.receiptDirectory,'dispatch-manifest.json'),'utf8'));
+ assert.deepEqual(manifest.command.args,calls().find(a=>a[1]==='worker-start'));
+ assert.equal(manifest.authority,'orca');assert.equal(manifest.employeeId,'minh');
+ assert.equal(manifest.effective,null);
+ const result=JSON.parse(readFileSync(output.resultPath,'utf8'));
+ assert.equal(result.operationStatus,'complete');assert.equal(result.executionStatus,'running');
+ assert.equal(result.acceptance,'unverified');assert.equal(result.routingStatus,'verified');
+ const handoff=JSON.parse(readFileSync(output.handoffPath,'utf8'));
+ assert.equal(handoff.resultPath,output.resultPath);assert.equal(handoff.dispatchId,'ctx1');
+ assert.ok(handoff.evidence.every(path=>statSync(path).isFile()));
+ assert.equal(statSync(output.handoffPath).mode&0o777,0o600);
+ assert.equal(calls().filter(a=>a[0]==='orchestration').length,1);
+}));
+test('unknown launch and route mismatch preserve dispatch and never imply execution success',()=>fixture(({run,calls})=>{
+ for(const env of [{FIX_START:'outcome_unknown'},{FIX_EFFECTIVE_JSON:JSON.stringify({agent:'codex',model:'wrong'})}]) {
+  const output=JSON.parse(run(start,env).stdout);
+  const result=JSON.parse(readFileSync(output.resultPath,'utf8'));
+  assert.equal(result.operationStatus,'partial');assert.equal(result.dispatchId,'ctx1');
+  assert.notEqual(result.executionStatus,'complete');assert.equal(result.acceptance,'unverified');
+  assert.equal(result.nextAction,'observe_existing_dispatch_do_not_restart');
+ }
+ assert.equal(calls().filter(a=>a[1]==='worker-start').length,2);
+}));
+test('settlement keeps execution failure separate from successful collection and retains raw receipt',()=>fixture(({run,calls})=>{
+ const output=JSON.parse(run(settle,{FIX_STATUS:'failed'}).stdout);
+ const result=JSON.parse(readFileSync(output.resultPath,'utf8'));
+ assert.equal(result.operationStatus,'complete');assert.equal(result.executionStatus,'failed');
+ assert.equal(result.acceptance,'unverified');assert.equal(result.taskId,'task1');
+ const receipt=JSON.parse(readFileSync(join(output.receiptDirectory,'settle-receipt.json'),'utf8'));
+ assert.equal(receipt.result.dispatch.status,'failed');
+ assert.equal(calls().filter(a=>a[1]==='worker-release').length,0);
+ const degraded=JSON.parse(run(settle,{FIX_COLLECT_FAIL:'1'}).stdout);
+ const partial=JSON.parse(readFileSync(degraded.resultPath,'utf8'));
+ assert.equal(partial.operationStatus,'partial');assert.equal(partial.executionStatus,'complete');
+}));
 test('company events normalize source UTC, dedupe and reject conflicting identities',()=>fixture(({dir})=>{
  const path=join(dir,'company.jsonl');
  const e={id:'checkpoint-1',employeeId:'linh',type:'checkpoint',runId:'run1',taskId:'task1',dispatchId:'ctx1',summary:'Kiểm tra card trên local.',occurredAt:'2026-10-24 08:00:00'};
