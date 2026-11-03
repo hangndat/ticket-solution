@@ -27,6 +27,7 @@ import { ReportController, ReportService } from './reporting';
 import { GateController, GateService } from './gate';
 import { CsController, CsService } from './cs';
 import { ExportController, ExportApiService } from './exports';
+import { EventCatalogService } from './event-catalog';
 import { EventAdminController, EventAdminService } from './events';
 import { DeviceTokenController, DeviceTokenService } from './device-tokens';
 import {
@@ -180,6 +181,10 @@ export async function createApp(
       {
         provide: EventAdminService,
         useValue: new EventAdminService(ticketDeps),
+      },
+      {
+        provide: EventCatalogService,
+        useValue: new EventCatalogService(ticketDeps),
       },
       {
         provide: TicketIssueService,
