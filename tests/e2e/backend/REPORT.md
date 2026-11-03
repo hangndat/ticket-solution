@@ -1,5 +1,15 @@
 # Backend E2E regression — kết quả tại baseline `022cb80fd159dad2a7ebd0eeeea07fd64391f90a`
 
+## DB-18 — kiểm kê assertion theo PLAN §6.1 và §15.2 (Issue #1030, 03/11/2026)
+
+| AC còn cần chứng minh             | Assertion thực                                                                                                                                                                                                                                                | Giới hạn còn lại                                                                                                                                                  |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ACK bền vững, phiên bị thu hồi    | D `account-ack-session-revoke.test.cjs` SEC-1 ACK/SEC-R1: ACK idempotent, revoke mọi session của actor qua hai tenant trong transaction, race raw INSERT, Gate từ chối session cũ/mở mới; `account-session-revoke.test.cjs` kiểm apply lần nữa                | Membership vẫn ACTIVE theo quyết định owner ở PLAN §15.2; D kiểm `revoked_at IS NULL` hai tenant; metadata cũ có thể bị đọc sai bởi đường bỏ qua identity/session |
+| IdP retry không bypass            | D `account-idp-erasure.test.cjs` T4–T16/SEC-D-01/05: DELETE/NOT_FOUND, 503/404/disable, tombstone deny, lease fencing; H `[DB-18] live HTTP` dùng bearer Keycloak thật, fault 503 trên Admin DELETE, REQUESTED+bị deny, retry DELETE tới COMPLETED và IdP 404 | H cần chạy trên SHA sạch để có verdict; không suy H từ adapter D                                                                                                  |
+| Dữ liệu audit/đối soát còn nguyên | D SEC-1 ACK: hai event report trước/sau bằng nhau (ticket state/quota/current check-in), ticket của actor xóa và tenant khác còn nguyên, check-in và audit giữ; `platform.test.cjs` kiểm PII scrub/audit. H kiểm audit proof và PII scrub                     | O06 TTL 365/730 ngày là POL riêng, không được chứng minh bằng một lần account deletion; rủi ro đọc metadata membership cũ như quyền thực còn lại                  |
+
+Mutation-check D: thay tạm ticket của actor từ ACTIVE sang REVOKED sau apply làm SEC-1 ACK fail tại aggregate `ticketsByState` (ACTIVE 1→0, REVOKED 0→1); thay đổi đã được hoàn nguyên trước lượt chạy sạch.
+
 ## DB-15 / DB-16 (Issue #1030)
 
 Đã bổ sung test PostgreSQL cô lập cho DB-15: đối soát confirm, reject, undo và audit history; `USED` đơn lẻ không làm tăng check-in; retry SMTP lỗi qua relay thật đi từ chưa terminal tới DEAD; cancel event giữ các số report. Test DB-16 kiểm Owner/Manager, event chưa assignment, tenant khác, cursor, clamp limit, watermark và transaction RLS. Hai selector D cũ cùng selector mới đã PASS trong lượt phát triển; cần chạy lại trên SHA sạch cuối và review độc lập.
@@ -53,6 +63,7 @@ H Keycloak/HTTP cho DB-11 **BLOCKED**: `tests/e2e/http/live.test.mjs` + `tests/e
 Thêm case `[DB-11] live HTTP` vào `tests/e2e/http/live.test.mjs` (đăng ký ở `CASE_IDS` cùng file, và ở `tests/e2e/http/entry.mjs`/`tests/e2e/harness/run.mjs` — hai danh sách case trùng lặp khác cần sửa riêng), cộng fixture generic cho DB-11 trong `tests/e2e/harness/seed.mjs` (`controlDatabaseUrl`, `formVersion`/`termsVersion`). Không dùng account/harness mới — chỉ tái dùng `owner`/`attendee`/`otherAttendee` sẵn có của mọi case để tránh rủi ro cho DB-09/DB-10.
 
 `pnpm test:e2e:http -- --case=DB-11` **PASS** qua endpoint thật + Keycloak password grant thật cho owner/attendee/otherAttendee:
+
 - Staff invite (`POST /tenants/:id/invites`, `POST /me/membership-invites/accept`): TTL đúng 48h (`security.inviteTtlSeconds`); accept thành công tạo đúng 1 membership; replay cùng actor/cùng token idempotent không tạo membership thứ hai; backdate `expires_at` qua control DB → `INVITE_INVALID_OR_EXPIRED` (422), không membership; token đúng nhưng actor verified khác email → cùng mã, không đổi membership hiện có.
 - Attendee claim (import GUESTS thật qua `/imports/files` → job → preview → commit, rồi `dispatch-preview`/`dispatch`, rồi `POST invitations/claim`): happy-path mint đúng 1 ticket và +1 `quota_buckets.allocated`; replay cùng Idempotency-Key idempotent (cùng `ticketId`, không mint thêm); replay Idempotency-Key mới trên invitation đã `CLAIMED` → `INVITATION_TOKEN_INVALID` (410), không ticket thứ hai; backdate `expires_at` qua control DB → `INVITATION_EXPIRED` (410), không ticket/quota mutation; actor khác (otherAttendee, email khác) claim invitation của attendee → `INVITATION_EMAIL_MISMATCH` (403), không ticket.
 - Cross-use cả hai chiều: token staff invite gọi `invitations/claim` → `INVITATION_TOKEN_INVALID` (410); token guest invitation gọi `me/membership-invites/accept` → `INVITE_INVALID_OR_EXPIRED` (422); không bên nào đổi membership/ticket/quota.
@@ -63,7 +74,7 @@ Evidence trên checkout sạch đúng SHA (sau commit): SHA `730c78fea5745947bcf
 
 **Finding khi viết test (đã sửa trong test, không sửa runtime):** `invited_email` ở `guest_invitations` được backend canonicalize (trim + lowercase) tại commit; test ban đầu dùng case gốc của account `otherAttendee` (camelCase) để tra lại invitation id nên không khớp — đã sửa test tự lowercase trước khi tra. Không phải bug runtime.
 
-Giới hạn: không tạo thêm Keycloak account mới để test "một lần dùng" theo đúng nghĩa hai actor khác nhau *cùng một email thật* (D-layer đã chứng minh trực tiếp qua actorUserId khác nhau trong DB); ở H, "một lần dùng" được chứng minh tương đương qua idempotency-key mới trên invitation đã CLAIMED (cùng actor) — đủ để phủ accept-path thực tế qua HTTP mà không thêm fixture/account chung mới có thể ảnh hưởng case khác.
+Giới hạn: không tạo thêm Keycloak account mới để test "một lần dùng" theo đúng nghĩa hai actor khác nhau _cùng một email thật_ (D-layer đã chứng minh trực tiếp qua actorUserId khác nhau trong DB); ở H, "một lần dùng" được chứng minh tương đương qua idempotency-key mới trên invitation đã CLAIMED (cùng actor) — đủ để phủ accept-path thực tế qua HTTP mà không thêm fixture/account chung mới có thể ảnh hưởng case khác.
 
 ## Cập nhật DB-12 (PR liên kết #1030, worktree `f04-db12-published`)
 
@@ -116,18 +127,18 @@ Checks (SHA `d54f3e3d8ce2d4f177fb8f6d2957e89b09516f19`): `node tests/e2e/backend
 
 ### POL-02 — điều chỉnh AC do owner chốt (03/11/2026)
 
-| ID | Phần giảm | Lý do | Rủi ro còn lại |
-| --- | --- | --- | --- |
+| ID     | Phần giảm                                       | Lý do                                                                                                                                             | Rủi ro còn lại                                                                                                                                 |
+| ------ | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
 | POL-02 | Xóa audit vật lý sau 730 ngày; restore re-sweep | O06 handoff giao audit deletion cho task riêng, restore cần bằng chứng ops ngoài local; owner chuyển hai phần này sang task riêng theo PLAN §15.2 | Audit quá hạn vẫn còn trong DB dù API lọc khỏi list; restore từ backup có thể làm PII đã scrub xuất hiện lại cho đến khi có quy trình re-sweep |
 
 Trong POL-02 hiện tại, D kiểm mốc trước/sau 365 ngày, clock hủy/null, tenant isolation, lock hai thứ tự, replay và giữ ticket/check-in làm đầu vào KPI. Test H không nằm trong AC của ID này. Đo event lớn vẫn là gap ops; không dùng run D để kết luận pilot ready. `ACCEPTANCE.md` giữ verdict chưa PASS cho đến khi đủ evidence trên SHA cuối.
 
-| Assertion → AC còn lại | Bằng chứng D hiện có | Phần chưa chứng minh |
-| --- | --- | --- |
-| 365 ngày, `ends_at` NULL, event `CANCELLED` | `o06-retention-db` kiểm trước/sau cutoff, loại NULL và dùng `cancelled_at`; apply sớm trả false | Chưa đo độ trễ sweep với event lớn |
-| Anonymize PII theo event và tenant | `canonical_email`/`answers_json` NULL đúng event; tenant khác còn nguyên; writer/sweep lock cả hai thứ tự và replay không ghi lại PII | Restore re-sweep chuyển task riêng |
-| Giữ vé, check-in và KPI | So snapshot ticket/check-in, count `USED`/check-in chưa undo trước và sau; `ticket_credentials` và `users.email` giữ nguyên theo ranh giới O06 | D chỉ xác nhận dữ liệu và phép đếm trên PostgreSQL local |
-| Audit TTL 730 ngày | Row 729 ngày còn sau sweep 365 ngày; `portal-audit-codes` lọc row quá 730 ngày khỏi list | Xóa vật lý row quá 730 ngày chuyển task riêng; không ghi PASS phần này |
+| Assertion → AC còn lại                      | Bằng chứng D hiện có                                                                                                                           | Phần chưa chứng minh                                                   |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| 365 ngày, `ends_at` NULL, event `CANCELLED` | `o06-retention-db` kiểm trước/sau cutoff, loại NULL và dùng `cancelled_at`; apply sớm trả false                                                | Chưa đo độ trễ sweep với event lớn                                     |
+| Anonymize PII theo event và tenant          | `canonical_email`/`answers_json` NULL đúng event; tenant khác còn nguyên; writer/sweep lock cả hai thứ tự và replay không ghi lại PII          | Restore re-sweep chuyển task riêng                                     |
+| Giữ vé, check-in và KPI                     | So snapshot ticket/check-in, count `USED`/check-in chưa undo trước và sau; `ticket_credentials` và `users.email` giữ nguyên theo ranh giới O06 | D chỉ xác nhận dữ liệu và phép đếm trên PostgreSQL local               |
+| Audit TTL 730 ngày                          | Row 729 ngày còn sau sweep 365 ngày; `portal-audit-codes` lọc row quá 730 ngày khỏi list                                                       | Xóa vật lý row quá 730 ngày chuyển task riêng; không ghi PASS phần này |
 
 ### JOB-03 revalidation F01 (code SHA `ffb997d2be34b436c62eec7d1a06b3330c6ee35e`)
 

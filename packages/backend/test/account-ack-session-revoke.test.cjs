@@ -25,6 +25,8 @@ const {
   GATE_ERROR_CODES,
   openStaffSession,
   reserveCheckin,
+  confirmCheckin,
+  readEventReport,
   createAccountDeletionRequest,
   applyAccountAnonymization,
   processDueAccountAnonymizations,
@@ -218,13 +220,13 @@ async function seedTwoTenantStaff(db, users) {
         tenantId,
         userId,
         role: 'STAFF',
-        permissions: ['gate.confirm', 'gate.undo', 'ticket.revoke'],
+        permissions: ['gate.confirm', 'gate.undo', 'ticket.revoke', 'report.read'],
       });
       await grantEventAssignment(tx, {
         tenantId,
         eventId,
         membershipId: membership.membershipId,
-        permissions: ['gate.confirm', 'gate.undo', 'ticket.revoke'],
+        permissions: ['gate.confirm', 'gate.undo', 'ticket.revoke', 'report.read'],
       });
     }
   });
@@ -246,25 +248,25 @@ async function seedTwoTenantStaff(db, users) {
       tenantId: tenantOther,
       userId: staff.userId,
       role: 'STAFF',
-      permissions: ['gate.confirm', 'gate.undo', 'ticket.revoke'],
+      permissions: ['gate.confirm', 'gate.undo', 'ticket.revoke', 'report.read'],
     });
     await grantEventAssignment(tx, {
       tenantId: tenantOther,
       eventId: eventOther,
       membershipId: membership.membershipId,
-      permissions: ['gate.confirm', 'gate.undo', 'ticket.revoke'],
+      permissions: ['gate.confirm', 'gate.undo', 'ticket.revoke', 'report.read'],
     });
     const membershipB = await grantMembership(tx, {
       tenantId: tenantOther,
       userId: staffB.userId,
       role: 'STAFF',
-      permissions: ['gate.confirm', 'gate.undo', 'ticket.revoke'],
+      permissions: ['gate.confirm', 'gate.undo', 'ticket.revoke', 'report.read'],
     });
     await grantEventAssignment(tx, {
       tenantId: tenantOther,
       eventId: eventOther,
       membershipId: membershipB.membershipId,
-      permissions: ['gate.confirm', 'gate.undo', 'ticket.revoke'],
+      permissions: ['gate.confirm', 'gate.undo', 'ticket.revoke', 'report.read'],
     });
     await seedEventInventory(tx, HMAC, {
       tenantId: tenantOther,
@@ -323,6 +325,32 @@ test(
           }),
         ),
       );
+      const staffTicket = unwrapRedeemOutcome(
+        await withTenant(db, tenantId, (tx) =>
+          redeemAndIssueTicket(tx, HMAC, 'd13-ack-cred-material-at-least-16', {
+            tenantId,
+            eventId,
+            actorUserId: staff.userId,
+            actorEmail: staff.email,
+            emailVerified: true,
+            rawCode: 'D13-ACK-A2',
+            idempotencyKey: randomUUID(),
+          }),
+        ),
+      );
+      const otherTenantTicket = unwrapRedeemOutcome(
+        await withTenant(db, tenantOther, (tx) =>
+          redeemAndIssueTicket(tx, HMAC, 'd13-ack-cred-material-at-least-16', {
+            tenantId: tenantOther,
+            eventId: eventOther,
+            actorUserId: guest.userId,
+            actorEmail: guest.email,
+            emailVerified: true,
+            rawCode: 'D13-ACK-B',
+            idempotencyKey: randomUUID(),
+          }),
+        ),
+      );
 
       const sessionA = await withTenant(db, tenantId, (tx) =>
         openStaffSession(tx, { tenantId, eventId, userId: staff.userId }),
@@ -337,6 +365,39 @@ test(
       const sessionB = await withTenant(db, tenantId, (tx) =>
         openStaffSession(tx, { tenantId, eventId, userId: staffB.userId }),
       );
+      const sessionBOther = await withTenant(db, tenantOther, (tx) =>
+        openStaffSession(tx, { tenantId: tenantOther, eventId: eventOther, userId: staffB.userId }),
+      );
+      const hold = await withTenant(db, tenantId, (tx) =>
+        reserveCheckin(tx, {
+          tenantId, eventId, ticketId: issued.ticketId,
+          staffSessionId: sessionB.sessionId, actorUserId: staffB.userId,
+        }),
+      );
+      assert.equal(hold.ok, true);
+      const confirmed = await withTenant(db, tenantId, (tx) =>
+        confirmCheckin(tx, {
+          tenantId, eventId, reservationId: hold.reservationId, token: hold.token,
+          staffSessionId: sessionB.sessionId, actorUserId: staffB.userId,
+        }),
+      );
+      assert.equal(confirmed.ok, true);
+      const reportA = () => withTenant(db, tenantId, (tx) =>
+        readEventReport(tx, { tenantId, eventId, actorUserId: staffB.userId }),
+      );
+      const reportB = () => withTenant(db, tenantOther, (tx) =>
+        readEventReport(tx, { tenantId: tenantOther, eventId: eventOther, actorUserId: staffB.userId }),
+      );
+      const aggregate = (report) => ({
+        ticketsByState: report.ticketsByState,
+        quota: report.quota,
+        checkInSuccessCount: report.checkInSuccessCount,
+      });
+      const aggregateABefore = aggregate(await reportA());
+      const aggregateBBefore = aggregate(await reportB());
+      assert.equal(aggregateABefore.checkInSuccessCount, 1);
+      assert.equal(aggregateABefore.ticketsByState.USED, 1);
+      assert.equal(aggregateBBefore.ticketsByState.ACTIVE, 1);
 
       const auditBefore = await withTenant(db, tenantId, (tx) =>
         tx.$queryRaw`SELECT count(*)::int AS n FROM audit_logs`,
@@ -348,6 +409,17 @@ test(
         confirmation: true,
       });
       assert.equal(del.state, 'REQUESTED');
+
+      // D13 owner decision: ACK revokes sessions, not durable membership metadata.
+      for (const scope of [tenantId, tenantOther]) {
+        const memberships = await withTenant(db, scope, (tx) => tx.$queryRaw`
+          SELECT activated_at IS NOT NULL AS active, revoked_at
+          FROM memberships WHERE user_id = ${staff.userId}::uuid
+        `);
+        assert.equal(memberships.length, 1);
+        assert.equal(memberships[0].active, true);
+        assert.equal(memberships[0].revoked_at, null);
+      }
 
       const victimSessions = await withTenant(db, tenantId, (tx) =>
         tx.$queryRaw`
@@ -475,6 +547,28 @@ test(
         tx.$queryRaw`SELECT count(*)::int AS n FROM audit_logs`,
       );
       assert.equal(auditAfterApply[0].n, auditAfterOpen[0].n);
+
+      // Deletion keeps business history and reconciliation in both tenants.
+      assert.deepEqual(aggregate(await reportA()), aggregateABefore);
+      assert.deepEqual(aggregate(await reportB()), aggregateBBefore);
+      const retainedA = await withTenant(db, tenantId, (tx) => tx.$queryRaw`
+        SELECT owner_user_id, state FROM tickets WHERE id = ${staffTicket.ticketId}::uuid
+      `);
+      assert.equal(retainedA[0].owner_user_id, staff.userId);
+      assert.equal(retainedA[0].state, 'ACTIVE');
+      const retainedB = await withTenant(db, tenantOther, (tx) => tx.$queryRaw`
+        SELECT owner_user_id, state FROM tickets WHERE id = ${otherTenantTicket.ticketId}::uuid
+      `);
+      assert.equal(retainedB[0].owner_user_id, guest.userId);
+      assert.equal(retainedB[0].state, 'ACTIVE');
+      const checkins = await withTenant(db, tenantId, (tx) => tx.$queryRaw`
+        SELECT count(*)::int AS n FROM checkins WHERE ticket_id = ${issued.ticketId}::uuid
+      `);
+      assert.equal(checkins[0].n, 1);
+      const unaffectedOtherTenantSession = await withTenant(db, tenantOther, (tx) => tx.$queryRaw`
+        SELECT status FROM staff_sessions WHERE id = ${sessionBOther.sessionId}::uuid
+      `);
+      assert.equal(unaffectedOtherTenantSession[0].status, 'ACTIVE');
 
       // Other staff never touched.
       const otherStill = await withTenant(db, tenantId, (tx) =>
