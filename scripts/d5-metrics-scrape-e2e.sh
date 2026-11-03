@@ -91,6 +91,10 @@ MIG_SQL="${ARTIFACT}/metrics-migrate-${SUFFIX}.sql"
 psql_exec "${DB_NAME}" -q <"${MIG_SQL}" >/dev/null
 
 LOG="${ARTIFACT}/metrics-api-${SUFFIX}.log"
+GATE_SMOKE_ENV="$(TICKET_CREDENTIAL_KEY=local-dev-credential-key node "${ROOT}/scripts/gate-smoke-env.cjs")"
+while IFS= read -r gate_setting; do
+  export "${gate_setting}"
+done <<< "${GATE_SMOKE_ENV}"
 DATABASE_URL="postgresql://metrics_rt:${PW}@127.0.0.1:${PG_PORT}/${DB_NAME}" \
 PORT="${PORT}" HOST=127.0.0.1 \
 OIDC_ISSUER="${OIDC_ISSUER:-http://127.0.0.1:8080/realms/ticket}" \

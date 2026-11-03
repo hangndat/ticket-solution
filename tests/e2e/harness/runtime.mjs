@@ -942,6 +942,17 @@ export function processEnvironment(state, extra = {}) {
           }),
         }
       : {}),
+    ...(state.secrets.gateCredentialCurrentKeyId
+      ? {
+          GATE_CREDENTIAL_CURRENT_KEY_ID:
+            state.secrets.gateCredentialCurrentKeyId,
+          GATE_CREDENTIAL_SIGNING_KEY_SEALED:
+            state.secrets.gateCredentialSigningKeySealed,
+          GATE_CREDENTIAL_VERIFY_KEYS_JSON:
+            state.secrets.gateCredentialVerifyKeysJson,
+          GATE_MANUAL_CODE_PEPPER: state.secrets.gateManualCodePepper,
+        }
+      : {}),
     ACCOUNT_DELETION_TOMBSTONE_CURRENT_KEY_ID: 'e2e',
     ACCOUNT_DELETION_TOMBSTONE_KEYRING_JSON: JSON.stringify([
       {

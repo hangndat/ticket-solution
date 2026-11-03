@@ -10,6 +10,7 @@ import {
   loadOwnerWallet,
 } from '../src/owner-ticket';
 import { walletTicketHref } from '../src/owner-ticket/wallet-ticket-card';
+import { gateCredentialQrValue } from '../src/owner-ticket/gate-credential-payload';
 import { sanitizePostLoginPath } from '../src/oidc/post-login';
 
 const SAMPLE_ID = '97f77680-4d65-4b6d-baf3-b3f699a006a6';
@@ -24,6 +25,12 @@ const BASE_TICKET = {
   sourceId: '44444444-4444-4444-8444-444444444444',
   state: 'ACTIVE',
   credentialVersion: 1,
+  gateCredential: {
+    v: 1,
+    kind: 'ticket.gate_credential',
+    jws: 'header.payload.signature',
+  },
+  manualEntryCode: 'ABCD2345EFGH6789',
   createdAt: '2026-10-18T00:00:00.000Z',
 };
 
@@ -70,6 +77,8 @@ describe('parseMeTicketsResponse', () => {
     assert.ok(ok);
     assert.equal(ok!.length, 1);
     assert.equal(ok![0]!.eventName, 'Demo Night');
+    assert.equal('gateCredential' in ok![0]!, false);
+    assert.equal('manualEntryCode' in ok![0]!, false);
     assert.equal(parseMeTicketsResponse({ tickets: [{}] }), null);
     assert.equal(parseMeTicketsResponse(null), null);
   });
@@ -81,6 +90,60 @@ describe('parseOwnerTicketDetail', () => {
     assert.ok(parsed);
     assert.equal(parsed!.state, 'ACTIVE');
     assert.equal(parsed!.tenantId, TENANT_ID);
+    assert.equal(parsed!.gateCredential?.jws, 'header.payload.signature');
+    assert.equal(parsed!.manualEntryCode, 'ABCD2345EFGH6789');
+    assert.equal(
+      gateCredentialQrValue(parsed!),
+      '{"v":1,"kind":"ticket.gate_credential","jws":"header.payload.signature"}',
+    );
+  });
+
+  it('fails closed when the signed QR envelope is absent or invalid', () => {
+    const absent = parseOwnerTicketDetail({
+      ...BASE_TICKET,
+      gateCredential: undefined,
+    });
+    assert.ok(absent);
+    assert.equal(absent!.gateCredential, null);
+    assert.equal(gateCredentialQrValue(absent!), null);
+
+    const invalid = parseOwnerTicketDetail({
+      ...BASE_TICKET,
+      gateCredential: {
+        v: 1,
+        kind: 'ticket.display',
+        jws: 'header.payload.signature',
+      },
+    });
+    assert.ok(invalid);
+    assert.equal(invalid!.gateCredential, null);
+    assert.equal(gateCredentialQrValue(invalid!), null);
+
+    const malformedJws = parseOwnerTicketDetail({
+      ...BASE_TICKET,
+      gateCredential: {
+        v: 1,
+        kind: 'ticket.gate_credential',
+        jws: 'not-a-jws',
+      },
+    });
+    assert.ok(malformedJws);
+    assert.equal(malformedJws!.gateCredential, null);
+    assert.equal(gateCredentialQrValue(malformedJws!), null);
+
+    const revoked = parseOwnerTicketDetail({
+      ...BASE_TICKET,
+      state: 'REVOKED',
+    });
+    assert.ok(revoked);
+    assert.equal(gateCredentialQrValue(revoked!), null);
+
+    const used = parseOwnerTicketDetail({
+      ...BASE_TICKET,
+      state: 'USED',
+    });
+    assert.ok(used);
+    assert.equal(gateCredentialQrValue(used!), null);
   });
 
   it('rejects incomplete bodies', () => {
@@ -229,6 +292,31 @@ describe('loadOwnerTicket', () => {
       },
     });
     assert.equal(forbidden.status, 'forbidden');
+  });
+
+  it('treats gate credential configuration failures as unavailable', async () => {
+    const unavailable = await loadOwnerTicket({
+      tenantSlug: 'uat-device',
+      ticketId: SAMPLE_ID,
+      accessToken: 'owner-token',
+      env: { API_BASE_URL: 'http://api.test' } as unknown as NodeJS.ProcessEnv,
+      fetchImpl: async (input) => {
+        if (String(input).endsWith('/v1/me/tenants')) {
+          return new Response(JSON.stringify(ME_TENANTS_OK), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+        return new Response(
+          JSON.stringify({
+            code: 'OIDC_MISCONFIGURED',
+            message: 'Gate credential services are not configured',
+          }),
+          { status: 503, headers: { 'Content-Type': 'application/json' } },
+        );
+      },
+    });
+    assert.equal(unavailable.status, 'unreachable');
   });
 
   it('maps Nest 404 and tenant-unresolved', async () => {

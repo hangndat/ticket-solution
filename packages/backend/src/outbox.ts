@@ -21,8 +21,13 @@ import {
   renderTemplate,
   resolveTicketIssuedTemplate,
 } from './notification-templates';
-import { openCurrentCredentialForQr, renderCredentialQrPng } from './qr-ticket';
 import { readCredentialKeyringEnvironment, type CredentialKeyInput } from './credential-crypto';
+import { openCurrentCredentialForQr, renderGateCredentialQrPng } from './qr-ticket';
+import {
+  readGateCredentialSigningConfig,
+  signGateCredentialJws,
+  type GateCredentialSigningConfig,
+} from './gate-credential';
 import {
   buildGuestInvitationClaimLink,
   buildInviteAcceptLink,
@@ -96,6 +101,7 @@ export async function processClaimedOutbox(
 ): Promise<ProcessOutboxResult> {
   let completed = 0;
   let failed = 0;
+  let gateSigningConfig: GateCredentialSigningConfig | null = null;
   const retry = options.retryConfig ?? readRetryConfig(options.env);
   const publicWebBaseUrl =
     options.publicWebBaseUrl ??
@@ -438,13 +444,13 @@ export async function processClaimedOutbox(
         const creds = await tx.$queryRaw<
           Array<{
             version: number;
-             kid: string;
+            status: string;
+            kid: string;
             token_hash: string;
             encrypted_token: string;
-            status: string;
           }>
         >`
-           SELECT version, kid, token_hash, encrypted_token, status
+          SELECT version, status, kid, token_hash, encrypted_token
           FROM ticket_credentials
           WHERE tenant_id = ${row.tenant_id}::uuid
             AND ticket_id = ${ticketId}::uuid
@@ -456,13 +462,41 @@ export async function processClaimedOutbox(
         if (!cred) {
           throw new Error('active credential missing for ticket');
         }
-
-        const opened = openCurrentCredentialForQr({
-          encryptedToken: cred.encrypted_token,
-          kid: cred.kid,
-          credentialKeyMaterial: options.credentialKeyMaterial,
-          expectedTokenHash: cred.token_hash,
-        });
+        try {
+          openCurrentCredentialForQr({
+            encryptedToken: cred.encrypted_token,
+            kid: cred.kid,
+            expectedTokenHash: cred.token_hash,
+            credentialKeyMaterial: options.credentialKeyMaterial,
+          });
+        } catch {
+          throw new Error('ticket_credential_integrity_invalid');
+        }
+        if (!gateSigningConfig) {
+          try {
+            gateSigningConfig = await readGateCredentialSigningConfig(
+              options.env ?? process.env,
+              options.credentialKeyMaterial,
+            );
+          } catch {
+            throw new Error('gate_credential_signing_config_invalid');
+          }
+        }
+        let jws: string;
+        try {
+          jws = await signGateCredentialJws({
+            claims: {
+              tid: row.tenant_id,
+              eid: eventId,
+              tkt: ticketId,
+              ver: ticket.credential_version,
+            },
+            privateKeyPem: gateSigningConfig.signingPrivateKeyPem,
+            kid: gateSigningConfig.currentKeyId,
+          });
+        } catch {
+          throw new Error('gate_credential_signing_failed');
+        }
 
         const events = await tx.$queryRaw<
           Array<{
@@ -523,13 +557,12 @@ export async function processClaimedOutbox(
         const subject = renderTemplate(template.subject, vars, 'text');
         const text = renderTemplate(template.bodyText, vars, 'text');
         const html = renderTemplate(template.bodyHtml, vars, 'html');
-        const qrPng = await renderCredentialQrPng({
-          ticketId,
-          tenantId: row.tenant_id,
-          eventId,
-          credentialVersion: cred.version,
-          token: opened.token,
-        });
+        let qrPng: Buffer;
+        try {
+          qrPng = await renderGateCredentialQrPng(jws);
+        } catch {
+          throw new Error('gate_credential_qr_render_failed');
+        }
 
         const messageId = `<ticket-issued.${ticketId}.${createHash('sha256')
           .update(businessKey)
@@ -562,8 +595,6 @@ export async function processClaimedOutbox(
             html,
             qrPng,
             messageId,
-            credentialVersion: cred.version,
-            credentialTokenHash: opened.tokenHash,
           },
           notification,
           template,

@@ -19,7 +19,6 @@ const {
   GateError,
   GATE_ERROR_CODES,
   openStaffSession,
-  reserveCheckin,
   confirmCheckin,
   unwrapReserveOutcome,
   unwrapConfirmOutcome,
@@ -27,7 +26,14 @@ const {
   revokeTicket,
   reissueTicketCredential,
   revokeStaffSession,
+  manualLookupTicket,
+  unwrapManualLookupOutcome,
+  openManualEntryCode,
+  readGateManualCodePepper,
+  backfillManualEntryCodes,
+  hashManualCode,
 } = require('../dist');
+const { reserveCheckin, signedQr, verifyKeys, privateKeyPem, kid } = require('./gate-test-credentials.cjs');
 
 const docker = (...args) =>
   execFileSync('docker', args, {
@@ -93,6 +99,7 @@ async function startIsolatedPostgres() {
   return {
     name,
     url: 'postgresql://d3_login:' + password + '@127.0.0.1:' + port + '/d3_gate_test',
+    adminUrl: 'postgresql://postgres:' + password + '@127.0.0.1:' + port + '/d3_gate_test',
   };
   } finally {
     await admin.end().catch(() => {});
@@ -106,6 +113,7 @@ test(
     let name;
     let db;
     let db2;
+    let admin;
     try {
       const boot = await startIsolatedPostgres();
       name = boot.name;
@@ -199,14 +207,68 @@ test(
       const other = await withTenant(db, tenantId, (tx) =>
         openStaffSession(tx, { tenantId, eventId, userId: staffB.userId }),
       );
+
+      const codeRows = await withTenant(db, tenantId, (tx) => tx.$queryRaw`
+        SELECT manual_entry_code_sealed FROM tickets
+        WHERE tenant_id = ${tenantId}::uuid AND id = ${issued.ticketId}::uuid
+      `);
+      const manualCode = openManualEntryCode(codeRows[0].manual_entry_code_sealed, 'd3-cred-key-material-at-least-16');
+      const forgedJws = await signedQr({ tenantId, eventId, ticketId: issued.ticketId });
+      const [forgedHeader, forgedPayload, forgedSignature] = forgedJws.split('.');
+      const signatureBytes = Buffer.from(forgedSignature, 'base64url');
+      signatureBytes[0] ^= 1;
+      const forged = [forgedHeader, forgedPayload, signatureBytes.toString('base64url')].join('.');
+      const forgedOutcome = await withTenant(db, tenantId, (tx) =>
+        reserveCheckin(tx, {
+          tenantId, eventId, staffSessionId: session.sessionId, actorUserId: staff.userId,
+          presented: { kind: 'qr', jws: forged },
+        }),
+      );
+      assert.equal(forgedOutcome.ok, false);
+      assert.equal(forgedOutcome.code, GATE_ERROR_CODES.CREDENTIAL_SIGNATURE_INVALID);
+      const [, algPayload] = forgedJws.split('.');
+      const algConfusion = [
+        Buffer.from(JSON.stringify({ alg: 'none', kid, typ: 'JWT' })).toString('base64url'),
+        algPayload,
+        '',
+      ].join('.');
+      const algOutcome = await withTenant(db, tenantId, (tx) =>
+        reserveCheckin(tx, {
+          tenantId, eventId, staffSessionId: session.sessionId, actorUserId: staff.userId,
+          presented: { kind: 'qr', jws: algConfusion },
+        }),
+      );
+      assert.equal(algOutcome.ok, false);
+      assert.equal(algOutcome.code, GATE_ERROR_CODES.CREDENTIAL_SIGNATURE_INVALID);
+
+      const wrongEventJws = await signedQr({
+        tenantId, eventId: randomUUID(), ticketId: issued.ticketId,
+      });
+      const wrongEventOutcome = await withTenant(db, tenantId, (tx) =>
+        reserveCheckin(tx, {
+          tenantId, eventId, staffSessionId: session.sessionId, actorUserId: staff.userId,
+          presented: { kind: 'qr', jws: wrongEventJws },
+        }),
+      );
+      assert.equal(wrongEventOutcome.ok, false);
+      assert.equal(wrongEventOutcome.code, GATE_ERROR_CODES.CREDENTIAL_CONTEXT_MISMATCH);
+
+      const manualLookup = unwrapManualLookupOutcome(await withTenant(db, tenantId, (tx) =>
+        manualLookupTicket(tx, {
+          tenantId, eventId, staffSessionId: session.sessionId, actorUserId: staff.userId,
+          code: manualCode, verifyKeys, signingKeyId: kid, signingPrivateKeyPem: privateKeyPem,
+          manualCodePepper: readGateManualCodePepper(process.env),
+        }),
+      ));
       const hold = unwrapReserveOutcome(
         await withTenant(db, tenantId, (tx) =>
           reserveCheckin(tx, {
             tenantId,
             eventId,
-            ticketId: issued.ticketId,
             staffSessionId: session.sessionId,
             actorUserId: staff.userId,
+            presented: { kind: 'manual', proofToken: manualLookup.proofToken },
+            verifyKeys,
           }),
         ),
       );
@@ -222,6 +284,22 @@ test(
       assert.deepEqual(rotated, {
         ok: true, ticketId: issued.ticketId, credentialVersion: 2, replayed: false,
       });
+      const staleManualProof = await withTenant(db, tenantId, (tx) =>
+        reserveCheckin(tx, {
+          tenantId, eventId, staffSessionId: session.sessionId, actorUserId: staff.userId,
+          presented: { kind: 'manual', proofToken: manualLookup.proofToken }, verifyKeys,
+        }),
+      );
+      assert.equal(staleManualProof.ok, false);
+      assert.equal(staleManualProof.code, GATE_ERROR_CODES.CREDENTIAL_VERSION_STALE);
+      const staleQr = await withTenant(db, tenantId, (tx) =>
+        reserveCheckin(tx, {
+          tenantId, eventId, staffSessionId: session.sessionId, actorUserId: staff.userId,
+          presented: { kind: 'qr', jws: forgedJws }, verifyKeys,
+        }),
+      );
+      assert.equal(staleQr.ok, false);
+      assert.equal(staleQr.code, GATE_ERROR_CODES.CREDENTIAL_VERSION_STALE);
       assert.deepEqual(Object.keys(rotated).sort(),
         ['credentialVersion', 'ok', 'replayed', 'ticketId']);
       await assert.rejects(
@@ -322,13 +400,38 @@ test(
       assert.equal(heldByOther.ok, false);
       assert.equal(heldByOther.code, GATE_ERROR_CODES.HELD_BY_OTHER_SESSION);
 
+      const staleHold = await withTenant(db, tenantId, (tx) =>
+        confirmCheckin(tx, {
+          tenantId,
+          eventId,
+          reservationId: hold.reservationId,
+          token: hold.token,
+          staffSessionId: session.sessionId,
+          actorUserId: staff.userId,
+        }),
+      );
+      assert.equal(staleHold.ok, false);
+      assert.equal(staleHold.code, GATE_ERROR_CODES.CREDENTIAL_VERSION_STALE);
+
+      const currentHold = unwrapReserveOutcome(
+        await withTenant(db, tenantId, (tx) =>
+          reserveCheckin(tx, {
+            tenantId,
+            eventId,
+            ticketId: issued.ticketId,
+            staffSessionId: session.sessionId,
+            actorUserId: staff.userId,
+          }),
+        ),
+      );
+
       const raced = await Promise.all([
         withTenant(db, tenantId, (tx) =>
           confirmCheckin(tx, {
             tenantId,
             eventId,
-            reservationId: hold.reservationId,
-            token: hold.token,
+            reservationId: currentHold.reservationId,
+            token: currentHold.token,
             staffSessionId: session.sessionId,
             actorUserId: staff.userId,
           }),
@@ -337,8 +440,8 @@ test(
           confirmCheckin(tx, {
             tenantId,
             eventId,
-            reservationId: hold.reservationId,
-            token: hold.token,
+            reservationId: currentHold.reservationId,
+            token: currentHold.token,
             staffSessionId: session.sessionId,
             actorUserId: staff.userId,
           }),
@@ -452,6 +555,14 @@ test(
         return { state: state[0].state, checkins: n[0].n, audit: audit[0].n };
       });
       assert.ok(after.state === 'USED' || after.state === 'REVOKED');
+      const inactiveProof = await withTenant(db, tenantId, (tx) =>
+        reserveCheckin(tx, {
+          tenantId, eventId, ticketId: second.ticketId,
+          staffSessionId: session.sessionId, actorUserId: staff.userId,
+        }),
+      );
+      assert.equal(inactiveProof.ok, false);
+      assert.equal(inactiveProof.code, GATE_ERROR_CODES.TICKET_NOT_ACTIVE);
       if (after.state === 'USED') {
         assert.equal(after.checkins, 1);
         const confirmOutcome = raceRevoke[0];
@@ -501,6 +612,166 @@ test(
       );
       assert.equal(cancelledEventRotate.ok, true);
       assert.equal(cancelledEventRotate.credentialVersion, 2);
+
+      const manualPepper = readGateManualCodePepper(process.env);
+      const runBackfill = () => withTenant(db2, tenantId, (tx) =>
+        backfillManualEntryCodes(tx, {
+          tenantId,
+          manualCodePepper: manualPepper,
+        credentialKeyMaterial: 'd3-cred-key-material-at-least-16',
+          batchSize: 1,
+        }),
+      );
+      await withTenant(db, tenantId, (tx) => tx.$executeRaw`
+        UPDATE tickets SET manual_entry_code_hash = NULL, manual_entry_code_sealed = NULL
+        WHERE tenant_id = ${tenantId}::uuid AND id = ${third.ticketId}::uuid
+      `);
+      const skippedSweep = await withTenant(db, tenantId, async (tx) => {
+        await tx.$queryRaw`SELECT id FROM tickets WHERE id = ${third.ticketId}::uuid FOR UPDATE`;
+        return runBackfill();
+      });
+      assert.equal(skippedSweep.complete, false);
+      assert.equal(skippedSweep.resweepRequired, true);
+      assert.equal(skippedSweep.remaining, 1);
+      const releasedSweep = await runBackfill();
+      assert.equal(releasedSweep.complete, true);
+      assert.equal(releasedSweep.minted, 1);
+
+      // Reissue owns the row first; a concurrent skip-locked sweep must defer and never overwrite it.
+      await withTenant(db, tenantId, (tx) => tx.$executeRaw`
+        UPDATE tickets SET manual_entry_code_hash = NULL, manual_entry_code_sealed = NULL
+        WHERE tenant_id = ${tenantId}::uuid AND id = ${third.ticketId}::uuid
+      `);
+      const reissueFirst = await withTenant(db, tenantId, async (tx) => {
+        const reissue = await reissueTicketCredential(tx, 'd3-cred-key-material-at-least-16', {
+          tenantId, eventId, ticketId: third.ticketId, actorUserId: staff.userId,
+          reason: 'reissue before manual-code backfill', idempotencyKey: randomUUID(),
+        });
+        const sweep = await runBackfill();
+        return { reissue, sweep };
+      });
+      assert.equal(reissueFirst.reissue.ok, true);
+      assert.equal(reissueFirst.sweep.resweepRequired, true);
+      const codeAfterReissue = await withTenant(db, tenantId, async (tx) => {
+        const rows = await tx.$queryRaw`SELECT manual_entry_code_hash, manual_entry_code_sealed
+          FROM tickets WHERE tenant_id = ${tenantId}::uuid AND id = ${third.ticketId}::uuid`;
+        return rows[0];
+      });
+      await runBackfill();
+      const codeAfterDeferredSweep = await withTenant(db, tenantId, async (tx) => {
+        const rows = await tx.$queryRaw`SELECT manual_entry_code_hash, manual_entry_code_sealed
+          FROM tickets WHERE tenant_id = ${tenantId}::uuid AND id = ${third.ticketId}::uuid`;
+        return rows[0];
+      });
+      assert.deepEqual(codeAfterDeferredSweep, codeAfterReissue);
+
+      // Backfill owns the row first; the later reissue must rotate the code in its transaction.
+      await withTenant(db, tenantId, (tx) => tx.$executeRaw`
+        UPDATE tickets SET manual_entry_code_hash = NULL, manual_entry_code_sealed = NULL
+        WHERE tenant_id = ${tenantId}::uuid AND id = ${third.ticketId}::uuid
+      `);
+      const backfillFirst = await runBackfill();
+      assert.equal(backfillFirst.minted, 1);
+      const reissueAfterBackfill = await withTenant(db, tenantId, (tx) =>
+        reissueTicketCredential(tx, 'd3-cred-key-material-at-least-16', {
+          tenantId, eventId, ticketId: third.ticketId, actorUserId: staff.userId,
+          reason: 'reissue after manual-code backfill', idempotencyKey: randomUUID(),
+        }),
+      );
+      assert.equal(reissueAfterBackfill.ok, true);
+      const finalCode = await withTenant(db, tenantId, async (tx) => {
+        const rows = await tx.$queryRaw`SELECT manual_entry_code_hash, manual_entry_code_sealed,
+            credential_version FROM tickets
+          WHERE tenant_id = ${tenantId}::uuid AND id = ${third.ticketId}::uuid`;
+        return rows[0];
+      });
+      const finalRawCode = openManualEntryCode(finalCode.manual_entry_code_sealed, 'd3-cred-key-material-at-least-16');
+      assert.equal(finalCode.credential_version, reissueAfterBackfill.credentialVersion);
+      assert.equal(finalCode.manual_entry_code_hash,
+        hashManualCode(manualPepper, tenantId, eventId, finalRawCode));
+
+      // Sequence increments survive savepoint rollback, so the trigger can force an
+      // exact number of real unique-index collisions without controlling random minting.
+      admin = new Client({ connectionString: boot.adminUrl });
+      await admin.connect();
+      await admin.query('CREATE SEQUENCE gate_test_manual_collision_attempt');
+      await admin.query('GRANT USAGE ON SEQUENCE gate_test_manual_collision_attempt TO ticket_runtime');
+      await admin.query(`
+        CREATE FUNCTION gate_test_manual_collision() RETURNS trigger
+        LANGUAGE plpgsql AS $$
+        BEGIN
+          IF NEW.id = TG_ARGV[0]::uuid
+             AND nextval('gate_test_manual_collision_attempt') <= TG_ARGV[1]::integer THEN
+            SELECT manual_entry_code_hash INTO NEW.manual_entry_code_hash
+            FROM tickets
+            WHERE id = TG_ARGV[2]::uuid
+              AND tenant_id = NEW.tenant_id AND event_id = NEW.event_id;
+          END IF;
+          RETURN NEW;
+        END $$
+      `);
+      const readManualRow = async (ticketId) => withTenant(db, tenantId, async (tx) => {
+        const rows = await tx.$queryRaw`SELECT tenant_id, event_id, state,
+          credential_version, manual_entry_code_hash, manual_entry_code_sealed
+          FROM tickets WHERE tenant_id = ${tenantId}::uuid AND id = ${ticketId}::uuid`;
+        return rows[0];
+      });
+      const installCollisionTrigger = async (limit) => {
+        await admin.query('DROP TRIGGER IF EXISTS gate_test_manual_collision ON tickets');
+        await admin.query('ALTER SEQUENCE gate_test_manual_collision_attempt RESTART WITH 1');
+        // Ticket IDs come from the database; validate before embedding in DDL.
+        assert.match(third.ticketId, /^[0-9a-f-]{36}$/i);
+        assert.match(issued.ticketId, /^[0-9a-f-]{36}$/i);
+        await admin.query(`CREATE TRIGGER gate_test_manual_collision
+          BEFORE UPDATE OF manual_entry_code_hash ON tickets
+          FOR EACH ROW EXECUTE FUNCTION gate_test_manual_collision(
+            '${third.ticketId}', '${limit}', '${issued.ticketId}')`);
+      };
+      try {
+        const donorBefore = await readManualRow(issued.ticketId);
+        assert.ok(donorBefore.manual_entry_code_hash);
+        await withTenant(db, tenantId, (tx) => tx.$executeRaw`
+          UPDATE tickets SET manual_entry_code_hash = NULL, manual_entry_code_sealed = NULL
+          WHERE tenant_id = ${tenantId}::uuid AND id = ${third.ticketId}::uuid
+        `);
+        const beforeRetry = await readManualRow(third.ticketId);
+        await installCollisionTrigger(1);
+        const retried = await runBackfill();
+        assert.equal(retried.minted, 1);
+        assert.equal(retried.complete, true);
+        const retryAttempts = await admin.query('SELECT last_value FROM gate_test_manual_collision_attempt');
+        assert.equal(Number(retryAttempts.rows[0].last_value), 2);
+        const afterRetry = await readManualRow(third.ticketId);
+        assert.equal(afterRetry.tenant_id, tenantId);
+        assert.equal(afterRetry.event_id, eventId);
+        assert.equal(afterRetry.state, beforeRetry.state);
+        assert.equal(afterRetry.credential_version, beforeRetry.credential_version);
+      const retriedCode = openManualEntryCode(afterRetry.manual_entry_code_sealed, 'd3-cred-key-material-at-least-16');
+        assert.equal(afterRetry.manual_entry_code_hash,
+          hashManualCode(manualPepper, tenantId, eventId, retriedCode));
+        assert.notEqual(afterRetry.manual_entry_code_hash, donorBefore.manual_entry_code_hash);
+        assert.deepEqual(await readManualRow(issued.ticketId), donorBefore);
+
+        await admin.query('DROP TRIGGER gate_test_manual_collision ON tickets');
+        await withTenant(db, tenantId, (tx) => tx.$executeRaw`
+          UPDATE tickets SET manual_entry_code_hash = NULL, manual_entry_code_sealed = NULL
+          WHERE tenant_id = ${tenantId}::uuid AND id = ${third.ticketId}::uuid
+        `);
+        const beforeExhaustion = await readManualRow(third.ticketId);
+        await installCollisionTrigger(5);
+        await assert.rejects(runBackfill, /tickets_manual_code_hmac_unique/);
+        const exhaustedAttempts = await admin.query('SELECT last_value FROM gate_test_manual_collision_attempt');
+        assert.equal(Number(exhaustedAttempts.rows[0].last_value), 5);
+        assert.deepEqual(await readManualRow(third.ticketId), beforeExhaustion);
+        assert.equal(beforeExhaustion.manual_entry_code_hash, null);
+        assert.equal(beforeExhaustion.manual_entry_code_sealed, null);
+        assert.deepEqual(await readManualRow(issued.ticketId), donorBefore);
+      } finally {
+        await admin.query('DROP TRIGGER IF EXISTS gate_test_manual_collision ON tickets');
+        await admin.query('DROP FUNCTION IF EXISTS gate_test_manual_collision()');
+        await admin.query('DROP SEQUENCE IF EXISTS gate_test_manual_collision_attempt');
+      }
+
       const race = await Promise.allSettled([
         withTenant(db, tenantId, (tx) =>
           reissueTicketCredential(tx, 'd3-cred-key-material-at-least-16', {
@@ -527,7 +798,7 @@ test(
       assert.equal(racedFinal.ticket[0].state, 'REVOKED');
       assert.ok(racedFinal.credentials.every((row) => row.status === 'REVOKED'));
       assert.equal(racedFinal.ticket[0].credential_version,
-        race[0].value.ok ? 3 : 2);
+        race[0].value.ok ? 5 : 4);
       await withTenant(db, tenantId, (tx) => tx.$executeRaw`
         UPDATE events SET business_status = 'ACTIVE',
           cancelled_at = NULL, cancel_reason = NULL
@@ -558,6 +829,7 @@ test(
           error.code === GATE_ERROR_CODES.SESSION_NOT_ACTIVE,
       );
     } finally {
+      if (admin) await admin.end();
       if (db) await db.$disconnect();
       if (db2) await db2.$disconnect();
       if (name) {

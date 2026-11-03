@@ -19,7 +19,6 @@ const {
   relayOutboxOnce,
   createFailingEmailAdapter,
   openStaffSession,
-  reserveCheckin,
   confirmCheckin,
   undoCheckin,
   unwrapReserveOutcome,
@@ -27,6 +26,7 @@ const {
   GATE_ERROR_CODES,
   cancelEvent,
 } = require('../dist');
+const { reserveCheckin } = require('./gate-test-credentials.cjs');
 
 const docker = (...args) =>
   execFileSync('docker', args, {

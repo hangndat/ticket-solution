@@ -31,12 +31,23 @@ const {
   revokeDeviceToken,
   revokeMembership,
   listActiveDeviceTokensForUser,
-  relayOutboxOnce,
+  relayOutboxOnce: relayOutboxOnceRaw,
   createNoopEmailAdapter,
   ExportError,
   AuthzError,
   providerStatusFromDbState,
 } = require('../dist');
+const { withTestEmailSigner } = require('./gate-test-credentials.cjs');
+
+async function relayOutboxOnce(db, email, leaseOwner, limit, options) {
+  return relayOutboxOnceRaw(
+    db,
+    email,
+    leaseOwner,
+    limit,
+    withTestEmailSigner(options),
+  );
+}
 
 const docker = (...args) =>
   execFileSync('docker', args, {

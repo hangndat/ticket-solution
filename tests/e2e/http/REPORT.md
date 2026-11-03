@@ -36,7 +36,7 @@ Sau Web commit `289e5200` (F01), H thêm so sánh direct-upstream với `Host` t
 Run thứ hai ghi product robots `Disallow: /`, không sitemap; marketing robots `Allow: /` và sitemap. Product sitemap không có `<loc>`, marketing có URL marketing. Cả hai policy và sitemap giữ nguyên trước/giả/sau. Analytics trên product luôn `403 FORBIDDEN_HOST`; trên marketing luôn `400 INVALID_EVENT`, kể cả forwarded host giả. Đây là bằng chứng hành vi F01 trên local direct upstream, chờ reviewer độc lập xác minh.
 
 Cache headers direct upstream: robots và sitemap trên cả hai Host trả `Cache-Control: public, max-age=0, must-revalidate`, `Vary: rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch`; analytics thiếu `Cache-Control`. Các redirect SEC-03 cũng thiếu `Cache-Control`. `Age`, `ETag`, `Via` và cache-status headers không xuất hiện trong các response được ghi. Trình tự trước/giả/sau không thấy lẫn response trong Next upstream local, nhưng H bypass shared edge, không chứng minh edge triển khai không lưu response hoặc dùng cache key theo Host. **F02 và full SEC-03 vẫn BLOCKED/FAIL**; cần bằng chứng edge/cache thực tế hoặc một sửa runtime/header được owner ủy quyền rồi H trên SHA mới. Chi tiết response: `tests/e2e/.artifacts/mvxz652h-b3984a/http-SEC-03.log`; provenance: `summary.json` cùng thư mục.
-## DB-19 — inventory assertion theo PLAN §6.1 (snapshot trước nghiệm thu keyring)
+## DB-19 — inventory assertion theo PLAN §6.1 (snapshot lịch sử trước nghiệm thu keyring)
 
 | AC | Assertion hiện có | Còn thiếu |
 | --- | --- | --- |
@@ -47,6 +47,15 @@ Cache headers direct upstream: robots và sitemap trên cả hai Host trả `Cac
 | QR credential key cũ, revoked | Chưa có versioned credential keyring: `kid` cố định `local-v1`; trạng thái `REVOKED` của credential được kiểm riêng trong DB-09 | Owner cần chốt giữ DB-19 AC và thiết kế keyring, hoặc điều chỉnh AC QR có ghi rủi ro theo PLAN §15.2 |
 
 Chạy H riêng bằng `E2E_LANES=1 pnpm test:e2e:http --lane --case=DB-19`; fixture v2 current/v1 legacy được cô lập, nên không ghép ID này với các HTTP case dùng cấu hình pepper mặc định. Kết quả exact SHA và verdict ghi ở báo cáo bàn giao, không đổi `ACCEPTANCE.md` trong Task này.
+## GATE-03 signed credential — 02/11/2026
+
+Run `mvyisdk6-156618` trả `PASS` 1/1 cho selector HTTP trên source SHA `989e68394ac6a301f26c47a519264c05e5e105da`. Harness dựng stack cô lập thật với Keycloak, PostgreSQL và API; summary và log ở `tests/e2e/.artifacts/mvyisdk6-156618/`.
+
+Ca lấy JWS ES256 và mã manual qua `/me/tickets/:ticketId`, sau đó kiểm reserve/confirm hợp lệ, chữ ký bị sửa, context sai event và signed context sai tenant, version cũ, vé revoke, vé đã dùng, manual lookup và proof token dùng từ staff session khác. Các request từ chối kiểm tra reservation/check-in bất biến; các nhánh credential deny có `gate.reject` trong tenant tương ứng dưới RLS. Signing key ephemeral được tạo cho run; private key chỉ được seal bằng helper backend hiện có.
+
+Không nâng GATE-03 thành PASS toàn phần. Summary ghi `evidenceExactShaEligible: false` / `NON_EVIDENCE_DIRTY` vì worktree vẫn có `company/work-events.jsonl` cùng sáu báo cáo James đã tồn tại trước task; các file được giữ nguyên. Ma trận còn thiếu audience/kid/alg/hash, ticket cancelled, manual code/proof invalid, proof expiry/version stale và rate-limit. `coverage.json` vẫn giữ trạng thái `blocked`.
+
+CRG scope: repo `/Users/admin/SideProject/ticket-solution/f04-port09-unknown-contract`; stats và `file_summary(tests/e2e/http/live.test.mjs)` đã chạy tại source SHA `989e68394ac6a301f26c47a519264c05e5e105da`. Tip `d066abbd` chỉ thêm báo cáo/coverage, không đổi source; MCP graph giữ `head_matches_build=false` cho phần docs-only.
 
 ## SEC-03 — tích hợp 03/11/2026
 

@@ -301,6 +301,8 @@ model Ticket {
   redemptionCodeId    String?            @map("redemption_code_id") @db.Uuid
   state               String             @default("ACTIVE")
   credentialVersion   Int                @default(1) @map("credential_version")
+  manualEntryCodeHash   String?          @map("manual_entry_code_hash")
+  manualEntryCodeSealed String?          @map("manual_entry_code_sealed")
   entitlementSnapshot Json               @default("{}") @map("entitlement_snapshot")
   createdAt           DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt           DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)

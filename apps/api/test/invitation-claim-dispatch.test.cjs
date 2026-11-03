@@ -2,10 +2,13 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { createApp } = require('../dist/app');
 const { IdentityError } = require('@ticket/backend');
+const { createGateTestConfig } = require('./gate-test-config.cjs');
 
 const tenantId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const eventId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 const actorId = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
+const credentialKey = 'fixture-credential-key';
+const gateConfig = createGateTestConfig(credentialKey);
 const claimPath = `/v1/tenants/${tenantId}/events/${eventId}/invitations/claim`;
 const dispatchPath = `/v1/tenants/${tenantId}/events/${eventId}/invitations/dispatch`;
 
@@ -33,7 +36,8 @@ test('claim requires a verified email before touching tenant data (M06/TD §5.1)
     logging: false,
     database: unreachableDb(),
     hmac: { pepper: 'fixture-key', version: 1 },
-    credentialKey: 'fixture-credential-key',
+    credentialKey,
+    env: { ...process.env, ...gateConfig.env },
     oidcVerifier: verifiedVerifier(),
     // No email/emailVerified on the identity record → claim must reject.
     users: { upsertFromVerifiedIdentity: async () => ({ userId: actorId }) },
@@ -62,7 +66,8 @@ test('claim requires an idempotency key for a verified attendee', async () => {
     logging: false,
     database: unreachableDb(),
     hmac: { pepper: 'fixture-key', version: 1 },
-    credentialKey: 'fixture-credential-key',
+    credentialKey,
+    env: { ...process.env, ...gateConfig.env },
     oidcVerifier: verifiedVerifier(),
     users: {
       upsertFromVerifiedIdentity: async () => ({

@@ -39,7 +39,7 @@ test('queued and unknown never use admit tone', () => {
   assert.match(unknown.title, /không cho vào/i);
 });
 
-test('fresh admit vs already-checked-in are distinct', () => {
+test('fresh admission is green while already-checked-in history is denied', () => {
   const fresh = presentGateOutcome({
     ...base,
     phase: 'admitted',
@@ -59,8 +59,10 @@ test('fresh admit vs already-checked-in are distinct', () => {
     message: 'Đã check-in. Kết quả đã rõ.',
   });
   assert.equal(already.kind, 'already-checked-in');
-  assert.equal(already.tone, 'admit');
+  assert.equal(already.tone, 'deny');
+  assert.equal(already.assertive, true);
   assert.match(already.title, /đã được sử dụng/i);
+  assert.match(already.detail, /không cho vào/i);
   assert.notEqual(already.title, fresh.title);
 });
 
