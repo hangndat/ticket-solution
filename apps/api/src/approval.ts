@@ -31,6 +31,7 @@ import {
   unwrapApprovalOutcome,
   withTenant,
   type IdentityUserRepository,
+  type CredentialKeyInput,
   type OidcVerifier,
   type PrismaClient,
 } from '@ticket/backend';
@@ -59,7 +60,7 @@ type Deps = {
   verifier: OidcVerifier | null;
   users: IdentityUserRepository | null;
   bootError: IdentityError | null;
-  credentialKey: string | null;
+  credentialKey: CredentialKeyInput | null;
 };
 
 function scopeError(message: string): HttpException {
