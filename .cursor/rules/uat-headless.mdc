@@ -1,9 +1,0 @@
----
-description: Web + iOS UAT via Orca browser/emulator — never steal the user's macOS mouse (Wave G)
-globs: scripts/**/*uat*,apps/web/.uat-artifacts/**,apps/mobile/.uat-artifacts/**,docs/reviews/**/*uat*,docs/reviews/**/*UAT*
-alwaysApply: false
----
-
-# Adapter Cursor
-
-Đọc và áp dụng [nguồn chuẩn](../../docs/agents/workflows/uat.md) khi rule được kích hoạt. Chỉnh policy tại nguồn chuẩn; metadata host giữ ở adapter này.

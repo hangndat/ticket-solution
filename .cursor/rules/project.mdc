@@ -7,4 +7,4 @@ alwaysApply: true
 
 Đọc và áp dụng [AGENTS.md](../../AGENTS.md), [routing](../../docs/agents/policies/routing.md) và [bản đồ đọc](../../docs/agents/README.md). Nạp context/CRG khi làm source, Git/GitHub API khi thao tác Git/GitHub, Project/DoD khi tracking/nghiệm thu; không đọc toàn bộ policy cho mọi task. Các quyền và gates vẫn áp dụng theo hành động.
 
-Đọc workflow và chi tiết theo hành động trong bản đồ; chỉnh policy tại nguồn chung. Rule này thay năm adapter alwaysApply cũ, không thay đổi quyền hoặc gates.
+Đọc workflow và chi tiết theo hành động trong bản đồ; chỉnh policy tại nguồn chung. Đây là adapter rule duy nhất của Cursor; quyền và gates nằm trong AGENTS.md và docs/agents, không sao chép policy sang rule riêng.

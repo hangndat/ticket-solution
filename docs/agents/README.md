@@ -12,6 +12,7 @@ Bắt đầu từ [AGENTS.md](../../AGENTS.md). Đây là bản đồ đọc chu
 - Review/fix: [findings và revalidation](workflows/review.md). Worktree: [metadata và cleanup](workflows/worktree.md).
 - UI: [UI workflow](ui-workflow.md); UAT: [browser/emulator](workflows/uat.md).
 - Host mới/nâng cấp: [setup](setup/README.md). Telemetry: [evidence](workflow-evidence-telemetry.md).
+- Provider lỗi/limit: [fallback](policies/provider-fallback.md). LeanCTX lỗi trên Cursor: [troubleshooting](setup/leanctx-cursor.md).
 
 ## Nguồn sở hữu
 
@@ -21,4 +22,4 @@ Bắt đầu từ [AGENTS.md](../../AGENTS.md). Đây là bản đồ đọc chu
 - `cost-catalog.md`: pin/tier/quota. `company/employees.json`: danh tính/văn phong; default route hồ sơ không vượt catalog.
 - `.agents/skills/`: skills dự án được version control; `.cursor/skills` là symlink, xem [skills](setup/skills.md).
 
-Adapter host trỏ đến nguồn chuẩn; các pointer orca-* cũ đã được loại bỏ. Chỉnh nội dung ở nguồn đích. [Catalog trước khi tổ chức lại](archive/agent-catalog-2026-11-02.md) chỉ là lịch sử.
+Cursor chỉ giữ `.cursor/rules/project.mdc` để trỏ AGENTS và bản đồ này; các rule theo chủ đề đã được gộp vào routing chung. Chỉnh nội dung ở nguồn đích. [Catalog trước khi tổ chức lại](archive/agent-catalog-2026-11-02.md) chỉ là lịch sử.

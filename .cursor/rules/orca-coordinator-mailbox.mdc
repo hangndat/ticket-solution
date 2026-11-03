@@ -1,8 +1,0 @@
----
-description: Coordinator — Orca V3 wake-up, settlement và cleanup
-alwaysApply: false
----
-
-# Adapter Cursor
-
-Đọc và áp dụng [nguồn chuẩn](../../docs/agents/workflows/lifecycle.md) khi rule được kích hoạt. Chỉnh policy tại nguồn chuẩn; metadata host giữ ở adapter này.
