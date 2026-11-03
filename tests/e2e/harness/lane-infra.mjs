@@ -285,11 +285,11 @@ export function removeRunObjectStorage(state, image, rootSecret) {
       failures.push(`${args.join(' ')}: ${error.status ?? error.code}`);
     }
   };
-  for (const bucket of Object.values(state.minio.buckets))
+  for (const bucket of state.minio.created?.buckets ?? Object.values(state.minio.buckets))
     attempt(['rb', '--force', `e2e/${bucket}`]);
-  for (const identity of Object.values(state.minio.identities))
+  for (const identity of state.minio.created?.identities ?? Object.values(state.minio.identities))
     attempt(['admin', 'user', 'remove', 'e2e', identity.accessKey]);
-  for (const role of ['shared', 'exports', 'observer'])
+  for (const role of state.minio.created?.policies ?? ['shared', 'exports', 'observer'])
     attempt(['admin', 'policy', 'rm', 'e2e', `e2e-${role}-${state.id}`]);
   if (failures.length) {
     writeFileSync(
@@ -297,5 +297,6 @@ export function removeRunObjectStorage(state, image, rootSecret) {
       failures.join('\n') + '\n',
       { mode: 0o600 },
     );
+    throw new Error(`object storage cleanup failed (${failures.length} operation(s)); see lane-object-cleanup.log`);
   }
 }
