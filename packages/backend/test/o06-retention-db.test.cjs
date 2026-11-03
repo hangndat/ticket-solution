@@ -662,7 +662,7 @@ test('O06 POL-02 50k attendee worker process completes within the step budget',
       const started = performance.now();
       worker = spawn(process.execPath, ['apps/worker/dist/main.js'], {
         cwd: require('node:path').resolve(__dirname, '../../..'),
-        stdio: 'ignore',
+        stdio: ['ignore', 'ignore', 'pipe'],
         env: {
           PATH: process.env.PATH,
           NODE_ENV: 'test',
@@ -672,9 +672,20 @@ test('O06 POL-02 50k attendee worker process completes within the step budget',
           TICKET_CREDENTIAL_KEY: 'pol02-synthetic-credential-key',
         },
       });
+      let startupDiagnostic = 'no recognized startup error';
+      worker.stderr.on('data', (chunk) => {
+        const line = String(chunk);
+        if (line.includes("Cannot find module") && line.includes('apps/worker/dist/main.js')) {
+          startupDiagnostic = 'worker entrypoint missing';
+        } else if (line.includes('Worker startup failed')) {
+          startupDiagnostic = 'worker startup failed';
+        }
+      });
+      worker.on('error', () => { startupDiagnostic = 'worker process spawn failed'; });
       let completed = false;
       for (let attempt = 0; attempt < 600; attempt++) {
-        assert.equal(worker.exitCode, null, 'worker must remain alive through the sweep');
+        assert.equal(worker.exitCode, null,
+          `worker must remain alive through the sweep (${startupDiagnostic})`);
         const marker = (await admin.query('SELECT ticket_pii_anonymized_at FROM events WHERE tenant_id=$1 AND id=$2',
           [tenant, fixture.event])).rows[0].ticket_pii_anonymized_at;
         if (marker !== null) { completed = true; break; }
