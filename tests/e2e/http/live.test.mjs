@@ -17,6 +17,7 @@ const CASE_IDS = [
   'SEC-06',
   'AUTH-03',
   'AUTH-06',
+  'AUTH-07',
   'GATE-01',
   'GATE-02',
   'GATE-03',
@@ -1573,6 +1574,65 @@ for (const caseId of CASE_IDS) {
   test(`[${caseId}] live HTTP`, async (t) => {
     const ctx = context(caseId);
     const f = ctx.fixture;
+    if (caseId === 'AUTH-07') {
+      const suffix = required(process.env.E2E_HOST_SUFFIX, 'E2E_HOST_SUFFIX');
+      const trust = required(process.env.E2E_TLS_SPKI, 'E2E_TLS_SPKI');
+      const browser = await chromium.launch({ headless: true, args: [
+        `--host-resolver-rules=MAP *.${suffix} 127.0.0.1, MAP ${suffix} 127.0.0.1`,
+        `--ignore-certificate-errors-spki-list=${trust}`,
+      ] });
+      try {
+        for (const surface of [
+          { origin: ctx.web, other: ctx.portal, a: 'attendee', b: 'otherAttendee',
+            identity: '/api/auth/identity', path: `/api/bff/tickets/${required(f.ticketId, 'AUTH-07 ticketId')}?tenantId=${f.tenantId}`,
+            actorHeader: 'x-actor-id', epochHeader: 'x-auth-epoch' },
+          { origin: ctx.portal, other: ctx.web, a: 'owner', b: 'scanner',
+            identity: '/api/auth/identity?surface=staff', path: `/api/bff/tenants/${f.tenantId}/events/${f.eventId}/audit`,
+            actorHeader: 'x-portal-actor-id', epochHeader: 'x-portal-auth-epoch' },
+        ]) {
+          const session = (actor) => oidcBrowserSession(browser, ctx, surface.origin, surface.other,
+            '/api/auth/login?return=/', '/api/bff/me/tenants', actor);
+          const cookiesA = await session(surface.a);
+          const get = (path, cookies) => fetch(new URL(path, surface.origin), {
+            headers: { cookie: cookieHeader(cookies) }, redirect: 'manual',
+          });
+          const noStore = (response) => {
+            assert.match(response.headers.get('cache-control') ?? '', /private/i);
+            assert.match(response.headers.get('cache-control') ?? '', /no-store/i);
+          };
+          const firstIdentity = await get(surface.identity, cookiesA);
+          assert.equal(firstIdentity.status, 200);
+          noStore(firstIdentity);
+          const actorA = await firstIdentity.json();
+          const pendingA = await get(surface.path, cookiesA);
+          assert.equal(pendingA.status, 200);
+          noStore(pendingA);
+          assert.equal(pendingA.headers.get(surface.actorHeader), actorA.actorId);
+          assert.equal(pendingA.headers.get(surface.epochHeader), actorA.authEpoch);
+          // Leave A's response body unread while the next OIDC actor is established.
+          const cookiesB = await session(surface.b);
+          const secondIdentity = await get(surface.identity, cookiesB);
+          assert.equal(secondIdentity.status, 200);
+          noStore(secondIdentity);
+          const actorB = await secondIdentity.json();
+          assert.notEqual(actorA.actorId, actorB.actorId);
+          assert.notEqual(actorA.authEpoch, actorB.authEpoch);
+          const denied = await get(surface.path, cookiesB);
+          assert.ok([403, 404].includes(denied.status));
+          noStore(denied);
+          const deniedBody = await denied.text();
+          assert.ok(!deniedBody.includes(f.ticketId));
+          assert.equal(denied.headers.get(surface.actorHeader), actorB.actorId);
+          assert.equal(denied.headers.get(surface.epochHeader), actorB.authEpoch);
+          const oldBody = await pendingA.text();
+          assert.ok(oldBody.length > 0, 'A positive control must return a body');
+          if (surface.origin === ctx.web) assert.ok(oldBody.includes(f.ticketId));
+        }
+      } finally {
+        await browser.close();
+      }
+      return;
+    }
     if (caseId === 'DB-19') {
       const attendee = await bearer(ctx, 'attendee');
       const owner = await bearer(ctx, 'owner');
