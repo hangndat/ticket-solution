@@ -520,12 +520,24 @@ test(
       );
       assert.equal(secondRowBefore.rows[0].status, 'PENDING');
       const activeTransactions = await admin.query(
-        `SELECT count(*)::int AS n FROM pg_stat_activity
+        `SELECT pid, application_name, state, wait_event_type, wait_event,
+                round(extract(epoch FROM clock_timestamp() - xact_start)::numeric, 3) AS transaction_age_seconds,
+                CASE
+                  WHEN query ILIKE '%redemption%' THEN 'redemption'
+                  WHEN query ILIKE '%outbox%' THEN 'outbox'
+                  WHEN query ILIKE '%notification%' THEN 'notification'
+                  WHEN query ILIKE '%tenant_email%' THEN 'email_budget'
+                  WHEN query ILIKE '%set_config%' OR query ILIKE 'SET %' THEN 'tenant_context'
+                  ELSE 'other'
+                END AS query_class
+         FROM pg_stat_activity
          WHERE datname = current_database() AND usename = 'e2e_login'
            AND state = 'idle in transaction'`,
       );
+      if (activeTransactions.rows.length !== 0)
+        console.error(JSON.stringify({ event: 'job06_idle_transaction_diagnostic', sessions: activeTransactions.rows }));
       assert.equal(
-        activeTransactions.rows[0].n,
+        activeTransactions.rows.length,
         0,
         'stalled SMTP must not hold a worker transaction open',
       );
@@ -631,7 +643,7 @@ test(
           dailySentCount: usage.sent_count,
           dailyHeldCount: usage.held_count,
           deferredCount: 1,
-          idleWorkerTransactions: activeTransactions.rows[0].n,
+        idleWorkerTransactions: activeTransactions.rows.length,
           replacementShutdown: shutdownB.signal,
         }),
       );
