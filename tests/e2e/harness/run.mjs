@@ -568,6 +568,7 @@ if (mode === 'list' || args.includes('--list')) {
       {
         ...common,
         PORT: String(state.ports.api),
+        API_CORS_ORIGINS: [state.origins.web, state.origins.portal].join(','),
         ...(diagnostic
           ? {
               NODE_OPTIONS: `${common.NODE_OPTIONS} --require ${resolve(E2E, 'harness/public-read-observer.cjs')}`,

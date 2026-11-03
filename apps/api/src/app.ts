@@ -115,6 +115,24 @@ export function readApiEnvironment(env: NodeJS.ProcessEnv) {
   return { ...common, port: Number(port), host };
 }
 
+// Unset grants no cross-origin access; invalid entries stop startup.
+export function readCorsOrigins(value: string | undefined): string[] {
+  if (!value?.trim()) return [];
+  return value.split(',').map((entry) => {
+    const origin = entry.trim();
+    let parsed: URL;
+    try {
+      parsed = new URL(origin);
+    } catch {
+      throw new Error('Invalid API_CORS_ORIGINS');
+    }
+    if (!['http:', 'https:'].includes(parsed.protocol) || parsed.origin !== origin || origin.includes('*')) {
+      throw new Error('Invalid API_CORS_ORIGINS');
+    }
+    return origin;
+  });
+}
+
 export async function createApp(
   options: CreateAppOptions | boolean = {},
 ): Promise<NestFastifyApplication> {
@@ -124,6 +142,7 @@ export async function createApp(
   const logging = normalized.logging ?? true;
   const identity = resolveIdentity(normalized);
   const env = normalized.env ?? process.env;
+  const corsOrigins = readCorsOrigins(env['API_CORS_ORIGINS']);
 
   const issueDeps = resolveIssueDeps(env);
   const credentialKey = identity.credentialKey ?? issueDeps.credentialKey;
@@ -310,6 +329,7 @@ export async function createApp(
     }),
     { logger: logging ? undefined : false },
   );
+  app.enableCors({ origin: corsOrigins, credentials: false });
   app.getHttpAdapter().getInstance().addHook('onRoute', (routeOptions) => {
     const url = routeOptions.url ?? '';
     if (url.includes('/imports/files')) {
