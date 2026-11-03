@@ -87,6 +87,7 @@ const httpCases = [
   'SEC-06',
   'AUTH-03',
   'AUTH-06',
+  'AUTH-08',
   'GATE-01',
   'GATE-02',
   'GATE-03',
