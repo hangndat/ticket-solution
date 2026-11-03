@@ -89,6 +89,15 @@ test('[AUTH-06] stale Portal capability rejects gate creation after assignment a
       ).toBeVisible();
       await expect(page.locator('.ant-alert-success')).toHaveCount(0);
       expect(await counts()).toEqual(before);
+      await page.reload();
+      await expect(
+        page.getByText('Không có quyền', { exact: true }),
+      ).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Thêm cổng' })).toHaveCount(
+        0,
+      );
+      await expect(page.locator('.ant-alert-success')).toHaveCount(0);
+      expect(await counts()).toEqual(before);
       if (branch === 'assignment') {
         const restored = await query(
           `UPDATE event_assignments SET revoked_at=NULL WHERE tenant_id=$1::uuid AND event_id=$2::uuid AND membership_id=(SELECT id FROM memberships WHERE tenant_id=$1::uuid AND user_id=$3::uuid) AND revoked_at IS NOT NULL`,
