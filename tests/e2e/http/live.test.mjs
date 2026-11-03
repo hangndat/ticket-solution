@@ -23,6 +23,8 @@ const CASE_IDS = [
   'GATE-04',
   'GATE-05',
   'GATE-07',
+  'GATE-08',
+  'GATE-09',
   'DB-01',
   'DB-02',
   'DB-03',
@@ -6444,6 +6446,69 @@ for (const caseId of CASE_IDS) {
         reportBefore.body.checkInSuccessCount + 1,
         'only the confirmed valid credential may create a check-in',
       );
+      return;
+    }
+    if (caseId === 'GATE-08' || caseId === 'GATE-09') {
+      const supervisor = await bearer(ctx, 'supervisor');
+      const scanner = await bearer(ctx, 'scanner');
+      const owner = await bearer(ctx, 'owner');
+      const open = async (token) => {
+        const response = await request(ctx, 'POST', gatePath(f, 'sessions'), token, { tenantId: f.tenantId });
+        expectStatus(response, 200);
+        return response.body.sessionId;
+      };
+      const originalSession = await open(supervisor);
+      await open(scanner);
+      const clientEventId = randomUUID();
+      const applied = await request(ctx, 'POST', gatePath(f, 'offline-sync'), supervisor, {
+        tenantId: f.tenantId, staffSessionId: originalSession, deviceId: randomUUID(),
+        clientClockAt: new Date().toISOString(), events: [{ clientEventId, type: 'CHECKIN_OFFLINE',
+          eventId: f.eventId, ticketId: required(f.ticketId, `${caseId} ticketId`),
+          clientOccurredAt: new Date().toISOString(), clientSeq: 0, payloadVersion: 1 }],
+      });
+      expectStatus(applied, 201);
+      assert.equal(applied.body.results[0].status, 'APPLIED');
+      const checkinId = applied.body.results[0].checkinId;
+      const receiptPath = `${gatePath(f, 'offline-sync/receipts')}/${clientEventId}?tenantId=${f.tenantId}`;
+      const snapshot = async () => db03Query(f,
+        `SELECT (SELECT count(*)::int FROM checkins WHERE tenant_id=$1::uuid AND event_id=$2::uuid) AS checkins,
+                (SELECT count(*)::int FROM offline_sync_events WHERE tenant_id=$1::uuid AND event_id=$2::uuid) AS events`,
+        [f.tenantId, f.eventId]);
+      const beforeReads = await snapshot();
+      const current = await request(ctx, 'GET', receiptPath, supervisor);
+      expectStatus(current, 200);
+      assert.equal(current.body.status, 'APPLIED');
+      assert.equal(current.body.historical, true);
+      assert.equal(current.body.checkinState, 'CURRENT');
+      assert.equal(current.body.ticketId, f.ticketId);
+      assert.equal(current.body.checkinId, checkinId);
+      assert.equal(current.body.staffSessionId, originalSession);
+      assert.ok(!Object.hasOwn(current.body, 'admissionEligible'));
+      expectStatus(await request(ctx, 'GET', receiptPath, scanner), 404, 'OFFLINE_SYNC_RECEIPT_NOT_FOUND');
+      expectStatus(await request(ctx, 'GET', `${gatePath(f, 'offline-sync/receipts')}/${randomUUID()}?tenantId=${f.tenantId}`, supervisor),
+        404, 'OFFLINE_SYNC_RECEIPT_NOT_FOUND');
+      expectStatus(await request(ctx, 'GET', `${gatePath(f, 'offline-sync/receipts')}/not-a-uuid?tenantId=${f.tenantId}`, supervisor), 422);
+      assert.deepEqual(await snapshot(), beforeReads, 'receipt reads must not mutate the ledger or check-ins');
+      expectStatus(await request(ctx, 'POST', gatePath(f, 'sessions/revoke'), owner,
+        { tenantId: f.tenantId, staffSessionId: originalSession }), 201);
+      expectStatus(await request(ctx, 'GET', receiptPath, supervisor), 403, 'SESSION_NOT_ACTIVE');
+      const newSession = await open(supervisor);
+      assert.notEqual(newSession, originalSession);
+      const afterNew = await request(ctx, 'GET', receiptPath, supervisor);
+      expectStatus(afterNew, 200);
+      assert.equal(afterNew.body.staffSessionId, originalSession);
+      expectStatus(await request(ctx, 'POST', gatePath(f, `checkins/${checkinId}/undo`), supervisor,
+        { tenantId: f.tenantId, reason: 'receipt history test' }), 201);
+      const undone = await request(ctx, 'GET', receiptPath, supervisor);
+      expectStatus(undone, 200);
+      assert.equal(undone.body.checkinState, 'UNDONE');
+      await db03Query(f, `UPDATE events SET check_in_closes_at=clock_timestamp()-interval '1 hour'
+        WHERE tenant_id=$1::uuid AND id=$2::uuid`, [f.tenantId, f.eventId]);
+      const beforeClosedRead = await snapshot();
+      const closed = await request(ctx, 'GET', receiptPath, supervisor);
+      expectStatus(closed, 200);
+      assert.equal(closed.body.checkinState, 'UNDONE');
+      assert.deepEqual(await snapshot(), beforeClosedRead, 'closed-gate receipt lookup must remain read-only');
       return;
     }
     if (caseId === 'GATE-07') {
