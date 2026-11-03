@@ -22,6 +22,7 @@ import {
   resolveTicketIssuedTemplate,
 } from './notification-templates';
 import { openCurrentCredentialForQr, renderCredentialQrPng } from './qr-ticket';
+import { readCredentialKeyringEnvironment, type CredentialKeyInput } from './credential-crypto';
 import {
   buildGuestInvitationClaimLink,
   buildInviteAcceptLink,
@@ -47,7 +48,7 @@ export type ProcessOutboxResult = {
 };
 
 export type ProcessOutboxOptions = {
-  credentialKeyMaterial: string;
+  credentialKeyMaterial: CredentialKeyInput;
   publicWebBaseUrl?: string;
   retryConfig?: RetryConfig;
   leaseOwner: string;
@@ -429,12 +430,13 @@ export async function processClaimedOutbox(
         const creds = await tx.$queryRaw<
           Array<{
             version: number;
+             kid: string;
             token_hash: string;
             encrypted_token: string;
             status: string;
           }>
         >`
-          SELECT version, token_hash, encrypted_token, status
+           SELECT version, kid, token_hash, encrypted_token, status
           FROM ticket_credentials
           WHERE tenant_id = ${row.tenant_id}::uuid
             AND ticket_id = ${ticketId}::uuid
@@ -449,6 +451,7 @@ export async function processClaimedOutbox(
 
         const opened = openCurrentCredentialForQr({
           encryptedToken: cred.encrypted_token,
+          kid: cred.kid,
           credentialKeyMaterial: options.credentialKeyMaterial,
           expectedTokenHash: cred.token_hash,
         });
@@ -1412,12 +1415,16 @@ export async function relayOutboxOnce(
   if (claimed.length === 0) {
     return { claimed: 0, completed: 0, failed: 0 };
   }
-  const credentialKeyMaterial =
-    options?.credentialKeyMaterial?.trim() ||
-    process.env['TICKET_CREDENTIAL_KEY']?.trim() ||
-    '';
+  let credentialKeyMaterial: CredentialKeyInput = options?.credentialKeyMaterial ?? '';
+  if (typeof credentialKeyMaterial === 'string' && !credentialKeyMaterial) {
+    try {
+      credentialKeyMaterial = readCredentialKeyringEnvironment(options?.env ?? process.env);
+    } catch {
+      credentialKeyMaterial = '';
+    }
+  }
   // TicketIssued needs credential key for QR; invite types must not stall on it.
-  if (credentialKeyMaterial.length < 16) {
+  if (typeof credentialKeyMaterial === 'string' && credentialKeyMaterial.length < 16) {
     const needsCredential = claimed.filter((r) => r.type === 'TicketIssued');
     const invitesOnly = claimed.filter((r) => r.type !== 'TicketIssued');
     if (needsCredential.length > 0) {
