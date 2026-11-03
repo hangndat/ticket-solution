@@ -17,6 +17,7 @@ const CASE_IDS = [
   'SEC-06',
   'AUTH-03',
   'AUTH-06',
+  'AUTH-08',
   'GATE-01',
   'GATE-02',
   'GATE-03',
@@ -1573,6 +1574,38 @@ for (const caseId of CASE_IDS) {
   test(`[${caseId}] live HTTP`, async (t) => {
     const ctx = context(caseId);
     const f = ctx.fixture;
+    if (caseId === 'AUTH-08') {
+      const actor = required(f.accounts?.attendee, 'AUTH-08 attendee');
+      const access = await bearer(ctx, 'attendee');
+      const { Client } = createRequire(new URL('../../../packages/backend/package.json', import.meta.url))('pg');
+      const client = new Client({ connectionString: required(f.data?.controlDatabaseUrl, 'AUTH-08 controlDatabaseUrl') });
+      await client.connect();
+      const open = async () => {
+        await client.query('BEGIN READ ONLY');
+        try {
+          await client.query("SELECT set_config('app.actor_id', $1, true)", [actor.userId]);
+          const result = await client.query("SELECT id, state FROM account_deletion_requests WHERE user_id = $1::uuid AND state IN ('REQUESTED', 'UNDER_REVIEW', 'AWAITING_POLICY') ORDER BY id", [actor.userId]);
+          await client.query('COMMIT');
+          return result.rows;
+        } catch (error) { await client.query('ROLLBACK'); throw error; }
+      };
+      try {
+        assert.deepEqual(await open(), []);
+        const headers = { 'Idempotency-Key': randomUUID() };
+        const denied = await request(ctx, 'POST', '/me/account-deletion-requests', access, { confirmation: false }, headers);
+        assert.equal(denied.status, 422);
+        assert.deepEqual(await open(), []);
+        const accepted = await request(ctx, 'POST', '/me/account-deletion-requests', access, { confirmation: true }, headers);
+        expectStatus(accepted, 201);
+        assert.equal(accepted.body.state, 'REQUESTED');
+        const id = required(accepted.body.requestId, 'AUTH-08 requestId');
+        assert.deepEqual(await open(), [{ id, state: 'REQUESTED' }]);
+        const retry = await request(ctx, 'POST', '/me/account-deletion-requests', access, { confirmation: true }, headers);
+        expectStatus(retry, 401, 'UNAUTHENTICATED');
+        assert.deepEqual(await open(), [{ id, state: 'REQUESTED' }]);
+      } finally { await client.end(); }
+      return;
+    }
     if (caseId === 'DB-19') {
       const attendee = await bearer(ctx, 'attendee');
       const owner = await bearer(ctx, 'owner');
