@@ -84,3 +84,24 @@ test('DB-19 QR keyring: invalid configuration is rejected without exposing mater
     );
   }
 });
+
+test('DB-19 QR keyring: duplicate kid with non-string first value is rejected', () => {
+  for (const raw of [
+    `{"local-v1":1,"local-v1":"${OLD}"}`,
+    `{"local-v1":{"nested":"value"},"local\\u002dv1":"${OLD}"}`,
+  ]) {
+    assert.throws(
+      () => readCredentialKeyringEnvironment({
+        TICKET_CREDENTIAL_KEY: NEW,
+        TICKET_CREDENTIAL_KID: 'local-v2',
+        TICKET_CREDENTIAL_LEGACY_KEYS: raw,
+      }),
+      (error) => {
+        assert.equal(error.message, 'ticket credential keyring is invalid');
+        assert.ok(!error.message.includes(OLD));
+        assert.ok(!error.message.includes(NEW));
+        return true;
+      },
+    );
+  }
+});
