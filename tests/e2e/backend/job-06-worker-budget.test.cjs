@@ -115,6 +115,7 @@ function spawnWorker(pgUrl, smtpUrl, output) {
       PATH: process.env.PATH,
       NODE_ENV: 'test',
       NODE_OPTIONS: `--require=${require('node:path').resolve(__dirname, 'job-06-one-connection.cjs')}`,
+      JOB06_TEST_HOLD_CONNECTION: process.env.JOB06_TEST_HOLD_CONNECTION || '',
       DATABASE_URL: pgUrl,
       SMTP_URL: smtpUrl,
       SMTP_FROM: 'tickets@job06.example.test',
@@ -444,6 +445,10 @@ test(
           [tenantId, firstOutboxId],
         );
         firstRow = rows.rows[0];
+        if (stalledSmtp.connections === 1) {
+          const start = workerEvents(outputA.value).find((event) => event.event === 'job06_relay_smtp_start');
+          assert.equal(start?.held, 0, `relay must release its DB connections before SMTP starts: ${JSON.stringify(workerEvents(outputA.value).filter((event) => event.event?.startsWith('job06_relay_')))}`);
+        }
         if (stalledSmtp.connections === 1 && !expiredAfterSmtp) {
           await admin.query(
             `UPDATE redemption_requests SET expires_at = clock_timestamp() - interval '2 seconds'
@@ -543,6 +548,13 @@ test(
       const shutdownAt = performance.now();
       const closedA = await stopWorker(workerA);
       workerA = null;
+      const relayEvents = workerEvents(outputA.value);
+      const smtpStart = relayEvents.find((event) => event.event === 'job06_relay_smtp_start');
+      assert.ok(relayEvents.some((event) => event.event === 'job06_relay_db_acquire'),
+        'instrumentation must observe a real relay checkout');
+      assert.equal(smtpStart?.held, 0, 'relay must release its DB connections before SMTP starts');
+      assert.ok(!relayEvents.some((event) => event.event === 'job06_relay_db_during_smtp'),
+        'relay must not acquire a DB connection while SMTP is pending');
       const shutdownMs = performance.now() - shutdownAt;
       assert.equal(closedA.signal, 'SIGTERM');
       assert.equal(closedA.code, null);
