@@ -489,6 +489,9 @@ export {
   sealCredentialToken,
   openCredentialToken,
   hashCredentialToken,
+  readCredentialKeyringEnvironment,
+  type CredentialKeyInput,
+  type CredentialKeyring,
 } from './credential-crypto';
 export {
   NotificationError,

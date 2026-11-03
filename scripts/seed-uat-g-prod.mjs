@@ -15,7 +15,7 @@ import {
   grantEventAssignment,
   createPrismaIdentityUserRepository,
   readCodeHmacEnvironment,
-  readCredentialKeyEnvironment,
+  readCredentialKeyringEnvironment,
   renderCredentialQrPng,
   openCurrentCredentialForQr,
   hashRedemptionCode,
@@ -38,7 +38,7 @@ if (!attendeeSub || !staffSub) {
 
 const db = createDatabase(process.env.DATABASE_URL, 2);
 const hmac = readCodeHmacEnvironment(process.env);
-const credKey = readCredentialKeyEnvironment(process.env);
+const credKey = readCredentialKeyringEnvironment(process.env);
 const users = createPrismaIdentityUserRepository(db);
 
 const attendee = await users.upsertFromVerifiedIdentity({
@@ -234,7 +234,7 @@ for (const { code, ticketId } of ticketIds) {
     const credVersion = tickets[0]?.credential_version;
     if (credVersion == null) throw new Error(`ticket missing ${ticketId}`);
     const creds = await tx.$queryRaw`
-      SELECT version, token_hash, encrypted_token FROM ticket_credentials
+      SELECT version, kid, token_hash, encrypted_token FROM ticket_credentials
       WHERE tenant_id = ${TENANT_ID}::uuid AND ticket_id = ${ticketId}::uuid
         AND version = ${credVersion}::integer AND status = 'ACTIVE'
       LIMIT 1
@@ -243,6 +243,7 @@ for (const { code, ticketId } of ticketIds) {
     if (!cred) throw new Error(`no credential for ${ticketId}`);
     const { token } = openCurrentCredentialForQr({
       encryptedToken: cred.encrypted_token,
+      kid: cred.kid,
       credentialKeyMaterial: credKey,
       expectedTokenHash: cred.token_hash,
     });

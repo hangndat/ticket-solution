@@ -1554,10 +1554,43 @@ for (const caseId of CASE_IDS) {
         afterBoth,
         'rotation must not resurrect consumed code',
       );
+      const credentialsBefore = await db03Query(f,
+        'SELECT version, kid, status, token_hash, encrypted_token FROM ticket_credentials WHERE tenant_id=$1::uuid AND ticket_id=$2::uuid ORDER BY version',
+        [f.tenantId, issued.body.ticketId]);
+      assert.equal(credentialsBefore.length, 1);
+      assert.equal(credentialsBefore[0].kid, 'local-v2', 'HTTP issuance must use current credential key');
+      assert.equal(credentialsBefore[0].status, 'ACTIVE');
+      assert.ok(!credentialsBefore[0].encrypted_token.includes(issued.body.ticketId));
       const runDir = required(process.env.E2E_RUN_DIR, 'DB-19 E2E_RUN_DIR');
       const privateState = JSON.parse(readFileSync(`${runDir}/seed-state.json`, 'utf8'));
+      const requireBackend = createRequire(new URL('../../../packages/backend/package.json', import.meta.url));
+      const backend = requireBackend('./dist');
+      // Model a still-active credential minted before rotation in the live DB.
+      const legacy = backend.sealCredentialToken('db19-legacy-opaque-token', privateState.secrets.credentialLegacy);
+      await db03Query(f,
+        'UPDATE ticket_credentials SET kid=$3, token_hash=$4, encrypted_token=$5 WHERE tenant_id=$1::uuid AND ticket_id=$2::uuid AND status=\'ACTIVE\'',
+        [f.tenantId, issued.body.ticketId, legacy.kid, legacy.tokenHash, legacy.encryptedToken]);
+      const ring = backend.readCredentialKeyringEnvironment({
+        TICKET_CREDENTIAL_KEY: privateState.secrets.credential,
+        TICKET_CREDENTIAL_KID: 'local-v2',
+        TICKET_CREDENTIAL_LEGACY_KEYS: JSON.stringify({ 'local-v1': privateState.secrets.credentialLegacy }),
+      });
+      assert.equal(backend.openCurrentCredentialForQr({
+        encryptedToken: legacy.encryptedToken, expectedTokenHash: legacy.tokenHash,
+        kid: legacy.kid, credentialKeyMaterial: ring,
+      }).token, 'db19-legacy-opaque-token');
+      const rotated = await request(ctx, 'POST',
+        gatePath(f, `tickets/${issued.body.ticketId}/reissue`), owner,
+        { tenantId: f.tenantId, reason: 'DB-19 credential rotation' },
+        { 'idempotency-key': randomUUID() });
+      expectStatus(rotated, 200);
+      const credentialsAfter = await db03Query(f,
+        'SELECT version, kid, status FROM ticket_credentials WHERE tenant_id=$1::uuid AND ticket_id=$2::uuid ORDER BY version',
+        [f.tenantId, issued.body.ticketId]);
+      assert.deepEqual(credentialsAfter.map((c) => c.status), ['REVOKED', 'ACTIVE']);
+      assert.deepEqual(credentialsAfter.map((c) => c.kid), ['local-v1', 'local-v2']);
       const exposed = JSON.stringify([issued.body, current.body]) + readFileSync(`${runDir}/api.log`, 'utf8');
-      for (const material of [privateState.secrets.hmacLegacy, privateState.secrets.hmac, privateState.secrets.credential]) {
+      for (const material of [privateState.secrets.hmacLegacy, privateState.secrets.hmac, privateState.secrets.credential, privateState.secrets.credentialLegacy]) {
         assert.ok(!exposed.includes(material), 'DB-19 API response/log must not reveal key material');
       }
       return;
