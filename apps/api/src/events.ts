@@ -29,6 +29,7 @@ import {
   EVENT_ERROR_CODES,
   IdentityError,
   IDENTITY_ERROR_CODES,
+  PlatformError,
   archiveEvent,
   cancelEvent,
   cloneEvent,
@@ -47,6 +48,7 @@ import {
   type PrismaClient,
 } from '@ticket/backend';
 import { identityErrorHttpStatus } from './identity-http-status';
+import { platformRouteFail } from './platform/platform-errors';
 
 const UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -460,6 +462,7 @@ export class EventAdminController {
   constructor(private readonly events: EventAdminService) {}
 
   private fail(error: unknown): never {
+    if (error instanceof PlatformError) platformRouteFail(error);
     if (error instanceof IdentityError) {
       throw new HttpException(
         {
