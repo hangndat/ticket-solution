@@ -456,7 +456,7 @@ if (mode === 'list' || args.includes('--list')) {
         .setIssuedAt()
         .sign(privateKey);
     }
-    if (rawManifest.cases['WEB-10'] || rawManifest.cases['PORT-08'] || rawManifest.cases['DB-18']) {
+    if (rawManifest.cases['WEB-10'] || rawManifest.cases['PORT-08'] || rawManifest.cases['DB-18'] || rawManifest.cases['AUTH-08']) {
       const web10 = rawManifest.cases['WEB-10'];
       const catalogListPaths = web10
         ? [
@@ -490,7 +490,7 @@ if (mode === 'list' || args.includes('--list')) {
         routes: {},
       });
       rawManifest.runtime.faultControlPath = state.faultControlPath;
-      if (rawManifest.cases['DB-18']) {
+      if (rawManifest.cases['DB-18'] || rawManifest.cases['AUTH-08']) {
         state.idpFaultHitPath = resolve(state.dir, 'idp-delete-fault-hit.json');
         rawManifest.runtime.idpFaultHitPath = state.idpFaultHitPath;
       }
@@ -586,7 +586,7 @@ if (mode === 'list' || args.includes('--list')) {
       'worker',
       process.execPath,
       [resolve(ROOT, 'apps/worker/dist/main.js')],
-      caseIds.includes('DB-18')
+      (caseIds.includes('DB-18') || (mode === 'http' && caseIds.includes('AUTH-08')))
         ? {
             ...common,
             KEYCLOAK_ERASURE_ENABLED: '1',

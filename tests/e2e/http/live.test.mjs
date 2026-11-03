@@ -1590,6 +1590,14 @@ for (const caseId of CASE_IDS) {
         } catch (error) { await client.query('ROLLBACK'); throw error; }
       };
       try {
+        const faultPath = required(ctx.runtime.faultControlPath, 'AUTH-08 faultControlPath');
+        const hitPath = required(ctx.runtime.idpFaultHitPath, 'AUTH-08 idpFaultHitPath');
+        const fault = JSON.parse(readFileSync(faultPath, 'utf8'));
+        fault.idpDelete = {
+          path: `/admin/realms/${ctx.runtime.realm}/users/${actor.subject}`,
+          mode: 'unavailable',
+        };
+        writeFileSync(faultPath, JSON.stringify(fault), { mode: 0o600 });
         assert.deepEqual(await open(), []);
         const headers = { 'Idempotency-Key': randomUUID() };
         const denied = await request(ctx, 'POST', '/me/account-deletion-requests', access, { confirmation: false }, headers);
@@ -1598,11 +1606,39 @@ for (const caseId of CASE_IDS) {
         const accepted = await request(ctx, 'POST', '/me/account-deletion-requests', access, { confirmation: true }, headers);
         expectStatus(accepted, 201);
         assert.equal(accepted.body.state, 'REQUESTED');
+        assert.equal(JSON.stringify(accepted.body).includes(actor.username), false);
+        assert.equal(JSON.stringify(accepted.body).includes(actor.subject), false);
         const id = required(accepted.body.requestId, 'AUTH-08 requestId');
         assert.deepEqual(await open(), [{ id, state: 'REQUESTED' }]);
         const retry = await request(ctx, 'POST', '/me/account-deletion-requests', access, { confirmation: true }, headers);
         expectStatus(retry, 401, 'UNAUTHENTICATED');
         assert.deepEqual(await open(), [{ id, state: 'REQUESTED' }]);
+        const row = async () => (await client.query(
+          `SELECT out_state AS state, out_idp_status AS idp_status,
+                  out_pg_applied_at IS NOT NULL AS pg_applied,
+                  out_original_subject IS NULL AS subject_cleared
+           FROM get_account_deletion_idp_row($1::uuid)`, [id],
+        )).rows[0];
+        let state;
+        for (let attempt = 0; attempt < 30; attempt += 1) {
+          state = await row();
+          if (state?.idp_status === 'FAILED' && existsSync(hitPath)) break;
+          await new Promise((resolve) => setTimeout(resolve, 1_000));
+        }
+        assert.equal(existsSync(hitPath), true, 'AUTH-08 IdP DELETE received 503');
+        assert.deepEqual(state, { state: 'REQUESTED', idp_status: 'FAILED', pg_applied: true, subject_cleared: false });
+        const freshAccess = await bearer(ctx, 'attendee');
+        expectStatus(await request(ctx, 'GET', '/me/tickets', freshAccess), 401, 'UNAUTHENTICATED');
+        delete fault.idpDelete;
+        writeFileSync(faultPath, JSON.stringify(fault), { mode: 0o600 });
+        for (let attempt = 0; attempt < 90; attempt += 1) {
+          state = await row();
+          if (state?.state === 'COMPLETED') break;
+          await new Promise((resolve) => setTimeout(resolve, 1_000));
+        }
+        assert.deepEqual(state, { state: 'COMPLETED', idp_status: 'DELETED', pg_applied: true, subject_cleared: true });
+        const user = await client.query('SELECT email, subject FROM users WHERE id = $1', [actor.userId]);
+        assert.deepEqual(user.rows, [{ email: null, subject: `anon:${id}` }]);
       } finally { await client.end(); }
       return;
     }

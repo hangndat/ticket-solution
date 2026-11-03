@@ -495,7 +495,7 @@ function realmConfig(state, caseIds) {
       },
     ],
   });
-  if (caseIds.includes('DB-18')) {
+  if (caseIds.some((id) => ['DB-18', 'AUTH-08'].includes(id))) {
     state.clientSecrets['e2e-erasure'] = randomBytes(24).toString('base64url');
     realm.clients.push({
       clientId: 'e2e-erasure',
@@ -1286,7 +1286,7 @@ export async function createRuntime(caseIds, options = {}) {
         150_000,
       );
     }
-    if (caseIds.includes('DB-18')) await provisionErasureClient(state);
+  if (caseIds.some((id) => ['DB-18', 'AUTH-08'].includes(id))) await provisionErasureClient(state);
     await waitFor(
       'MinIO health',
       async () =>

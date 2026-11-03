@@ -2831,7 +2831,7 @@ export async function seedRuntime(state, caseIds) {
     httpClientSecret: state.clientSecrets['e2e-http'],
     httpPlatformClientId: 'e2e-http-platform',
     httpPlatformClientSecret: state.clientSecrets['e2e-http-platform'],
-    ...(caseIds.includes('DB-18')
+    ...(caseIds.some((id) => ['DB-18', 'AUTH-08'].includes(id))
       ? {
           erasureClientId: 'e2e-erasure',
           erasureClientSecret: state.clientSecrets['e2e-erasure'],
