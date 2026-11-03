@@ -432,6 +432,23 @@ function realmConfig(state, caseIds) {
       }
     }
   }
+  if (caseIds.includes('SEC-02')) {
+    // Same MFA flow and actor, with only the API audience changed.
+    const staffMfa = structuredClone(
+      realm.clients.find((client) => client.clientId === 'ticket-platform-web'),
+    );
+    delete staffMfa.id;
+    staffMfa.clientId = 'e2e-staff-mfa';
+    staffMfa.secret = randomBytes(24).toString('base64url');
+    state.clientSecrets[staffMfa.clientId] = staffMfa.secret;
+    staffMfa.redirectUris = [`${state.origins.portal}/`];
+    staffMfa.protocolMappers = staffMfa.protocolMappers
+      .filter((mapper) => mapper.name !== 'acr-mfa-2')
+      .map((mapper) => mapper.config?.['included.client.audience'] === 'ticket-platform-api'
+        ? { ...mapper, config: { ...mapper.config, 'included.client.audience': 'ticket-api' } }
+        : mapper);
+    realm.clients.push(staffMfa);
+  }
   // Real Keycloak grant for HTTP-layer tests only; no fabricated JWT/verifier.
   state.clientSecrets['e2e-http'] = randomBytes(24).toString('base64url');
   realm.clients.push({
