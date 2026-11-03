@@ -5,6 +5,7 @@ const assert = require('node:assert/strict');
 const { execFileSync } = require('node:child_process');
 const { randomBytes, randomUUID } = require('node:crypto');
 const { readFileSync } = require('node:fs');
+const { performance } = require('node:perf_hooks');
 const { Client } = require('pg');
 const { migrationFiles } = require('./migration-files.cjs');
 const { processDueObjectRetentions } = require('../dist/retention-o06');
@@ -606,6 +607,62 @@ test('O06 PII writer and sweep serialize on event lock in both orders',
       assert.equal(rejected, true);
       await assert.rejects(admin.query('UPDATE events SET ends_at=ends_at + interval \'1 day\' WHERE id=$1',
         [second.event]), /EVENT_RETENTION_FENCED/);
+    } finally {
+      if (db?.runtime) await db.runtime.end().catch(() => {});
+      if (db?.admin) await db.admin.end().catch(() => {});
+      if (db?.name) docker('rm', '-f', db.name);
+    }
+  });
+
+test('O06 POL-02 50k attendee event completes within the worker step budget',
+  { timeout: 240000 }, async () => {
+    let db;
+    try {
+      db = await database();
+      const { admin, runtime } = db;
+      const tenant = randomUUID();
+      const user = randomUUID();
+      await admin.query('INSERT INTO tenants (id,slug,name) VALUES ($1,$2,$2)',
+        [tenant, 'o06-large']);
+      await admin.query('INSERT INTO users (id,issuer,subject,email) VALUES ($1,$2,$3,$4)',
+        [user, 'o06-large', user, 'first@example.test']);
+      const fixture = await seedEvent(admin, tenant, user, 'large', -366 * 86400);
+      const code = (await admin.query('SELECT redemption_code_id FROM redemption_requests WHERE id=$1',
+        [fixture.request])).rows[0].redemption_code_id;
+      await admin.query(`CREATE TEMP TABLE o06_bulk_users AS
+        SELECT gen_random_uuid() AS id FROM generate_series(1, 49999)`);
+      await admin.query(`INSERT INTO users (id,issuer,subject,email)
+        SELECT id,'o06-large',id::text,id::text || '@example.test' FROM o06_bulk_users`);
+      await admin.query(`INSERT INTO event_attendees
+        (tenant_id,event_id,id,user_id,canonical_email)
+        SELECT $1,$2,gen_random_uuid(),id,id::text || '@example.test'
+        FROM o06_bulk_users`, [tenant, fixture.event]);
+      await admin.query(`INSERT INTO redemption_requests
+        (tenant_id,event_id,id,actor_user_id,redemption_code_id,status,answers_json)
+        SELECT $1,$2,gen_random_uuid(),id,$3,'ISSUED',
+          jsonb_build_object('phone', 'fixture-only')
+        FROM o06_bulk_users`, [tenant, fixture.event, code]);
+      const before = (await admin.query(`SELECT
+        (SELECT count(*)::int FROM event_attendees WHERE tenant_id=$1 AND event_id=$2
+          AND canonical_email IS NOT NULL) AS emails,
+        (SELECT count(*)::int FROM redemption_requests WHERE tenant_id=$1 AND event_id=$2
+          AND answers_json IS NOT NULL) AS answers`, [tenant, fixture.event])).rows[0];
+      assert.deepEqual(before, { emails: 50000, answers: 50000 });
+
+      const started = performance.now();
+      const applied = (await runtime.query(
+        'SELECT apply_ticket_pii_anonymization($1,$2) AS applied',
+        [tenant, fixture.event])).rows[0].applied;
+      const elapsedMs = Math.round(performance.now() - started);
+      console.log(`POL-02 50k attendee sweep: ${elapsedMs} ms`);
+      assert.equal(applied, true);
+      const after = (await admin.query(`SELECT
+        (SELECT count(*)::int FROM event_attendees WHERE tenant_id=$1 AND event_id=$2
+          AND canonical_email IS NOT NULL) AS emails,
+        (SELECT count(*)::int FROM redemption_requests WHERE tenant_id=$1 AND event_id=$2
+          AND answers_json IS NOT NULL) AS answers`, [tenant, fixture.event])).rows[0];
+      assert.deepEqual(after, { emails: 0, answers: 0 });
+      assert.ok(elapsedMs < 60000, `sweep ${elapsedMs} ms exceeds 60s worker step budget`);
     } finally {
       if (db?.runtime) await db.runtime.end().catch(() => {});
       if (db?.admin) await db.admin.end().catch(() => {});
