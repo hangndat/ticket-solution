@@ -7,6 +7,7 @@ import test from 'node:test';
 import { chromium } from 'playwright';
 import { web05ConfigV2Payload } from '../harness/web05-published-config.mjs';
 import { loadWeb05ExpectedHashes } from '../harness/web05-hashes.mjs';
+import { withIdpDeleteFault } from '../harness/idp-fault.mjs';
 
 const CASE_IDS = [
   'SEC-01',
@@ -1589,6 +1590,7 @@ for (const caseId of CASE_IDS) {
           return result.rows;
         } catch (error) { await client.query('ROLLBACK'); throw error; }
       };
+      let failed = false;
       try {
         const actorSession = await request(ctx, 'POST', gatePath(f, 'sessions'), access, { tenantId: f.tenantId });
         expectStatus(actorSession, 200);
@@ -1621,46 +1623,45 @@ for (const caseId of CASE_IDS) {
         assert.ok(otherBefore[0].tickets?.length > 0);
         const faultPath = required(ctx.runtime.faultControlPath, 'AUTH-08 faultControlPath');
         const hitPath = required(ctx.runtime.idpFaultHitPath, 'AUTH-08 idpFaultHitPath');
-        const fault = JSON.parse(readFileSync(faultPath, 'utf8'));
-        fault.idpDelete = {
+        const { id, row } = await withIdpDeleteFault(faultPath, {
           path: `/admin/realms/${ctx.runtime.realm}/users/${actor.subject}`,
           mode: 'unavailable',
-        };
-        writeFileSync(faultPath, JSON.stringify(fault), { mode: 0o600 });
-        assert.deepEqual(await open(), []);
-        const headers = { 'Idempotency-Key': randomUUID() };
-        const denied = await request(ctx, 'POST', '/me/account-deletion-requests', access, { confirmation: false }, headers);
-        assert.equal(denied.status, 422);
-        assert.deepEqual(await open(), []);
-        const accepted = await request(ctx, 'POST', '/me/account-deletion-requests', access, { confirmation: true }, headers);
-        expectStatus(accepted, 201);
-        assert.equal(accepted.body.state, 'REQUESTED');
-        assert.equal(JSON.stringify(accepted.body).includes(actor.username), false);
-        assert.equal(JSON.stringify(accepted.body).includes(actor.subject), false);
-        const id = required(accepted.body.requestId, 'AUTH-08 requestId');
-        assert.deepEqual(await sessionState(), [{ status: 'REVOKED' }]);
-        assert.deepEqual(await open(), [{ id, state: 'REQUESTED' }]);
-        const retry = await request(ctx, 'POST', '/me/account-deletion-requests', access, { confirmation: true }, headers);
-        expectStatus(retry, 401, 'UNAUTHENTICATED');
-        assert.deepEqual(await open(), [{ id, state: 'REQUESTED' }]);
-        const row = async () => (await client.query(
-          `SELECT out_state AS state, out_idp_status AS idp_status,
-                  out_pg_applied_at IS NOT NULL AS pg_applied,
-                  out_original_subject IS NULL AS subject_cleared
-           FROM get_account_deletion_idp_row($1::uuid)`, [id],
-        )).rows[0];
+        }, async () => {
+          assert.deepEqual(await open(), []);
+          const headers = { 'Idempotency-Key': randomUUID() };
+          const denied = await request(ctx, 'POST', '/me/account-deletion-requests', access, { confirmation: false }, headers);
+          assert.equal(denied.status, 422);
+          assert.deepEqual(await open(), []);
+          const accepted = await request(ctx, 'POST', '/me/account-deletion-requests', access, { confirmation: true }, headers);
+          expectStatus(accepted, 201);
+          assert.equal(accepted.body.state, 'REQUESTED');
+          assert.equal(JSON.stringify(accepted.body).includes(actor.username), false);
+          assert.equal(JSON.stringify(accepted.body).includes(actor.subject), false);
+          const id = required(accepted.body.requestId, 'AUTH-08 requestId');
+          assert.deepEqual(await sessionState(), [{ status: 'REVOKED' }]);
+          assert.deepEqual(await open(), [{ id, state: 'REQUESTED' }]);
+          const retry = await request(ctx, 'POST', '/me/account-deletion-requests', access, { confirmation: true }, headers);
+          expectStatus(retry, 401, 'UNAUTHENTICATED');
+          assert.deepEqual(await open(), [{ id, state: 'REQUESTED' }]);
+          const row = async () => (await client.query(
+            `SELECT out_state AS state, out_idp_status AS idp_status,
+                    out_pg_applied_at IS NOT NULL AS pg_applied,
+                    out_original_subject IS NULL AS subject_cleared
+             FROM get_account_deletion_idp_row($1::uuid)`, [id],
+          )).rows[0];
+          let state;
+          for (let attempt = 0; attempt < 30; attempt += 1) {
+            state = await row();
+            if (state?.idp_status === 'FAILED' && existsSync(hitPath)) break;
+            await new Promise((resolve) => setTimeout(resolve, 1_000));
+          }
+          assert.equal(existsSync(hitPath), true, 'AUTH-08 IdP DELETE received 503');
+          assert.deepEqual(state, { state: 'REQUESTED', idp_status: 'FAILED', pg_applied: true, subject_cleared: false });
+          const freshAccess = await bearer(ctx, 'attendee');
+          expectStatus(await request(ctx, 'GET', '/me/tickets', freshAccess), 401, 'UNAUTHENTICATED');
+          return { id, row };
+        }, { onCleanupError: () => t.diagnostic('AUTH-08: IdP fault cleanup failed after test failure') });
         let state;
-        for (let attempt = 0; attempt < 30; attempt += 1) {
-          state = await row();
-          if (state?.idp_status === 'FAILED' && existsSync(hitPath)) break;
-          await new Promise((resolve) => setTimeout(resolve, 1_000));
-        }
-        assert.equal(existsSync(hitPath), true, 'AUTH-08 IdP DELETE received 503');
-        assert.deepEqual(state, { state: 'REQUESTED', idp_status: 'FAILED', pg_applied: true, subject_cleared: false });
-        const freshAccess = await bearer(ctx, 'attendee');
-        expectStatus(await request(ctx, 'GET', '/me/tickets', freshAccess), 401, 'UNAUTHENTICATED');
-        delete fault.idpDelete;
-        writeFileSync(faultPath, JSON.stringify(fault), { mode: 0o600 });
         for (let attempt = 0; attempt < 90; attempt += 1) {
           state = await row();
           if (state?.state === 'COMPLETED') break;
@@ -1671,7 +1672,15 @@ for (const caseId of CASE_IDS) {
         assert.deepEqual(user.rows, [{ email: null, subject: `anon:${id}` }]);
         assert.deepEqual(await snapshot(f.tenantId), before);
         assert.deepEqual(await snapshot(f.data.otherTenantId), otherBefore);
-      } finally { await client.end(); }
+      } catch (error) {
+        failed = true;
+        throw error;
+      } finally {
+        try { await client.end(); } catch (error) {
+          if (!failed) throw error;
+          try { t.diagnostic('AUTH-08: database cleanup failed after test failure'); } catch { /* Keep the original failure. */ }
+        }
+      }
       return;
     }
     if (caseId === 'DB-19') {
