@@ -52,6 +52,7 @@ import {
   validateFormAnswers,
 } from '../../../src/redeem/form-validate';
 import { fetchOwnerRedemptionStatus } from '../../../src/redeem/owner-status';
+import { ownerRefreshPlan } from '../../../src/redeem/owner-refresh';
 import {
   isApiError,
   pollOperation,
@@ -669,28 +670,10 @@ export function RedeemForm({
       if (result.status === 'ok') {
         setUx(messageForOwnerStatus(result.body, locale));
         setRaw(JSON.stringify(result.body, null, 2));
-        if (result.body.status === 'ISSUED') {
-          setDecision({
-            kind: 'issued',
-            ticketId: result.body.ticketId,
-            requestId: result.body.requestId,
-            replayed: false,
-          });
-          setTicket({
-            ticketId: result.body.ticketId,
-            requestId: result.body.requestId,
-            operationId: '',
-            eventId: result.body.eventId,
-            ticketTypeId: result.body.ticketTypeId,
-            sourceId: result.body.sourceId,
-            state: 'ACTIVE',
-            credentialVersion: 1,
-            replayed: false,
-          });
-        } else if (result.body.status === 'REJECTED' || result.body.status === 'EXPIRED') {
-          setDecision(null);
-          setPendingRequestId(null);
-        }
+        const plan = ownerRefreshPlan(result.body);
+        if (plan.decision !== undefined) setDecision(plan.decision);
+        if (plan.ticket !== undefined) setTicket(plan.ticket);
+        if (plan.clearPendingRequest) setPendingRequestId(null);
         return;
       }
       if (result.status === 'unauthorized') {
