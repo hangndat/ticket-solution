@@ -13,7 +13,7 @@ const docker = (...args) =>
     stdio: ['ignore', 'pipe', 'pipe'],
   }).trim();
 
-async function startPostgres() {
+async function startPostgres({ excludeMigration } = {}) {
   const name = `ticket-e2e-backend-${randomBytes(6).toString('hex')}`;
   const password = randomBytes(24).toString('hex');
   const database = 'e2e_backend';
@@ -75,8 +75,11 @@ async function startPostgres() {
         'GRANT CREATE, USAGE ON SCHEMA public TO migration_owner',
       );
       await admin.query('SET ROLE migration_owner');
-      for (const file of migrationFiles())
+      for (const file of migrationFiles()) {
+        if (excludeMigration && file.includes(`/${excludeMigration}/`))
+          continue;
         await admin.query(readFileSync(file, 'utf8'));
+      }
       await admin.query('RESET ROLE');
       await admin.query(
         `CREATE ROLE e2e_login LOGIN PASSWORD '${password}' NOSUPERUSER NOBYPASSRLS INHERIT`,

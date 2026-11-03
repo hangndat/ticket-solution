@@ -2,6 +2,8 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { randomUUID } = require('node:crypto');
+const { readFileSync } = require('node:fs');
+const path = require('node:path');
 const { Client } = require('../../../packages/backend/node_modules/pg');
 const {
   createDatabase,
@@ -24,6 +26,127 @@ const env = {
     },
   ]),
 };
+
+test(
+  '[POL-01] previous worker runs after forward migration without data or access changes',
+  { timeout: 240000 },
+  async () => {
+    const migration = '202611040001_pol01_deadline_boundary';
+    const pg = await startPostgres({ excludeMigration: migration });
+    const db = createDatabase(pg.url, 4);
+    const admin = new Client({ connectionString: pg.adminUrl });
+    try {
+      await admin.connect();
+      const users = createPrismaIdentityUserRepository(db, { env });
+      const subject = randomUUID();
+      const user = await users.upsertFromVerifiedIdentity({
+        issuer,
+        subject,
+        email: `${subject}@example.test`,
+        emailVerified: true,
+      });
+      const ack = await createAccountDeletionRequest(db, {
+        userId: user.userId,
+        confirmation: true,
+      });
+      await admin.query(
+        `UPDATE account_deletion_requests SET requested_at = clock_timestamp() - interval '31 days',
+      idp_next_attempt_at = clock_timestamp() + interval '1 day' WHERE id = $1`,
+        [ack.requestId],
+      );
+      const snapshot = () =>
+        admin.query(
+          `SELECT to_jsonb(r) AS request, to_jsonb(u) AS account
+      FROM account_deletion_requests r JOIN users u ON u.id = r.user_id WHERE r.id = $1`,
+          [ack.requestId],
+        );
+      const before = (await snapshot()).rows;
+      assert.equal(before.length, 1);
+      const oldCount =
+        await db.$queryRaw`SELECT public.count_overdue_account_deletion_requests() AS n`;
+      assert.equal(oldCount[0].n, 1);
+      const oldDefinition = await admin.query(
+        `SELECT pg_get_functiondef('public.count_overdue_account_deletion_requests()'::regprocedure) AS definition`,
+      );
+      assert.match(
+        oldDefinition.rows[0].definition,
+        /requested_at < clock_timestamp\(\)/,
+      );
+      const missing = await admin.query(
+        `SELECT to_regprocedure('public.account_deletion_overdue_count_at(timestamptz)') IS NULL AS absent`,
+      );
+      assert.equal(missing.rows[0].absent, true);
+      const migrationSql = readFileSync(
+        path.join(
+          __dirname,
+          '../../../packages/backend/prisma/migrations',
+          migration,
+          'migration.sql',
+        ),
+        'utf8',
+      );
+      await admin.query('SET ROLE migration_owner');
+      try {
+        await admin.query(migrationSql);
+      } finally {
+        await admin.query('RESET ROLE');
+      }
+      assert.deepEqual(
+        (await snapshot()).rows,
+        before,
+        'forward migration preserves request and user',
+      );
+      const acl = await admin.query(`SELECT
+      has_function_privilege('ticket_runtime', 'public.count_overdue_account_deletion_requests()', 'EXECUTE') AS wrapper,
+      has_function_privilege('ticket_runtime', 'public.account_deletion_overdue_count_at(timestamptz)', 'EXECUTE') AS helper,
+      EXISTS (SELECT 1 FROM pg_proc p, LATERAL aclexplode(p.proacl) a
+        WHERE p.oid = 'public.account_deletion_overdue_count_at(timestamptz)'::regprocedure AND a.grantee = 0 AND a.privilege_type = 'EXECUTE') AS helper_public`);
+      assert.deepEqual(acl.rows[0], {
+        wrapper: true,
+        helper: false,
+        helper_public: false,
+      });
+      const metadata =
+        await admin.query(`SELECT p.proname, p.prosecdef, r.rolname AS owner,
+        p.proconfig, EXISTS (SELECT 1 FROM aclexplode(p.proacl) a WHERE a.grantee = 0 AND a.privilege_type = 'EXECUTE') AS public_execute
+        FROM pg_proc p JOIN pg_roles r ON r.oid = p.proowner
+        WHERE p.oid IN ('public.count_overdue_account_deletion_requests()'::regprocedure,
+          'public.account_deletion_overdue_count_at(timestamptz)'::regprocedure) ORDER BY p.proname`);
+      assert.equal(metadata.rows.length, 2);
+      for (const fn of metadata.rows) {
+        assert.equal(fn.prosecdef, true);
+        assert.equal(fn.owner, 'migration_owner');
+        assert.deepEqual(fn.proconfig, ['search_path=pg_catalog, public']);
+        assert.equal(fn.public_execute, false);
+      }
+      await assert.rejects(
+        db.$queryRaw`SELECT public.account_deletion_overdue_count_at(now())`,
+      );
+      const visible =
+        await db.$queryRaw`SELECT count(*)::int AS n FROM account_deletion_requests`;
+      assert.equal(visible[0].n, 0, 'runtime remains actorless under RLS');
+      // The previous application's worker source is unchanged by this PR; this
+      // calls its actual path and its existing no-argument metric signature.
+      const result = await processDueAccountAnonymizations(db, 10, {
+        env,
+        keyring: readTombstoneKeyring(env),
+        idp: null,
+        leaseOwner: `rollback-${randomUUID()}`,
+      });
+      assert.equal(result.scanned, 0);
+      assert.equal(result.slaOverdue, 1);
+      assert.deepEqual(
+        (await snapshot()).rows,
+        before,
+        'old worker leaves deferred request and account intact',
+      );
+    } finally {
+      await admin.end().catch(() => {});
+      await db.$disconnect().catch(() => {});
+      pg.stop();
+    }
+  },
+);
 
 test(
   '[POL-01] overdue cutoff uses inclusive DB deadline and private clock',
