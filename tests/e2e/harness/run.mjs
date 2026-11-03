@@ -111,6 +111,7 @@ const httpCases = [
   'DB-17',
   'DB-18',
   'JOB-04',
+  'JOB-07',
   'PLAT-03',
   'WEB-04',
   'WEB-05',
