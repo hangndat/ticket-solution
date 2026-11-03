@@ -8228,8 +8228,8 @@ for (const caseId of CASE_IDS) {
       expectStatus(session, 200);
       const hold = await request(ctx, 'POST', gatePath(f, 'reservations'), scanner, {
         tenantId: f.tenantId,
-        ticketId: issued.body.ticketId,
         staffSessionId: session.body.sessionId,
+        presented: { kind: 'qr', jws: ticket.body.gateCredential.jws },
       });
       expectStatus(hold, 200);
       const confirmed = await request(ctx, 'POST',
