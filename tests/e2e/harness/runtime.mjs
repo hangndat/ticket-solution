@@ -983,6 +983,12 @@ export function processEnvironment(state, extra = {}) {
 }
 
 export function startProcess(state, name, binary, args, env) {
+  if (
+    name !== 'http-SEC-05' && name !== 'browser-tests' &&
+    ('E2E_MINIO_OBSERVER_ACCESS_KEY' in env || 'E2E_MINIO_OBSERVER_SECRET_KEY' in env)
+  ) {
+    throw new Error(`BLOCKED: import observer credentials forbidden for ${name}`);
+  }
   const file = openSync(resolve(state.dir, `${name}.log`), 'a', 0o600);
   const child = spawn(binary, args, {
     cwd: ROOT,

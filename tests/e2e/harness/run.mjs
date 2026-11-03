@@ -531,8 +531,6 @@ if (mode === 'list' || args.includes('--list')) {
       MINIO_BUCKET_IMPORTS: state.minio.buckets.imports,
       MINIO_BUCKET_EXPORTS: state.minio.buckets.exports,
       MINIO_REGION: 'us-east-1',
-      E2E_MINIO_OBSERVER_ACCESS_KEY: state.minio.identities.observer.accessKey,
-      E2E_MINIO_OBSERVER_SECRET_KEY: state.minio.identities.observer.secretKey,
       API_BASE_URL: state.origins.api,
       MARKETING_HOSTS: state.suffix,
       PUBLIC_HOME_TENANT_SLUGS: homeCatalogSlugs.join(','),
@@ -540,6 +538,10 @@ if (mode === 'list' || args.includes('--list')) {
       E2E_RUN_DIR: state.dir,
       E2E_TLS_SPKI: state.spki,
     });
+    const observerEnv = {
+      E2E_MINIO_OBSERVER_ACCESS_KEY: state.minio.identities.observer.accessKey,
+      E2E_MINIO_OBSERVER_SECRET_KEY: state.minio.identities.observer.secretKey,
+    };
     if (publicReadDiagnostic) {
       diagnostic = {
         salt: randomBytes(24).toString('hex'),
@@ -738,6 +740,7 @@ if (mode === 'list' || args.includes('--list')) {
           [entry, '--case', id],
           {
             ...common,
+            ...(id === 'SEC-05' ? observerEnv : {}),
             ...(id === 'JOB-07' && process.env.E2E_JOB07_EXPIRY === '1'
               ? { E2E_JOB07_EXPIRY: '1' }
               : {}),
@@ -792,6 +795,7 @@ if (mode === 'list' || args.includes('--list')) {
         browserArgs(caseIds),
         {
           ...common,
+          ...(caseIds.includes('SEC-05') ? observerEnv : {}),
           ...(caseIds.includes('AUTH-07') ? { E2E_AUTH07_BFCACHE: '1' } : {}),
         },
       );

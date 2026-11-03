@@ -122,6 +122,109 @@ test('[SEC-05] Portal denies upload without event permission', async ({
   expect(await readImportBusinessSnapshot(f)).toEqual(before);
 });
 
+test('[SEC-05] stored encoded iframe payload renders as inert text in Portal preview', async ({
+  page,
+  context,
+}) => {
+  const m = loadManifest();
+  const f = fixtureFor(m, 'SEC-05');
+  await context.addInitScript(() => {
+    (window as unknown as { sec05Executed: boolean }).sec05Executed = false;
+  });
+  await login(page, m, 'SEC-05', 'owner');
+  await page.goto(portalUrl(m, eventPath(f, '/config')));
+  const path = eventBff(f, '/config-versions');
+  const versions = await bffGet(page, m, path);
+  expect(versions.status).toBe(200);
+  const latest = (versions.json as { items: Array<{ version: number }> })
+    .items[0].version;
+  const preview = await bffGet(page, m, `${path}/${latest}/preview`);
+  expect(preview.status).toBe(200);
+  const payload = structuredClone(
+    (
+      preview.json as {
+        payload: { sections: Array<{ kind: string; body: { text?: string } }> };
+      }
+    ).payload,
+  );
+  const hero = payload.sections.find((section) => section.kind === 'hero');
+  expect(hero).toBeTruthy();
+  const probe =
+    '<iframe srcdoc="&#60;script&#62;parent.sec05Executed=true&#60;/script&#62;"></iframe> SEC05-STORED SEC05-VALID-CONTENT';
+  hero!.body.text = probe;
+  const saved = await bffMutate(page, path, {
+    payload,
+    schemaVersion: 1,
+    expectedVersion: latest,
+  });
+  expect([200, 201]).toContain(saved.status);
+  const version = (saved.json as { version: number }).version;
+  const savedSnapshot = await readEventConfigMutationSnapshot(f);
+  const stored = await bffGet(page, m, `${path}/${version}/preview`);
+  expect(JSON.stringify(stored.json)).toContain('SEC05-STORED');
+  const response = await page.reload();
+  const csp = response?.headers()['content-security-policy'] ?? '';
+  expect(csp).toMatch(/object-src 'none'/);
+  expect(csp).toMatch(/script-src 'self' 'unsafe-inline'/);
+  expect(csp).not.toMatch(/unsafe-eval/);
+  const section = page.locator('section').filter({ hasText: 'SEC05-STORED' });
+  await expect(section).toBeVisible();
+  await expect(section).toContainText(probe);
+  await expect(section.locator('iframe, script')).toHaveCount(0);
+  await expect(section).toContainText('E2E SEC-05');
+  expect(
+    await page.evaluate(
+      () => (window as unknown as { sec05Executed: boolean }).sec05Executed,
+    ),
+  ).toBe(false);
+  expect(await readEventConfigMutationSnapshot(f)).toEqual(savedSnapshot);
+  const published = await bffMutate(page, eventBff(f, '/publish'), {
+    expectedVersion: version,
+  });
+  expect([200, 201]).toContain(published.status);
+  const afterPublish = await readEventConfigMutationSnapshot(f);
+  const api = await context.request.get(
+    new URL(
+      `/v1/public/tenants/${f.tenantSlug}/events/${f.eventSlug}`,
+      m.origins.api,
+    ).toString(),
+  );
+  expect(api.status()).toBe(200);
+  const detail = await api.json();
+  expect(
+    detail.sections.find((s: { kind: string }) => s.kind === 'hero')
+      .bodyMarkdown,
+  ).toBe(probe);
+  const web = await context.newPage();
+  try {
+    const res = await web.goto(
+      new URL(
+        `/t/${f.tenantSlug}/events/${f.eventSlug}`,
+        m.origins.web,
+      ).toString(),
+    );
+    expect(res?.status()).toBe(200);
+    const webCsp = res?.headers()['content-security-policy'] ?? '';
+    expect(webCsp).toMatch(/default-src 'self'/);
+    expect(webCsp).toMatch(/object-src 'none'/);
+    expect(webCsp).toMatch(/script-src 'self' 'unsafe-inline'/);
+    expect(webCsp).not.toMatch(/unsafe-eval/);
+    const content = web.locator('#event-details');
+    await expect(web.getByRole('heading', { level: 1 })).toContainText('E2E SEC-05');
+    await expect(content).toContainText(probe);
+    await expect(content).toContainText('SEC05-VALID-CONTENT');
+    await expect(content.locator('iframe, script')).toHaveCount(0);
+    expect(
+      await web.evaluate(
+        () => (window as unknown as { sec05Executed: boolean }).sec05Executed,
+      ),
+    ).toBe(false);
+    expect(await readEventConfigMutationSnapshot(f)).toEqual(afterPublish);
+  } finally {
+    await web.close();
+  }
+});
+
 test('[SEC-05] rejected rich text remains absent from real Web and Portal surfaces', async ({
   page,
   context,
@@ -195,64 +298,6 @@ test('[SEC-05] rejected rich text remains absent from real Web and Portal surfac
   } finally {
     await web.close();
   }
-});
-
-test('[SEC-05] stored encoded iframe payload renders as inert text in Portal preview', async ({
-  page,
-  context,
-}) => {
-  const m = loadManifest();
-  const f = fixtureFor(m, 'SEC-05');
-  await context.addInitScript(() => {
-    (window as unknown as { sec05Executed: boolean }).sec05Executed = false;
-  });
-  await login(page, m, 'SEC-05', 'owner');
-  await page.goto(portalUrl(m, eventPath(f, '/config')));
-  const path = eventBff(f, '/config-versions');
-  const versions = await bffGet(page, m, path);
-  expect(versions.status).toBe(200);
-  const latest = (versions.json as { items: Array<{ version: number }> })
-    .items[0].version;
-  const preview = await bffGet(page, m, `${path}/${latest}/preview`);
-  expect(preview.status).toBe(200);
-  const payload = structuredClone(
-    (
-      preview.json as {
-        payload: { sections: Array<{ kind: string; body: { text?: string } }> };
-      }
-    ).payload,
-  );
-  const hero = payload.sections.find((section) => section.kind === 'hero');
-  expect(hero).toBeTruthy();
-  const probe =
-    '<iframe srcdoc="&#60;script&#62;parent.sec05Executed=true&#60;/script&#62;"></iframe> SEC05-STORED';
-  hero!.body.text = probe;
-  const saved = await bffMutate(page, path, {
-    payload,
-    schemaVersion: 1,
-    expectedVersion: latest,
-  });
-  expect([200, 201]).toContain(saved.status);
-  const version = (saved.json as { version: number }).version;
-  const savedSnapshot = await readEventConfigMutationSnapshot(f);
-  const stored = await bffGet(page, m, `${path}/${version}/preview`);
-  expect(JSON.stringify(stored.json)).toContain('SEC05-STORED');
-  const response = await page.reload();
-  const csp = response?.headers()['content-security-policy'] ?? '';
-  expect(csp).toMatch(/object-src 'none'/);
-  expect(csp).toMatch(/script-src 'self' 'unsafe-inline'/);
-  expect(csp).not.toMatch(/unsafe-eval/);
-  const section = page.locator('section').filter({ hasText: 'SEC05-STORED' });
-  await expect(section).toBeVisible();
-  await expect(section).toContainText(probe);
-  await expect(section.locator('iframe, script')).toHaveCount(0);
-  await expect(section).toContainText('E2E SEC-05');
-  expect(
-    await page.evaluate(
-      () => (window as unknown as { sec05Executed: boolean }).sec05Executed,
-    ),
-  ).toBe(false);
-  expect(await readEventConfigMutationSnapshot(f)).toEqual(savedSnapshot);
 });
 
 test('[SEC-05] CSP and nosniff on web and portal home responses', async ({
