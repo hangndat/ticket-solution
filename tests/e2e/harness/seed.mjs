@@ -379,6 +379,16 @@ export async function seedRuntime(state, caseIds) {
             permissions: backend.eventPermissionsForRole(role),
           });
         }
+        if (caseId === 'AUTH-08') {
+          const membership = await backend.grantMembership(tx, {
+            tenantId, userId: accounts.attendee.userId, role: 'Scanner',
+            permissions: backend.tenantPermissionsForRole('Scanner'),
+          });
+          await backend.grantEventAssignment(tx, {
+            tenantId, eventId, membershipId: membership.membershipId,
+            permissions: backend.eventPermissionsForRole('Scanner'),
+          });
+        }
         if (caseId === 'PORT-07') {
           // Fixture-only gate panel reader: Portal nav (report.read) + list API
           // (gate.confirm) without event.update — not a production role preset.
