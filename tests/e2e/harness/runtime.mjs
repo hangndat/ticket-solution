@@ -1077,6 +1077,9 @@ function bootstrapMinio(state) {
     exports: `e2e-exports-${state.id}`,
     observer: `e2e-observer-${state.id}`,
   };
+  // Register planned resources before provisioning so lane cleanup can remove
+  // any subset created if bootstrap fails midway through.
+  state.minio = { buckets, identities };
   let stage = 'buckets';
   try {
     for (const bucket of Object.values(buckets))
@@ -1158,7 +1161,6 @@ function bootstrapMinio(state) {
       `BLOCKED: MinIO ${stage} failed (${error.status ?? error.code ?? 'policy_mismatch'})`,
     );
   }
-  state.minio = { buckets, identities };
 }
 
 export async function createRuntime(caseIds, options = {}) {
