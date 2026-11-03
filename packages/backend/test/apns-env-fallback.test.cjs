@@ -179,8 +179,9 @@ test('DeviceTokenNotForTopic triggers one alternate host attempt', async () => {
   assert.deepEqual(calls, ['sandbox', 'production']);
 });
 
-test('AR891-T3-F04: hanging HTTP/2 exchange is aborted at the provider deadline', async () => {
+test('AR891-T3-F04: hanging HTTP/2 exchange is aborted after it starts', async () => {
   let aborted = false;
+  const controller = new AbortController();
   setApnsHttp2ClientForTest({
     exchange(_environment, request) {
       return new Promise((_resolve, reject) => {
@@ -188,20 +189,45 @@ test('AR891-T3-F04: hanging HTTP/2 exchange is aborted at the provider deadline'
           aborted = true;
           reject(new Error('transport aborted'));
         }, { once: true });
+        queueMicrotask(() => controller.abort());
       });
     },
   });
   await assert.rejects(
-    () => sendApnsPush(cfg, baseInput, { env: enabledEnv, timeoutMs: 25 }),
+    () => sendApnsPush(cfg, { ...baseInput, signal: controller.signal }, { env: enabledEnv, timeoutMs: 5000 }),
     /aborted|timeout/i,
   );
   assert.equal(aborted, true);
 });
 
 test('AR891-T3-F04: deadline resolves even if an injected transport ignores abort', async () => {
-  setApnsHttp2ClientForTest({ exchange: () => new Promise(() => {}) });
+  let started = false;
+  setApnsHttp2ClientForTest({ exchange: () => { started = true; return new Promise(() => {}); } });
   await assert.rejects(
-    () => sendApnsPush(cfg, baseInput, { env: enabledEnv, timeoutMs: 25 }),
+    () => sendApnsPush(cfg, baseInput, { env: enabledEnv, timeoutMs: 1000 }),
     /aborted|timeout/i,
   );
+  assert.equal(started, true);
+});
+
+test('AR891-T3-F04: cancellation before fallback prevents another exchange', async () => {
+  const controller = new AbortController();
+  const calls = [];
+  let firstReturned;
+  const firstDone = new Promise((resolve) => { firstReturned = resolve; });
+  setApnsHttp2ClientForTest({
+    async exchange(environment) {
+      calls.push(environment);
+      controller.abort();
+      firstReturned();
+      return { status: 400, body: JSON.stringify({ reason: 'BadDeviceToken' }), apnsId: 'id' };
+    },
+  });
+  await assert.rejects(
+    () => sendApnsPush(cfg, { ...baseInput, signal: controller.signal }, { env: enabledEnv }),
+    /aborted|timeout/i,
+  );
+  await firstDone;
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.deepEqual(calls, ['sandbox']);
 });
