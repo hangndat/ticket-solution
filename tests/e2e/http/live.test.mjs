@@ -1590,6 +1590,11 @@ for (const caseId of CASE_IDS) {
         } catch (error) { await client.query('ROLLBACK'); throw error; }
       };
       try {
+        const actorSession = await request(ctx, 'POST', gatePath(f, 'sessions'), access, { tenantId: f.tenantId });
+        expectStatus(actorSession, 200);
+        const sessionState = () => web04Query(f, f.tenantId,
+          'SELECT status FROM staff_sessions WHERE id = $1::uuid', [actorSession.body.sessionId]);
+        assert.deepEqual(await sessionState(), [{ status: 'ACTIVE' }]);
         const scanner = await bearer(ctx, 'scanner');
         const session = await request(ctx, 'POST', gatePath(f, 'sessions'), scanner, { tenantId: f.tenantId });
         expectStatus(session, 200);
@@ -1633,6 +1638,7 @@ for (const caseId of CASE_IDS) {
         assert.equal(JSON.stringify(accepted.body).includes(actor.username), false);
         assert.equal(JSON.stringify(accepted.body).includes(actor.subject), false);
         const id = required(accepted.body.requestId, 'AUTH-08 requestId');
+        assert.deepEqual(await sessionState(), [{ status: 'REVOKED' }]);
         assert.deepEqual(await open(), [{ id, state: 'REQUESTED' }]);
         const retry = await request(ctx, 'POST', '/me/account-deletion-requests', access, { confirmation: true }, headers);
         expectStatus(retry, 401, 'UNAUTHENTICATED');
