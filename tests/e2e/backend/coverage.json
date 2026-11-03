@@ -492,11 +492,11 @@
       "D:packages/backend/test/portal-audit-codes.test.cjs#H-A1/H-C1/H-P-AUDIT",
       "D:packages/backend/test/o06-retention-db.test.cjs#O06 DB clocks",
       "D:packages/backend/test/o06-retention-db.test.cjs#O06 PII writer",
-      "D:packages/backend/test/o06-retention-db.test.cjs#O06 POL-02 50k attendee"
+      "R:packages/backend/test/o06-retention-db.test.cjs#O06 POL-02 50k attendee worker process"
     ],
-    "layers": ["D"],
+    "layers": ["D", "R"],
     "status": "blocked",
-    "reason": "D POL-02 kiểm biên 365 ngày, ends_at NULL, CANCELLED lấy cancelled_at, PII writer/sweep hai thứ tự row lock, tenant isolation, replay và giữ ticket/check-in/KPI input. Probe 50k attendee/request đo apply local dưới budget worker 60s; audit 729 ngày hiện, 731 ngày ẩn. Owner giảm AC theo PLAN §15.2: xóa audit vật lý 730 ngày và restore re-sweep chuyển task riêng; audit cũ vẫn nằm trong DB và PII có thể hồi sinh sau restore. Chưa đo worker process/VPS đích."
+    "reason": "D POL-02 kiểm biên 365 ngày, ends_at NULL, CANCELLED lấy cancelled_at, PII writer/sweep hai thứ tự row lock, tenant isolation, replay và giữ ticket/check-in/KPI input. R đo worker process local với 50k attendee/request và kiểm PII, tenant khác, ticket/check-in/KPI. Audit 729 ngày hiện, 731 ngày ẩn. Owner giảm AC theo PLAN §15.2: xóa audit vật lý 730 ngày và restore re-sweep chuyển task riêng; audit cũ vẫn nằm trong DB và PII có thể hồi sinh sau restore. Chưa đo VPS đích."
   },
   {
     "caseId": "POL-03",
