@@ -36,7 +36,7 @@ Khách & vé → tab Import
   → Không paste importId
 ```
 
-Pending / Notifications / Export: flow giữ [PORTAL-IMPLEMENTATION-HANDOFF.md](../PORTAL-IMPLEMENTATION-HANDOFF.md); bulk resend chạm `RESEND_LIMIT` → F4.
+Pending / Notifications / Export: flow giữ [contract UI Portal](../portal-contract.md); bulk resend chạm `RESEND_LIMIT` → F4.
 
 ## F3 — Tạo sự kiện + review
 

@@ -187,7 +187,7 @@ test(
 
       const issued = unwrapRedeemOutcome(
         await withTenant(db, tenantId, (tx) =>
-          redeemAndIssueTicket(tx, HMAC, 'd3-cred-key', {
+          redeemAndIssueTicket(tx, HMAC, 'd3-cred-key-material-at-least-16', {
             tenantId,
             eventId,
             actorUserId: guest.userId,
@@ -277,7 +277,7 @@ test(
         idempotencyKey: reissueKey,
       };
       const rotated = await withTenant(db, tenantId, (tx) =>
-        reissueTicketCredential(tx, 'd3-cred-key', reissueInput),
+        reissueTicketCredential(tx, 'd3-cred-key-material-at-least-16', reissueInput),
       );
       assert.deepEqual(rotated, {
         ok: true, ticketId: issued.ticketId, credentialVersion: 2, replayed: false,
@@ -302,7 +302,7 @@ test(
         ['credentialVersion', 'ok', 'replayed', 'ticketId']);
       await assert.rejects(
         () => withTenant(db, tenantId, (tx) =>
-          reissueTicketCredential(tx, 'd3-cred-key', {
+          reissueTicketCredential(tx, 'd3-cred-key-material-at-least-16', {
             ...reissueInput, actorUserId: cs.userId, idempotencyKey: randomUUID(),
           }),
         ),
@@ -327,7 +327,7 @@ test(
         });
         await assert.rejects(
           () => withTenant(db, tenantId, (tx) =>
-            reissueTicketCredential(tx, 'd3-cred-key', {
+            reissueTicketCredential(tx, 'd3-cred-key-material-at-least-16', {
               ...reissueInput, actorUserId: actor.userId,
               idempotencyKey: randomUUID(),
             }),
@@ -336,12 +336,12 @@ test(
         );
       }
       const replay = await withTenant(db2, tenantId, (tx) =>
-        reissueTicketCredential(tx, 'd3-cred-key', reissueInput),
+        reissueTicketCredential(tx, 'd3-cred-key-material-at-least-16', reissueInput),
       );
       assert.deepEqual(replay, { ...rotated, replayed: true });
       await assert.rejects(
         () => withTenant(db, tenantId, (tx) =>
-          reissueTicketCredential(tx, 'd3-cred-key', {
+          reissueTicketCredential(tx, 'd3-cred-key-material-at-least-16', {
             ...reissueInput, reason: 'different reason',
           }),
         ),
@@ -495,7 +495,7 @@ test(
 
       const second = unwrapRedeemOutcome(
         await withTenant(db, tenantId, (tx) =>
-          redeemAndIssueTicket(tx, HMAC, 'd3-cred-key', {
+          redeemAndIssueTicket(tx, HMAC, 'd3-cred-key-material-at-least-16', {
             tenantId,
             eventId,
             actorUserId: guest.userId,
@@ -577,7 +577,7 @@ test(
           WHERE tenant_id = ${tenantId}::uuid AND id = ${second.ticketId}::uuid
         `);
         const denied = await withTenant(db, tenantId, (tx) =>
-          reissueTicketCredential(tx, 'd3-cred-key', {
+          reissueTicketCredential(tx, 'd3-cred-key-material-at-least-16', {
             tenantId, eventId, ticketId: second.ticketId,
             actorUserId: staff.userId, reason: 'must deny non-active ticket',
             idempotencyKey: randomUUID(),
@@ -589,7 +589,7 @@ test(
 
       const third = unwrapRedeemOutcome(
         await withTenant(db, tenantId, (tx) =>
-          redeemAndIssueTicket(tx, HMAC, 'd3-cred-key', {
+          redeemAndIssueTicket(tx, HMAC, 'd3-cred-key-material-at-least-16', {
             tenantId, eventId, actorUserId: guest.userId,
             actorEmail: guest.email, emailVerified: true,
             rawCode: 'GATE-REISSUE-RACE', idempotencyKey: randomUUID(),
@@ -602,7 +602,7 @@ test(
         WHERE tenant_id = ${tenantId}::uuid AND id = ${eventId}::uuid
       `);
       const cancelledEventRotate = await withTenant(db, tenantId, (tx) =>
-        reissueTicketCredential(tx, 'd3-cred-key', {
+        reissueTicketCredential(tx, 'd3-cred-key-material-at-least-16', {
           tenantId, eventId, ticketId: third.ticketId,
           actorUserId: staff.userId, reason: 'event cancelled but ticket active',
           idempotencyKey: randomUUID(),
@@ -690,7 +690,7 @@ test(
 
       const race = await Promise.allSettled([
         withTenant(db, tenantId, (tx) =>
-          reissueTicketCredential(tx, 'd3-cred-key', {
+          reissueTicketCredential(tx, 'd3-cred-key-material-at-least-16', {
             tenantId, eventId, ticketId: third.ticketId,
             actorUserId: staff.userId, reason: 'race with revoke',
             idempotencyKey: randomUUID(),

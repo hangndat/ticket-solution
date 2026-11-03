@@ -1,11 +1,11 @@
 import {
-  createCipheriv,
   createHash,
   randomBytes,
   randomUUID,
 } from 'node:crypto';
 import type { Prisma } from './generated/prisma/client';
 import { ApprovalError } from './approval-error';
+import { sealCredentialToken, type CredentialKeyInput } from './credential-crypto';
 import { holdCodeForReview } from './approval';
 import {
   hashRedemptionCode,
@@ -171,23 +171,16 @@ function canonicalRequestHash(input: {
   return createHash('sha256').update(payload).digest('hex');
 }
 
-function sealCredentialToken(
-  token: string,
-  keyMaterial: string,
-): { tokenHash: string; encryptedToken: string; kid: string } {
-  const tokenHash = createHash('sha256').update(token).digest('hex');
-  const key = createHash('sha256').update(keyMaterial).digest();
-  const iv = randomBytes(12);
-  const cipher = createCipheriv('aes-256-gcm', key, iv);
-  const ciphertext = Buffer.concat([
-    cipher.update(token, 'utf8'),
-    cipher.final(),
-  ]);
-  const tag = cipher.getAuthTag();
-  const encryptedToken = Buffer.concat([iv, tag, ciphertext]).toString(
-    'base64url',
-  );
-  return { tokenHash, encryptedToken, kid: 'local-v1' };
+/** Dedup by pepper version, current wins on collision, then hash the code under each. */
+function codeHmacRingCandidates(
+  current: CodeHmacConfig,
+  legacy: CodeHmacConfig[] | undefined,
+  rawCode: string,
+): string[] {
+  const byVersion = new Map<number, CodeHmacConfig>();
+  for (const cfg of legacy ?? []) byVersion.set(cfg.version, cfg);
+  byVersion.set(current.version, current);
+  return [...byVersion.values()].map((cfg) => hashRedemptionCode(cfg, rawCode));
 }
 
 function mapIssuedResponse(
@@ -213,7 +206,7 @@ function mapIssuedResponse(
 export async function redeemAndIssueTicket(
   tx: Prisma.TransactionClient,
   hmac: CodeHmacConfig,
-  credentialKeyMaterial: string,
+  credentialKeyMaterial: CredentialKeyInput,
   input: RedeemInput,
 ): Promise<RedeemOutcome> {
   if (!input.emailVerified) {
@@ -387,7 +380,7 @@ export async function redeemAndIssueTicket(
 async function runIssueBusiness(
   tx: Prisma.TransactionClient,
   hmac: CodeHmacConfig,
-  credentialKeyMaterial: string,
+  credentialKeyMaterial: CredentialKeyInput,
   input: RedeemInput,
   operationId: string,
 ): Promise<IssueBusinessResult> {
@@ -426,8 +419,15 @@ async function runIssueBusiness(
     });
   }
 
-  // 3) Lock code FOR UPDATE
-  const codeHmac = hashRedemptionCode(hmac, input.rawCode);
+  // 3) Lock code FOR UPDATE — try the current pepper plus any still-supported
+  // legacy versions (input.routingPeppers) so a code hashed under an older,
+  // rotated-out version keeps resolving; a version dropped from the ring
+  // yields no candidate hmac and fails closed below as CODE_INVALID.
+  const codeHmacCandidates = codeHmacRingCandidates(
+    hmac,
+    input.routingPeppers,
+    input.rawCode,
+  );
   const codes = await tx.$queryRaw<CodeRow[]>`
     SELECT c.id, c.source_id, c.ticket_type_id, c.status, c.active_request_id,
            s.approval_mode, t.entitlement_snapshot
@@ -438,9 +438,20 @@ async function runIssueBusiness(
       ON s.tenant_id = c.tenant_id AND s.id = c.source_id
     WHERE c.tenant_id = ${input.tenantId}::uuid
       AND c.event_id = ${input.eventId}::uuid
-      AND c.code_hmac = ${codeHmac}
+      AND c.code_hmac = ANY(${codeHmacCandidates}::text[])
     FOR UPDATE OF c
   `;
+  if (codes.length > 1) {
+    // Same raw code resolves to more than one row in this tenant/event —
+    // a residual duplicate from re-import across a pepper rotation without
+    // the DB-10 routing registry (no global fingerprint to catch it). Which
+    // row is authoritative is ambiguous, so fail closed before any mutation
+    // rather than guess via unordered row order.
+    throw new IssueError(
+      ISSUE_ERROR_CODES.CODE_INVALID,
+      'Redemption code is invalid',
+    );
+  }
   const code = codes[0];
   if (!code) {
     throw new IssueError(

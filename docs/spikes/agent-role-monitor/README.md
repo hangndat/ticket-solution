@@ -4,31 +4,30 @@
 
 **Không phải:** implement production dashboard ngay; không deploy; không merge bắt buộc.
 
-
 ## Trạng thái MVP (implementation)
 
-| Hạng mục | Status | Path |
-| -------- | ------ | ---- |
-| Research spike `01`–`07` + `00` | **Xong** (research) | thư mục này |
-| Runbook coordinator (mailbox ingest) | **Xong** (docs) | [`docs/ops/AGENT-ROLE-MONITOR.md`](../../ops/AGENT-ROLE-MONITOR.md) |
+| Hạng mục                                                       | Status                      | Path                                                                                                             |
+| -------------------------------------------------------------- | --------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Research spike `01`–`07` + `00`                                | **Xong** (research)         | thư mục này                                                                                                      |
+| Runbook coordinator (mailbox ingest)                           | **Xong** (docs)             | [`docs/ops/AGENT-ROLE-MONITOR.md`](../../ops/AGENT-ROLE-MONITOR.md)                                              |
 | Scripts CLI (`record-opened` / `ingest-settlement` / `rollup`) | **Đang làm** (ownership BE) | [`scripts/agent-role-monitor/`](../../../scripts/agent-role-monitor/) — lib ledger đã có; entry CLI theo Task BE |
-| Portal `apps/web` | **Hoãn** | xem `07-web-surfaces.md` |
-| Token Cursor / OTel export | **Gap** (`null` / phase 2) | runbook §6 · `03` / `05` |
+| Portal `apps/web`                                              | **Hoãn**                    | xem `07-web-surfaces.md`                                                                                         |
+| Token Cursor / OTel export                                     | **Gap** (`null` / phase 2)  | runbook §6 · `03` / `05`                                                                                         |
 
 Coordinator: copy-paste hook từ runbook vào `check --wait` loop — **không** đợi portal.
 
 ## Output files (ownership — không đụng file người khác)
 
-| Role | File |
-| ---- | ---- |
-| product-ba | `01-ba-metrics-taxonomy.md` |
-| product-design | `02-pd-monitor-ux.md` |
-| architect | `03-architect-telemetry.md` |
-| research/SOTA (BA-lens) | `04-sota-landscape.md` |
-| reviewer-dod | `05-dod-evidence-gates.md` |
-| backend | `06-backend-data-plane.md` |
-| web | `07-web-surfaces.md` |
-| coordinator (sau wave) | `00-synthesis.md` — **đã có** (Run `run_0736a709b8b9`) |
+| Role                    | File                                                   |
+| ----------------------- | ------------------------------------------------------ |
+| product-ba              | `01-ba-metrics-taxonomy.md`                            |
+| product-design          | `02-pd-monitor-ux.md`                                  |
+| architect               | `03-architect-telemetry.md`                            |
+| research/SOTA (BA-lens) | `04-sota-landscape.md`                                 |
+| reviewer-dod            | `05-dod-evidence-gates.md`                             |
+| backend                 | `06-backend-data-plane.md`                             |
+| web                     | `07-web-surfaces.md`                                   |
+| coordinator (sau wave)  | `00-synthesis.md` — **đã có** (Run `run_0736a709b8b9`) |
 
 ## Điểm neo internet (seed — worker SOTA phải mở rộng/verify)
 
@@ -41,8 +40,8 @@ Coordinator: copy-paste hook từ runbook vào `check --wait` loop — **không*
 ## Context nội bộ bắt buộc đọc
 
 - `docs/agents/README.md` — Role ID catalog
-- `.cursor/rules/orca-agent-routing-coordinator.mdc` — agent = cursor
-- `.cursor/rules/github-project-tracking.mdc` — WIP / đo nhẹ process
+- `docs/agents/workflows/dispatch.md` — agent = cursor
+- `docs/agents/policies/project.md` — WIP / đo nhẹ process
 - `.cursor/rules/orca-coordinator-mailbox.mdc` — Dispatch lifecycle
 - Orca reality: `worker-list --json` có lifecycle/provider, **chưa** có token/CPU per role
 

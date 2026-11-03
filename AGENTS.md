@@ -19,36 +19,28 @@ Roadmap, Project, Issue, status, progress: **Tiếng Việt** (giữ ID/API/comm
 ## iOS build policy
 
 - **Không** Expo/EAS Cloud Build.
-- Local prebuild + Xcode/xcodebuild/fastlane trên Mac. Trước build/signing/provisioning/store: đọc `/Users/admin/.cursor/rules/apple-developer-personal.mdc`; xác minh personal team, không lấy mặc định từ Xcode/Keychain.
+- Local prebuild + Xcode/xcodebuild/fastlane trên Mac. Trước build/signing/provisioning/store: đọc `docs/agents/policies/ios-signing.md`; xác minh personal team, không lấy mặc định từ Xcode/Keychain.
 - Không upload signing lên Expo cloud.
 
 ## Safety and correctness
 
 - Không secrets/user data thật; không mock auth production; PG = SoT business state; tenant transaction-local + RLS.
-- Cloud prod / store chỉ khi task authorize. Commit/PR/merge: `.cursor/rules/git-workflow.mdc`.
-- UAT session: Orca browser + emulator — `.cursor/rules/uat-headless.mdc` (Read nếu glob chưa khớp).
+- Cloud prod / store chỉ khi task authorize. Commit/PR/merge: `docs/agents/policies/git.md`.
+- UAT session: Orca browser + emulator — `docs/agents/workflows/uat.md` (Read nếu glob chưa khớp).
 - Sau UAT luôn tự đóng browser page/tab do agent mở; không đóng tab user, giữ server local nếu còn phục vụ review/dev.
 - Công ty agent: mỗi task gắn nhân viên cố định trong `company/employees.json`, đọc persona/văn phong của người nhận; start qua workflow wrapper với `--employee <id>`. Tracking append-only theo `company/README.md` và `company/work-events.jsonl`; không đổi nhân viên khi phục hồi phiên/đổi model, không ghi secrets hoặc suy nghĩ nội bộ. Chưa build dashboard.
 
-## Workflow (pointers — chi tiết trong rules)
+## Bản đồ đọc
 
-| Topic                                       | Rule file                                                        |
-| ------------------------------------------- | ---------------------------------------------------------------- |
-| CRG                                         | `.cursor/rules/code-review-graph-ready.mdc`                      |
-| Project #3 status / DoD worker              | `.cursor/rules/github-project-tracking.mdc`                      |
-| Project WIP / `gh` / milestone              | `.cursor/rules/github-project-tracking-coordinator.mdc` (leader) |
-| Agent, Persona, Cost tier worker            | `.cursor/rules/orca-agent-routing-core.mdc`                      |
-| Spawn wave D+E, Codex fallback              | `.cursor/rules/orca-agent-routing-coordinator.mdc` (leader)      |
-| Giới hạn review/fix, findings, revalidation | `.cursor/rules/orca-review-convergence.mdc` (khi review/fix)     |
-| Git / PR                                    | `.cursor/rules/git-workflow.mdc`                                 |
-| Worktree                                    | `.cursor/rules/orca-worktree-hygiene.mdc`                        |
-| Roles catalog                               | [docs/agents/README.md](docs/agents/README.md)                   |
-| Task UI: chọn role/skill, mẫu chuẩn, review | [docs/agents/ui-workflow.md](docs/agents/ui-workflow.md)         |
-| Context budget                              | [docs/agents/context-budget.md](docs/agents/context-budget.md)   |
+Đọc [hướng dẫn agent](docs/agents/README.md) để chọn policy/workflow theo hành động. Mọi agent đọc [routing](docs/agents/policies/routing.md); source task đọc [context/CRG](docs/agents/policies/context.md), Git task đọc [quyền Git](docs/agents/policies/git.md), nghiệm thu theo [Project/DoD](docs/agents/policies/project.md).
 
-- **Leader / boss / orchestrator:** session = coordinator gốc → Read `.cursor/rules/orca-leader-activation.mdc` + coordinator-only rules theo hành động cần làm + skill `orchestration` khi supervise.
-- **Leader — bắt buộc:** tool đầu tiên khi được gọi leader là Read `orca-leader-activation.mdc`. **Cấm** dùng `Agent` tool (Claude Code subagent) để spawn worker/reviewer; chỉ dùng Orca CLI (`task-create` → `worker-start` với agent/model theo `docs/agents/cost-catalog.md` (Codex điều phối; Composer thực thi thường lệ; worker/reviewer focused/advanced/high ưu tiên Claude Sonnet 5 trước Codex) + `--display-name`/`--task-title` Persona → `check --wait`). Sau `worker-start` đọc `result.state`, không chỉ `ok` (`ok:true` vẫn có thể `state=failed`, vd. sai base branch — lấy tên branch từ `gh pr view <N> --json headRefName`). `.claude/settings.json` có hook PreToolUse chặn `Agent` để ép quy tắc này; cần subagent chỉ đọc cho việc ngoài leader thì hỏi user hoặc đặt `"disableAllHooks": true` trong `.claude/settings.local.json` (tắt mọi hook, chỉ cho phiên đó).
+- **Leader / boss / orchestrator:** session = coordinator gốc → Read `docs/agents/workflows/dispatch.md` + coordinator-only rules theo hành động cần làm + skill `orchestration` khi supervise.
+- **Leader:** đọc [dispatch](docs/agents/workflows/dispatch.md) và [lifecycle](docs/agents/workflows/lifecycle.md) trước supervise; dùng Orca qua workflow wrapper, không dùng subagent tool để dispatch worker/reviewer. Kiểm receipt state/next/requested/effective; nhường turn để Orca wake. Không tắt hooks để mở capability; lỗi hook giữ checkpoint và báo lỗi cụ thể.
 - **Worker/reviewer** không spawn con; không Read mailbox/parallel/idle-fill/epic-orchestrator trừ khi được giao coordinator.
 - Mỗi Task Spec: `Architecture impact: Có|Không`, `Cost tier: cheap|standard|focused|advanced|high`, Role ID + `docs/agents/roles/<id>.md` khi spawn chuyên môn.
 - Task UI: ghi `Skills cần nạp`, mẫu thiết kế chuẩn và evidence; chọn role theo `docs/agents/ui-workflow.md`, chỉ nạp skill liên quan.
-- DoD: nhánh B (product rủi ro) reviewer ≠ implementer, một session/PR, gộp dod±sec±ux; nhánh A (docs/tooling) không reviewer độc lập. Exact SHA → comment Issue/PR (ưu tiên) hoặc `docs/reviews/*.md` ngắn. Revalidate diff/findings, tái dùng evidence còn hiệu lực theo `orca-review-convergence.mdc`; không thêm vòng DoD/security riêng mặc định.
+- DoD: nhánh B (product rủi ro) reviewer ≠ implementer, một session/PR, gộp dod±sec±ux; nhánh A (docs/tooling) không reviewer độc lập. Exact SHA → comment Issue/PR (ưu tiên) hoặc `docs/reviews/*.md` ngắn. Revalidate diff/findings, tái dùng evidence còn hiệu lực theo `docs/agents/workflows/review.md`; không thêm vòng DoD/security riêng mặc định.
+
+## Nguồn dùng chung
+
+Policy/workflow chuẩn nằm trong docs/agents; .cursor/rules chỉ giữ trigger và pointer. Skills chuẩn ở .agents/skills, Cursor đọc qua symlink. CLAUDE.md trỏ AGENTS; mọi host theo cùng [bản đồ đọc](docs/agents/README.md).

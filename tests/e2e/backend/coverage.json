@@ -139,11 +139,13 @@
   {
     "caseId": "DB-13",
     "tests": [
-      "D:packages/backend/test/event-lifecycle.test.cjs#C-E event lifecycle"
+      "D:packages/backend/test/event-lifecycle.test.cjs#C-E event lifecycle",
+      "D:packages/backend/test/db13-event-windows.test.cjs#DB-13: isWindowOpen is half-open with null bounds unbounded",
+      "D:packages/backend/test/db13-event-windows.test.cjs#DB-13: two IANA timezones stored independently; invalid timezone/window rejected"
     ],
     "layers": ["D"],
     "status": "blocked",
-    "reason": "D lifecycle; thiếu UTC/IANA/deadline sau lock và archived ticket policy."
+    "reason": "D lifecycle + db13-event-windows (hai IANA timezone độc lập, isWindowOpen half-open, invalid timezone/window bị từ chối). Thiếu H Keycloak/HTTP theo ACCEPTANCE."
   },
   {
     "caseId": "DB-14",
@@ -184,32 +186,48 @@
     "caseId": "DB-17",
     "tests": [
       "D:packages/backend/test/role-presets.test.cjs#P2-ROLES-PRESET",
-      "D:packages/backend/test/tenant-registration.test.cjs#P2 self-serve PENDING registration"
+      "D:packages/backend/test/tenant-registration.test.cjs#P2 self-serve PENDING registration",
+      "D:packages/backend/test/event-quota-suspended.test.cjs#632 concurrent createEvent at max_events — one winner, one TENANT_LIMIT_REACHED",
+      "D:packages/backend/test/tenant-limits-usage.test.cjs#G-10 runtime role reads only authorized tenant counters and UTC day",
+      "D:packages/backend/test/db17-role-escalation.test.cjs#DB-17: non-Owner cannot create/list role presets; catalogue stays the only grantable surface",
+      "D:packages/backend/test/db17-tenant-limits-mutation.test.cjs#DB-17: maxEvents/maxStaff enforced at mutation; usage reflects committed counts",
+      "H:tests/e2e/http/live.test.mjs#[DB-17] live HTTP"
     ],
-    "layers": ["D"],
-    "status": "blocked",
-    "reason": "D presets/onboarding; thiếu H usage/mutation limit và arbitrary permissions matrix."
+    "layers": ["D", "H"],
+    "status": "implemented",
+    "reason": "D presets/onboarding, tenant limit mutation/usage, race và deny-by-default; H Keycloak bearer/API/PG thêm Manager/Scanner deny, invalid permission, named preset version, PENDING replay + 503, Operator MFA activation, maxEvents race 1 commit/1 TENANT_LIMIT_REACHED 409, maxStaff invite 409 và usage. Chờ clean exact-SHA D/H run và review."
   },
   {
     "caseId": "DB-18",
     "tests": [
+      "D:packages/backend/test/account-ack-session-revoke.test.cjs#SEC-1 ACK",
+      "D:packages/backend/test/account-ack-session-revoke.test.cjs#SEC-R1",
+      "D:packages/backend/test/account-session-revoke.test.cjs#session",
       "D:packages/backend/test/account-idp-erasure.test.cjs#SEC-2 T4/T14",
+      "D:packages/backend/test/account-idp-erasure.test.cjs#SEC-2 T5:",
+      "D:packages/backend/test/account-idp-erasure.test.cjs#SEC-2 T6/T7/T8",
       "D:packages/backend/test/account-idp-erasure.test.cjs#SEC-2 T9/T11/T12/T13",
-      "D:packages/backend/test/account-session-revoke.test.cjs#session"
+      "D:packages/backend/test/account-idp-erasure.test.cjs#SEC-2 T16",
+      "D:packages/backend/test/account-idp-erasure.test.cjs#SEC-D-01",
+      "D:packages/backend/test/account-idp-erasure.test.cjs#SEC-D-05",
+      "D:packages/backend/test/platform.test.cjs#deletion acceptance"
     ],
     "layers": ["D"],
     "status": "blocked",
-    "reason": "D deletion/tombstone; thiếu H session/IdP end-to-end và audit retention."
+    "reason": "DB-18 D: ACK/apply revoke sessions, race ACK/INSERT, IdP retry/tombstone/lease, PII scrub, audit retained; account-ack-session-revoke SEC-1 ACK còn kiểm membership ACTIVE theo PLAN §15.2, hai tenant không bị xóa nhầm, ticket/check-in và event report quota/ticket/check-in giữ nguyên sau apply. Mutation-check đổi tạm ticket ACTIVE→REVOKED làm aggregate assertion fail rồi hoàn nguyên. H live.test.mjs đã có Keycloak Admin DELETE và bearer HTTP, đang chờ run trên SHA sạch; không ghi H PASS từ inventory này. O06 TTL 365/730 ngày thuộc POL, không suy từ DB-18."
   },
   {
     "caseId": "DB-19",
     "tests": [
       "D:packages/backend/test/account-idp-erasure.test.cjs#SEC-2 B1:",
-      "U:packages/backend/test/issue-unit.test.cjs#CODE_HMAC_PEPPER"
+      "U:packages/backend/test/issue-unit.test.cjs#CODE_HMAC_PEPPER",
+      "D:packages/backend/test/db19-code-pepper-rotation.test.cjs#DB-19: code issued under v1 keeps resolving after v2 rotation; removed v1 fails closed; no plaintext",
+      "D:packages/backend/test/db19-code-pepper-rotation.test.cjs#DB-19: consumed code cannot be re-issued after pepper rotation (fail-closed)",
+      "D:packages/backend/test/db19-code-pepper-rotation.test.cjs#DB-19: duplicate rows for the same raw code across a pepper rotation fail closed with zero mutation"
     ],
     "layers": ["D", "U"],
     "status": "blocked",
-    "reason": "Keyring tombstone tests không chứng minh code/QR rotation."
+    "reason": "D code pepper rotation (v1 alias giữ sau rotate v2, removed v1 fail-closed, không lộ plaintext; consumed/ambiguous code không cấp lại sau rotation). H Keycloak/HTTP ở http/coverage.json. QR credential rotation (credential-crypto key đơn, kid local-v1) chưa có versioned keyring — product gap cần owner."
   },
   {
     "caseId": "GATE-01",
@@ -220,10 +238,14 @@
   },
   {
     "caseId": "GATE-02",
-    "tests": ["D:packages/backend/test/gate.test.cjs#gate: one confirm wins"],
+    "tests": [
+      "D:packages/backend/test/gate.test.cjs#gate: one confirm wins",
+      "D:packages/backend/test/gate-acceptance.test.cjs#GATE-02/04/05 acceptance",
+      "D:packages/backend/test/gate-concurrency.test.cjs#GATE-02/04/05 concurrency"
+    ],
     "layers": ["D"],
     "status": "blocked",
-    "reason": "D reserve conflict; thiếu H retry/cancel/expiry matrix."
+    "reason": "Race (gate-concurrency, hai kết nối thật, 6 vòng mỗi ca): cancel vs confirm trên cùng hold luôn cho đúng một kết quả hợp lệ (confirm thắng thì cancel nhận ALREADY_CHECKED_IN; cancel thắng thì confirm nhận RESERVATION_EXPIRED), không hold HELD nào sống sót, không quá một check-in hiện hành; cancel hold đã hết hạn không bao giờ lỗi và không tranh được hold mới của phiên khác (đúng một hold HELD). D: hold không phải check-in, retry cùng holder dùng lại reservation và xoay token (token cũ bị từ chối), hold hết hạn nhả cho session khác, staff khác nhận HELD_BY_OTHER_SESSION. Huỷ hold chủ động (owner quyết định 02/11/2026, `cancelReservation`): chỉ holder huỷ được (phiên khác HELD_BY_OTHER_SESSION), hold chuyển RELEASED + audit gate.cancel, không tạo check-in, phiên khác reserve được ngay, confirm hold đã huỷ bị RESERVATION_EXPIRED, huỷ lại là replay (replayed=true, không thêm audit, không đụng hold mới), reservation CONFIRMED trả ALREADY_CHECKED_IN, không tồn tại trả RESERVATION_NOT_FOUND. H xem http/coverage.json."
   },
   {
     "caseId": "GATE-03",
@@ -234,17 +256,25 @@
   },
   {
     "caseId": "GATE-04",
-    "tests": ["D:packages/backend/test/gate.test.cjs#gate: one confirm wins"],
+    "tests": [
+      "D:packages/backend/test/gate.test.cjs#gate: one confirm wins",
+      "D:packages/backend/test/gate-acceptance.test.cjs#GATE-02/04/05 acceptance",
+      "D:packages/backend/test/gate-concurrency.test.cjs#GATE-02/04/05 concurrency"
+    ],
     "layers": ["D"],
     "status": "blocked",
-    "reason": "D concurrent confirm; thiếu wrong holder/token, revoke/session race và H retry."
+    "reason": "Race confirm vs cancel xem GATE-02 (gate-concurrency). D: confirm đồng thời đúng một thắng, hết hạn, confirm vs revoke ticket (gate.test.cjs); sai holder/sai token không mutation, retry confirm không thêm check-in, confirm sau khi session bị revoke bị chặn (gate-acceptance). H xem http/coverage.json. Còn thiếu: revoke permission/membership giữa chừng request đang bay."
   },
   {
     "caseId": "GATE-05",
-    "tests": ["D:packages/backend/test/gate.test.cjs#gate: one confirm wins"],
+    "tests": [
+      "D:packages/backend/test/gate.test.cjs#gate: one confirm wins",
+      "D:packages/backend/test/gate-acceptance.test.cjs#GATE-02/04/05 acceptance",
+      "D:packages/backend/test/gate-concurrency.test.cjs#GATE-02/04/05 concurrency"
+    ],
     "layers": ["D"],
     "status": "blocked",
-    "reason": "D undo; thiếu H permission/idempotency và concurrent scan/revoke."
+    "reason": "Race (gate-concurrency): undo vs scan của phiên khác — undo luôn thành công, vé về ACTIVE, không check-in hiện hành, hàng undone giữ làm lịch sử, đúng một audit gate.undo, và dù scan thắng hay thua đều dẫn tới trạng thái hợp lệ (confirm được hoặc scan lại được); undo vs revoke — không bên nào lỗi, vé luôn kết thúc REVOKED (undo không hồi sinh vé đã revoke), một audit mỗi loại. D: Scanner không có gate.undo nên không override, lý do trống bị từ chối REASON_REQUIRED không mutation, undo giữ hàng check-in làm lịch sử (undone_at/undo_reason/undone_by) và đúng một audit gate.undo. Owner quyết định 02/11/2026: undo replay-safe — gọi lại cùng lý do trả kết quả ban đầu với replayed=true, không thêm audit, không đổi ticket; lý do khác vẫn CHECKIN_ALREADY_UNDONE. Re-entry sau undo vẫn đúng một check-in hiện hành. Lý do trống thống nhất REASON_REQUIRED cho undo, revoke, reissue (domain `revokeTicket` nay cũng kiểm)."
   },
   {
     "caseId": "GATE-06",
@@ -259,11 +289,13 @@
   {
     "caseId": "GATE-07",
     "tests": [
-      "D:packages/backend/test/offline-sync-apply.test.cjs#offline sync: apply"
+      "D:packages/backend/test/offline-sync-apply.test.cjs#offline sync: apply",
+      "D:packages/backend/test/offline-sync-authz-retry.test.cjs#GATE-07 authz on retry",
+      "D:packages/backend/test/offline-sync-authz-retry.test.cjs#GATE-07 two sessions replay one ticket"
     ],
     "layers": ["D"],
     "status": "blocked",
-    "reason": "D duplicate/conflict; thiếu H authz-on-retry và mixed batch audit."
+    "reason": "D: duplicate/conflict/REJECTED/CONFLICT idempotent audit (apply); authz-on-retry (authz-retry): retry DUPLICATE trước khi thu quyền là vô hại, sau khi thu event_assignments hoặc revoke staff session thì bị AuthzError/SESSION_NOT_ACTIVE và sổ cái offline_sync_events + checkins không đổi; đã kiểm đột biến bỏ từng kiểm tra. H không viết (AC giảm xuống D, xem ACCEPTANCE.md)."
   },
   {
     "caseId": "GATE-08",
@@ -459,12 +491,13 @@
     "caseId": "POL-02",
     "tests": [
       "D:packages/backend/test/portal-audit-codes.test.cjs#H-A1/H-C1/H-P-AUDIT",
-      "D:packages/backend/test/o06-retention-db.test.cjs#O06 POL-02/03",
-      "D:packages/backend/test/o06-retention-db.test.cjs#O06 PII writer"
+      "D:packages/backend/test/o06-retention-db.test.cjs#O06 DB clocks",
+      "D:packages/backend/test/o06-retention-db.test.cjs#O06 PII writer",
+      "R:packages/backend/test/o06-retention-db.test.cjs#O06 POL-02 50k attendee worker process"
     ],
-    "layers": ["D"],
+    "layers": ["D", "R"],
     "status": "blocked",
-    "reason": "D POL-02 kiểm clock ends_at NULL, CANCELLED lấy cancelled_at, PII writer/sweep hai thứ tự row lock, tenant isolation và replay. Cần ops đo event lớn, restore re-sweep. Audit TTL 730 ngày là gap policy riêng: chưa có deletion job."
+    "reason": "D POL-02 kiểm biên 365 ngày, ends_at NULL, CANCELLED lấy cancelled_at, PII writer/sweep hai thứ tự row lock, tenant isolation, replay và giữ ticket/check-in/KPI input. R đo worker process local với 50k attendee/request và kiểm PII, tenant khác, ticket/check-in/KPI. Audit 729 ngày hiện, 731 ngày ẩn. Owner giảm AC theo PLAN §15.2: xóa audit vật lý 730 ngày và restore re-sweep chuyển task riêng; audit cũ vẫn nằm trong DB và PII có thể hồi sinh sau restore. Chưa đo VPS đích."
   },
   {
     "caseId": "POL-03",

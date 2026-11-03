@@ -625,6 +625,8 @@ test('recommendRoute prefers Claude when recovered and null when none available'
   const route = recommendRoute({ costTier: 'advanced', codexSnapshot: codexSnapshot(5) }, { root, deps: bins });
   assert.equal(route.recommendation?.agent, 'claude');
   assert.equal(route.reason, 'claude_recovered');
+  assert.equal(route.purpose, 'non-coding');
+  assert.deepEqual(route.routes.map((entry) => entry.route.agent), ['claude', 'codex']);
   const blockedDir = mkdtempSync(join(tmpdir(), 'prov-rec-blocked-'));
   const blockedRoot = recoveryRoot(blockedDir);
   const failBins = fakeBins(blockedDir, { probe: 'rate' });

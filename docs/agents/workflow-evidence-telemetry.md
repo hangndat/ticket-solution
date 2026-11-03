@@ -1,6 +1,6 @@
 # Workflow evidence và đo token
 
-Coordinator đọc khi chạy UAT/evidence hoặc benchmark; worker chỉ nhận các bước liên quan trong spec. Không nạp tài liệu này vào mọi prompt. Giữ Codex điều phối, Composer thực thi thường lệ, max fan-out và planner theo routing hiện hành.
+Coordinator đọc khi chạy UAT/evidence hoặc benchmark; worker chỉ nhận các bước liên quan trong spec. Không nạp tài liệu này vào mọi prompt. Chọn agent/model, fan-out và planner theo [routing](policies/routing.md) và [dispatch](workflows/dispatch.md).
 
 ## Ngăn các vòng làm lại
 
@@ -16,24 +16,51 @@ Manifest v1 dùng các trường dưới đây (thay toàn bộ giá trị minh 
 {
   "schema": "agent-workflow-guard/manifest/v1",
   "capturedAt": "<UTC sau probe>",
-  "preflight": {"fingerprint": "<probe.fingerprint>", "at": "<UTC probe>", "ok": true, "kind": "integrity_expect_observation"},
+  "preflight": {
+    "fingerprint": "<probe.fingerprint>",
+    "at": "<UTC probe>",
+    "ok": true,
+    "kind": "integrity_expect_observation"
+  },
   "expect": {
-    "route": {"exact": "/ops/dashboard"}, "htmlLang": "vi",
-    "viewport": {"width": 1280, "height": 720},
+    "route": { "exact": "/ops/dashboard" },
+    "htmlLang": "vi",
+    "viewport": { "width": 1280, "height": 720 },
     "authMode": "protected",
-    "authProbe": {"url": "/api/auth/session", "authenticated": true, "operator": "platform", "mfa": "verified"},
-    "build": {"commit": "<full SHA đang serve>", "id": "<build ID>"},
-    "dom": [{"selector": "[data-testid=shell]", "visible": true}],
-    "states": [{"id": "dashboard-vi", "screenshot": "docs/reviews/assets/dashboard.png", "viewport": {"width": 1280, "height": 720}}]
+    "authProbe": {
+      "url": "/api/auth/session",
+      "authenticated": true,
+      "operator": "platform",
+      "mfa": "verified"
+    },
+    "build": { "commit": "<full SHA đang serve>", "id": "<build ID>" },
+    "dom": [{ "selector": "[data-testid=shell]", "visible": true }],
+    "states": [
+      {
+        "id": "dashboard-vi",
+        "screenshot": "docs/reviews/assets/dashboard.png",
+        "viewport": { "width": 1280, "height": 720 }
+      }
+    ]
   },
   "observations": "<object probe.observation, không phải string>",
   "git": {
-    "commit": {"ref": "<capture ref>", "sha": "<full SHA>", "dirty": false},
-    "sourceTree": {"path": ".", "sha": "<git rev-parse SHA^{tree}>"},
-    "build": {"id": "<build ID>"},
-    "scope": {"base": "<full base SHA>", "head": "<full head SHA>", "mode": "evidence-only"}
+    "commit": { "ref": "<capture ref>", "sha": "<full SHA>", "dirty": false },
+    "sourceTree": { "path": ".", "sha": "<git rev-parse SHA^{tree}>" },
+    "build": { "id": "<build ID>" },
+    "scope": {
+      "base": "<full base SHA>",
+      "head": "<full head SHA>",
+      "mode": "evidence-only"
+    }
   },
-  "artifacts": [{"path": "docs/reviews/assets/dashboard.png", "sha256": "<64 hex>", "viewport": {"width": 1280, "height": 720}}]
+  "artifacts": [
+    {
+      "path": "docs/reviews/assets/dashboard.png",
+      "sha256": "<64 hex>",
+      "viewport": { "width": 1280, "height": 720 }
+    }
+  ]
 }
 ```
 
@@ -56,27 +83,27 @@ Với worker mới, dùng wrapper để preflight, snapshot quota trước start
 
 ```bash
 node scripts/agent-workflow-run.mjs start --run-id RUN --task TASK --role-id ROLE \
-  --cost-tier standard --agent cursor --model composer-2.5 --task-title "Persona · việc cần làm"
+  --cost-tier standard --agent opencode --model opencode-go/deepseek-v4.1-flash --employee EMPLOYEE --task-title "Persona · việc cần làm"
 ```
 
 Đặt `--display-name` và `--task-title` Persona khi `task-create`; start trên current/existing không gửi creation flag `--display-name`. Wrapper giữ display-name local cho existing, chỉ chuyển vào Orca khi `--worktree new-child|new-top-level`.
 
 `--cost-tier` phải khớp Task Spec và agent/model/effort trong cost-catalog. Wrapper lưu `routing.json` cùng receipt và không gửi flag local này vào Orca. Đọc `state`, requested/effective và receipt, không chỉ `ok`. Effective agent/model/effort thiếu hoặc lệch làm wrapper trả lỗi kèm dispatch đang live và `observe_existing_dispatch_do_not_restart`; không tự retry/stop/release. Start thất bại/không rõ hoặc ledger lỗi sau khi agent ready: quan sát dispatch hiện hữu, không launch lại tự động. Worker cũ reuse bằng Orca theo skill: chụp quota theo wave và collect trước release, giữ receipt model gốc; model unknown phải báo unknown.
 
-Sau `worker_done` hợp lệ và đối chiếu task/dispatch/run:
+Sau `worker_done` hợp lệ và đối chiếu task/dispatch/run, collect khi coordinator được wake. V3 tự đóng worker đã xong; collect trước cleanup chủ động, không mặc định yêu cầu release lại:
 
 ```bash
-node scripts/agent-workflow-run.mjs settle --run-id RUN --dispatch-id DISPATCH --role-id ROLE --release
+node scripts/agent-workflow-run.mjs settle --run-id RUN --dispatch-id DISPATCH --role-id ROLE --employee EMPLOYEE
 node scripts/agent-role-monitor/telemetry.mjs report --run-id RUN --out .orca-metrics/report.json
 ```
 
-Wrapper chỉ collect/release dispatch completed/failed đúng run, không tự giả settlement hay ack mailbox. Coordinator vẫn xử lý delivery, findings và quyết định terminal. Transcript lưu metadata cấu trúc + sourceExact/contentComplete/clipping, không lưu prompt/response hoặc secrets. Terminal fallback/nguồn thiếu phải ghi partial/unknown.
+Wrapper chỉ collect/release dispatch completed/failed đúng run, không tự giả settlement hay ack mailbox. Chỉ thêm `--release` khi receipt/`next` yêu cầu cleanup owned; tôn trọng keep-open và user takeover. Không keep-open chỉ để đo. `send` follow-up: join receipt/employee/model/boundary theo Task/Dispatch thật, không gán usage assignment cũ vào Task mới. Coordinator vẫn xử lý delivery và findings, không chạy watcher đọc Orca mailbox. Transcript lưu metadata cấu trúc + sourceExact/contentComplete/clipping, không lưu prompt/response hoặc secrets. Terminal đã đóng/nguồn thiếu phải ghi partial/unknown; không coi auto-close là đã collect telemetry.
 
 ### Recovery khi worker lỗi / quota trước `worker_done`
 
 Heartbeat, escalation và thông báo lỗi mailbox **không** settle dispatch. `worker_done` hợp lệ (task/dispatch/run khớp, outcome rõ) **được Orca settle** — coordinator xác minh rồi `agent-workflow-run.mjs settle` (collect; `--release` chỉ khi receipt `released`).
 
-Liveness fleet: `orca orchestration worker-list --run <RUN> --include-remote --json` → `projection.liveness` và `projection.nextAction`; `worker-show` `observation.status` chỉ PTY. `unverifiable`, timeout hoặc inbox rỗng không chứng minh agent dừng ([orca-coordinator-mailbox](../../.cursor/rules/orca-coordinator-mailbox.mdc)). Đọc `ORCA skills get orchestration --reference references/recovery-and-cleanup.md`; **không** `worker-start` khi dispatch còn `live`.
+Liveness fleet: `orca orchestration worker-list --run <RUN> --include-remote --json` → `projection.liveness` và `projection.nextAction`; `worker-show` `observation.status` chỉ PTY. `unverifiable`, timeout hoặc inbox rỗng không chứng minh agent dừng ([orca-coordinator-mailbox](workflows/lifecycle.md)). Đọc `ORCA skills get orchestration --reference references/recovery-and-cleanup.md`; **không** `worker-start` khi dispatch còn `live`.
 
 Dispatch `completed`/`failed` đã settled: chỉ collect và (nếu cần) `--release` — **không** `worker-stop`/`worker-abandon` lại. Trước settlement: chỉ positive proof (`exited`, hoặc dispatch failed/stopped đúng run) mới stop/abandon/retry theo guide. `--release` là request wrapper; chỉ ghi `released` sau receipt, không điều kiện vòng trước khi gọi. Retry cùng `--employee` và `--retry-of <dispatch cũ>`; không ack delivery trước batch. Start thất bại sau agent ready → `observe_existing_dispatch_do_not_restart`, không implicit retry.
 
@@ -105,14 +132,14 @@ Worker có thể truyền các flags provider/thread/baseline/comparison-key nà
 
 Missing token phải ghi unknown cùng nguyên nhân (thiếu provider file/baseline/join), không coi telemetryCollected là đã có token. Chỉ truyền provider file/thread/baseline đã xác minh vào collect/settle; không đoán file mới nhất. company/work-events.jsonl giữ vai trò join nhân viên/lifecycle, không phải nguồn usage. Không đọc toàn bộ transcript để lấy số đo; đọc counters/metadata và khử trùng session/event. Cursor terminal display là chỉ số riêng, không cộng với provider totals. Tiền chỉ lấy từ billing/receipt có attribution; không đổi token/cache thành tiền subscription hay quota tiết kiệm. Không mở dashboard/tooling mới chỉ để đo.
 
-| Số đo | Ý nghĩa / giới hạn |
-| --- | --- |
-| input / output | Provider counters; input có thể tính lại cùng context qua nhiều request, không phải số token duy nhất |
-| cachedInput / input | Tỷ lệ token input được provider báo cached, không phải request cache hit rate hoặc % quota tiết kiệm |
-| reasoning | Thành phần của output; cachedInput là thành phần của input, không cộng lần nữa |
-| task_delta | Chỉ có khi baseline thật trước/sau trên cùng nguồn; task phải chiếm riêng boundary đó |
-| quota usedPercent | Snapshot account/rateLimits/read qua app-server, không tạo inference; shared toàn tài khoản |
-| quota delta | Chỉ so khi account hash/plan/limit/window/reset và thứ tự thời gian hợp lệ; đơn vị **điểm phần trăm**, không phải tiết kiệm riêng task |
+| Số đo               | Ý nghĩa / giới hạn                                                                                                                     |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| input / output      | Provider counters; input có thể tính lại cùng context qua nhiều request, không phải số token duy nhất                                  |
+| cachedInput / input | Tỷ lệ token input được provider báo cached, không phải request cache hit rate hoặc % quota tiết kiệm                                   |
+| reasoning           | Thành phần của output; cachedInput là thành phần của input, không cộng lần nữa                                                         |
+| task_delta          | Chỉ có khi baseline thật trước/sau trên cùng nguồn; task phải chiếm riêng boundary đó                                                  |
+| quota usedPercent   | Snapshot account/rateLimits/read qua app-server, không tạo inference; shared toàn tài khoản                                            |
+| quota delta         | Chỉ so khi account hash/plan/limit/window/reset và thứ tự thời gian hợp lệ; đơn vị **điểm phần trăm**, không phải tiết kiệm riêng task |
 
 `report --run-id NEW --baseline-run-id OLD --comparison-key KEY` chỉ tính % input giảm khi workload key, model/provider và boundary coverage khớp. Key phải đại diện cùng AC, input/diff và checks; thay template nhưng đổi workload không phải A/B hợp lệ. Một run nhiều task chưa có pairing 1:1 thì không được lấy một task đại diện để báo tiết kiệm cả run. Không quy token/cache thành % quota hoặc USD của subscription. Không có baseline lịch sử cho review GitHub trước đây thì không hồi suy được % tiết kiệm thực tế.
 

@@ -4,35 +4,35 @@
 
 > **Đối chiếu 24/10/2026:** đây là roadmap và ma trận gap tại thời điểm thiết kế, không phải danh sách task live. Wave 1 đã có PR #586, #587 và #597 merge; Issue #580 đã đóng. §1, §4, §7 và §8 giữ nguyên để truy vết đề xuất ban đầu. Trạng thái hiện hành lấy từ [Project #3](https://github.com/users/hangndat/projects/3), PR và evidence exact SHA; các AC/UAT chưa được xác nhận chỉ bằng việc merge. Xem [README](README.md).
 
-| Trường | Giá trị |
-| --- | --- |
-| **Epic GitHub** | [#580](https://github.com/hangndat/ticket-solution/issues/580) |
-| **Run** | `run_526c9a272efd` |
-| **Base SHA đọc code** | `6ba435ebfaf8` (main) + dirty `apps/mobile` (~105 paths — [IOS-AUDIT.md](IOS-AUDIT.md)) |
-| **Planner** | Dexter · planner · Cost tier `cheap` |
-| **Architecture impact** | **Có** |
-| **Synthesis inputs** | [BA-RESEARCH.md](BA-RESEARCH.md) · [PD-HANDOFF.md](PD-HANDOFF.md) · [ARCHITECTURE.md](ARCHITECTURE.md) · [IOS-AUDIT.md](IOS-AUDIT.md) |
+| Trường                  | Giá trị                                                                                                                               |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| **Epic GitHub**         | [#580](https://github.com/hangndat/ticket-solution/issues/580)                                                                        |
+| **Run**                 | `run_526c9a272efd`                                                                                                                    |
+| **Base SHA đọc code**   | `6ba435ebfaf8` (main) + dirty `apps/mobile` (~105 paths — [IOS-AUDIT.md](IOS-AUDIT.md))                                               |
+| **Planner**             | Dexter · planner · Cost tier `cheap`                                                                                                  |
+| **Architecture impact** | **Có**                                                                                                                                |
+| **Synthesis inputs**    | [BA-RESEARCH.md](BA-RESEARCH.md) · [PD-HANDOFF.md](PD-HANDOFF.md) · [ARCHITECTURE.md](ARCHITECTURE.md) · [IOS-AUDIT.md](IOS-AUDIT.md) |
 
 **Phân loại hoàn thành:**
 
-| Mốc | Epic #580 |
-| --- | --- |
-| **Design complete** | Gói plan + ROADMAP + artifacts §10 — **user duyệt 20/10/2026** (mockup mobile/web + roadmap) |
-| **Code complete** | PR merge `main` theo Task ownership |
-| **Acceptance complete** | Reviewer ≠ implementer, exact SHA, AC §6, UAT iPhone (đội) |
-| **Pilot ready** | TF/Archive + UAT vật lý + AC §6 đủ trên integrated SHA |
+| Mốc                     | Epic #580                                                                                    |
+| ----------------------- | -------------------------------------------------------------------------------------------- |
+| **Design complete**     | Gói plan + ROADMAP + artifacts §10 — **user duyệt 20/10/2026** (mockup mobile/web + roadmap) |
+| **Code complete**       | PR merge `main` theo Task ownership                                                          |
+| **Acceptance complete** | Reviewer ≠ implementer, exact SHA, AC §6, UAT iPhone (đội)                                   |
+| **Pilot ready**         | TF/Archive + UAT vật lý + AC §6 đủ trên integrated SHA                                       |
 
 ---
 
 ## 1. Evidence — hiện trạng vs O18 (tóm tắt)
 
-| Hạng mục | Quyết định O18 | Gap (code / contract) | Nguồn |
-| --- | --- | --- | --- |
-| **API origin** | Luôn `https://api.vemoki.com` mọi **dev + runtime**; chỉ test inject transport | `getApiBaseUrl()` vẫn đọc env/extra | [IOS-AUDIT §2](IOS-AUDIT.md), `config.ts` |
-| **Catalog** | Platform published, **không** `EXPO_PUBLIC_TENANT_SLUG` | Client tenant-scoped ADR-19; BE chưa có list đa tenant | [ARCHITECTURE §4.1](ARCHITECTURE.md), `catalog-context.ts` |
-| **Account / push** | JTBD; không jargon/CTA trùng; permission thật + moment | Account + `push-status.tsx` như audit | [PD-HANDOFF](PD-HANDOFF.md), [BA §5](BA-RESEARCH.md) |
-| **Staff / ví** | 3 tab; ẩn ví guest | WIP dirty tree ~aligned; cần **preserve/regression** khi integrate | [IOS-AUDIT §5–6](IOS-AUDIT.md) |
-| **Redeem** | Auth gate + draft park | Tenant-bound OK; global → **SCR** | [BA D-SCR-01](BA-RESEARCH.md) |
+| Hạng mục           | Quyết định O18                                                                 | Gap (code / contract)                                              | Nguồn                                                      |
+| ------------------ | ------------------------------------------------------------------------------ | ------------------------------------------------------------------ | ---------------------------------------------------------- |
+| **API origin**     | Luôn `https://api.vemoki.com` mọi **dev + runtime**; chỉ test inject transport | `getApiBaseUrl()` vẫn đọc env/extra                                | [IOS-AUDIT §2](IOS-AUDIT.md), `config.ts`                  |
+| **Catalog**        | Platform published, **không** `EXPO_PUBLIC_TENANT_SLUG`                        | Client tenant-scoped ADR-19; BE chưa có list đa tenant             | [ARCHITECTURE §4.1](ARCHITECTURE.md), `catalog-context.ts` |
+| **Account / push** | JTBD; không jargon/CTA trùng; permission thật + moment                         | Account + `push-status.tsx` như audit                              | [PD-HANDOFF](PD-HANDOFF.md), [BA §5](BA-RESEARCH.md)       |
+| **Staff / ví**     | 3 tab; ẩn ví guest                                                             | WIP dirty tree ~aligned; cần **preserve/regression** khi integrate | [IOS-AUDIT §5–6](IOS-AUDIT.md)                             |
+| **Redeem**         | Auth gate + draft park                                                         | Tenant-bound OK; global → **SCR**                                  | [BA D-SCR-01](BA-RESEARCH.md)                              |
 
 **Dirty tree:** sau roadmap approval — **snapshot / diff handoff / branch** từ tree user; **không** `cherry-pick` commit không tồn tại; **không** reset wt user.
 
@@ -48,14 +48,14 @@
 
 ## 3. Khuyến nghị kỹ thuật (planner — không phải gate user)
 
-| ID | Chọn | Ghi chú |
-| --- | --- | --- |
-| **K-API-01** | `GET /v1/public/events` (cursor, `PublishedEventListResponse`) | [ARCHITECTURE phương án A](ARCHITECTURE.md); per-tenant routes giữ cho detail/deep link |
-| **K-API-02** | `getApiBaseUrl()` / OIDC public getters → hằng prod allowlist; bỏ qua env/extra cũ; không trả null vì cấu hình cũ | **Không** điều kiện `getApsEnvironment()` — áp dụng mọi runtime |
-| **K-WALLET-01** | `GET /v1/me/tickets` optional `tenantId` (W1) | [ARCHITECTURE §6.2](ARCHITECTURE.md); tách khái niệm catalog slug vs ví UUID |
-| **K-PUSH-01** | Primer in-context (N1) — [PD-HANDOFF §4](PD-HANDOFF.md) | Không cold-start prompt |
-| **K-STAFF-01** | T8 chỉ **preserve + regression** navigation/gate đã có trong WIP | Không feature refactor staff mới trong #580 |
-| **K-INTEGRATE-01** | Một **iOS worker** / một dispatch cho cùng `apps/mobile` slice — paths **tuần tự** hoặc một Task integration coherent | Cấm wave song song T6∥T7∥T8 coding cùng slice |
+| ID                 | Chọn                                                                                                                  | Ghi chú                                                                                 |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| **K-API-01**       | `GET /v1/public/events` (cursor, `PublishedEventListResponse`)                                                        | [ARCHITECTURE phương án A](ARCHITECTURE.md); per-tenant routes giữ cho detail/deep link |
+| **K-API-02**       | `getApiBaseUrl()` / OIDC public getters → hằng prod allowlist; bỏ qua env/extra cũ; không trả null vì cấu hình cũ     | **Không** điều kiện `getApsEnvironment()` — áp dụng mọi runtime                         |
+| **K-WALLET-01**    | `GET /v1/me/tickets` optional `tenantId` (W1)                                                                         | [ARCHITECTURE §6.2](ARCHITECTURE.md); tách khái niệm catalog slug vs ví UUID            |
+| **K-PUSH-01**      | Primer in-context (N1) — [PD-HANDOFF §4](PD-HANDOFF.md)                                                               | Không cold-start prompt                                                                 |
+| **K-STAFF-01**     | T8 chỉ **preserve + regression** navigation/gate đã có trong WIP                                                      | Không feature refactor staff mới trong #580                                             |
+| **K-INTEGRATE-01** | Một **iOS worker** / một dispatch cho cùng `apps/mobile` slice — paths **tuần tự** hoặc một Task integration coherent | Cấm wave song song T6∥T7∥T8 coding cùng slice                                           |
 
 **ADR:** amendment “platform public catalog” — owner Architect ([ARCHITECTURE.md](ARCHITECTURE.md)); coordinator cấp ID.
 
@@ -73,29 +73,29 @@ Parent [#580](https://github.com/hangndat/ticket-solution/issues/580). DoD: AC �
 
 ### Stories
 
-| Story | Mô tả | Arch impact |
-| --- | --- | --- |
-| **MPR-S1** | Contracts freeze + BE platform catalog | Có |
-| **MPR-S2** | iOS transport + Events consumer | Có |
-| **MPR-S3** | PD handoff (done) → Account UX | Không |
-| **MPR-S4** | Push permission UX | Có |
-| **MPR-S5** | Staff navigation preserve/regression | Không |
-| **MPR-S6** | Redeem auth + draft (tenant-bound) | Có (SCR sau) |
-| **MPR-S7** | Review + UAT vật lý | — |
+| Story      | Mô tả                                  | Arch impact  |
+| ---------- | -------------------------------------- | ------------ |
+| **MPR-S1** | Contracts freeze + BE platform catalog | Có           |
+| **MPR-S2** | iOS transport + Events consumer        | Có           |
+| **MPR-S3** | PD handoff (done) → Account UX         | Không        |
+| **MPR-S4** | Push permission UX                     | Có           |
+| **MPR-S5** | Staff navigation preserve/regression   | Không        |
+| **MPR-S6** | Redeem auth + draft (tenant-bound)     | Có (SCR sau) |
+| **MPR-S7** | Review + UAT vật lý                    | —            |
 
 ### Tasks
 
-| Task | Role · Persona | Paths | Deps (thật) | Cost | Arch |
-| --- | --- | --- | --- | --- | --- |
-| **MPR-T1** | `backend` · **Gonic** hoặc **Colin** | `apps/api` `GET /v1/public/events`, tests published | **MPR-T2** merge (contract freeze) | standard | Có |
-| **MPR-T2** | coordinator · contracts | `packages/contracts`, OpenAPI | — | standard | Có |
-| **MPR-T3** | `ios` · Zico | `identity/config.ts`, `catalog-context.ts`, `published-event-api.ts`, `events.tsx`, copy | **T1+T2** integrated tip | standard | Có |
-| **MPR-T4** | `ios` · Zico | `account.tsx`, `screen-state-copy.ts`, `push/*` (Account + moment) | [PD-HANDOFF](PD-HANDOFF.md) (T5 artifact **done**) | standard | Có |
-| **MPR-T5** | `product-design` · Liv | [PD-HANDOFF.md](PD-HANDOFF.md) (đã giao) | — | **standard** | Có |
-| **MPR-T6** | `ios` · Zico | `redeem.tsx`, `redeem-draft-intent.ts`, auth gates | — (không phụ thuộc catalog T3) | standard | Có |
-| **MPR-T7** | `ios` · Zico | Staff tab/gate **regression only**; gate UAT/fixture routes Release | [IOS-AUDIT](IOS-AUDIT.md) handoff sau approval | standard | Không |
-| **MPR-T8** | `reviewer-dod` + `reviewer-security` · **James · dod+sec** | exact SHA tích hợp | T1–T7 merged | **standard** | Có |
-| **MPR-T9** | `ios` + coordinator | UAT checklist iPhone thật, `docs/reviews/MPR-UAT-*` | T8 PASS | standard | — |
+| Task       | Role · Persona                                             | Paths                                                                                    | Deps (thật)                                        | Cost         | Arch  |
+| ---------- | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------- | -------------------------------------------------- | ------------ | ----- |
+| **MPR-T1** | `backend` · **Gonic** hoặc **Colin**                       | `apps/api` `GET /v1/public/events`, tests published                                      | **MPR-T2** merge (contract freeze)                 | standard     | Có    |
+| **MPR-T2** | coordinator · contracts                                    | `packages/contracts`, OpenAPI                                                            | —                                                  | standard     | Có    |
+| **MPR-T3** | `ios` · Zico                                               | `identity/config.ts`, `catalog-context.ts`, `published-event-api.ts`, `events.tsx`, copy | **T1+T2** integrated tip                           | standard     | Có    |
+| **MPR-T4** | `ios` · Zico                                               | `account.tsx`, `screen-state-copy.ts`, `push/*` (Account + moment)                       | [PD-HANDOFF](PD-HANDOFF.md) (T5 artifact **done**) | standard     | Có    |
+| **MPR-T5** | `product-design` · Liv                                     | [PD-HANDOFF.md](PD-HANDOFF.md) (đã giao)                                                 | —                                                  | **standard** | Có    |
+| **MPR-T6** | `ios` · Zico                                               | `redeem.tsx`, `redeem-draft-intent.ts`, auth gates                                       | — (không phụ thuộc catalog T3)                     | standard     | Có    |
+| **MPR-T7** | `ios` · Zico                                               | Staff tab/gate **regression only**; gate UAT/fixture routes Release                      | [IOS-AUDIT](IOS-AUDIT.md) handoff sau approval     | standard     | Không |
+| **MPR-T8** | `reviewer-dod` + `reviewer-security` · **James · dod+sec** | exact SHA tích hợp                                                                       | T1–T7 merged                                       | **standard** | Có    |
+| **MPR-T9** | `ios` + coordinator                                        | UAT checklist iPhone thật, `docs/reviews/MPR-UAT-*`                                      | T8 PASS                                            | standard     | —     |
 
 **Ghi chú Task:**
 
@@ -104,7 +104,7 @@ Parent [#580](https://github.com/hangndat/ticket-solution/issues/580). DoD: AC �
 - **T5** design artifact hoàn tất; không block spawn T4 (PD đã handoff).
 - **T6** redeem polish **không** dep T3/T4 (tránh dep giả redeem→catalog).
 - **T7** không re-implement staff refactor; preserve WIP qua snapshot/branch; AC regression §6.
-- **T8** một session James **dod+sec** cùng SHA ([orca routing](../../../.cursor/rules/orca-agent-routing-core.mdc)).
+- **T8** một session James **dod+sec** cùng SHA ([orca routing](../../agents/policies/routing.md)).
 - **T9** owner **iOS + coordinator** chạy UAT trên iPhone thật (đội); user không bắt buộc làm tester; ghi blocker thật nếu thiếu thiết bị/quyền.
 
 **Web (optional):** **MPR-W1** nếu Architect ghi consumer web cần `GET /v1/public/events` — không chặn iOS.
@@ -183,16 +183,16 @@ Wave 7   MPR-T9 physical UAT (iOS/coordinator)
 
 ## 8. Đề xuất Issues GitHub (snapshot trước triển khai)
 
-| Issue | Title (VI) | Task |
-| --- | --- | --- |
-| #NEW-MPR-1 | Contracts: OpenAPI platform events list | T2 |
-| #NEW-MPR-2 | BE: `GET /v1/public/events` | T1 |
-| #NEW-MPR-3 | iOS: API prod cố định + catalog platform | T3 |
-| #NEW-MPR-4 | iOS: Tài khoản + thông báo production | T4 |
-| #NEW-MPR-5 | iOS: Redeem auth + draft intent | T6 |
-| #NEW-MPR-6 | iOS: Staff navigation regression | T7 |
-| #NEW-MPR-7 | Review dod+sec MPR | T8 |
-| #NEW-MPR-8 | UAT iPhone Epic 580 | T9 |
+| Issue      | Title (VI)                               | Task |
+| ---------- | ---------------------------------------- | ---- |
+| #NEW-MPR-1 | Contracts: OpenAPI platform events list  | T2   |
+| #NEW-MPR-2 | BE: `GET /v1/public/events`              | T1   |
+| #NEW-MPR-3 | iOS: API prod cố định + catalog platform | T3   |
+| #NEW-MPR-4 | iOS: Tài khoản + thông báo production    | T4   |
+| #NEW-MPR-5 | iOS: Redeem auth + draft intent          | T6   |
+| #NEW-MPR-6 | iOS: Staff navigation regression         | T7   |
+| #NEW-MPR-7 | Review dod+sec MPR                       | T8   |
+| #NEW-MPR-8 | UAT iPhone Epic 580                      | T9   |
 
 PD artifact **#580** — không Issue coding (T5 done).
 
@@ -206,11 +206,11 @@ Không migration/flag prod trong #580. Sau SCR contracts/BE: Task iOS global red
 
 ## 10. Artifact synthesis (handoff coordinator)
 
-| Artifact | Điểm planner đã gắn vào ROADMAP |
-| --- | --- |
-| [BA-RESEARCH.md](BA-RESEARCH.md) | D-API-01, D-EVT-01, push 4 lớp, AC tổng hợp |
-| [PD-HANDOFF.md](PD-HANDOFF.md) | IA phương án A, N1 push, AC-A* → T4 |
-| [ARCHITECTURE.md](ARCHITECTURE.md) | K-API-01/02, W1 wallet, deps BE→iOS |
-| [IOS-AUDIT.md](IOS-AUDIT.md) | B1–B6, dirty handoff, T7 scope, Dexter screenshot evidence |
+| Artifact                           | Điểm planner đã gắn vào ROADMAP                            |
+| ---------------------------------- | ---------------------------------------------------------- |
+| [BA-RESEARCH.md](BA-RESEARCH.md)   | D-API-01, D-EVT-01, push 4 lớp, AC tổng hợp                |
+| [PD-HANDOFF.md](PD-HANDOFF.md)     | IA phương án A, N1 push, AC-A* → T4                        |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | K-API-01/02, W1 wallet, deps BE→iOS                        |
+| [IOS-AUDIT.md](IOS-AUDIT.md)       | B1–B6, dirty handoff, T7 scope, Dexter screenshot evidence |
 
 **Planner worker (20/10):** roadmap đủ để soạn specs; danh sách Issue §8 là đề xuất ban đầu, không dùng để tạo lại task đã triển khai.

@@ -42,7 +42,7 @@ pnpm hooks:install   # git config core.hooksPath .githooks
 - Manual: `pnpm check:prepush` · dry-run: `PREPUSH_DRY_RUN=1 pnpm check:prepush`
 - Escape (not recommended): `SKIP_PREPUSH=1` or `TICKET_SKIP_PREPUSH=1`
 
-DoD / CI evidence on a PR (minimize GitHub API rate limit): `gh auth switch --user hangndat` then `./scripts/gh-dod-evidence.sh <pr>`. See `.cursor/rules/github-api-hygiene.mdc`.
+DoD / CI evidence on a PR (minimize GitHub API rate limit): `gh auth switch --user hangndat` then `./scripts/gh-dod-evidence.sh <pr>`. See `docs/agents/policies/github-api.md`.
 
 ## Workspace commands
 
@@ -57,13 +57,14 @@ Each app has its own README and environment examples. Database runtime role prov
 
 ## Documentation
 
-- [PRD](docs/PRD.md)
-- [Technical design](docs/TECHNICAL-DESIGN.md)
-- [Agent development plan](docs/AGENT-DEVELOPMENT-PLAN.md)
-- [Roadmap](docs/ROADMAP.md)
-- [Decision log](docs/DECISION-LOG.md)
-- [OIDC spike D1](docs/spikes/D1-OIDC-PROVIDER.md)
-- [W0 foundation report](docs/W0-FOUNDATION-REPORT.md)
-- Agent rules: [AGENTS.md](AGENTS.md) and `.cursor/rules/` (Orca, Project board, GitHub Flow)
+Start with the [documentation map](docs/README.md).
 
-W0 is foundation work. Keycloak P4 live smoke, transactional issuance, and Gate correctness require dedicated validation before pilot. See [D1-P4-KEYCLOAK-SMOKE](docs/reviews/D1-P4-KEYCLOAK-SMOKE.md).
+- Product scope: [PRD](docs/PRD.md), [roadmap and release gates](docs/ROADMAP.md), [decisions](docs/DECISION-LOG.md).
+- Architecture: [evidence-backed baseline](docs/architecture/ar891-current-architecture.md); [technical proposal](docs/TECHNICAL-DESIGN.md) for design context.
+- Development agents: [AGENTS.md](AGENTS.md), [workflow map](docs/agents/README.md).
+- Operations: [runbook](docs/ops/RUNBOOK.md), [immutable release](docs/ops/IMMUTABLE-RELEASE.md), [deploy pipeline](docs/ops/DEPLOY-PIPELINE.md).
+- UI: [design sources by surface](docs/design/README.md).
+- Verification: [review evidence index](docs/reviews/README.md); current delivery status is tracked in GitHub Project #3.
+- Earlier foundation reports and coordination logs: [archive](docs/archive/README.md).
+
+Documentation and historical PASS reports do not establish the current deployed SHA, a fresh regression result, pilot readiness or App Store availability.

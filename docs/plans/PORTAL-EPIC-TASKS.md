@@ -1,27 +1,29 @@
 # Epic PORTAL — Portal admin riêng `portal.vemoki.com` (Ant Design)
 
-| Trường | Giá trị |
-| --- | --- |
-| Epic đề xuất | **PORTAL** (slug board; **không** tái dùng D12/D13) |
-| Vai trò soạn | Epic planner (`orca-epic-orchestrator.mdc`) — **không** ownership coding, **không** spawn |
-| Agent | `cursor` (`orca-agent-routing-coordinator.mdc`) |
-| Orca Run | `run_df32d5572a2d` |
-| Task (bản đầu) / Task (hiệu chỉnh) | `task_b1db0479e51c` / `task_f67673d9a277` |
-| Ngày | 2026-10-18 (hiệu chỉnh cùng ngày) |
-| Source HEAD lúc bắt đầu Run | `400ad87a1401972476c79f17c4fd726ca7538063` |
-| Board | [Project #3](https://github.com/users/hangndat/projects/3) — Status động; file này **không** tự `Hoàn thành` / không tạo Issue |
-| Architecture impact | **Có** — tách host/session + framework portal (antd); Architect ADR trước consumer deploy |
-| Ngôn ngữ | Tiếng Việt (giữ ID, path, API, SHA, URL) |
+> **Snapshot theo scope/Issue và SHA ghi trong tài liệu.** Các run/model/Status/option chưa duyệt bên dưới là lịch sử của mốc đó; không chọn provider hoặc ready queue từ đây. Thực thi theo [docs index](../README.md), Project #3 và quyết định/ADR mới hơn. Riêng Gate scope theo O23 và Portal theo ADR-20; snapshot không cấp quyền production/store mới.
+
+| Trường                             | Giá trị                                                                                                                        |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Epic đề xuất                       | **PORTAL** (slug board; **không** tái dùng D12/D13)                                                                            |
+| Vai trò soạn                       | Epic planner (`docs/agents/workflows/dispatch.md`) — **không** ownership coding, **không** spawn                               |
+| Agent                              | `cursor` (`docs/agents/workflows/dispatch.md`)                                                                                 |
+| Orca Run                           | `run_df32d5572a2d`                                                                                                             |
+| Task (bản đầu) / Task (hiệu chỉnh) | `task_b1db0479e51c` / `task_f67673d9a277`                                                                                      |
+| Ngày                               | 2026-10-18 (hiệu chỉnh cùng ngày)                                                                                              |
+| Source HEAD lúc bắt đầu Run        | `400ad87a1401972476c79f17c4fd726ca7538063`                                                                                     |
+| Board                              | [Project #3](https://github.com/users/hangndat/projects/3) — Status động; file này **không** tự `Hoàn thành` / không tạo Issue |
+| Architecture impact                | **Có** — tách host/session + framework portal (antd); Architect ADR trước consumer deploy                                      |
+| Ngôn ngữ                           | Tiếng Việt (giữ ID, path, API, SHA, URL)                                                                                       |
 
 **Phân loại bằng chứng**
 
-| Loại | Áp dụng |
-| --- | --- |
-| **Quan sát** | Source/docs tại HEAD trên; Project #3 snapshot §1; URL chính thức + ngày truy cập §3 |
-| **Peer research (Run này)** | BA/PD/… đã bàn giao hoặc đang chạy — xem §0.1; coordinator tổng hợp cuối |
-| **Đề xuất planner** | Epic → Story → Task, wave, AC, migration/rollback — **chưa** approval implementation |
-| **Đã confirmed (user)** | `portal.vemoki.com` = staff admin; UI **Ant Design (antd)** — **không hỏi lại** |
-| **Gói đề xuất chờ user** | Một gói §9 (không 9 câu rời); Gate/Platform **không** mặc định chuyển quyền |
+| Loại                        | Áp dụng                                                                              |
+| --------------------------- | ------------------------------------------------------------------------------------ |
+| **Quan sát**                | Source/docs tại HEAD trên; Project #3 snapshot §1; URL chính thức + ngày truy cập §3 |
+| **Peer research (Run này)** | BA/PD/… đã bàn giao hoặc đang chạy — xem §0.1; coordinator tổng hợp cuối             |
+| **Đề xuất planner**         | Epic → Story → Task, wave, AC, migration/rollback — **chưa** approval implementation |
+| **Đã confirmed (user)**     | `portal.vemoki.com` = staff admin; UI **Ant Design (antd)** — **không hỏi lại**      |
+| **Gói đề xuất chờ user**    | Một gói §9 (không 9 câu rời); Gate/Platform **không** mặc định chuyển quyền          |
 
 `worker_done` ≠ DoD ≠ research complete = implementation ready ≠ pilot ready.
 
@@ -38,24 +40,24 @@
 
 ## 0. Readiness — research vs implementation
 
-| Mức | Trạng thái | Ý nghĩa |
-| --- | --- | --- |
-| **Research readiness** | **Wave discovery đã điều phối** (7 worker — §0.1); BA/PD đã có báo cáo | Không còn bước “spawn S0 như chưa bắt đầu”. Coordinator **tổng hợp** peer reports còn thiếu/đang chạy rồi đưa gói §9 cho user |
-| **Implementation readiness** | **Chưa** | Thiếu: (1) user duyệt **một gói** §9; (2) Architect ADR chốt kỹ thuật trong scope; (3) ủy quyền coding + lockfile; (4) WIP D12/D13 không đầy khi mở feature web |
+| Mức                          | Trạng thái                                                             | Ý nghĩa                                                                                                                                                         |
+| ---------------------------- | ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Research readiness**       | **Wave discovery đã điều phối** (7 worker — §0.1); BA/PD đã có báo cáo | Không còn bước “spawn S0 như chưa bắt đầu”. Coordinator **tổng hợp** peer reports còn thiếu/đang chạy rồi đưa gói §9 cho user                                   |
+| **Implementation readiness** | **Chưa**                                                               | Thiếu: (1) user duyệt **một gói** §9; (2) Architect ADR chốt kỹ thuật trong scope; (3) ủy quyền coding + lockfile; (4) WIP D12/D13 không đầy khi mở feature web |
 
 ### 0.1 Discovery Run `run_df32d5572a2d` — đã chạy (không spawn lại)
 
-Nguồn điều phối: [PORTAL-RESEARCH-RUN.md](./PORTAL-RESEARCH-RUN.md).
+Nguồn điều phối: [PORTAL-RESEARCH-RUN.md](../archive/runs/PORTAL-RESEARCH-RUN.md).
 
-| Role | Output (quan sát path local) | Ghi chú planner |
-| --- | --- | --- |
-| Epic planner | `docs/plans/PORTAL-EPIC-TASKS.md` (file này) | Hiệu chỉnh theo feedback coordinator |
-| `product-ba` | `docs/plans/PORTAL-PRODUCT-RESEARCH.md` | **Đã có** — journeys, ma trận, AC mẫu |
-| `product-design` | `docs/design/PORTAL-ANTD-UX.md` | **Đã có** — IA/shell/antd handoff đề xuất |
-| `architect` | `docs/architecture/PORTAL-SUBDOMAIN-ANTD.md` | Theo nhật ký Run; đối chiếu khi tổng hợp |
-| `web` | `docs/plans/PORTAL-WEB-FEASIBILITY.md` | Theo nhật ký Run; đối chiếu khi tổng hợp |
-| `backend` | `docs/plans/PORTAL-BACKEND-GAPS.md` | **Đã có path** — coi là đề xuất BE peer; **không** suy gap API ngoài evidence file đó |
-| `reviewer-security` | `docs/reviews/PORTAL-DISCOVERY-SECURITY.md` | Theo nhật ký Run; đối chiếu khi tổng hợp |
+| Role                | Output (quan sát path local)                 | Ghi chú planner                                                                       |
+| ------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------- |
+| Epic planner        | `docs/plans/PORTAL-EPIC-TASKS.md` (file này) | Hiệu chỉnh theo feedback coordinator                                                  |
+| `product-ba`        | `docs/plans/PORTAL-PRODUCT-RESEARCH.md`      | **Đã có** — journeys, ma trận, AC mẫu                                                 |
+| `product-design`    | `docs/design/PORTAL-ANTD-UX.md`              | **Đã có** — IA/shell/antd handoff đề xuất                                             |
+| `architect`         | `docs/architecture/PORTAL-SUBDOMAIN-ANTD.md` | Theo nhật ký Run; đối chiếu khi tổng hợp                                              |
+| `web`               | `docs/plans/PORTAL-WEB-FEASIBILITY.md`       | Theo nhật ký Run; đối chiếu khi tổng hợp                                              |
+| `backend`           | `docs/plans/PORTAL-BACKEND-GAPS.md`          | **Đã có path** — coi là đề xuất BE peer; **không** suy gap API ngoài evidence file đó |
+| `reviewer-security` | `docs/reviews/PORTAL-DISCOVERY-SECURITY.md`  | Theo nhật ký Run; đối chiếu khi tổng hợp                                              |
 
 Planner **không chờ** mọi report còn chạy để đóng hiệu chỉnh này; coordinator tổng hợp cuối.
 
@@ -65,13 +67,13 @@ Planner **không chờ** mọi report còn chạy để đóng hiệu chỉnh n�
 
 **Nguồn:** `gh project item-list 3 --owner hangndat` — 183 items — truy cập **2026-10-18**.
 
-| Parent / Epic | Issue | Status | Nội dung ngắn | Trùng PORTAL? |
-| --- | --- | --- | --- | --- |
-| D12 Production readiness | [#293](https://github.com/hangndat/ticket-solution/issues/293) | **Đang làm** | Gap sau O06 | **Không** |
-| D13 App Store | [#301](https://github.com/hangndat/ticket-solution/issues/301) | **Đang làm** | Phát hành ASC | **Không** |
-| D13-S1…S4 | #303, #305, #306, #307 | **Đang làm** | Eligibility / runtime / media / archive | Không |
-| D13-S6…S8 + Task | #310–#312, #317, #319, #327, #332–#339 | **Bị chặn** | Submit/release/đóng | Không |
-| Keyword `portal` / `antd` trên board | — | — | **0** item lúc snapshot | Chưa có Epic PORTAL |
+| Parent / Epic                        | Issue                                                          | Status       | Nội dung ngắn                           | Trùng PORTAL?       |
+| ------------------------------------ | -------------------------------------------------------------- | ------------ | --------------------------------------- | ------------------- |
+| D12 Production readiness             | [#293](https://github.com/hangndat/ticket-solution/issues/293) | **Đang làm** | Gap sau O06                             | **Không**           |
+| D13 App Store                        | [#301](https://github.com/hangndat/ticket-solution/issues/301) | **Đang làm** | Phát hành ASC                           | **Không**           |
+| D13-S1…S4                            | #303, #305, #306, #307                                         | **Đang làm** | Eligibility / runtime / media / archive | Không               |
+| D13-S6…S8 + Task                     | #310–#312, #317, #319, #327, #332–#339                         | **Bị chặn**  | Submit/release/đóng                     | Không               |
+| Keyword `portal` / `antd` trên board | —                                                              | —            | **0** item lúc snapshot                 | Chưa có Epic PORTAL |
 
 **Đếm Status:** Hoàn thành 161 · Bị chặn 14 · Đang làm 6 · Chưa lên lịch 2 · Chờ duyệt 0 · Sẵn sàng 0.
 
@@ -85,24 +87,24 @@ Planner **không chờ** mọi report còn chạy để đóng hiệu chỉnh n�
 
 ### 2.1 Host — O13 đã chốt; portal là mở rộng confirmed
 
-| Host | Vai trò | Trạng thái |
-| --- | --- | --- |
-| `vemoki.com` | Marketing / sales | O13 đã chốt |
-| `app.vemoki.com` | Product (O13: attendee + admin/gate/platform) | O13 đã chốt — **sẽ thu hẹp** khi portal live |
-| `portal.vemoki.com` | Staff admin (antd) | **User đã yêu cầu / confirmed** — cập nhật DECISION-LOG khi gói §9 được duyệt |
-| Cookie parent | Host-only; **cấm** `Domain=.vemoki.com` | O13 B2 / ENV-MANIFEST / R-INT — giữ |
+| Host                | Vai trò                                       | Trạng thái                                                                    |
+| ------------------- | --------------------------------------------- | ----------------------------------------------------------------------------- |
+| `vemoki.com`        | Marketing / sales                             | O13 đã chốt                                                                   |
+| `app.vemoki.com`    | Product (O13: attendee + admin/gate/platform) | O13 đã chốt — **sẽ thu hẹp** khi portal live                                  |
+| `portal.vemoki.com` | Staff admin (antd)                            | **User đã yêu cầu / confirmed** — cập nhật DECISION-LOG khi gói §9 được duyệt |
+| Cookie parent       | Host-only; **cấm** `Domain=.vemoki.com`       | O13 B2 / ENV-MANIFEST / R-INT — giữ                                           |
 
 Nguồn O13: [DECISION-LOG](../DECISION-LOG.md), [o13-marketing-app-subdomain.md](../architecture/o13-marketing-app-subdomain.md).
 
 ### 2.2 Surface staff hiện có trên `apps/web`
 
-| Surface | Path quan sát | Capability (nav) |
-| --- | --- | --- |
-| Tenant admin | `apps/web/app/admin/**` | `showAdmin` |
-| Web Gate | `apps/web/app/gate/**` | `showGate` |
-| Platform | `apps/web/app/platform/**` | `showPlatform` |
-| BFF admin | `apps/web/app/api/bff/admin/**` | Cookie BFF → Bearer Nest |
-| Attendee / guest | `/redeem`, `/claim`, `/t/...`, marketing | Không staff |
+| Surface          | Path quan sát                            | Capability (nav)         |
+| ---------------- | ---------------------------------------- | ------------------------ |
+| Tenant admin     | `apps/web/app/admin/**`                  | `showAdmin`              |
+| Web Gate         | `apps/web/app/gate/**`                   | `showGate`               |
+| Platform         | `apps/web/app/platform/**`               | `showPlatform`           |
+| BFF admin        | `apps/web/app/api/bff/admin/**`          | Cookie BFF → Bearer Nest |
+| Attendee / guest | `/redeem`, `/claim`, `/t/...`, marketing | Không staff              |
 
 UI: Next App Router + CSS riêng — **`antd` / `@ant-design/*` chưa có** trong `apps/web/package.json` tại HEAD (quan sát).
 
@@ -123,14 +125,14 @@ Scope complete portal = **parity toàn bộ chức năng staff admin hiện có*
 
 ## 3. Nghiên cứu Ant Design (nguồn chính thức)
 
-| Nguồn | URL | Ngày truy cập | Điểm rút |
-| --- | --- | --- | --- |
-| Ant Design — Next.js App Router | https://ant.design/docs/react/use-with-next/ | 2026-10-18 | `@ant-design/nextjs-registry` + `AntdRegistry`; tránh sub-component `.` trên RSC |
-| nextjs-registry | https://github.com/ant-design/nextjs-registry | 2026-10-18 | Style registry |
-| Ví dụ App Router | https://github.com/ant-design/ant-design-examples/tree/main/examples/with-nextjs-app-router-inline-style | 2026-10-18 | `"use client"` khi cần |
-| npm `antd` metadata | https://registry.npmjs.org/antd/latest | 2026-10-18 | **Quan sát** version `6.6.6` tại ngày check — **không** auto-pin “latest” khi coding; coordinator chọn exact khi được ủy quyền install |
-| npm `@ant-design/nextjs-registry` | https://registry.npmjs.org/@ant-design/nextjs-registry/latest | 2026-10-18 | **Quan sát** `1.3.0` cùng ngày — cùng quy tắc pin |
-| Next.js App Router | https://nextjs.org/docs/app | 2026-10-18 | RSC vs client |
+| Nguồn                             | URL                                                                                                      | Ngày truy cập | Điểm rút                                                                                                                               |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------- | ------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| Ant Design — Next.js App Router   | https://ant.design/docs/react/use-with-next/                                                             | 2026-10-18    | `@ant-design/nextjs-registry` + `AntdRegistry`; tránh sub-component `.` trên RSC                                                       |
+| nextjs-registry                   | https://github.com/ant-design/nextjs-registry                                                            | 2026-10-18    | Style registry                                                                                                                         |
+| Ví dụ App Router                  | https://github.com/ant-design/ant-design-examples/tree/main/examples/with-nextjs-app-router-inline-style | 2026-10-18    | `"use client"` khi cần                                                                                                                 |
+| npm `antd` metadata               | https://registry.npmjs.org/antd/latest                                                                   | 2026-10-18    | **Quan sát** version `6.6.6` tại ngày check — **không** auto-pin “latest” khi coding; coordinator chọn exact khi được ủy quyền install |
+| npm `@ant-design/nextjs-registry` | https://registry.npmjs.org/@ant-design/nextjs-registry/latest                                            | 2026-10-18    | **Quan sát** `1.3.0` cùng ngày — cùng quy tắc pin                                                                                      |
+| Next.js App Router                | https://nextjs.org/docs/app                                                                              | 2026-10-18    | RSC vs client                                                                                                                          |
 
 **Hệ quả (đề xuất kỹ thuật — Architect/coordinator giải trong scope):** portal antd-first; cô lập khỏi attendee CSS/bundle; lockfile chỉ coordinator khi ủy quyền.
 
@@ -148,31 +150,31 @@ api.vemoki.com      → Nest (giữ)
 
 ### 4.1 Biên Gate & Platform — đề xuất trong gói §9; không mặc định
 
-| Surface | Khuyến nghị planner (đưa vào gói) | Option khác |
-| --- | --- | --- |
-| **Tenant Admin** | Chuyển hết sang `portal.` (parity đủ rồi cutover) | Dual dài hạn (không khuyến nghị) |
-| **Web Gate** | **Giữ `app.`** (day-of) | Chuyển `portal.` / dual — user chọn trong gói |
-| **Platform** | **Theo `portal.`** (cùng staff shell) | Giữ `app.` — user chọn trong gói |
+| Surface          | Khuyến nghị planner (đưa vào gói)                 | Option khác                                   |
+| ---------------- | ------------------------------------------------- | --------------------------------------------- |
+| **Tenant Admin** | Chuyển hết sang `portal.` (parity đủ rồi cutover) | Dual dài hạn (không khuyến nghị)              |
+| **Web Gate**     | **Giữ `app.`** (day-of)                           | Chuyển `portal.` / dual — user chọn trong gói |
+| **Platform**     | **Theo `portal.`** (cùng staff shell)             | Giữ `app.` — user chọn trong gói              |
 
 Mọi option: authz server-side; cookie host-only; Origin/CSRF allowlist; **không** `Domain=.vemoki.com`.
 
 ### 4.2 Packaging — Architect khuyến nghị; coordinator giải trong scope
 
-| | **P1 — `apps/portal`** | **P2 — host-aware `apps/web`** |
-| --- | --- | --- |
-| Ý tưởng | Next + antd riêng; nginx `portal.` | Middleware host tách layout |
-| Pros | Isolate dep/CSS | Một image;reuse BFF |
-| Cons | CI/lockfile/image | Rủi ro cross-host route/CSS |
+|         | **P1 — `apps/portal`**             | **P2 — host-aware `apps/web`** |
+| ------- | ---------------------------------- | ------------------------------ |
+| Ý tưởng | Next + antd riêng; nginx `portal.` | Middleware host tách layout    |
+| Pros    | Isolate dep/CSS                    | Một image;reuse BFF            |
+| Cons    | CI/lockfile/image                  | Rủi ro cross-host route/CSS    |
 
 **Không** đưa P1/P2 thành câu hỏi user rời — Architect ghi khuyến nghị + lý do trong ADR; coordinator chốt khi mở coding.
 
 ### 4.3 Session / OIDC — phân biệt IdP SSO vs BFF cookie
 
-| Khái niệm | Quy tắc PORTAL |
-| --- | --- |
-| **Keycloak IdP SSO (hiện có)** | User có thể đã có SSO session IdP khi login OIDC clients — **được phép / không cấm** trong Epic này |
-| **BFF session local** | Cookie session **riêng** per host (`portal.` vs `app.`); host-only; **không** share BFF cookie qua parent domain |
-| **Enterprise SSO feature** (IdP riêng tenant, SAML… ) | Vẫn **out of scope** (PRD sau MVP) |
+| Khái niệm                                             | Quy tắc PORTAL                                                                                                   |
+| ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| **Keycloak IdP SSO (hiện có)**                        | User có thể đã có SSO session IdP khi login OIDC clients — **được phép / không cấm** trong Epic này              |
+| **BFF session local**                                 | Cookie session **riêng** per host (`portal.` vs `app.`); host-only; **không** share BFF cookie qua parent domain |
+| **Enterprise SSO feature** (IdP riêng tenant, SAML… ) | Vẫn **out of scope** (PRD sau MVP)                                                                               |
 
 Hệ quả UX: staff mở portal có thể SSO lại qua IdP nhanh, nhưng **attendee `app.` không tự nhận BFF staff** và ngược lại — cần login BFF trên từng host (IdP có thể silent).
 
@@ -182,11 +184,11 @@ URI Keycloak / client `ticket-web` vs `ticket-admin-web`: Architect + coordinato
 
 Vì cookie BFF thường **HttpOnly**, JS `Document.cookie` **không** phải bằng chứng hợp lệ.
 
-| Gate | Cách kiểm (khi có môi trường / UAT) |
-| --- | --- |
-| Set-Cookie | Response login portal: `Set-Cookie` **không** có `Domain=.vemoki.com` (Domain absent = host-only) |
-| Browser request | Request tới `app.vemoki.com` **không** gửi cookie portal (và ngược lại) — DevTools Network / Playwright storage state tách origin |
-| Login cross-host | Sau login portal, gọi BFF `app.` (cùng browser profile) → unauthenticated / challenge; sau login app, BFF portal tương tự |
+| Gate             | Cách kiểm (khi có môi trường / UAT)                                                                                               |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| Set-Cookie       | Response login portal: `Set-Cookie` **không** có `Domain=.vemoki.com` (Domain absent = host-only)                                 |
+| Browser request  | Request tới `app.vemoki.com` **không** gửi cookie portal (và ngược lại) — DevTools Network / Playwright storage state tách origin |
+| Login cross-host | Sau login portal, gọi BFF `app.` (cùng browser profile) → unauthenticated / challenge; sau login app, BFF portal tương tự         |
 
 ---
 
@@ -224,18 +226,18 @@ Epic PORTAL
 
 ### 5.1 Bảng Task
 
-| ID | Story | Ownership | Role | Arch impact | Dep | Acceptance |
-| --- | --- | --- | --- | --- | --- | --- |
-| T-BA…T-PLAN | S0 | docs | theo Run | Có (ARCH) | — | Báo cáo đã/đang bàn giao; planner reconcile |
-| T-COORD-1 | S1 | coordinator | — | Có | Gói §9 + ADR | Env/nginx/realm đúng ADR; không deploy mặc định |
-| T-WEB-1 | S1 | web | `web` | Có | ADR packaging | Portal boot antd; login BFF; fail-closed guest |
-| T-BE-1 | S1 | backend | `backend` | Nếu ADR yêu cầu | ADR | Chỉ việc ADR liệt kê; RLS/authz không regress |
-| T-WEB-2 | S2 | web | `web` | UI | S1 | **Parity đầy đủ** admin hiện có — checklist BA; headless UAT |
-| T-WEB-3 | S3 | web | `web` | Có nếu chuyển | S1; **sau** T-WEB-2 nếu một slice web | Platform parity |
-| T-WEB-4* | S4 | web | `web` | Có | Gói Gate | Gate fail-closed; không phá iOS Gate |
-| T-WEB-5 | S5 | web | `web` | Có | Parity S2(+S3) | Dual-run → contract; rollback §8 |
-| T-COORD-2 | S5 | coordinator | — | Có | T-WEB-5 | URI + email link |
-| T-UAT / T-SEC-2 / T-DOD | S6 | mixed | dod/security | — | S5 | Exact SHA `docs/reviews/*` |
+| ID                      | Story | Ownership   | Role         | Arch impact     | Dep                                   | Acceptance                                                   |
+| ----------------------- | ----- | ----------- | ------------ | --------------- | ------------------------------------- | ------------------------------------------------------------ |
+| T-BA…T-PLAN             | S0    | docs        | theo Run     | Có (ARCH)       | —                                     | Báo cáo đã/đang bàn giao; planner reconcile                  |
+| T-COORD-1               | S1    | coordinator | —            | Có              | Gói §9 + ADR                          | Env/nginx/realm đúng ADR; không deploy mặc định              |
+| T-WEB-1                 | S1    | web         | `web`        | Có              | ADR packaging                         | Portal boot antd; login BFF; fail-closed guest               |
+| T-BE-1                  | S1    | backend     | `backend`    | Nếu ADR yêu cầu | ADR                                   | Chỉ việc ADR liệt kê; RLS/authz không regress                |
+| T-WEB-2                 | S2    | web         | `web`        | UI              | S1                                    | **Parity đầy đủ** admin hiện có — checklist BA; headless UAT |
+| T-WEB-3                 | S3    | web         | `web`        | Có nếu chuyển   | S1; **sau** T-WEB-2 nếu một slice web | Platform parity                                              |
+| T-WEB-4*                | S4    | web         | `web`        | Có              | Gói Gate                              | Gate fail-closed; không phá iOS Gate                         |
+| T-WEB-5                 | S5    | web         | `web`        | Có              | Parity S2(+S3)                        | Dual-run → contract; rollback §8                             |
+| T-COORD-2               | S5    | coordinator | —            | Có              | T-WEB-5                               | URI + email link                                             |
+| T-UAT / T-SEC-2 / T-DOD | S6    | mixed       | dod/security | —               | S5                                    | Exact SHA `docs/reviews/*`                                   |
 
 **iOS:** không Task coding portal. **Cùng ownership web:** tối đa **một** feature coding Dispatch active (§6).
 
@@ -255,10 +257,10 @@ Song song ownership **khác**:
 
 ### Wave I2 — Migrate UI (**không** song song hai web feature)
 
-| Slot | Được |
-| --- | --- |
-| Web feature | **Một** active: trước `T-WEB-2` (admin parity); **sau** `worker_done`/settle mới `T-WEB-3` (platform nếu gói chọn) hoặc `T-WEB-4*` |
-| Song song với web | BE contract đã xác nhận · coordinator docs/env · reviewer DoD/security · docs BA/PD update |
+| Slot              | Được                                                                                                                               |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Web feature       | **Một** active: trước `T-WEB-2` (admin parity); **sau** `worker_done`/settle mới `T-WEB-3` (platform nếu gói chọn) hoặc `T-WEB-4*` |
+| Song song với web | BE contract đã xác nhận · coordinator docs/env · reviewer DoD/security · docs BA/PD update                                         |
 
 `T-WEB-4*` không chặn I2 trừ khi gói §9 bắt Gate cùng cutover.
 
@@ -311,12 +313,12 @@ Song song ownership **khác**:
 
 ### 8.2 Rollback
 
-| Phase | Rollback |
-| --- | --- |
-| DNS/TLS | Gỡ `portal.`; giữ `app.` |
-| OIDC URI expand | Giữ URI `app.` dual-run; gỡ portal nếu abort |
-| UI cutover | Tắt redirect; nav `app./admin` |
-| antd package | Revert image/app; attendee không phụ thuộc antd nếu P1 |
+| Phase           | Rollback                                               |
+| --------------- | ------------------------------------------------------ |
+| DNS/TLS         | Gỡ `portal.`; giữ `app.`                               |
+| OIDC URI expand | Giữ URI `app.` dual-run; gỡ portal nếu abort           |
+| UI cutover      | Tắt redirect; nav `app./admin`                         |
+| antd package    | Revert image/app; attendee không phụ thuộc antd nếu P1 |
 
 ---
 
@@ -326,16 +328,16 @@ Song song ownership **khác**:
 
 ### 9.1 Nội dung gói (duyệt / chỉnh một lần)
 
-| Hạng mục | Đề xuất trong gói |
-| --- | --- |
+| Hạng mục        | Đề xuất trong gói                                                                          |
+| --------------- | ------------------------------------------------------------------------------------------ |
 | Cập nhật O13 #2 | Admin (và Platform nếu chọn) chuyển dần sang `portal.`; `app.` = attendee (+ Gate nếu giữ) |
-| Web Gate | **Giữ trên `app.`** |
-| Platform | **Chuyển sang `portal.`** cùng staff shell |
-| Parity | Cutover chỉ khi parity **toàn bộ** admin hiện có (gồm CS/export) |
-| Session | BFF cookie tách host; Keycloak IdP SSO hiện có vẫn dùng; không mở enterprise SSO |
-| Board | Epic tên **PORTAL** (không nhét D12/D13) |
-| Coding | Ủy quyền I1 sau ADR Architect + gói này; vẫn PR/DoD; không tự deploy/store |
-| Lịch vs D12/D13 | I1 sau khi WIP cho phép (discovery đã xong không cần chờ D13 submit) |
+| Web Gate        | **Giữ trên `app.`**                                                                        |
+| Platform        | **Chuyển sang `portal.`** cùng staff shell                                                 |
+| Parity          | Cutover chỉ khi parity **toàn bộ** admin hiện có (gồm CS/export)                           |
+| Session         | BFF cookie tách host; Keycloak IdP SSO hiện có vẫn dùng; không mở enterprise SSO           |
+| Board           | Epic tên **PORTAL** (không nhét D12/D13)                                                   |
+| Coding          | Ủy quyền I1 sau ADR Architect + gói này; vẫn PR/DoD; không tự deploy/store                 |
+| Lịch vs D12/D13 | I1 sau khi WIP cho phép (discovery đã xong không cần chờ D13 submit)                       |
 
 User có thể **chỉnh Gate/Platform/board name/lịch** trong cùng lần duyệt gói.
 
@@ -350,16 +352,16 @@ User có thể **chỉnh Gate/Platform/board name/lịch** trong cùng lần duy
 
 ## 10. Security & UAT gates (Epic)
 
-| Gate | Yêu cầu |
-| --- | --- |
-| Authz | Nest + RLS; UI capability chỉ chrome |
-| Cookie | Host-only; cấm parent Domain; chứng minh §4.4 |
-| CSRF / Origin | Allowlist `https://portal.vemoki.com`; không tin `X-Forwarded-*` thô |
-| IdP vs BFF | Không cấm IdP SSO hiện có; cấm share BFF cookie cross-host |
-| Reviewer | Security-sensitive: session ≠ implementer; exact SHA |
-| UAT | Headless portal + regression attendee |
-| Deploy | Chỉ khi ủy quyền |
-| Non-goals | Android/payment/refund/transfer/seat/Wallet/enterprise-SSO/billing/custom-domain |
+| Gate          | Yêu cầu                                                                          |
+| ------------- | -------------------------------------------------------------------------------- |
+| Authz         | Nest + RLS; UI capability chỉ chrome                                             |
+| Cookie        | Host-only; cấm parent Domain; chứng minh §4.4                                    |
+| CSRF / Origin | Allowlist `https://portal.vemoki.com`; không tin `X-Forwarded-*` thô             |
+| IdP vs BFF    | Không cấm IdP SSO hiện có; cấm share BFF cookie cross-host                       |
+| Reviewer      | Security-sensitive: session ≠ implementer; exact SHA                             |
+| UAT           | Headless portal + regression attendee                                            |
+| Deploy        | Chỉ khi ủy quyền                                                                 |
+| Non-goals     | Android/payment/refund/transfer/seat/Wallet/enterprise-SSO/billing/custom-domain |
 
 ---
 
@@ -376,17 +378,17 @@ User có thể **chỉnh Gate/Platform/board name/lịch** trong cùng lần duy
 
 ## 12. Liên kết
 
-| Tài liệu | Vai trò |
-| --- | --- |
-| [PORTAL-RESEARCH-RUN.md](./PORTAL-RESEARCH-RUN.md) | Nhật ký 7 worker discovery |
-| [PORTAL-PRODUCT-RESEARCH.md](./PORTAL-PRODUCT-RESEARCH.md) | BA |
-| [PORTAL-ANTD-UX.md](../design/PORTAL-ANTD-UX.md) | PD |
-| [PORTAL-BACKEND-GAPS.md](./PORTAL-BACKEND-GAPS.md) | BE peer (đối chiếu — không đoán thêm) |
-| [ROADMAP.md](../ROADMAP.md) | Phạm vi đợt; Status = Project |
-| [DECISION-LOG O13](../DECISION-LOG.md) | Host marketing/app baseline |
-| [o13-marketing-app-subdomain.md](../architecture/o13-marketing-app-subdomain.md) | Cookie/OIDC/nginx |
-| [PRD.md](../PRD.md) | M11/M12; non-goals |
-| [agents/README.md](../agents/README.md) | Role catalog |
+| Tài liệu                                                                         | Vai trò                               |
+| -------------------------------------------------------------------------------- | ------------------------------------- |
+| [PORTAL-RESEARCH-RUN.md](../archive/runs/PORTAL-RESEARCH-RUN.md)                 | Nhật ký 7 worker discovery            |
+| [PORTAL-PRODUCT-RESEARCH.md](./PORTAL-PRODUCT-RESEARCH.md)                       | BA                                    |
+| [PORTAL-ANTD-UX.md](../design/PORTAL-ANTD-UX.md)                                 | PD                                    |
+| [PORTAL-BACKEND-GAPS.md](./PORTAL-BACKEND-GAPS.md)                               | BE peer (đối chiếu — không đoán thêm) |
+| [ROADMAP.md](../ROADMAP.md)                                                      | Phạm vi đợt; Status = Project         |
+| [DECISION-LOG O13](../DECISION-LOG.md)                                           | Host marketing/app baseline           |
+| [o13-marketing-app-subdomain.md](../architecture/o13-marketing-app-subdomain.md) | Cookie/OIDC/nginx                     |
+| [PRD.md](../PRD.md)                                                              | M11/M12; non-goals                    |
+| [agents/README.md](../agents/README.md)                                          | Role catalog                          |
 
 ---
 

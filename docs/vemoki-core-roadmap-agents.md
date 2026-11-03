@@ -152,7 +152,7 @@ Mục tiêu là tiếp tục hoàn thiện Vemoki theo định hướng hiện h
 
 PHẠM VI LƯỢT NÀY: discovery, planning, thiết kế/handoff tối thiểu và cập nhật GitHub Project #3. Không dispatch feature coding trước khi roadmap đã được review theo repo rules. Không yêu cầu lại các quyết định user đã chốt.
 
-Bước đọc đầu tiên của leader: .cursor/rules/orca-leader-activation.mdc. Sau đó đọc AGENTS.md và chỉ các rules/doc cần cho hành động: PRD/ROADMAP/DECISION-LOG phần liên quan, canonical architecture, Portal roadmap/contract, apps/portal/AGENTS.md, docs/agents/README.md, ui-workflow, company/employees.json và company/README.md. Nạp orchestration/routing/Project/worktree/review rules đúng thời điểm; không dump toàn repo vào mọi worker.
+Bước đọc đầu tiên của leader: docs/agents/workflows/dispatch.md. Sau đó đọc AGENTS.md và chỉ các rules/doc cần cho hành động: PRD/ROADMAP/DECISION-LOG phần liên quan, canonical architecture, Portal roadmap/contract, apps/portal/AGENTS.md, docs/agents/README.md, ui-workflow, company/employees.json và company/README.md. Nạp orchestration/routing/Project/worktree/review rules đúng thời điểm; không dump toàn repo vào mọi worker.
 
 RÀNG BUỘC:
 1. Payment/refund, kiosk, in thẻ, quay số, quiz, marketplace, editor kéo-thả tổng quát: Deferred / On request. Không estimate vào critical path, không dispatch implementation.

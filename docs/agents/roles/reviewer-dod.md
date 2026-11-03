@@ -2,19 +2,19 @@
 
 **Role ID:** `reviewer-dod`
 **Upstream:** `engineering-code-reviewer.md` + `testing-reality-checker.md` (+ a11y auditor khi UI)
-**Ưu tiên:** `github-project-tracking.mdc` DoD + `orca-agent-routing-core.mdc` > file này.
+**Ưu tiên:** `docs/agents/policies/project.md` DoD + `docs/agents/policies/routing.md` > file này.
 
 ## Independence (bắt buộc)
 
 - Session / dispatch **khác** implementer của Task đang duyệt.
 - Không reuse terminal implementer để “tự DoD”.
-- Agent: Cursor mặc định; Codex `gpt-6-sol` cho DoD rủi ro/phức tạp theo cost-catalog. Reviewer luôn độc lập với implementer.
+- Agent/model/effort theo [routing](../policies/routing.md) và [cost catalog](../cost-catalog.md), chọn theo rủi ro và phần phán đoán còn lại. Reviewer luôn độc lập với implementer.
 
 ## Khi nào dùng
 
 Issue/PR ở `Chờ duyệt`; hoặc coordinator ưu tiên review khi hàng đợi duyệt đầy. Scope = review only — không drive-by refactor, không implement fix trừ khi Task riêng là fix-worker.
 
-DoD là checklist nghiệm thu **trong lượt review độc lập**, không mở thêm vòng đọc code nếu PR đã có reviewer độc lập kiểm đủ scope. Áp dụng [quy trình review chung](../../../.cursor/rules/orca-review-convergence.mdc) để chọn security/UI và tái dùng checks; coordinator kiểm gate từ evidence, không lặp toàn bộ review.
+DoD là checklist nghiệm thu **trong lượt review độc lập**, không mở thêm vòng đọc code nếu PR đã có reviewer độc lập kiểm đủ scope. Áp dụng [quy trình review chung](../workflows/review.md) để chọn security/UI và tái dùng checks; coordinator kiểm gate từ evidence, không lặp toàn bộ review.
 
 ## Đầu vào Spec phải có
 
@@ -32,11 +32,11 @@ Nhận spec đã điền (initial/revalidate), AC/evidence/findings từ coordin
 1. Xác minh SHA và diff thuộc scope ownership.
 2. Correctness theo AC — không chỉ “code nhìn ổn”.
 3. Evidence thật: lệnh test/CI/UAT trên SHA đó; mặc định **skeptical** với claim “production ready” không có artifact.
-4. Web/iOS — phân biệt automation và thiết bị thật (khớp `ROADMAP.md` §1.2 + `uat-headless.mdc`):
-   - **Automation / agent UAT:** dùng Orca browser/emulator theo `uat-headless.mdc`; không điều khiển desktop user hoặc tự chạy wrapper legacy ngoài rule.
+4. Web/iOS — phân biệt automation và thiết bị thật (khớp `ROADMAP.md` §1.2 + `docs/agents/workflows/uat.md`):
+   - **Automation / agent UAT:** dùng Orca browser/emulator theo `docs/agents/workflows/uat.md`; không điều khiển desktop user hoặc tự chạy wrapper legacy ngoài rule.
    - **Physical-device:** khi AC/Issue yêu cầu camera, push delivered, deep link, offline ví, revoke, hoặc tương đương trên thiết bị vật lý — phải kiểm tra bằng chứng device (local signed / TestFlight theo AC). Headless và Simulator **không** thay thế hoặc loại bỏ bằng chứng đó; thiếu → FAIL hoặc `PASS with known gap` chỉ khi gap đã được ROADMAP/Issue chấp nhận có chủ đích.
 5. Với architecture impact: đối chiếu ranh giới/contract/transaction/failure/compatibility với handoff và ADR. Design drift đáng kể hoặc rủi ro còn mở → báo coordinator giao kiểm tra kiến trúc độc lập theo `architect.md`; không dùng design document thay evidence implementation, không coi architecture review là DoD/security PASS.
-6. **Read** [quy trình review/fix](../../../.cursor/rules/orca-review-convergence.mdc): một vòng feedback đầy đủ, finding có ID/bằng chứng/điều kiện đóng và ghi rõ có chặn merge. Revalidation theo diff + findings + vùng ảnh hưởng; lỗi mới vẫn phải báo. Lỗi tái hiện sau khi báo đã sửa → báo coordinator chẩn đoán, không chỉ yêu cầu “fix tiếp”.
+6. **Read** [quy trình review/fix](../workflows/review.md): một vòng feedback đầy đủ, finding có ID/bằng chứng/điều kiện đóng và ghi rõ có chặn merge. Revalidation theo diff + findings + vùng ảnh hưởng; lỗi mới vẫn phải báo. Lỗi tái hiện sau khi báo đã sửa → báo coordinator chẩn đoán, không chỉ yêu cầu “fix tiếp”.
 7. Verdict: `PASS` | `FAIL` | `PASS with known gap` (gap không được nuốt acceptance/security bắt buộc — xem routing rule).
 
 ## Artifact bắt buộc
