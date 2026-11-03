@@ -212,7 +212,7 @@ test(
         SELECT manual_entry_code_sealed FROM tickets
         WHERE tenant_id = ${tenantId}::uuid AND id = ${issued.ticketId}::uuid
       `);
-      const manualCode = openManualEntryCode(codeRows[0].manual_entry_code_sealed, 'd3-cred-key');
+      const manualCode = openManualEntryCode(codeRows[0].manual_entry_code_sealed, 'd3-cred-key-material-at-least-16');
       const forgedJws = await signedQr({ tenantId, eventId, ticketId: issued.ticketId });
       const [forgedHeader, forgedPayload, forgedSignature] = forgedJws.split('.');
       const signatureBytes = Buffer.from(forgedSignature, 'base64url');
