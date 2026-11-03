@@ -336,7 +336,7 @@ export const notes = {
   'DB-17':
     'D presets/onboarding + tenant limit mutation/usage (event-quota-suspended #632 race, tenant-limits-usage) + non-Owner escalation deny (catalogue là surface duy nhất, cross-tenant 404) + maxEvents/maxStaff mutation limit/usage (rollback, race xác định, không oversell). Thiếu H Keycloak/HTTP presets/PENDING/operator activation.',
   'DB-18':
-    'D deletion/tombstone + session revoke (ACK và apply, cross-tenant) + race ACK vs raw INSERT (SEC-R1 advisory lock) + REJECTED giữ REVOKED/mở lại có điều kiện + IdP DELETE/NOT_FOUND/404/disable/503-retry không bypass COMPLETED + issuer allowlist/no fuzzy lookup + OIDC maxTokenAge>24h reject + lease fencing + PII anonymize + audit kept; mutation-check xác nhận tắt ACK revoke làm 3 test fail đúng. Thiếu H: live Keycloak Admin erasure DELETE thật qua /v1/me/account-deletion-requests — chưa có client/fixture trong harness, cần Task riêng.',
+    'D ACK/apply session revoke, raw INSERT race, IdP retry/tombstone/lease, PII scrub, audit kept; SEC-1 ACK còn kiểm membership ACTIVE theo PLAN §15.2, ticket/check-in và aggregate report hai tenant giữ nguyên; mutation-check ticket ACTIVE→REVOKED làm aggregate assertion fail. H live Keycloak Admin DELETE + bearer HTTP đã có selector, chờ run SHA sạch.',
   'DB-19': 'D code pepper rotation, consumed và ambiguous fail-closed; H Keycloak/HTTP cặp v1/v2 cùng nhánh từ chối. QR credential rotation (credential-crypto key đơn, kid local-v1) chưa có versioned keyring — product gap cần owner.',
   'GATE-01': 'D gate FK/list/open; thiếu H permission và response contract.',
   'GATE-02':

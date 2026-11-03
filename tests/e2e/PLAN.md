@@ -442,6 +442,8 @@ Hai ranh giới giữ nguyên, vì chúng nói về tính trung thực của b�
 
 Agent vẫn không tự hạ AC: điều chỉnh cần quyết định owner hoặc nằm trong khung tầng đã duyệt ở mục này.
 
+**DB-18 — diễn giải owner đã duyệt (03/11/2026).** Phần giảm: bỏ yêu cầu chuyển `memberships` sang `REVOKED` hoặc đặt `memberships.revoked_at` khi ACK; membership vẫn `ACTIVE` trong dữ liệu. Lý do: D13 thu hồi `staff_sessions` ngay trong transaction ACK, sau đó OIDC/Keycloak xóa identity và tombstone chặn upsert/re-entry; đổi trạng thái membership là thay đổi contract sản phẩm ngoài quyết định này. Rủi ro còn lại: metadata membership `ACTIVE` cũ vẫn tồn tại và có thể bị đọc như quyền còn hiệu lực nếu một đường truy cập bỏ qua kiểm tra session/identity; D/H phải xác nhận bearer cũ bị từ chối, session bị thu hồi, các tenant khác không bị xóa nhầm, còn ticket/check-in/audit và aggregate đối soát. Không dùng diễn giải này để đổi trạng thái membership của sản phẩm.
+
 ### 15.3 Ba tầng
 
 **Tầng 1 — giữ nguyên gate đầy đủ (16 ID):** AUTH-06/07/08, SEC-01/02/05, PORT-02/03/10/11/12/14, PLAT-01/02/04, JOB-05. Đây là nhóm chỉ chứng minh được khi ghép thật: cookie host-only/CSRF/session boundary, SSR và BFF, mutation thực hiện qua UI, và với PORT-11/JOB-05 là worker process thật gửi Mailpit. Không thu gọn.

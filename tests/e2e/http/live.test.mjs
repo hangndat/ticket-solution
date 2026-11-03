@@ -1734,6 +1734,23 @@ for (const caseId of CASE_IDS) {
         };
         const auditBefore = await auditCount();
         assert.equal(auditBefore, 1, 'DB-18 audit proof seeded');
+        const membershipState = async () => {
+          await client.query('BEGIN');
+          try {
+            await client.query('SET LOCAL ROLE ticket_runtime');
+            await client.query("SELECT set_config('app.tenant_id', $1, true)", [f.tenantId]);
+            const result = await client.query(
+              'SELECT activated_at IS NOT NULL AS active, revoked_at FROM memberships WHERE user_id = $1',
+              [actor.userId],
+            );
+            await client.query('COMMIT');
+            return result.rows;
+          } catch (error) {
+            await client.query('ROLLBACK');
+            throw error;
+          }
+        };
+        assert.deepEqual(await membershipState(), [{ active: true, revoked_at: null }]);
         const faultControlPath = required(ctx.runtime.faultControlPath, 'DB-18 faultControlPath');
         const faultHitPath = required(ctx.runtime.idpFaultHitPath, 'DB-18 idpFaultHitPath');
         const fault = JSON.parse(readFileSync(faultControlPath, 'utf8'));
@@ -1770,6 +1787,7 @@ for (const caseId of CASE_IDS) {
         assert.equal(row.subject_cleared, false, 'DB-18 retry retains original subject');
         expectStatus(await request(ctx, 'GET', '/me/account-deletion-requests/current', access), 401, 'UNAUTHENTICATED');
         assert.equal((await adminUser(adminToken)).status, 200, 'DB-18 IdP user remains after 503');
+        assert.deepEqual(await membershipState(), [{ active: true, revoked_at: null }]);
         console.log('DB-18: live IdP DELETE 503; REQUESTED and bearer denied');
         delete fault.idpDelete;
         writeFileSync(faultControlPath, JSON.stringify(fault), { mode: 0o600 });
@@ -1794,6 +1812,7 @@ for (const caseId of CASE_IDS) {
         assert.equal(user.rows[0].email, null);
         assert.equal(user.rows[0].subject, `anon:${requestId}`);
         assert.equal(await auditCount(), auditBefore, 'DB-18 audit retained');
+        assert.deepEqual(await membershipState(), [{ active: true, revoked_at: null }]);
         console.log('DB-18: retry DELETE completed; PG scrub and audit verified');
         return;
       } finally {
