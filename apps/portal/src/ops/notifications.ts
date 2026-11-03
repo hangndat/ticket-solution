@@ -62,8 +62,10 @@ export const DEFAULT_TICKET_ISSUED_DRAFT = {
   ].join(''),
 };
 
-export const NOTIFICATION_UNKNOWN =
-  t(DEFAULT_PORTAL_LOCALE, 'ops.notifications.unknown');
+export const NOTIFICATION_UNKNOWN = t(
+  DEFAULT_PORTAL_LOCALE,
+  'ops.notifications.unknown',
+);
 
 const PII_KEYS = [
   'email',
@@ -260,10 +262,12 @@ function rejectionOrUnknown(
   json: unknown,
   networkError: boolean,
   locale: PortalLocale = DEFAULT_PORTAL_LOCALE,
-): { kind: 'rejected'; code: string; message: string } | {
-  kind: 'unknown';
-  message: string;
-} {
+):
+  | { kind: 'rejected'; code: string; message: string }
+  | {
+      kind: 'unknown';
+      message: string;
+    } {
   if (networkError || status === 0 || status >= 500) {
     return { kind: 'unknown', message: t(locale, 'ops.notifications.unknown') };
   }
@@ -284,18 +288,31 @@ export function interpretNotificationList(
   const body = asRecord(json);
   if (status === 200 && body && Array.isArray(body.items)) {
     if (!('nextCursor' in body)) {
-      return { kind: 'unknown', message: t(locale, 'ops.notifications.unknown') };
+      return {
+        kind: 'unknown',
+        message: t(locale, 'ops.notifications.unknown'),
+      };
     }
     if (body.nextCursor !== null && typeof body.nextCursor !== 'string') {
-      return { kind: 'unknown', message: t(locale, 'ops.notifications.unknown') };
+      return {
+        kind: 'unknown',
+        message: t(locale, 'ops.notifications.unknown'),
+      };
     }
     if (hasForbiddenPii(body)) {
-      return { kind: 'unknown', message: t(locale, 'ops.notifications.unknown') };
+      return {
+        kind: 'unknown',
+        message: t(locale, 'ops.notifications.unknown'),
+      };
     }
     const items: NotificationSummary[] = [];
     for (const row of body.items) {
       const item = parseNotificationSummary(row);
-      if (!item) return { kind: 'unknown', message: t(locale, 'ops.notifications.unknown') };
+      if (!item)
+        return {
+          kind: 'unknown',
+          message: t(locale, 'ops.notifications.unknown'),
+        };
       items.push(item);
     }
     return { kind: 'list', items, cursor: body.nextCursor };
@@ -315,7 +332,10 @@ export function interpretTemplatePreview(
   const body = asRecord(json);
   if (status === 200 && body) {
     if (hasForbiddenPii(body)) {
-      return { kind: 'unknown', message: t(locale, 'ops.notifications.unknown') };
+      return {
+        kind: 'unknown',
+        message: t(locale, 'ops.notifications.unknown'),
+      };
     }
     if (
       isNonEmptyString(body.subject) &&
@@ -348,7 +368,10 @@ export function interpretTemplatePublish(
   const body = asRecord(json);
   if ((status === 200 || status === 201) && body) {
     if (hasForbiddenPii(body)) {
-      return { kind: 'unknown', message: t(locale, 'ops.notifications.unknown') };
+      return {
+        kind: 'unknown',
+        message: t(locale, 'ops.notifications.unknown'),
+      };
     }
     if (
       isNonEmptyString(body.templateId) &&
@@ -379,7 +402,10 @@ export function interpretReminderPreview(
   const body = asRecord(json);
   if (status === 200 && body) {
     if (hasForbiddenPii(body)) {
-      return { kind: 'unknown', message: t(locale, 'ops.notifications.unknown') };
+      return {
+        kind: 'unknown',
+        message: t(locale, 'ops.notifications.unknown'),
+      };
     }
     // recipientCount only — never a list of emails/ids
     if (
@@ -443,8 +469,7 @@ export function interpretReminderCreate(
   if ((status === 200 || status === 201) && body) {
     // Accept either nested reminder or flat ReminderSummary
     const reminder =
-      parseReminderSummary(body.reminder ?? body) ??
-      parseReminderSummary(body);
+      parseReminderSummary(body.reminder ?? body) ?? parseReminderSummary(body);
     if (reminder && reminder.status === 'SCHEDULED') {
       return { kind: 'created', reminder };
     }
@@ -465,8 +490,7 @@ export function interpretReminderCancel(
   const body = asRecord(json);
   if ((status === 200 || status === 201) && body) {
     const reminder =
-      parseReminderSummary(body.reminder ?? body) ??
-      parseReminderSummary(body);
+      parseReminderSummary(body.reminder ?? body) ?? parseReminderSummary(body);
     if (reminder && reminder.status === 'CANCELLED') {
       return { kind: 'cancelled', reminder };
     }
@@ -487,13 +511,13 @@ export function interpretNotificationRetry(
   const body = asRecord(json);
   if ((status === 200 || status === 201) && body) {
     if (hasForbiddenPii(body)) {
-      return { kind: 'unknown', message: t(locale, 'ops.notifications.unknown') };
+      return {
+        kind: 'unknown',
+        message: t(locale, 'ops.notifications.unknown'),
+      };
     }
     // Requeue starts PENDING — ACCEPTED alone is not proof of delivery or success.
-    if (
-      isNonEmptyString(body.notificationId) &&
-      body.requeued === true
-    ) {
+    if (isNonEmptyString(body.notificationId) && body.requeued === true) {
       return {
         kind: 'requeued',
         notificationId: body.notificationId.trim(),
@@ -505,62 +529,128 @@ export function interpretNotificationRetry(
   return rejectionOrUnknown(status, json, false, locale);
 }
 
-export function notificationListLabel(view: NotificationListView, locale: PortalLocale = DEFAULT_PORTAL_LOCALE): string {
+export function notificationListLabel(
+  view: NotificationListView,
+  locale: PortalLocale = DEFAULT_PORTAL_LOCALE,
+): string {
   if (view.kind === 'list') {
-    return t(locale, 'ops.notifications.listSummary', { count: view.items.length, pageSuffix: view.cursor ? t(locale, 'common.pagination.pageSuffix') : '' });
+    return t(locale, 'ops.notifications.listSummary', {
+      count: view.items.length,
+      pageSuffix: view.cursor ? t(locale, 'common.pagination.pageSuffix') : '',
+    });
   }
-  if (view.kind === 'rejected') return t(locale, 'ops.export.apiRejected', { code: view.code, message: view.message });
+  if (view.kind === 'rejected')
+    return t(locale, 'ops.export.apiRejected', {
+      code: view.code,
+      message: view.message,
+    });
   return view.message;
 }
 
-export function templatePreviewLabel(view: TemplatePreviewView, locale: PortalLocale = DEFAULT_PORTAL_LOCALE): string {
+export function templatePreviewLabel(
+  view: TemplatePreviewView,
+  locale: PortalLocale = DEFAULT_PORTAL_LOCALE,
+): string {
   if (view.kind === 'preview') {
     return `Preview (escaped): ${view.subject.slice(0, 80)}`;
   }
-  if (view.kind === 'rejected') return t(locale, 'ops.export.apiRejected', { code: view.code, message: view.message });
+  if (view.kind === 'rejected')
+    return t(locale, 'ops.export.apiRejected', {
+      code: view.code,
+      message: view.message,
+    });
   return view.message;
 }
 
-export function templatePublishLabel(view: TemplatePublishView, locale: PortalLocale = DEFAULT_PORTAL_LOCALE): string {
+export function templatePublishLabel(
+  view: TemplatePublishView,
+  locale: PortalLocale = DEFAULT_PORTAL_LOCALE,
+): string {
   if (view.kind === 'published') {
-    return t(locale, 'ops.notifications.publishTemplate', { templateId: view.templateId, version: view.version });
+    return t(locale, 'ops.notifications.publishTemplate', {
+      templateId: view.templateId,
+      version: view.version,
+    });
   }
-  if (view.kind === 'rejected') return t(locale, 'ops.export.apiRejected', { code: view.code, message: view.message });
+  if (view.kind === 'rejected')
+    return t(locale, 'ops.export.apiRejected', {
+      code: view.code,
+      message: view.message,
+    });
   return view.message;
 }
 
-export function reminderPreviewLabel(view: ReminderPreviewView, locale: PortalLocale = DEFAULT_PORTAL_LOCALE): string {
+export function reminderPreviewLabel(
+  view: ReminderPreviewView,
+  locale: PortalLocale = DEFAULT_PORTAL_LOCALE,
+): string {
   if (view.kind === 'preview') {
-    return t(locale, 'ops.notifications.previewReminder', { recipientCount: view.recipientCount, scheduledAt: view.scheduledAt, eventRevision: view.eventRevision });
+    return t(locale, 'ops.notifications.previewReminder', {
+      recipientCount: view.recipientCount,
+      scheduledAt: view.scheduledAt,
+      eventRevision: view.eventRevision,
+    });
   }
-  if (view.kind === 'rejected') return t(locale, 'ops.export.apiRejected', { code: view.code, message: view.message });
+  if (view.kind === 'rejected')
+    return t(locale, 'ops.export.apiRejected', {
+      code: view.code,
+      message: view.message,
+    });
   return view.message;
 }
 
-export function reminderCreateLabel(view: ReminderCreateView, locale: PortalLocale = DEFAULT_PORTAL_LOCALE): string {
+export function reminderCreateLabel(
+  view: ReminderCreateView,
+  locale: PortalLocale = DEFAULT_PORTAL_LOCALE,
+): string {
   if (view.kind === 'created') {
-    return t(locale, 'ops.notifications.reminderCreated', { reminderId: view.reminder.reminderId, status: view.reminder.status, eventRevision: view.reminder.eventRevision });
+    return t(locale, 'ops.notifications.reminderCreated', {
+      reminderId: view.reminder.reminderId,
+      status: view.reminder.status,
+      eventRevision: view.reminder.eventRevision,
+    });
   }
-  if (view.kind === 'rejected') return t(locale, 'ops.export.apiRejected', { code: view.code, message: view.message });
+  if (view.kind === 'rejected')
+    return t(locale, 'ops.export.apiRejected', {
+      code: view.code,
+      message: view.message,
+    });
   return view.message;
 }
 
-export function reminderCancelLabel(view: ReminderCancelView, locale: PortalLocale = DEFAULT_PORTAL_LOCALE): string {
+export function reminderCancelLabel(
+  view: ReminderCancelView,
+  locale: PortalLocale = DEFAULT_PORTAL_LOCALE,
+): string {
   if (view.kind === 'cancelled') {
-    return t(locale, 'ops.notifications.reminderCancelled', { reminderId: view.reminder.reminderId });
+    return t(locale, 'ops.notifications.reminderCancelled', {
+      reminderId: view.reminder.reminderId,
+    });
   }
-  if (view.kind === 'rejected') return t(locale, 'ops.export.apiRejected', { code: view.code, message: view.message });
+  if (view.kind === 'rejected')
+    return t(locale, 'ops.export.apiRejected', {
+      code: view.code,
+      message: view.message,
+    });
   return view.message;
 }
 
-export function notificationRetryLabel(view: NotificationRetryView, locale: PortalLocale = DEFAULT_PORTAL_LOCALE): string {
+export function notificationRetryLabel(
+  view: NotificationRetryView,
+  locale: PortalLocale = DEFAULT_PORTAL_LOCALE,
+): string {
   if (view.kind === 'requeued') {
-    return t(locale, 'ops.notifications.requeued', { notificationId: view.notificationId });
+    return t(locale, 'ops.notifications.requeued', {
+      notificationId: view.notificationId,
+    });
   }
-  if (view.kind === 'rejected') return t(locale, 'ops.export.apiRejected', { code: view.code, message: view.message });
+  if (view.kind === 'rejected')
+    return t(locale, 'ops.export.apiRejected', {
+      code: view.code,
+      message: view.message,
+    });
   return view.message;
 }
-
 
 // Preserve the existing notifications module API for Portal callers.
 export * from './notification-commands';
