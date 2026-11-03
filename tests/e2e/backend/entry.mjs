@@ -98,16 +98,7 @@ if (!args.includes('--no-build')) {
   run('pnpm', ['--filter', '@ticket/backend', 'build']);
   if (selectors.some((s) => s.file.startsWith('apps/api/')))
     run('pnpm', ['--filter', '@ticket/api', 'build']);
-  if (selectors.some((s) => s.file.startsWith('apps/worker/')))
-    run('pnpm', ['--filter', '@ticket/worker', 'build']);
-  if (
-    selectors.some(
-      (s) =>
-        s.layer === 'R' &&
-        s.file.startsWith('tests/e2e/backend/') &&
-        s.file.endsWith('.test.cjs'),
-    )
-  )
+  if (selectors.some((s) => s.layer === 'R' || s.file.startsWith('apps/worker/')))
     run('pnpm', ['--filter', '@ticket/worker', 'build']);
 }
 for (const s of selectors) {

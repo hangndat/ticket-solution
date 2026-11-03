@@ -294,7 +294,7 @@ export const catalog = {
     b('portal-audit-codes', 'H-A1/H-C1/H-P-AUDIT'),
     b('o06-retention-db', 'O06 DB clocks'),
     b('o06-retention-db', 'O06 PII writer'),
-    b('o06-retention-db', 'O06 POL-02 50k attendee'),
+    b('o06-retention-db', 'O06 POL-02 50k attendee worker process', 'R'),
   ],
   'POL-03': [
     b('minio-real', 'MinIO'),

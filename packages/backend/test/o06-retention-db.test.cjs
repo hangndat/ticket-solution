@@ -2,7 +2,7 @@
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { execFileSync } = require('node:child_process');
+const { execFileSync, spawn } = require('node:child_process');
 const { randomBytes, randomUUID } = require('node:crypto');
 const { readFileSync } = require('node:fs');
 const { performance } = require('node:perf_hooks');
@@ -614,19 +614,29 @@ test('O06 PII writer and sweep serialize on event lock in both orders',
     }
   });
 
-test('O06 POL-02 50k attendee event completes within the worker step budget',
+test('O06 POL-02 50k attendee worker process completes within the step budget',
   { timeout: 240000 }, async () => {
     let db;
+    let worker;
     try {
       db = await database();
-      const { admin, runtime } = db;
+      const { admin } = db;
       const tenant = randomUUID();
+      const otherTenant = randomUUID();
       const user = randomUUID();
-      await admin.query('INSERT INTO tenants (id,slug,name) VALUES ($1,$2,$2)',
-        [tenant, 'o06-large']);
+      await admin.query('INSERT INTO tenants (id,slug,name) VALUES ($1,$2,$2),($3,$4,$4)',
+        [tenant, 'o06-large', otherTenant, 'o06-other']);
       await admin.query('INSERT INTO users (id,issuer,subject,email) VALUES ($1,$2,$3,$4)',
         [user, 'o06-large', user, 'first@example.test']);
       const fixture = await seedEvent(admin, tenant, user, 'large', -366 * 86400);
+      const other = await seedEvent(admin, otherTenant, user, 'other', -364 * 86400);
+      const ledger = await seedCheckedInTicket(admin, fixture, user);
+      const ledgerBefore = (await admin.query(`SELECT t.id, t.state, c.id AS checkin_id,
+        c.confirmed_at, c.undone_at FROM tickets t JOIN checkins c
+        ON c.tenant_id=t.tenant_id AND c.ticket_id=t.id
+        WHERE t.tenant_id=$1 AND t.id=$2`, [tenant, ledger.ticket])).rows;
+      const kpiBefore = await eventKpi(admin, tenant, fixture.event);
+      assert.deepEqual(kpiBefore, { used: 1, admitted: 1 });
       const code = (await admin.query('SELECT redemption_code_id FROM redemption_requests WHERE id=$1',
         [fixture.request])).rows[0].redemption_code_id;
       await admin.query(`CREATE TEMP TABLE o06_bulk_users AS
@@ -650,20 +660,66 @@ test('O06 POL-02 50k attendee event completes within the worker step budget',
       assert.deepEqual(before, { emails: 50000, answers: 50000 });
 
       const started = performance.now();
-      const applied = (await runtime.query(
-        'SELECT apply_ticket_pii_anonymization($1,$2) AS applied',
-        [tenant, fixture.event])).rows[0].applied;
+      worker = spawn(process.execPath, ['apps/worker/dist/main.js'], {
+        cwd: require('node:path').resolve(__dirname, '../../..'),
+        stdio: ['ignore', 'ignore', 'pipe'],
+        env: {
+          PATH: process.env.PATH,
+          NODE_ENV: 'test',
+          DATABASE_URL: db.runtimeUrl,
+          EMAIL_ALLOW_NOOP: '1',
+          OUTBOX_POLL_MS: '1000',
+          TICKET_CREDENTIAL_KEY: 'pol02-synthetic-credential-key',
+        },
+      });
+      let startupDiagnostic = 'no recognized startup error';
+      worker.stderr.on('data', (chunk) => {
+        const line = String(chunk);
+        if (line.includes("Cannot find module") && line.includes('apps/worker/dist/main.js')) {
+          startupDiagnostic = 'worker entrypoint missing';
+        } else if (line.includes('Worker startup failed')) {
+          startupDiagnostic = 'worker startup failed';
+        }
+      });
+      worker.on('error', () => { startupDiagnostic = 'worker process spawn failed'; });
+      let completed = false;
+      for (let attempt = 0; attempt < 600; attempt++) {
+        assert.equal(worker.exitCode, null,
+          `worker must remain alive through the sweep (${startupDiagnostic})`);
+        const marker = (await admin.query('SELECT ticket_pii_anonymized_at FROM events WHERE tenant_id=$1 AND id=$2',
+          [tenant, fixture.event])).rows[0].ticket_pii_anonymized_at;
+        if (marker !== null) { completed = true; break; }
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
       const elapsedMs = Math.round(performance.now() - started);
-      console.log(`POL-02 50k attendee sweep: ${elapsedMs} ms`);
-      assert.equal(applied, true);
+      console.log(`POL-02 50k worker process sweep: ${elapsedMs} ms`);
+      assert.ok(completed, 'worker must commit the 50k event sweep');
       const after = (await admin.query(`SELECT
         (SELECT count(*)::int FROM event_attendees WHERE tenant_id=$1 AND event_id=$2
           AND canonical_email IS NOT NULL) AS emails,
         (SELECT count(*)::int FROM redemption_requests WHERE tenant_id=$1 AND event_id=$2
           AND answers_json IS NOT NULL) AS answers`, [tenant, fixture.event])).rows[0];
       assert.deepEqual(after, { emails: 0, answers: 0 });
+      assert.deepEqual((await admin.query(`SELECT canonical_email, answers_json FROM event_attendees a
+        JOIN redemption_requests r ON r.tenant_id=a.tenant_id AND r.event_id=a.event_id
+        WHERE a.tenant_id=$1 AND a.event_id=$2`, [otherTenant, other.event])).rows,
+      [{ canonical_email: 'other@example.test', answers_json: { phone: 'fixture-only' } }],
+      'the younger event in another tenant retains PII');
+      assert.deepEqual((await admin.query(`SELECT t.id, t.state, c.id AS checkin_id,
+        c.confirmed_at, c.undone_at FROM tickets t JOIN checkins c
+        ON c.tenant_id=t.tenant_id AND c.ticket_id=t.id
+        WHERE t.tenant_id=$1 AND t.id=$2`, [tenant, ledger.ticket])).rows, ledgerBefore);
+      assert.deepEqual(await eventKpi(admin, tenant, fixture.event), kpiBefore);
       assert.ok(elapsedMs < 60000, `sweep ${elapsedMs} ms exceeds 60s worker step budget`);
     } finally {
+      if (worker?.exitCode === null) {
+        worker.kill('SIGTERM');
+        await Promise.race([
+          new Promise((resolve) => worker.once('close', resolve)),
+          new Promise((resolve) => setTimeout(resolve, 5000)),
+        ]);
+        if (worker.exitCode === null) worker.kill('SIGKILL');
+      }
       if (db?.runtime) await db.runtime.end().catch(() => {});
       if (db?.admin) await db.admin.end().catch(() => {});
       if (db?.name) docker('rm', '-f', db.name);
