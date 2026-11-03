@@ -237,6 +237,7 @@ export async function seedRuntime(state, caseIds) {
           ? [`E2E-${state.id}-${caseId}-C`]
           : []),
         ...(['DB-07', 'GATE-07'].includes(caseId) ? [`E2E-${state.id}-${caseId}-D`] : []),
+        ...(caseId === 'GATE-07' ? ['E', 'F', 'G'].map((suffix) => `E2E-${state.id}-${caseId}-${suffix}`) : []),
       ];
       const fixture = {
         tenantId,
@@ -310,6 +311,7 @@ export async function seedRuntime(state, caseIds) {
       if (caseId === 'GATE-07') {
         fixture.data.thirdCode = codes[2];
         fixture.data.fourthCode = codes[3];
+        fixture.data.moreRaceCodes = codes.slice(4);
       }
       if (caseId === 'PORT-12') {
         fixture.data.registrationName = `New Tenant ${state.id}`;
