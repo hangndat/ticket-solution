@@ -36,7 +36,9 @@ async function startStalledSmtp() {
   const sockets = new Set();
   const server = createNetServer((socket) => {
     connections += 1;
-    connectedAtMs ??= Date.now();
+    // Date.now truncates sub-millisecond precision; round the boundary up so
+    // a transaction begun in the same millisecond cannot escape the probe.
+    connectedAtMs ??= Date.now() + 1;
     sockets.add(socket);
     socket.on('close', () => sockets.delete(socket));
     socket.write('220 job06-stall ESMTP\r\n');
