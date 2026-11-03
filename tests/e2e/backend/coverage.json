@@ -357,13 +357,16 @@
       "U:packages/backend/test/csv-guard.test.cjs#providerStatus maps",
       "D:packages/backend/test/reporting.test.cjs#event report counts",
       "D:packages/backend/test/outbox-fence.test.cjs#TicketIssued: email outside tx",
+      "D:packages/backend/test/email-budget.test.cjs#JOB04 D: concurrent admission, settlement CAS, config and replay isolation",
+      "D:packages/backend/test/email-budget.test.cjs#JOB04 D: InvitationReady worker shares budget and typed preflight releases holds",
+      "D:packages/backend/test/email-budget.test.cjs#JOB04 D: worker invite calls SMTP once and defers another at tenant cap",
       "D:packages/backend/test/cs-export.test.cjs#CS lookup/export/events",
       "D:packages/backend/test/job04-resend-caps.test.cjs#[JOB-04] D staff resend: cooldown, staff hourly cap, recipient hourly cap, retry(transient)!=terminal for emailNeedsCs",
       "H:tests/e2e/http/live.test.mjs#[JOB-04]"
     ],
     "layers": ["U", "D", "H"],
     "status": "blocked",
-    "reason": "D/U/H PASS exact-SHA ff9c969625f390479e6884d038bc6e3f98f57589 (D: `node tests/e2e/backend/entry.mjs --case JOB-04 --suite D` PASS 3/3; H: run mvvtn4n2-296e28, sourceProvenance commitStable+evidenceExactShaEligible true): cs.ts resendTicketEmail cooldown/user-hourly-limit/idempotency-dedup (cs-export.test.cjs + live H); notification-service.ts retryNotificationDelivery staff hourly cap (10/h) + recipient hourly cap (3/h) qua PostgreSQL thật (job04-resend-caps.test.cjs); cooldown trên cả 2 endpoint qua Keycloak thật; emailNeedsCsCount phân biệt đúng retry tạm (FAILED, next_attempt_at còn) khỏi terminal DEAD (O12) ở cả D và H. THIẾU: tenant-wide resend cap — PRD.md:208 yêu cầu 'hạn mức tenant' nhưng cs.ts không có tenant cap, và notification-retry.ts:assertResendCaps có tham số tenantCapPerHour song không caller nào (apps/api/src/notifications.ts) truyền giá trị nên unreachable qua mọi HTTP endpoint hiện có; tenant_email_usage.sent_count (tenant_limits.email_per_day) chỉ được ĐỌC, không nơi nào ghi. Đã escalate qua ask/orchestration — coordinator giữ AC này BLOCKED chờ contract wiring riêng (command admission vs delivery budget), không tự đặt cap mới. Xem .artifacts/job04-report.md."
+    "reason": "Existing exact-SHA evidence remains in history for cooldown, idempotency, staff/recipient resend caps, and transient-vs-terminal emailNeedsCs. Added D selector coverage for tenant delivery-budget admission/settlement/reclaim (email-budget.test.cjs); local working-tree run passed, exact-SHA clean run pending. Gap remains: tenant-wide resend-command cap is unreachable through current API wiring (notifications.ts does not supply tenantCapPerHour; cs.ts has no tenant cap). Keep BLOCKED pending contract owner; do not assert behavior runtime cannot implement."
   },
   {
     "caseId": "JOB-05",
@@ -379,11 +382,13 @@
     "tests": [
       "D:packages/backend/test/worker-db-cancel.test.cjs#PG lock cancels reconcile",
       "U:apps/worker/test/worker-budget-fault.test.cjs#slow SMTP/APNs",
-      "U:apps/worker/test/worker-relay-tick-timeout.test.cjs#hung tick step"
+      "U:apps/worker/test/worker-relay-tick-timeout.test.cjs#hung tick step",
+      "R:tests/e2e/backend/job-06-worker-budget.test.cjs#[JOB-06] R real worker process bounds a stuck step while reconciliation continues",
+      "R:tests/e2e/backend/job-06-worker-budget.test.cjs#[JOB-06] R stalled SMTP after claim times out, then lease reclaim preserves finite tenant cap"
     ],
-    "layers": ["D", "U"],
+    "layers": ["D", "U", "R"],
     "status": "blocked",
-    "reason": "D/U bounded timeout; thiếu R process kill/overlap and tenant cap."
+    "reason": "D worker combined-load test uses email_per_day=8 and asserts 8 accepted, 4 durably deferred. R covers a real SMTP stall after PROCESSING/HELD, post-claim timeout, no idle worker transaction, bounded shutdown, expired-lease reclaim, one accepted delivery, and a second job deferred at finite tenant cap. CI-equivalent command `node --test --test-concurrency=4 --test-force-exit test/worker-db-cancel.test.cjs ../../tests/e2e/backend/job-06-worker-budget.test.cjs` passed 3/3 in 11.99s on clean exact SHA 1647592f05287388654328c4b0955ff9508d71ae; CI job wired to the same command remains pending. Keep BLOCKED pending integrated acceptance."
   },
   {
     "caseId": "JOB-07",
