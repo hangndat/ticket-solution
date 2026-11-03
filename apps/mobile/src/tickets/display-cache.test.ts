@@ -15,6 +15,8 @@ const ticket = {
   sourceId: '55555555-5555-5555-5555-555555555555',
   state: 'ACTIVE',
   credentialVersion: 1,
+  gateCredential: { v: 1, kind: "ticket.gate_credential", jws: "header.payload.signature" } as const,
+  manualEntryCode: "ABCD-EFGH-JK",
   createdAt: '2026-10-16T00:00:00.000Z',
 };
 
@@ -39,18 +41,17 @@ test('display cache JSON rejects other users and malformed payloads', () => {
   assert.equal(parseTicketDisplayCacheJson(null), null);
 });
 
-test('display QR payload is TicketSummary fields, not a forged JWS', () => {
+test('display QR payload is the exact signed Gate envelope', () => {
   const payload = buildDisplayQrPayload(ticket);
   const parsed = JSON.parse(payload) as Record<string, unknown>;
-  assert.equal(parsed.kind, 'ticket.display');
-  assert.equal(parsed.ticketId, ticket.ticketId);
-  assert.equal(parsed.credentialVersion, 1);
-  // Compact JWS is three base64url segments; display payload is JSON.
-  assert.equal(payload.split('.').length === 3 && !payload.startsWith('{'), false);
+  assert.deepEqual(parsed, ticket.gateCredential);
+  assert.equal(parsed.kind, 'ticket.gate_credential');
+  assert.equal('ticketId' in parsed, false);
+  assert.equal('manualEntryCode' in parsed, false);
   assert.equal(payload.startsWith('{'), true);
 });
 
-test('QR matrix encodes display payload without inventing modules', () => {
+test('QR matrix encodes signed payload without inventing modules', () => {
   const modules = encodeQrModules(buildDisplayQrPayload(ticket));
   assert.ok(modules.length >= 21);
   assert.equal(modules.length, modules[0]?.length);

@@ -12,7 +12,7 @@ Giới hạn cụ thể: SEC-01 thiếu matrix mọi resource; AUTH-03 thiếu b
 
 Chạy: `node tests/e2e/http/entry.mjs --list`; với manifest: `E2E_MANIFEST=<private-path> NODE_EXTRA_CA_CERTS=<cert-path> NODE_OPTIONS='--require <dns-preload>' node tests/e2e/http/entry.mjs [--case DB-03]`.
 
-## DB-19 — inventory assertion theo PLAN §6.1
+## DB-19 — inventory assertion theo PLAN §6.1 (snapshot lịch sử trước nghiệm thu keyring)
 
 | AC | Assertion hiện có | Còn thiếu |
 | --- | --- | --- |
@@ -23,3 +23,12 @@ Chạy: `node tests/e2e/http/entry.mjs --list`; với manifest: `E2E_MANIFEST=<p
 | QR credential key cũ, revoked | Chưa có versioned credential keyring: `kid` cố định `local-v1`; trạng thái `REVOKED` của credential được kiểm riêng trong DB-09 | Owner cần chốt giữ DB-19 AC và thiết kế keyring, hoặc điều chỉnh AC QR có ghi rủi ro theo PLAN §15.2 |
 
 Chạy H riêng bằng `E2E_LANES=1 pnpm test:e2e:http --lane --case=DB-19`; fixture v2 current/v1 legacy được cô lập, nên không ghép ID này với các HTTP case dùng cấu hình pepper mặc định. Kết quả exact SHA và verdict ghi ở báo cáo bàn giao, không đổi `ACCEPTANCE.md` trong Task này.
+## GATE-03 signed credential — 02/11/2026
+
+Run `mvyisdk6-156618` trả `PASS` 1/1 cho selector HTTP trên source SHA `989e68394ac6a301f26c47a519264c05e5e105da`. Harness dựng stack cô lập thật với Keycloak, PostgreSQL và API; summary và log ở `tests/e2e/.artifacts/mvyisdk6-156618/`.
+
+Ca lấy JWS ES256 và mã manual qua `/me/tickets/:ticketId`, sau đó kiểm reserve/confirm hợp lệ, chữ ký bị sửa, context sai event và signed context sai tenant, version cũ, vé revoke, vé đã dùng, manual lookup và proof token dùng từ staff session khác. Các request từ chối kiểm tra reservation/check-in bất biến; các nhánh credential deny có `gate.reject` trong tenant tương ứng dưới RLS. Signing key ephemeral được tạo cho run; private key chỉ được seal bằng helper backend hiện có.
+
+Không nâng GATE-03 thành PASS toàn phần. Summary ghi `evidenceExactShaEligible: false` / `NON_EVIDENCE_DIRTY` vì worktree vẫn có `company/work-events.jsonl` cùng sáu báo cáo James đã tồn tại trước task; các file được giữ nguyên. Ma trận còn thiếu audience/kid/alg/hash, ticket cancelled, manual code/proof invalid, proof expiry/version stale và rate-limit. `coverage.json` vẫn giữ trạng thái `blocked`.
+
+CRG scope: repo `/Users/admin/SideProject/ticket-solution/f04-port09-unknown-contract`; stats và `file_summary(tests/e2e/http/live.test.mjs)` đã chạy tại source SHA `989e68394ac6a301f26c47a519264c05e5e105da`. Tip `d066abbd` chỉ thêm báo cáo/coverage, không đổi source; MCP graph giữ `head_matches_build=false` cho phần docs-only.

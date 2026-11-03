@@ -26,8 +26,10 @@ See `apps/mobile/.env.example`:
    `GET /v1/me` returns `MeResponse.userId` (same identity path as web).
 3. **My Tickets** — `GET /v1/me/tickets?tenantId=` with the verified bearer;
    durable SecureStore display cache for offline open (not offline check-in).
-4. **Display QR** — encodes `TicketSummary` fields (`kind: ticket.display`).
-   Contracts do not yet expose a signed Gate JWS credential.
+4. **Gate QR** — renders the server-signed `gateCredential` envelope from each
+    ticket response. Staff reserve accepts only its JWS; unsigned display JSON
+    and bare ticket UUIDs are rejected. The ticket detail also displays the
+    server-issued manual entry code, which staff verify online before reserve.
 5. **Log out** — detach APNs (`DELETE /v1/me/device-tokens/{id}` + clear local registration) **before** `session.logout()`; then SecureStore clear + best-effort Keycloak end-session. Account switch uses the same detach.
 6. **Account deletion request** — Account → “Yêu cầu xóa tài khoản” → confirm →
    `POST /v1/me/account-deletion-requests` `{confirmation:true}` + `Idempotency-Key`

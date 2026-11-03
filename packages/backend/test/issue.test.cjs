@@ -18,10 +18,21 @@ const {
   IssueError,
   ISSUE_ERROR_CODES,
   REDEEM_COMMAND,
-  relayOutboxOnce,
+  relayOutboxOnce: relayOutboxOnceRaw,
   createFailingEmailAdapter,
   createNoopEmailAdapter,
 } = require('../dist');
+const { withTestEmailSigner } = require('./gate-test-credentials.cjs');
+
+async function relayOutboxOnce(db, email, leaseOwner, limit, options) {
+  return relayOutboxOnceRaw(
+    db,
+    email,
+    leaseOwner,
+    limit,
+    withTestEmailSigner(options),
+  );
+}
 
 const docker = (...args) =>
   execFileSync('docker', args, {

@@ -128,9 +128,9 @@ function mapOutcomeKind(
       return {
         kind: 'already-checked-in',
         label: 'Vé đã được sử dụng',
-        hint: 'Cho qua theo lần check-in trước — không tạo lượt mới.',
-        tone: 'admit',
-        symbol: 'checkmark.circle',
+        hint: 'Vé đã được check-in trước đó. Không cho vào.',
+        tone: 'deny',
+        symbol: 'xmark.circle.fill',
       };
     case 'denied':
       return {

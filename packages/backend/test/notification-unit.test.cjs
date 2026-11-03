@@ -13,7 +13,7 @@ const {
   NotificationError,
   NOTIFICATION_ERROR_CODES,
   DEFAULT_TICKET_ISSUED_TEMPLATE,
-  buildCredentialQrJson,
+  buildGateCredentialQrJson,
   hashCredentialToken,
   sealCredentialToken,
   openCredentialToken,
@@ -138,21 +138,18 @@ test('backoff stays within ±20% jitter bounds for attempts 1..8', () => {
   assert.ok(maxed <= 3600 * 1.2);
 });
 
-test('credential seal/open round-trip; QR JSON embeds current token', () => {
+test('credential seal/open remains available; email QR contains only signed gate envelope', () => {
   const key = 'unit-test-credential-key';
   const token = 'tok_' + 'a'.repeat(40);
   const sealed = sealCredentialToken(token, key);
   assert.equal(openCredentialToken(sealed.encryptedToken, key), token);
   assert.equal(hashCredentialToken(token), sealed.tokenHash);
-  const qr = JSON.parse(
-    buildCredentialQrJson({
-      ticketId: '11111111-1111-4111-8111-111111111111',
-      tenantId: '22222222-2222-4222-8222-222222222222',
-      eventId: '33333333-3333-4333-8333-333333333333',
-      credentialVersion: 1,
-      token,
-    }),
-  );
-  assert.equal(qr.kind, 'ticket.credential');
-  assert.equal(qr.token, token);
+  const jws = 'header.payload.signature';
+  const qrJson = buildGateCredentialQrJson(jws);
+  const qr = JSON.parse(qrJson);
+  assert.equal(qrJson, JSON.stringify({ v: 1, kind: 'ticket.gate_credential', jws }));
+  assert.deepEqual(qr, { v: 1, kind: 'ticket.gate_credential', jws });
+  assert.equal(qrJson.includes(token), false);
+  assert.equal(qrJson.includes('ticketId'), false);
+  assert.equal(qrJson.includes('tenantId'), false);
 });
