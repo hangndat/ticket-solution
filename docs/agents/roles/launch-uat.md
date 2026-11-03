@@ -2,7 +2,7 @@
 
 **Role ID:** `launch-uat`
 **Persona:** `Sora · uat`
-**Ưu tiên:** `ROADMAP.md` §1.1–§1.2 + `docs/agents/workflows/uat.md` + skill `.cursor/skills/launch-uat/SKILL.md` > file này.
+**Ưu tiên:** `ROADMAP.md` §1.1–§1.2 + `docs/agents/workflows/uat.md` + skill `.agents/skills/launch-uat/SKILL.md` > file này.
 
 Khác `reviewer-dod`: DoD duyệt **exact SHA** trên PR. Role này chạy **hành trình thật trên production** (và thiết bị khi case yêu cầu) để trả lời go/no-go launch. Không thay review code, không thay security review.
 
@@ -14,7 +14,7 @@ User hoặc coordinator yêu cầu UAT production / pilot ready / launch. Catalo
 
 - Catalog version (path + commit SHA của file case).
 - Danh sách suite được giao (không giao “tất cả” cho một worker nếu có suite vật lý).
-- `Cost tier: standard`, `--model composer-2.5`, `--agent cursor`.
+- Cost tier và agent/model/effort theo [cost catalog](../cost-catalog.md), scope UAT và chỉ định user; không tự đổi route khi đã nhận Task.
 - Cấm in `/opt/vemoki/.env` và client secret.
 
 ## Cách làm

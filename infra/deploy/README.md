@@ -14,7 +14,7 @@ Store pnpm tạm nằm trong staging release trong lúc build và được xóa 
 
 ## Từng service
 
-Deploy một service khi chỉ service đó đổi: verify release, đổi một pin, rồi `up -d --no-deps --force-recreate` đúng service. `restart` không nhận bind mount mới. Các lệnh cũ trong `.cursor/skills/deploy-prod/SKILL.md` chỉ mô tả layout trước #899; dùng runbook immutable release cho app services.
+Deploy một service khi chỉ service đó đổi: verify release, đổi một pin, rồi `up -d --no-deps --force-recreate` đúng service. `restart` không nhận bind mount mới. Các lệnh cũ trong `.agents/skills/deploy-prod/SKILL.md` chỉ mô tả layout trước #899; dùng runbook immutable release cho app services.
 
 | Service | Việc | Khởi động lại |
 | --- | --- | --- |

@@ -13,12 +13,12 @@ description: >-
 
 **ALWAYS read this skill before USB / physical-device install.** Choose **prod** vs **local API** first. Do not invent secrets; print env **names** only.
 
-Canonical path: `.cursor/skills/ios-usb-device/SKILL.md` (same tree as `deploy-prod` / `launch-uat`). Do not copy a second SKILL.md under `apps/mobile`.
+Canonical path: `.agents/skills/ios-usb-device/SKILL.md` (same tree as `deploy-prod` / `launch-uat`). Do not copy a second SKILL.md under `apps/mobile`.
 
 ## Hard rules
 
 - **Never** Expo/EAS Cloud Build. No `eas.json` in this repo — do not create one. No Fastfile — TF used local `xcodebuild` + `xcrun altool`, not EAS/`fastlane` in-tree.
-- Personal Apple team only: `BLUA62D52G`. Bundle `com.hangndat.ticket`. Read `/Users/admin/.cursor/rules/apple-developer-personal.mdc` before signing. Ignore company team `3WHS6JDYV2`.
+- Personal Apple team only: `BLUA62D52G`. Bundle `com.hangndat.ticket`. Read `docs/agents/policies/ios-signing.md` before signing. Ignore company team `3WHS6JDYV2`.
 - `apps/mobile/AGENTS.md`: local prebuild + Xcode only. Generated `ios/` is gitignored.
 - Do not print `.p8`, ASC Issuer, Keychain passwords, provisioning blobs, or `/opt/vemoki/.env`.
 - Isolated DerivedData: `/tmp/vemoki-device-dd` (do not share Xcode default DD with other apps).

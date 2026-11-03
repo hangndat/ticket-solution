@@ -17,7 +17,7 @@ Task review: coordinator dùng [review.md](review.md) để soạn spec ngắn �
 
 ## Routing và đầu vào
 
-- Agent / model / effort: <theo cost-catalog; Codex worker cần lý do reasoning>
+- Agent / model / effort: <theo cost-catalog và chỉ định user; ghi lý do ngoại lệ/fallback khi áp dụng>
 - Cost tier: cheap | standard | focused | advanced | high
 - Lý do dùng quota dự phòng (nếu có): --essential-reason; không tự coi high là khẩn cấp.
 - Lý do tier: <quyết định, giải pháp và rủi ro cụ thể — 1 câu>; high bắt buộc truyền --tier-reason, việc khó có giới hạn mặc định advanced.

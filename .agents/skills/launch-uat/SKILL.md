@@ -10,7 +10,7 @@ description: >-
 
 Catalog: [docs/plans/PROD-LAUNCH-UAT.md](../../../docs/plans/PROD-LAUNCH-UAT.md).
 Role: [docs/agents/roles/launch-uat.md](../../../docs/agents/roles/launch-uat.md).
-Browser/emulator policy: `.cursor/rules/uat-headless.mdc`.
+Browser/emulator policy: `docs/agents/workflows/uat.md`.
 
 ## Trước khi chạy
 
