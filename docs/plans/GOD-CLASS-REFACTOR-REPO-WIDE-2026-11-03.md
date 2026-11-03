@@ -113,3 +113,34 @@ Không có thay đổi public API, DB schema, tenant/RLS/auth hay business contr
 | Next khi owner bàn giao | Outbox: characterization lease/race/at-least-once trước tách email/APNs. Import jobs: cursor/CSV boundary + tenant/quota tests. Mobile: replay/receipt boundary + device/simulator probe. |
 
 Lỗi worker Web CRG/LeanCTX được lưu riêng tại [gate incident](../reviews/GOD-CLASS-WEB-CRG-GATE-2026-11-03.md), đã gửi main-2; không bỏ qua guard. Workflow evidence có manifest/result/handoff từng Dispatch trong `.orca-metrics/lifecycle/`; follow-up qua Orca `send` không được suy route từ `effective` thiếu field. OpenCode Go weekly limit đã tạo các attempt failed nhưng không dispatch lặp một task khi trạng thái unknown. Chưa có baseline token/cost để khẳng định tiết kiệm.
+
+### Ownership release và wave backend tiếp theo
+
+- F04 JOB Run `run_453b66c288fe` xác nhận không sửa `packages/backend/src/import-jobs.ts` và release ownership qua Orca `msg_f3e6b2c90978`. F04 DB/POL Run `run_a6137f22ff16` xác nhận đã merge #1165/#1171, không còn writer/PR sửa `packages/backend/src/outbox.ts`, release qua `msg_ec9449c7cb99`. Mọi thay đổi mới lấy base `origin/main` mới nhất, giữ DB-19 keyring.
+- F04 GATE Run `run_c1da00d12197` qua `msg_22f9fca0138c` **chưa** bàn giao `staff-gate-workspace-context.tsx`/`offline-queue.ts`; chờ PR1138 tích hợp/revalidate. Đây là blocked ownership, không phải keep/done.
+- Backend outbox Task `task_04ebbe7a5280` ở worktree `god-backend-outbox`, base `d1ab1d2e…`. OpenCode Go Pro advanced Dispatch `ctx_0b7e3328e35a` requested=effective nhưng weekly limit ngay khi chạy; đã stop `processAction=closed_agent_terminal`, settle/release. Fallback cùng employee Colin/Task/tier là Codex Luna medium Dispatch `ctx_0a2abea34046`, requested=effective, quota snapshot 22%/reserve 20%, receipt `.orca-metrics/lifecycle/1793690176834-1ce1663b-26e8-4b41-a101-8efa7570a119/`; đang làm một seam outbox, chưa có code SHA/acceptance. Không dùng Free/Extra Usage hoặc dispatch lặp khi unknown.
+
+Colin outbox fallback `ctx_0a2abea34046` cũng bị PreToolUse CRG gate dù stats/build và query qualified calls/tests_for đã thành công ở worktree/HEAD `d1ab1d2e…`; không đọc/sửa source. Coordinator stop/settle/release receipt `.orca-metrics/lifecycle/1793690318867-6bf3df2a-3a4b-4b30-baf6-fccc81c58a06/` và báo main-2. **Outbox vẫn mở**, chờ sửa guard hoặc boundary đủ evidence để làm tiếp; không coi attempt là code done. `outbox.ts` từ root HEAD và `origin/main` có cùng bytes tại checkpoint, nhưng refactor lease/provider rủi ro cao nên không làm vội không characterization/review.
+
+Import jobs Task recovery `task_ac0408d4b8cf` do Minh thực hiện sau khi backend worker bị guard: tách UTF-8 CSV validation, row parsing/mapping/duplicate/masking từ `import-jobs.ts` sang `import-csv.ts` không phụ thuộc DB/object-store; job lifecycle, quota, tenant/RLS và exported API giữ nguyên. Product SHA `1175c090178f85aea2f3123911fb8f32623b4bf3` (base `1e383442…`), bốn file backend. Baseline backend suite trước sửa exit0; trên SHA mới backend suite 61/61, `test:import-list` (Docker integration) exit0, lint/Prettier/diff check PASS. Review độc lập James Task `task_2ff75b51adc3` / Dispatch `ctx_2e6e47a6e35c` đang chạy, chưa acceptance. Một Task reviewer preflight `task_4b3d2f4de179` failed trước Dispatch vì role ID `reviewer` không thuộc employee James; Task đúng dùng `reviewer-merged` và Claude Sonnet 5 low requested=effective.
+
+### Backend import: nghiệm thu
+
+James đã review độc lập exact SHA `1175c090…` và kết luận DoD/Security PASS, không finding; [báo cáo](../reviews/GOD-CLASS-BACKEND-IMPORT-2026-11-03.md). Task `task_2ff75b51adc3` / Dispatch `ctx_2e6e47a6e35c` đã settle/release tại `.orca-metrics/lifecycle/1793690934302-259141db-0ac8-4a38-87d7-955b49b4d73d/`. Nghiệm thu áp dụng cho product SHA này, không suy sang commit khác.
+
+### Backend outbox: fence persistence boundary
+
+F04 DB/POL đã release ownership `outbox.ts` (mục trên). Baseline `test:architecture-recovery` 28/28 trước sửa. Minh tách sáu hàm ghi attempt, lock/fence lease, retry và terminal status sang `outbox-fence.ts`; `outbox.ts` còn điều phối provider, budget, APNs và metrics, import các hàm mới. SQL và call sites giữ nguyên, type `ClaimedOutboxRow` import type-only nên không có runtime cycle. Product SHA `29c43b35cc3f8bc9563d229755c352d54fabf4e6` gồm đúng hai file backend; build, lint, `test:job04-regression` 7/7, `test:architecture-recovery` 28/28, Prettier file mới và diff check PASS. Một lần chạy architecture suite trước đó exit 137 khi Docker nhiều tải, lần chạy lại exit 0; không có assertion failure trong lần bị kill.
+
+James review độc lập Task `task_1ab566bbc5d7` / Dispatch `ctx_eaac2ebae66a`, requested=effective Claude Sonnet 5 low, receipt start `.orca-metrics/lifecycle/1793691586313-eb398824-88bb-4a40-8223-a1cfb9222b64/`, settle/release `.orca-metrics/lifecycle/1793691721000-f847585f-daed-403b-852b-bfa186dce1f3/`. [Báo cáo outbox](../reviews/GOD-CLASS-BACKEND-OUTBOX-2026-11-03.md) trên exact SHA kết luận DoD/Security PASS, không findings. Review dùng lại test evidence của coordinator và tự kiểm diff, callers/importers, tenant predicates, lease token/expiry và ordinal; không có public API hay business contract thay đổi có chủ ý.
+
+### Backlog sau wave backend
+
+| Ứng viên | Quyết định |
+| --- | --- |
+| Mobile `StaffGateWorkspaceProvider` / `OfflineScanQueue` | Hoãn vì F04 GATE chưa release ownership, chờ PR1138 và evidence replay/receipt trên thiết bị hoặc simulator. |
+| Portal `ops/import-job.ts` | Khảo sát riêng nếu có task tiếp theo; backend CSV đã tách, không kéo Portal vào cùng diff. |
+| `credential-crypto.ts` rotation | Giữ trong DB-19 owner; không đụng key handling khi không có boundary/test seam đã duyệt. |
+| Root release artifact và các provider/shared helper nhỏ | Giữ nguyên: release tooling đã chia helper và có test, các helper còn lại trách nhiệm hẹp; không refactor theo số dòng. |
+
+Wave này dừng ở các boundary đã review. Root tooling/telemetry dirty thuộc handoff main-2/PR #1172, không nằm trong commit product. Không push/PR/merge product hoặc deploy theo scope local reviewable. CRG root đã cập nhật và query ở HEAD `29c43b35…`; reviewer build graph/query riêng trên worktree exact SHA.
