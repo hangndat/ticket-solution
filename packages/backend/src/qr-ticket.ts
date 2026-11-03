@@ -66,7 +66,7 @@ export async function renderCredentialQrPng(
   });
 }
 
-/** @deprecated Legacy fixture/tooling only; never use the opened token as Gate proof. */
+/** Validate the stored credential; the opened token is never Gate proof. */
 export function openCurrentCredentialForQr(input: {
   encryptedToken: string;
   kid?: string;

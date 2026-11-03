@@ -22,7 +22,7 @@ import {
   resolveTicketIssuedTemplate,
 } from './notification-templates';
 import { readCredentialKeyringEnvironment, type CredentialKeyInput } from './credential-crypto';
-import { renderGateCredentialQrPng } from './qr-ticket';
+import { openCurrentCredentialForQr, renderGateCredentialQrPng } from './qr-ticket';
 import {
   readGateCredentialSigningConfig,
   signGateCredentialJws,
@@ -437,9 +437,12 @@ export async function processClaimedOutbox(
           Array<{
             version: number;
             status: string;
+            kid: string;
+            token_hash: string;
+            encrypted_token: string;
           }>
         >`
-          SELECT version, status
+          SELECT version, status, kid, token_hash, encrypted_token
           FROM ticket_credentials
           WHERE tenant_id = ${row.tenant_id}::uuid
             AND ticket_id = ${ticketId}::uuid
@@ -450,6 +453,16 @@ export async function processClaimedOutbox(
         const cred = creds[0];
         if (!cred) {
           throw new Error('active credential missing for ticket');
+        }
+        try {
+          openCurrentCredentialForQr({
+            encryptedToken: cred.encrypted_token,
+            kid: cred.kid,
+            expectedTokenHash: cred.token_hash,
+            credentialKeyMaterial: options.credentialKeyMaterial,
+          });
+        } catch {
+          throw new Error('ticket_credential_integrity_invalid');
         }
         if (!gateSigningConfig) {
           try {
