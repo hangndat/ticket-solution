@@ -41,7 +41,10 @@ import {
   type RedeemAttempt,
 } from '../../../src/redeem/attempt-key';
 import { redeemMutate } from '../../../src/redeem/client-fetch';
-import { decideRedeemBody, type RedeemDecision } from '../../../src/redeem/decide';
+import {
+  decideRedeemBody,
+  type RedeemDecision,
+} from '../../../src/redeem/decide';
 import { fetchJson } from '../../../src/redeem/fetch-json';
 import {
   focusFirstFieldError,
@@ -179,11 +182,9 @@ export function RedeemForm({
   const busy = pending || polling;
   const outcomeRequiresStatusCheck =
     decision?.kind === 'pending' || Boolean(attempt?.unclear);
-  const showDevScopeFields =
-    tenantBound && (!productChrome || !globalEntry);
+  const showDevScopeFields = tenantBound && (!productChrome || !globalEntry);
   const slugPinnedSchema =
-    !singleCodeFlow &&
-    Boolean(tenantSlug.trim() && eventSlug.trim());
+    !singleCodeFlow && Boolean(tenantSlug.trim() && eventSlug.trim());
   const canRepoll = Boolean(attempt?.unclear && attempt.key && !busy);
 
   const isStale = useCallback(
@@ -490,7 +491,8 @@ export function RedeemForm({
 
   function onSubmit(event: FormEvent) {
     event.preventDefault();
-    if (busy || outcomeRequiresStatusCheck || decision?.kind === 'issued') return;
+    if (busy || outcomeRequiresStatusCheck || decision?.kind === 'issued')
+      return;
     if (singleCodeFlow && globalPhase === 'enter-code') {
       onGlobalResolve();
       return;
@@ -524,7 +526,12 @@ export function RedeemForm({
     if (!validated.ok || termsIssue || scopeIssue) {
       if (scopeIssue && !showDevScopeFields) {
         setUx({
-          ...messageForApiError('SCOPE_REQUIRED', scopeIssue.message, false, locale),
+          ...messageForApiError(
+            'SCOPE_REQUIRED',
+            scopeIssue.message,
+            false,
+            locale,
+          ),
           detail: scopeIssue.message,
         });
       }
@@ -582,9 +589,7 @@ export function RedeemForm({
       if (result.timedOut || result.networkError) {
         const hungWithoutResponse = result.timedOut && !result.networkError;
         setUx(
-          result.networkError
-            ? networkMessage(locale)
-            : timeoutMessage(locale),
+          result.networkError ? networkMessage(locale) : timeoutMessage(locale),
         );
         setRaw(null);
         const pollOutcome = await runPoll(
@@ -601,12 +606,7 @@ export function RedeemForm({
       }
 
       setRaw(JSON.stringify(result.json, null, 2));
-      const next = decideRedeemBody(
-        result.status,
-        result.json,
-        key,
-        false,
-      );
+      const next = decideRedeemBody(result.status, result.json, key, false);
 
       const retryableApi =
         isApiError(result.json) &&
@@ -665,7 +665,10 @@ export function RedeemForm({
     if (!pendingRequestId || busy) return;
     const generation = generationRef.current;
     startTransition(async () => {
-      const result = await fetchOwnerRedemptionStatus(pendingRequestId, tenantId);
+      const result = await fetchOwnerRedemptionStatus(
+        pendingRequestId,
+        tenantId,
+      );
       if (isStale(generation)) return;
       if (result.status === 'ok') {
         setUx(messageForOwnerStatus(result.body, locale));
@@ -677,7 +680,9 @@ export function RedeemForm({
         return;
       }
       if (result.status === 'unauthorized') {
-        setUx(messageForApiError('UNAUTHENTICATED', undefined, undefined, locale));
+        setUx(
+          messageForApiError('UNAUTHENTICATED', undefined, undefined, locale),
+        );
         return;
       }
       setUx(
@@ -705,9 +710,7 @@ export function RedeemForm({
       if (isStale(generation)) return;
       if (result.timedOut || result.networkError) {
         setUx(
-          result.networkError
-            ? networkMessage(locale)
-            : timeoutMessage(locale),
+          result.networkError ? networkMessage(locale) : timeoutMessage(locale),
         );
         return;
       }
@@ -777,7 +780,9 @@ export function RedeemForm({
         }
       : undefined;
 
-  const formClassName = productChrome ? redeemProductFormRoot : redeemDevFormRoot;
+  const formClassName = productChrome
+    ? redeemProductFormRoot
+    : redeemDevFormRoot;
 
   const termsEventHref =
     tenantSlug.trim() && eventSlug.trim()
@@ -799,9 +804,16 @@ export function RedeemForm({
 
   return (
     <div className={formClassName}>
-      <form onSubmit={onSubmit} aria-labelledby="redeem-form-title" noValidate
-        className={productChrome ? 'grid gap-4' : undefined}>
-        <h2 id="redeem-form-title" className={productChrome ? 'm-0 text-[1.2rem] font-bold' : undefined}>
+      <form
+        onSubmit={onSubmit}
+        aria-labelledby="redeem-form-title"
+        noValidate
+        className={productChrome ? 'grid gap-4' : undefined}
+      >
+        <h2
+          id="redeem-form-title"
+          className={productChrome ? 'm-0 text-[1.2rem] font-bold' : undefined}
+        >
           {singleCodeFlow && globalPhase === 'enter-code'
             ? copy.formTitleEnter
             : copy.formTitleConfirm}
@@ -886,7 +898,9 @@ export function RedeemForm({
                         placeholder="UUID tổ chức"
                         aria-invalid={fieldErrors.tenantId ? true : undefined}
                         aria-describedby={
-                          fieldErrors.tenantId ? 'redeem-tenantId-error' : undefined
+                          fieldErrors.tenantId
+                            ? 'redeem-tenantId-error'
+                            : undefined
                         }
                       />
                       {fieldErrors.tenantId ? (
@@ -910,7 +924,9 @@ export function RedeemForm({
                         placeholder="UUID sự kiện"
                         aria-invalid={fieldErrors.eventId ? true : undefined}
                         aria-describedby={
-                          fieldErrors.eventId ? 'redeem-eventId-error' : undefined
+                          fieldErrors.eventId
+                            ? 'redeem-eventId-error'
+                            : undefined
                         }
                       />
                       {fieldErrors.eventId ? (
@@ -968,7 +984,9 @@ export function RedeemForm({
                       placeholder="UUID tổ chức"
                       aria-invalid={fieldErrors.tenantId ? true : undefined}
                       aria-describedby={
-                        fieldErrors.tenantId ? 'redeem-tenantId-error-dev' : undefined
+                        fieldErrors.tenantId
+                          ? 'redeem-tenantId-error-dev'
+                          : undefined
                       }
                     />
                     {fieldErrors.tenantId ? (
@@ -992,7 +1010,9 @@ export function RedeemForm({
                       placeholder="UUID sự kiện"
                       aria-invalid={fieldErrors.eventId ? true : undefined}
                       aria-describedby={
-                        fieldErrors.eventId ? 'redeem-eventId-error-dev' : undefined
+                        fieldErrors.eventId
+                          ? 'redeem-eventId-error-dev'
+                          : undefined
                       }
                     />
                     {fieldErrors.eventId ? (
@@ -1104,7 +1124,9 @@ export function RedeemForm({
                   placeholder={copy.codePlaceholder}
                   readOnly={singleCodeFlow && globalPhase === 'confirm'}
                   aria-readonly={
-                    singleCodeFlow && globalPhase === 'confirm' ? true : undefined
+                    singleCodeFlow && globalPhase === 'confirm'
+                      ? true
+                      : undefined
                   }
                 />
               </label>
@@ -1128,7 +1150,8 @@ export function RedeemForm({
                 });
               }}
             />
-          ) : singleCodeFlow && globalPhase === 'enter-code' ? null : termsVersion ? (
+          ) : singleCodeFlow &&
+            globalPhase === 'enter-code' ? null : termsVersion ? (
             <p className={introLead} data-testid="redeem-schema-terms-only">
               {copy.termsOnly}
             </p>
@@ -1136,9 +1159,7 @@ export function RedeemForm({
             <SurfaceState
               kind="empty"
               title={copy.noFormTitle}
-              detail={
-                singleCodeFlow ? copy.noFormGlobal : copy.noFormScoped
-              }
+              detail={singleCodeFlow ? copy.noFormGlobal : copy.noFormScoped}
               testId="redeem-schema-empty"
             />
           )}
@@ -1165,9 +1186,7 @@ export function RedeemForm({
           ) : null}
         </div>
 
-        <div
-          className={productChrome ? redeemPrimaryActions : authButtonsRow}
-        >
+        <div className={productChrome ? redeemPrimaryActions : authButtonsRow}>
           {singleCodeFlow && globalPhase === 'enter-code' ? (
             <Button
               type="submit"
@@ -1192,17 +1211,32 @@ export function RedeemForm({
           )}
           {productChrome ? (
             canRepoll ? (
-              <Button type="button" variant="secondary" onClick={pollAgain} disabled={!canRepoll}>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={pollAgain}
+                disabled={!canRepoll}
+              >
                 {copy.checkAgain}
               </Button>
             ) : decision?.kind === 'pending' && pendingRequestId ? (
-              <Button type="button" variant="secondary" onClick={refreshOwnerStatus} disabled={busy}>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={refreshOwnerStatus}
+                disabled={busy}
+              >
                 {copy.checkRequest}
               </Button>
             ) : null
           ) : (
             <>
-              <Button type="button" variant="secondary" onClick={pollAgain} disabled={!canRepoll}>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={pollAgain}
+                disabled={!canRepoll}
+              >
                 {copy.checkAgain}
               </Button>
               <Button
@@ -1230,7 +1264,9 @@ export function RedeemForm({
       </form>
       {productChrome && singleCodeFlow && globalPhase === 'enter-code' ? (
         <p className="m-0 text-[0.9rem]">
-                    <Link href="/wallet" prefetch={false}>{copy.myTickets}</Link>
+          <Link href="/wallet" prefetch={false}>
+            {copy.myTickets}
+          </Link>
         </p>
       ) : null}
 
@@ -1256,7 +1292,12 @@ export function RedeemForm({
           <p>{ux.detail}</p>
           {ux.kind === 'unknown' && canRepoll ? (
             <p>
-              <Button type="button" variant="secondary" onClick={pollAgain} disabled={!canRepoll}>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={pollAgain}
+                disabled={!canRepoll}
+              >
                 {copy.checkAgain}
               </Button>
             </p>
@@ -1267,19 +1308,26 @@ export function RedeemForm({
                 <a href={redeemLogin}>{copy.login}</a>
               </Button>
               {ux.code === IDENTITY_ERROR_CODES.EMAIL_NOT_VERIFIED ? (
-                  <Button asChild variant="secondary">
-                    <Link href="/account">{copy.openAccount}</Link>
-                  </Button>
-                ) : null}
+                <Button asChild variant="secondary">
+                  <Link href="/account">{copy.openAccount}</Link>
+                </Button>
+              ) : null}
             </p>
           ) : null}
           {productErrorOutcome ? (
             <div className={redeemOutcomeActions}>
-              <Button type="button" variant="brand" onClick={resetRedeemAttempt} disabled={busy}>
+              <Button
+                type="button"
+                variant="brand"
+                onClick={resetRedeemAttempt}
+                disabled={busy}
+              >
                 {copy.tryOtherCode}
               </Button>
               <Button asChild variant="primary">
-                    <Link href="/wallet" prefetch={false}>{copy.myTickets}</Link>
+                <Link href="/wallet" prefetch={false}>
+                  {copy.myTickets}
+                </Link>
               </Button>
             </div>
           ) : null}
@@ -1311,7 +1359,9 @@ export function RedeemForm({
           {ux.kind === 'success' ? (
             <p className={authButtonsRow}>
               <Button asChild variant="brand">
-                    <Link href="/wallet" prefetch={false}>{copy.viewWallet}</Link>
+                <Link href="/wallet" prefetch={false}>
+                  {copy.viewWallet}
+                </Link>
               </Button>
             </p>
           ) : null}
@@ -1328,21 +1378,21 @@ export function RedeemForm({
             </p>
           ) : null}
           {!productChrome &&
-          (idempotencyKey || decision?.kind === 'pending') && (
-            <details className={redeemMetaDetails}>
-              <summary>Chi tiết kỹ thuật</summary>
-              {idempotencyKey ? (
-                <p>
-                  Khóa thao tác: <code>{idempotencyKey}</code>
-                </p>
-              ) : null}
-              {decision?.kind === 'pending' ? (
-                <p>
-                  Mã yêu cầu: <code>{decision.requestId}</code>
-                </p>
-              ) : null}
-            </details>
-          )}
+            (idempotencyKey || decision?.kind === 'pending') && (
+              <details className={redeemMetaDetails}>
+                <summary>Chi tiết kỹ thuật</summary>
+                {idempotencyKey ? (
+                  <p>
+                    Khóa thao tác: <code>{idempotencyKey}</code>
+                  </p>
+                ) : null}
+                {decision?.kind === 'pending' ? (
+                  <p>
+                    Mã yêu cầu: <code>{decision.requestId}</code>
+                  </p>
+                ) : null}
+              </details>
+            )}
         </section>
       ) : null}
 
@@ -1373,7 +1423,10 @@ export function RedeemForm({
       ) : null}
 
       {!productChrome && tickets?.tickets?.length ? (
-        <section className={redeemTicketListSection} aria-labelledby="tickets-title">
+        <section
+          className={redeemTicketListSection}
+          aria-labelledby="tickets-title"
+        >
           <h3 id="tickets-title">{copy.myTickets}</h3>
           <ul>
             {tickets.tickets.map((t) => (
