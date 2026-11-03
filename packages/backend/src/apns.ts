@@ -275,6 +275,7 @@ async function sendApnsToEnvironment(
   bearerToken: string,
   http2: ApnsHttp2Client,
 ): Promise<ApnsHttp2ExchangeResult> {
+  if (input.signal?.aborted) throw new Error('apns_request_timeout_or_aborted');
   const apnsId = randomUUID();
   const path = `/3/device/${input.deviceToken}`;
   const payload = JSON.stringify({
