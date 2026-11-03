@@ -6498,6 +6498,28 @@ for (const caseId of CASE_IDS) {
         (SELECT count(*)::int FROM offline_sync_events WHERE tenant_id=$1::uuid AND event_id=$2::uuid) AS events`,
         [f.tenantId, f.eventId]);
       assert.deepEqual(state[0], { checkins: 0, events: 0 });
+      const ticketId = required(f.ticketId, 'GATE-06 ticketId');
+      const early = item(3, { ticketId, clientOccurredAt: new Date(Date.now() - 2000).toISOString() });
+      const late = item(4, { ticketId, clientOccurredAt: new Date(Date.now() - 1000).toISOString() });
+      const replayBody = { ...body, deviceId: randomUUID(), clientClockAt: new Date().toISOString(), events: [late, early] };
+      const applied = await sync(replayBody);
+      expectStatus(applied, 201);
+      assert.deepEqual(applied.body.results.map((r) => r.clientEventId), [early.clientEventId, late.clientEventId]);
+      assert.deepEqual(applied.body.results.map((r) => r.status), ['APPLIED', 'CONFLICT']);
+      assert.equal(applied.body.results[1].winningCheckinId, applied.body.results[0].checkinId);
+      const olderSequence = await sync({ ...replayBody, events: [item(2, { ticketId })] });
+      expectStatus(olderSequence, 201);
+      assert.equal(olderSequence.body.results[0].status, 'REJECTED');
+      assert.equal(olderSequence.body.results[0].code, 'OFFLINE_SYNC_REPLAY_ORDER_INVALID');
+      const repeated = await sync({ ...replayBody, events: [early] });
+      expectStatus(repeated, 201);
+      assert.equal(repeated.body.results[0].status, 'DUPLICATE');
+      assert.equal(repeated.body.results[0].checkinId, applied.body.results[0].checkinId);
+      const finalState = await db03Query(f, `SELECT
+        (SELECT count(*)::int FROM checkins WHERE tenant_id=$1::uuid AND event_id=$2::uuid AND undone_at IS NULL) AS checkins,
+        (SELECT count(*)::int FROM offline_sync_events WHERE tenant_id=$1::uuid AND event_id=$2::uuid) AS events`,
+        [f.tenantId, f.eventId]);
+      assert.deepEqual(finalState[0], { checkins: 1, events: 1 });
       return;
     }
     if (caseId === 'GATE-08' || caseId === 'GATE-09') {
