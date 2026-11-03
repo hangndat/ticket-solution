@@ -345,7 +345,9 @@ if (mode === 'list' || args.includes('--list')) {
         throw new Error('BLOCKED: core build thất bại; xem core-build.log');
     }
     let gateCredentialPrivateKeyPem;
-    if (caseIds.includes('GATE-03')) {
+    // API startup and issuance require signing config for every case, not only
+    // the Gate-specific assertions below.
+    {
       const { privateKey, publicKey } = generateKeyPairSync('ec', {
         namedCurve: 'prime256v1',
       });
