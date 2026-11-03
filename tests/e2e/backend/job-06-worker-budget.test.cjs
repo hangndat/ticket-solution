@@ -54,6 +54,7 @@ async function startStalledSmtp() {
   };
 }
 
+
 async function startMailpit() {
   const name = `ticket-job06-mailpit-${randomBytes(5).toString('hex')}`;
   docker(
@@ -113,6 +114,8 @@ function spawnWorker(pgUrl, smtpUrl, output) {
     env: {
       PATH: process.env.PATH,
       NODE_ENV: 'test',
+      NODE_OPTIONS: `--require=${require('node:path').resolve(__dirname, 'job-06-one-connection.cjs')}`,
+      JOB06_TEST_HOLD_CONNECTION: process.env.JOB06_TEST_HOLD_CONNECTION || '',
       DATABASE_URL: pgUrl,
       SMTP_URL: smtpUrl,
       SMTP_FROM: 'tickets@job06.example.test',
@@ -393,7 +396,7 @@ test(
       await admin.query(
         `INSERT INTO redemption_requests
           (tenant_id, event_id, id, actor_user_id, redemption_code_id, status, expires_at)
-         VALUES($1, $2, $3, $4, $5, 'PENDING_REVIEW', clock_timestamp() - interval '2 seconds')`,
+         VALUES($1, $2, $3, $4, $5, 'PENDING_REVIEW', clock_timestamp() + interval '1 day')`,
         [tenantId, eventId, requestId, userId, codeId],
       );
       const insertInvite = (outboxId, inviteId, ageSeconds) =>
@@ -427,6 +430,7 @@ test(
       let requestState;
       let sawTimeout = false;
       let sawOverlapFence = false;
+      let expiredAfterSmtp = false;
       while (Date.now() < deadline) {
         assert.equal(
           workerA.exitCode,
@@ -441,6 +445,17 @@ test(
           [tenantId, firstOutboxId],
         );
         firstRow = rows.rows[0];
+        if (stalledSmtp.connections === 1) {
+          const start = workerEvents(outputA.value).find((event) => event.event === 'job06_relay_smtp_start');
+          assert.equal(start?.held, 0, `relay must release its DB connections before SMTP starts: ${JSON.stringify(workerEvents(outputA.value).filter((event) => event.event?.startsWith('job06_relay_')))}`);
+        }
+        if (stalledSmtp.connections === 1 && !expiredAfterSmtp) {
+          await admin.query(
+            `UPDATE redemption_requests SET expires_at = clock_timestamp() - interval '2 seconds'
+             WHERE tenant_id = $1 AND id = $2`, [tenantId, requestId],
+          );
+          expiredAfterSmtp = true;
+        }
         const requests = await admin.query(
           `SELECT rr.status, rc.status AS code_status
            FROM redemption_requests rr
@@ -519,20 +534,27 @@ test(
         [tenantId, secondOutboxId],
       );
       assert.equal(secondRowBefore.rows[0].status, 'PENDING');
-      const activeTransactions = await admin.query(
-        `SELECT count(*)::int AS n FROM pg_stat_activity
-         WHERE datname = current_database() AND usename = 'e2e_login'
-           AND state = 'idle in transaction'`,
-      );
-      assert.equal(
-        activeTransactions.rows[0].n,
-        0,
-        'stalled SMTP must not hold a worker transaction open',
-      );
+      assert.ok(expiredAfterSmtp, 'reconciliation must become due after SMTP connects');
+      assert.ok(workerEvents(outputA.value).some((event) =>
+        event.event === 'job06_test_pool_limit' && event.max === 1),
+      'the real worker must use the single-connection test pool');
+      await admin.query('BEGIN');
+      try {
+        await admin.query('SELECT id FROM outbox WHERE tenant_id=$1 AND id=$2 FOR UPDATE NOWAIT', [tenantId, firstOutboxId]);
+      } finally {
+        await admin.query('ROLLBACK');
+      }
 
       const shutdownAt = performance.now();
       const closedA = await stopWorker(workerA);
       workerA = null;
+      const relayEvents = workerEvents(outputA.value);
+      const smtpStart = relayEvents.find((event) => event.event === 'job06_relay_smtp_start');
+      assert.ok(relayEvents.some((event) => event.event === 'job06_relay_db_acquire'),
+        'instrumentation must observe a real relay checkout');
+      assert.equal(smtpStart?.held, 0, 'relay must release its DB connections before SMTP starts');
+      assert.ok(!relayEvents.some((event) => event.event === 'job06_relay_db_during_smtp'),
+        'relay must not acquire a DB connection while SMTP is pending');
       const shutdownMs = performance.now() - shutdownAt;
       assert.equal(closedA.signal, 'SIGTERM');
       assert.equal(closedA.code, null);
@@ -631,7 +653,7 @@ test(
           dailySentCount: usage.sent_count,
           dailyHeldCount: usage.held_count,
           deferredCount: 1,
-          idleWorkerTransactions: activeTransactions.rows[0].n,
+        workerPoolSize: 1,
           replacementShutdown: shutdownB.signal,
         }),
       );
