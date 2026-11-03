@@ -199,7 +199,7 @@ Tối thiểu Phase 2: contrast Live Pulse + tenant accent an toàn; focus/keybo
 | Web event / account / claim | `scripts/web-uat.sh` (Playwright headless) | Screenshot `apps/web/.uat-artifacts/`; assert AC-E* / AC-A* / AC-C* / AC-H1 |
 | iOS event-detail / account / claim | `scripts/sim-uat.sh` (AXe + `simctl`) | Screenshot `apps/mobile/.uat-artifacts/`; assert cùng AC + VoiceOver smoke |
 
-**Cấm:** `cliclick`, AppleScript click, `ORCA computer click` trên Chrome/Safari/Simulator của user (`.cursor/rules/uat-headless.mdc`).
+**Cấm:** `cliclick`, AppleScript click, `ORCA computer click` trên Chrome/Safari/Simulator của user (`docs/agents/workflows/uat.md`).
 
 ---
 

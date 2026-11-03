@@ -19,7 +19,7 @@ Nhận spec ngắn đã điền từ coordinator; **không đọc template revie
 | AC correctness, CI/tests/UAT trên SHA, skeptical claims                           | dod § Cách làm 1–3     | Luôn                           |
 | Automation vs physical-device (headless ≠ thay device AC)                         | dod § 4                | Khi AC/ROADMAP yêu cầu         |
 | Architecture impact ↔ handoff/ADR                                                 | dod § 5                | Spec `Architecture impact: Có` |
-| [orca-review-convergence.mdc](../../../.cursor/rules/orca-review-convergence.mdc) | dod · uiux · sec       | Luôn                           |
+| [quy trình review/fix](../workflows/review.md) | dod · uiux · sec       | Luôn                           |
 | O02 / PD §6.1 chrome (D-O02 … D-DECISION-ROW)                                     | dod § Checklist O02    | Spec đụng chrome/permission/IA |
 | UI: mẫu, viewport đo, probe, journey, evidence ảnh + `ui-evidence-check.sh`       | uiux § Cách review 1–7 | `dod+ux` / `dod+sec+ux`        |
 | UI finding types + verdict UI riêng                                               | uiux § Artifact        | Có UI trong scope              |

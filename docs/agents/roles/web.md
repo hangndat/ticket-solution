@@ -16,7 +16,7 @@
 
 - Next.js consumer Web theo TECHNICAL-DESIGN; Portal thuộc role `portal`.
 - Auth qua BFF/OIDC đã có trong repo — không thêm Clerk/Auth0/mock production.
-- UAT: Playwright headless / `scripts/web-uat.sh` — không `cliclick` / computer-use trên Chrome user.
+- UAT: Orca embedded browser theo [workflow UAT](../workflows/uat.md); HTTP smoke khi AC không cần UI. Không chạy Playwright trực tiếp trong agent session.
 
 ## Chuyên môn bổ sung (rút từ upstream)
 
@@ -40,7 +40,7 @@
 
 ## Orca
 
-- Agent: `--agent cursor`.
+- Agent/model/effort theo [routing](../policies/routing.md) và [cost catalog](../cost-catalog.md); giữ chỉ định user và route của Task, không chọn provider theo tên role.
 - Coordinator spawn song song `backend` / `ios` / BA/PD khi không conflict contract; PD handoff chỉ chặn Task UI cần design.
 - Một lúc chỉ một feature coding Dispatch trên slice web.
 - Reviewer ≠ session này.

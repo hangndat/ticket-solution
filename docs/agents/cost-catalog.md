@@ -32,7 +32,7 @@ Khi giao **code**, thay Composer 2.5 bằng hai model **OpenCode Go** dưới đ
 
 Pin đã được xác minh bằng `opencode models` trên host ngày 02/11/2026; Orca có active account OpenCode Zen-Go. OpenCode không hỗ trợ `--effort` qua Orca: tier vẫn là metadata về scope/rủi ro, `high` vẫn bắt buộc `--tier-reason`. Start qua wrapper với `--employee`, trên worktree hiện có và kiểm requested/effective trong receipt. Không suy quota hoặc mức giá/off-peak từ tên model hay từ quota Codex; giữ số lượng quota unknown khi provider không cung cấp.
 
-**Fallback user cập nhật 02/11/2026:** khi OpenCode Go báo limit/quota hoặc lỗi runtime, chuyển thẳng sang Codex `gpt-6-luna`, giữ employee, Task, Cost tier và review/fix budget. Không dùng Beam Free. Checkpoint và xác minh attempt cũ đã dừng trước `--retry-of`; không bật Extra Usage. Flash/Pro vẫn là primary. Chi tiết: [opencode-limit-fallback.mdc](policies/provider-fallback.md).
+**Fallback user cập nhật 02/11/2026:** khi OpenCode Go báo limit/quota hoặc lỗi runtime, chuyển thẳng sang Codex `gpt-6-luna`, giữ employee, Task, Cost tier và review/fix budget. Không dùng Beam Free. Checkpoint và xác minh attempt cũ đã dừng trước `--retry-of`; không bật Extra Usage. Flash/Pro vẫn là primary. Chi tiết: [fallback OpenCode](policies/provider-fallback.md).
 
 ## Pinned (Cursor host hangndat · 2026-10-19; Codex/Claude · 2026-10-24)
 
@@ -74,6 +74,7 @@ ORCA orchestration task-create \
 
 node scripts/agent-workflow-run.mjs start \
   --run-id <RUN> --task <id> --role-id reviewer-dod --employee james \
+   --task-title "James · dod+sec — PR #<n> exact SHA" \
   --cost-tier <tier-theo-scope> --agent <agent-theo-bang> --model <pin-theo-bang>
 ```
 
@@ -95,7 +96,7 @@ Chọn tier theo **quyết định cần đưa ra, mức độ rõ của giải 
 
 ### Mặc định tiết kiệm quota
 
-Việc khó nhưng scope rõ, rủi ro giới hạn mặc định `advanced` (ưu tiên Claude Sonnet 5 medium, Codex GPT-6 Sol medium là lựa chọn sau). Câu hỏi hẹp dùng `focused`; triển khai thường lệ dùng `standard`. Không chọn `high` chỉ vì nhiều file, nhiều bước hoặc thời gian dài. Không lần lượt thử đủ năm tier: chọn thẳng mức cần thiết từ evidence; giữ nguyên giới hạn sửa của review-convergence.
+Việc khó nhưng scope rõ, rủi ro giới hạn mặc định `advanced`. Coding dùng bảng OpenCode Go; reviewer/chuyên gia không coding ưu tiên Claude Sonnet 5 medium, Codex GPT-6 Sol medium là lựa chọn sau theo catalog. Câu hỏi hẹp dùng `focused`; triển khai thường lệ dùng `standard`. Không chọn `high` chỉ vì nhiều file, nhiều bước hoặc thời gian dài. Không lần lượt thử đủ năm tier: chọn thẳng mức cần thiết từ evidence; giữ nguyên giới hạn sửa của review-convergence.
 
 Tier `high` bắt buộc lý do cụ thể trong Task Spec và `--tier-reason` khi preflight/start. Flag này chỉ lưu local, không truyền vào Orca. Thu evidence/việc nhỏ gom cùng context; giữ reviewer độc lập cho verdict.
 
@@ -165,7 +166,7 @@ Coordinator **không** gọi `worker-start` nếu argv thiếu pin:
 
 ```text
 node scripts/orca-spawn-model-preflight.mjs -- \
-  --cost-tier standard --agent cursor --model composer-2.5
+  --cost-tier standard --agent opencode --model opencode-go/deepseek-v4.1-flash
 # exit 0 → worker-start với agent/model/effort; cost-tier/tier-reason là metadata local
 # exit 2 → thiếu/sai tier hoặc agent/model/effort → dừng wave
 ```
@@ -175,21 +176,21 @@ node scripts/orca-spawn-model-preflight.mjs -- \
 | Gate                                                             | Hành vi                                                                                         |
 | ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
 | Thiếu `--model` / `--model auto`                                 | **Reject** wave (trừ `--terminal` reuse)                                                        |
-| Thiếu/sai `--cost-tier`, hoặc agent/model/effort không khớp tier | **Reject** trước snapshot/start; ví dụ `high` + effort `medium` hoặc `standard` + Codex đều sai |
+| Thiếu/sai `--cost-tier`, hoặc agent/model/effort không khớp tier | **Reject** trước snapshot/start; ví dụ Codex `high` + effort `medium` sai. Codex Luna/Terra `standard` + `low` là route đã đăng ký, chỉ dùng đúng điều kiện catalog |
 | `--model` ngoài cost-catalog pin set                             | **Reject** — refresh `agent models` rồi cập nhật catalog                                        |
 | Receipt `effective.model` null sau spawn dù đã request           | Ghi limitation; đếm **inherit** trên cost-wave; không claim pinned                              |
 
 Snippet spawn trên existing worktree sau khi Task đã có Persona:
 
 ```text
-ORCA orchestration worker-start \
-  --task <id> --worktree path:<abs> --agent cursor \
-  --model <pin-from-cost-catalog> \
-  --task-title "<Persona> · <ui-label> — #<issue> <tóm tắt>" \
-  --json
+node scripts/agent-workflow-run.mjs start \
+  --run-id <RUN> --task <id> --worktree path:<abs> \
+  --role-id <role> --employee <employee> --cost-tier <tier> \
+  --agent <agent-from-cost-catalog> --model <pin-from-cost-catalog> \
+  --task-title "<Persona> · <ui-label> — #<issue> <tóm tắt>"
 ```
 
-Sau `worker-start`: đối chiếu `launch.requested` vs `launch.effective` trên receipt JSON; ghi dòng `cost-wave` với `source=receipt`.
+Thêm `--effort` theo route và `--tier-reason` khi tier high. Wrapper thực hiện preflight/start và trả JSON; không chạy start trực tiếp thêm lần nữa. Đối chiếu `launch.requested` vs `launch.effective` trên receipt; ghi dòng `cost-wave` với `source=receipt`.
 
 ## Vai trò và năm tier — 2026-10-24
 
@@ -204,9 +205,9 @@ Sau `worker-start`: đối chiếu `launch.requested` vs `launch.effective` trê
 
 Pin GPT-6 = `gpt-6-sol`, có trong catalog host 2026-10-23; catalog không chứng minh entitlement. Fallback `gpt-6.1-sol` chỉ được đăng ký ở `focused` / `low` theo refresh 2026-10-30 bên trên; các model khác cần refresh và đăng ký trước. Codex truyền đúng effort của tier: `focused` → `low`, `advanced` → `medium`, `high` → `high`; preflight từ chối mọi cặp lệch và effort cao hơn `high`. Cặp agent/model phải khớp; không truyền Codex pin vào Cursor.
 
-Thử nghiệm ban đầu: tối đa **1 Codex worker live** toàn fleet được coordinator quan sát (các session user khác vẫn có thể dùng chung allowance). Không tăng đồng loạt 5 coding + 3 reviewer. Kiểm allowance trước/sau, ghi thời điểm/reset/source; dữ liệu thiếu = unknown, không coi bằng 0 hoặc unlimited. Khi allowance unknown, coordinator Codex vẫn điều phối theo chỉ định user; không mở thêm Codex worker ngoài benchmark được chỉ định. Task thực thi thông thường giao Composer. Token count không quy đổi trực tiếp thành phần trăm allowance hay USD. Gói ChatGPT không cấp thêm Cursor quota; không tự chuyển sang API billing.
+Tối đa **1 Codex worker live** toàn fleet được coordinator quan sát (các session user khác vẫn có thể dùng chung allowance). Không tăng đồng loạt 5 coding + 3 reviewer. Kiểm allowance trước/sau, ghi thời điểm/reset/source; dữ liệu thiếu = unknown, không coi bằng 0 hoặc unlimited. Khi allowance unknown, coordinator Codex vẫn điều phối theo chỉ định user; không mở thêm Codex worker. Coding thường lệ theo bảng OpenCode Go; non-coding theo route được giao. Token count không quy đổi trực tiếp thành phần trăm allowance hay USD. Gói ChatGPT không cấp thêm Cursor quota; không tự chuyển sang API billing.
 
-Fallback: ưu tiên route khác đã đăng ký trong cùng tier. Route hết quota/auth/model unavailable → checkpoint, xác minh attempt đã dừng và settle theo Orca recovery trước replacement. Nếu phần còn lại đã đủ rõ để hạ tier, coordinator ghi lại scope và tier trước replacement. Phần việc vẫn khớp `high` chỉ chạy route đã đăng ký ở `high`; hiện tại chỉ có Codex nên chờ Codex khả dụng, không tự hạ tier vì quota. Cursor inherit chỉ khi host reject tất cả pin cùng band và có limitation; preflight vẫn chặn inherit mặc định. Không chạy hai owner cùng lúc, không reset worktree; ghi riêng agent/model thực tế sau fallback.
+Fallback coding theo [policy OpenCode → Luna](policies/provider-fallback.md); non-coding chọn route khác đã đăng ký trong cùng tier khi có evidence. Route hết quota/auth/model unavailable → checkpoint, xác minh attempt đã dừng và settle theo Orca recovery trước replacement. Nếu phần còn lại đã đủ rõ để hạ tier, coordinator ghi lại scope và tier trước replacement; không hạ tier chỉ vì quota. Phần việc vẫn khớp `high` dùng route high đã đăng ký và đúng loại công việc. Không chạy hai owner cùng lúc, không reset worktree; ghi riêng agent/model thực tế sau fallback.
 
 Chỉ mở rộng tỷ lệ sau benchmark: cùng SHA/input, reviewer độc lập, findings được xác minh, thời gian và allowance có nguồn. Một cặp review không đủ kết luận tỷ lệ đạt DoD cho coding hoặc pilot ready.
 
@@ -214,11 +215,11 @@ Chỉ mở rộng tỷ lệ sau benchmark: cùng SHA/input, reviewer độc lậ
 
 Host Orca 1.4.237: `--display-name` truyền tại `task-create`; với `worker-start --worktree current` không truyền creation-only flags (gồm `--display-name`). Persona giữ trong Task; `--task-title` vẫn truyền khi start.
 
-## Điều chỉnh theo user sau benchmark — 2026-10-23
+## Phân công sau benchmark — cập nhật theo routing 02/11/2026
 
-**Codex điều phối; Composer làm phần ít cần suy luận.** Coordinator giữ context quyết định, contract, findings và checkpoint; giao Composer coding theo spec rõ, docs, viết/chạy test theo AC, thu log/CI và sửa lỗi đã xác định nguyên nhân. Worker trả báo cáo ngắn kèm paths, SHA/checks và blocker; coordinator đọc sâu khi cần quyết định hoặc xác minh rủi ro. Gộp việc nhỏ vào task Composer phù hợp; lifecycle và hygiene vài lệnh vẫn do coordinator thực hiện, không spawn chỉ để đổi vài dòng.
+**Codex điều phối; coding theo bảng OpenCode Go.** Coordinator giữ context quyết định, contract, findings và checkpoint. Docs/evidence không coding theo route được giao. Worker trả báo cáo ngắn kèm paths, SHA/checks và blocker; coordinator đọc sâu khi cần quyết định hoặc xác minh rủi ro. Gộp việc nhỏ vào task cùng owner/context; lifecycle và hygiene vài lệnh vẫn do coordinator thực hiện, không spawn chỉ để đổi vài dòng.
 
-Giới hạn 1 Codex worker live không tính coordinator gốc, nhưng allowance tính cả hai. Codex worker phải có lý do cần phán đoán kỹ thuật theo tier `focused`, `advanced` hoặc `high`; task thuần thực thi giao Composer. Reviewer vẫn khác implementer. User báo tổng tiêu hao 4% quota tuần; số đo benchmark chỉ bao phủ một đoạn phiên. Chưa tăng số Codex workers đồng thời hoặc chạy thêm benchmark. Fallback phải giữ đúng tier và scope như mục trên.
+Giới hạn 1 Codex worker live không tính coordinator gốc, nhưng allowance tính cả hai. Codex worker theo route được giao, chỉ định user hoặc fallback đã được duyệt; không loại ngoại lệ Luna/Terra hợp lệ chỉ vì task ở tier standard. Reviewer vẫn khác implementer. Chưa tăng số Codex workers đồng thời hoặc chạy thêm benchmark. Fallback giữ tier và scope theo policy hiện hành.
 
 ## Quota gate trước dispatch
 

@@ -1,6 +1,6 @@
 # UAT / nghiệm thu e2e — Orca browser + emulator (headless-safe)
 
-> **Wave G:** rule này **không** `alwaysApply`. Cursor nạp khi mở file khớp `globs`. Task UAT / milestone gate (a) → **Read** file này trước khi chạy UAT.
+Task UAT / milestone gate (a): mọi host đọc file này trước khi chạy UAT. Metadata kích hoạt riêng của Cursor nằm ở adapter, không quyết định scope của host khác.
 
 **Chính sách (2026-10-19):** UAT web và iOS trong Orca/agent session dùng **100% surface Orca** — embedded **browser** (`orca tab …`, `orca exec …`) và **emulator** (`orca emulator …`). Không tự chạy Playwright trực tiếp, không `axe`/AXe HID trực tiếp, không Computer Use trên Chrome/Safari/Simulator.app của user.
 

@@ -4,7 +4,7 @@ Ngày: 2026-10-19
 Issue: [#502](https://github.com/hangndat/ticket-solution/issues/502) · Story [#494](https://github.com/hangndat/ticket-solution/issues/494) · Epic [#491](https://github.com/hangndat/ticket-solution/issues/491)  
 Run: `run_d04055a8969b` · Ủy quyền: **A+B+C** (DNS/TLS/deploy prod)  
 Architecture impact: **Có** (host/OIDC/nginx/dual-run — ADR-20 §8)  
-Skill: `.cursor/skills/deploy-prod/SKILL.md`
+Skill: `.agents/skills/deploy-prod/SKILL.md`
 
 > **Phạm vi:** production DNS/TLS/nginx + deploy `apps/portal` + bật dual-run GET/HEAD redirect `app./admin|/platform` → portal có quan sát/rollback.  
 > **Giữ:** `GATE-STAY-APP` (`app.vemoki.com/gate` không redirect portal).  

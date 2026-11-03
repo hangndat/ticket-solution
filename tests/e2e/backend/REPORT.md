@@ -114,6 +114,21 @@ Checks (SHA `d54f3e3d8ce2d4f177fb8f6d2957e89b09516f19`): `node tests/e2e/backend
 
 ## Giới hạn còn mở
 
+### POL-02 — điều chỉnh AC do owner chốt (03/11/2026)
+
+| ID | Phần giảm | Lý do | Rủi ro còn lại |
+| --- | --- | --- | --- |
+| POL-02 | Xóa audit vật lý sau 730 ngày; restore re-sweep | O06 handoff giao audit deletion cho task riêng, restore cần bằng chứng ops ngoài local; owner chuyển hai phần này sang task riêng theo PLAN §15.2 | Audit quá hạn vẫn còn trong DB dù API lọc khỏi list; restore từ backup có thể làm PII đã scrub xuất hiện lại cho đến khi có quy trình re-sweep |
+
+Trong POL-02 hiện tại, D kiểm mốc trước/sau 365 ngày, clock hủy/null, tenant isolation, lock hai thứ tự, replay và giữ ticket/check-in làm đầu vào KPI. Test H không nằm trong AC của ID này. Đo event lớn vẫn là gap ops; không dùng run D để kết luận pilot ready. `ACCEPTANCE.md` giữ verdict chưa PASS cho đến khi đủ evidence trên SHA cuối.
+
+| Assertion → AC còn lại | Bằng chứng D hiện có | Phần chưa chứng minh |
+| --- | --- | --- |
+| 365 ngày, `ends_at` NULL, event `CANCELLED` | `o06-retention-db` kiểm trước/sau cutoff, loại NULL và dùng `cancelled_at`; apply sớm trả false | Chưa đo độ trễ sweep với event lớn |
+| Anonymize PII theo event và tenant | `canonical_email`/`answers_json` NULL đúng event; tenant khác còn nguyên; writer/sweep lock cả hai thứ tự và replay không ghi lại PII | Restore re-sweep chuyển task riêng |
+| Giữ vé, check-in và KPI | So snapshot ticket/check-in, count `USED`/check-in chưa undo trước và sau; `ticket_credentials` và `users.email` giữ nguyên theo ranh giới O06 | D chỉ xác nhận dữ liệu và phép đếm trên PostgreSQL local |
+| Audit TTL 730 ngày | Row 729 ngày còn sau sweep 365 ngày; `portal-audit-codes` lọc row quá 730 ngày khỏi list | Xóa vật lý row quá 730 ngày chuyển task riêng; không ghi PASS phần này |
+
 ### JOB-03 revalidation F01 (code SHA `ffb997d2be34b436c62eec7d1a06b3330c6ee35e`)
 
 `markOutboxDeadFenced` xóa `outbox.next_attempt_at` khi chuyển DEAD, giữ nguyên điều kiện lease fence. R cap test đọc cả `outbox.next_attempt_at` và `notifications.next_attempt_at`: NULL tại DEAD và sau quiet window 2,5 giây; worker process còn sống, đúng 3 attempts/provider calls, vé ACTIVE. Trên checkout sạch code SHA này: `node tests/e2e/backend/entry.mjs --case JOB-03 --suite D` PASS 1/1; `node tests/e2e/backend/entry.mjs --case JOB-03 --suite R --no-build` PASS 3/3; `pnpm --filter @ticket/backend test:worker-budget-db` PASS. `pnpm --filter @ticket/backend test:architecture-recovery` bị giới hạn output/time 120 giây của lean-ctx, exit 137 sau nhiều test pass; không ghi là PASS. F02 giữ giới hạn relay subprocess sau SMTP accept trước PG ack, chưa chứng minh SIGKILL main worker.
