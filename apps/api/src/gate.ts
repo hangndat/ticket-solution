@@ -323,7 +323,7 @@ function requireUuid(value: string | undefined, name: string): string {
   return trimmed;
 }
 
-function gateHttpException(error: GateError): HttpException {
+function gateHttpException(error: GateError, receiptLookup = false): HttpException {
   const body: ApiError = {
     code: error.code,
     message: error.message,
@@ -331,6 +331,9 @@ function gateHttpException(error: GateError): HttpException {
     retryable:
       error.code === GATE_ERROR_CODES.OFFLINE_SYNC_RECEIPT_NOT_FOUND,
   };
+  if (receiptLookup && error.code === GATE_ERROR_CODES.SESSION_NOT_ACTIVE) {
+    return new HttpException(body, 403);
+  }
   if (
     error.code === GATE_ERROR_CODES.OFFLINE_SYNC_RECEIPT_NOT_FOUND
   ) {
@@ -714,14 +717,14 @@ export class GateService {
 export class GateController {
   constructor(private readonly gate: GateService) {}
 
-  private async run<T>(work: () => Promise<T>): Promise<T> {
+  private async run<T>(work: () => Promise<T>, receiptLookup = false): Promise<T> {
     try {
       return await work();
     } catch (error) {
       if (error instanceof HttpException) throw error;
       if (error instanceof IdentityError) throw identityHttpException(error);
       if (error instanceof AuthzError) throw authzHttpException(error);
-      if (error instanceof GateError) throw gateHttpException(error);
+      if (error instanceof GateError) throw gateHttpException(error, receiptLookup);
       if (error instanceof EventError) {
         throw new HttpException(
           {
@@ -972,6 +975,7 @@ export class GateController {
   @Get('gate/events/:eventId/offline-sync/receipts/:clientEventId')
   @ApiBearerAuth()
   @ApiOkResponse({ type: OfflineSyncReceiptResponseDto })
+  @ApiResponse({ status: 403, type: ApiErrorDto })
   @ApiResponse({ status: 404, type: ApiErrorDto })
   @ApiUnauthorizedResponse({ type: ApiErrorDto })
   offlineSyncReceipt(
@@ -983,13 +987,9 @@ export class GateController {
     const event = requireUuid(eventId, 'eventId');
     const clientEvent = requireUuid(clientEventId, 'clientEventId');
     const tenantId = requireUuid(tenantIdRaw, 'tenantId');
-    return this.run(() =>
-      this.gate.offlineSyncReceipt(
-        authorization,
-        event,
-        tenantId,
-        clientEvent,
-      ),
+    return this.run(
+      () => this.gate.offlineSyncReceipt(authorization, event, tenantId, clientEvent),
+      true,
     );
   }
 

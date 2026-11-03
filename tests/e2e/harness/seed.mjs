@@ -295,6 +295,8 @@ export async function seedRuntime(state, caseIds) {
           'GATE-02',
           'GATE-05',
           'GATE-07',
+          'GATE-08',
+          'GATE-09',
         ].includes(caseId)
       ) {
         // Private, run-scoped control for H/DB reconciliation under tenant RLS.
@@ -1646,6 +1648,8 @@ export async function seedRuntime(state, caseIds) {
           'GATE-04',
           'GATE-05',
           'GATE-07',
+          'GATE-08',
+          'GATE-09',
           'DB-09',
           'SEC-04',
           'SEC-05',
