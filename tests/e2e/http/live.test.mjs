@@ -5,6 +5,7 @@ import http from 'node:http';
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import test from 'node:test';
 import { chromium } from 'playwright';
+import { importObjects } from '../harness/import-objects.mjs';
 import { web05ConfigV2Payload } from '../harness/web05-published-config.mjs';
 import { loadWeb05ExpectedHashes } from '../harness/web05-hashes.mjs';
 
@@ -915,6 +916,7 @@ async function multipartImportUpload(ctx, token, tenantId, eventId, file) {
     new Blob([file.body], { type: file.contentType ?? 'text/csv' }),
     file.filename,
   );
+  if (file.second) form.append('file', new Blob(['code\nB\n'], { type: 'text/csv' }), 'second.csv');
   const response = await fetch(
     new URL(`/v1/tenants/${tenantId}/events/${eventId}/imports/files`, ctx.api),
     {
@@ -4417,6 +4419,7 @@ for (const caseId of CASE_IDS) {
       expectStatus(accepted, 201);
       assert.ok(accepted.body.fileId);
       const snapshotAfterControl = await importSnapshot(tenantId, eventId);
+      const objectsAfterControl = await importObjects();
       assert.deepEqual(snapshotAfterControl, {
         ...snapshotBefore,
         files: snapshotBefore.files + 1,
@@ -4438,6 +4441,22 @@ for (const caseId of CASE_IDS) {
         await importSnapshot(tenantId, eventId),
         snapshotAfterControl,
       );
+      const twoFiles = await multipartImportUpload(ctx, owner, tenantId, eventId, {
+        kind: 'CODES', filename: 'first.csv', body: Buffer.from('code\nA\n'), second: true,
+      });
+      assert.equal(twoFiles.status, 422);
+      assert.equal(twoFiles.body.code, 'IMPORT_FILE_INVALID');
+      const noAuth = await multipartImportUpload(ctx, '', tenantId, eventId, {
+        kind: 'CODES', filename: 'no-auth.csv', body: Buffer.from('code\nA\n'),
+      });
+      assert.equal(noAuth.status, 401);
+      const scanner = await bearer(ctx, 'scanner');
+      const noPermission = await multipartImportUpload(ctx, scanner, tenantId, eventId, {
+        kind: 'CODES', filename: 'forbidden.csv', body: Buffer.from('code\nA\n'),
+      });
+      assert.equal(noPermission.status, 403);
+      assert.deepEqual(await importSnapshot(tenantId, eventId), snapshotAfterControl);
+      assert.deepEqual(await importObjects(), objectsAfterControl);
       const importsAfterSize = await request(
         ctx,
         'GET',

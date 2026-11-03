@@ -289,7 +289,7 @@ export function removeRunObjectStorage(state, image, rootSecret) {
     attempt(['rb', '--force', `e2e/${bucket}`]);
   for (const identity of Object.values(state.minio.identities))
     attempt(['admin', 'user', 'remove', 'e2e', identity.accessKey]);
-  for (const role of ['shared', 'exports'])
+  for (const role of ['shared', 'exports', 'observer'])
     attempt(['admin', 'policy', 'rm', 'e2e', `e2e-${role}-${state.id}`]);
   if (failures.length) {
     writeFileSync(
