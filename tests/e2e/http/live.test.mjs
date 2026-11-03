@@ -5589,21 +5589,26 @@ for (const caseId of CASE_IDS) {
         }),
         201,
       );
-      expectStatus(
-        await request(
-          ctx,
-          'POST',
-          `${gatePath(f, 'reservations')}/${reservation.body.reservationId}/confirm`,
-          supervisor,
-          {
-            tenantId: f.tenantId,
-            staffSessionId: session.body.sessionId,
-            token: reservation.body.token,
-          },
-        ),
-        409,
-        'SESSION_NOT_ACTIVE',
-      );
+      const snapshot = () => gateSnapshot(f, f.eventId, f.ticketId, '');
+      const afterRevoke = await snapshot();
+      for (let attempt = 0; attempt < 2; attempt++) {
+        expectStatus(
+          await request(
+            ctx,
+            'POST',
+            `${gatePath(f, 'reservations')}/${reservation.body.reservationId}/confirm`,
+            supervisor,
+            {
+              tenantId: f.tenantId,
+              staffSessionId: session.body.sessionId,
+              token: reservation.body.token,
+            },
+          ),
+          409,
+          'SESSION_NOT_ACTIVE',
+        );
+        assert.deepEqual(await snapshot(), afterRevoke, 'denied confirm and retry must not mutate ticket, reservation or check-in');
+      }
       const after = await request(ctx, 'GET', reportPath(f), owner);
       expectStatus(after, 200);
       assert.equal(
