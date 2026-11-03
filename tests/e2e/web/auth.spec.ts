@@ -1483,6 +1483,9 @@ test('[AUTH-08] account deletion needs consent and acknowledges one request', as
   const callbackPromise = page.waitForResponse((response) =>
     new URL(response.url()).pathname === '/api/auth/callback',
   );
+  const gatedPromise = page.waitForResponse((response) =>
+    new URL(response.url()).pathname === '/api/bff/me/tenants',
+  );
   await page.locator('#kc-login').click();
   const callback = await callbackPromise;
   expect([302, 307]).toContain(callback.status());
@@ -1501,6 +1504,11 @@ test('[AUTH-08] account deletion needs consent and acknowledges one request', as
   const claims = decodeJwtPayload(token);
   expect(subject === initialSubject && claims.sub === initialSubject && claims.email === actor.username).toBe(true);
   await page.waitForURL((url) => url.origin === manifest.origins.web && url.pathname === '/account' && !url.searchParams.has('error'));
+  const gated = await gatedPromise;
+  expect(gated.status()).toBe(401);
+  const sentCookies = (await gated.request().allHeaders()).cookie ?? '';
+  expect(sentCookies.split('; ').includes(`oidc_access_token=${encodeURIComponent(token)}`)).toBe(true);
+  expect(sentCookies.split('; ').includes(`web_oidc_sub=${encodeURIComponent(subject)}`)).toBe(true);
   expect((await page.request.get(webUrl(manifest, '/api/bff/me'))).status()).toBe(401);
   await page.goto(webUrl(manifest, '/account'));
   await page.reload();
