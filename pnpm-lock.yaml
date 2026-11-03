@@ -29,6 +29,9 @@ importers:
 
   apps/api:
     dependencies:
+      '@fastify/cors':
+        specifier: 11.3.1
+        version: 11.3.1
       '@fastify/multipart':
         specifier: 10.1.0
         version: 10.1.0
