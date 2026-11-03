@@ -55,6 +55,11 @@ test('[AUTH-06] attendee staff-client login does not grant a staff workspace', a
       [f.tenantId, attendeeId],
     );
     expect(memberships.count).toBe(0);
+    const assignments = await query(
+      `SELECT count(*)::int AS count FROM event_assignments a JOIN memberships m ON m.tenant_id=a.tenant_id AND m.id=a.membership_id WHERE a.tenant_id=$1::uuid AND a.event_id=$2::uuid AND m.user_id=$3::uuid AND a.revoked_at IS NULL`,
+      [f.tenantId, f.eventId, attendeeId],
+    );
+    expect(assignments.count).toBe(0);
     const staffPage = await staff.newPage();
     await login(staffPage, m, 'AUTH-06', 'owner');
     const ownerEvents = await bffGet(staffPage, m, '/api/bff/me/events');
