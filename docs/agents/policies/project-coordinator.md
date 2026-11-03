@@ -1,12 +1,12 @@
 # GitHub Project tracking (coordinator)
 
-Bổ sung [github-project-tracking.mdc](project.md). Leader Read khi orchestrate.
+Bổ sung [Project/DoD](project.md). Leader Read khi orchestrate.
 
 ## Reviewer spawn
 
 Task `Chờ duyệt` **nhánh B** → một reviewer độc lập/PR (review only). Nhánh A: không spawn reviewer. Nhiều PR độc lập → reviewer song song, cap ≤3 live (`docs/agents/workflows/dispatch.md`). Agent: `docs/agents/workflows/dispatch.md`.
 
-Áp dụng [orca-review-convergence.mdc](../../../.cursor/rules/orca-review-convergence.mdc) trước review/fix: lưu findings và số lượt trên Issue/PR; bị ngắt → `Bị chặn` kèm owner/điều kiện mở lại, không tự quay lại ready queue. Revalidation ưu tiên reviewer cũ nếu phù hợp, luôn khác implementer.
+Áp dụng [quy trình review/fix](../workflows/review.md) trước review/fix: lưu findings và số lượt trên Issue/PR; bị ngắt → `Bị chặn` kèm owner/điều kiện mở lại, không tự quay lại ready queue. Revalidation ưu tiên reviewer cũ nếu phù hợp, luôn khác implementer.
 
 **Wave C:** DoD+security cùng SHA → một `James · dod+sec`; tách chỉ hot path + lý do evidence.
 

@@ -5,6 +5,6 @@ alwaysApply: true
 
 # Vemoki — điểm vào Cursor
 
-Đọc và áp dụng [AGENTS.md](../../AGENTS.md) và [bản đồ đọc](../../docs/agents/README.md). Các policy nền tảng luôn áp dụng: [routing](../../docs/agents/policies/routing.md), [context/CRG](../../docs/agents/policies/context.md), [Git](../../docs/agents/policies/git.md), [GitHub API](../../docs/agents/policies/github-api.md), [Project/DoD](../../docs/agents/policies/project.md).
+Đọc và áp dụng [AGENTS.md](../../AGENTS.md), [routing](../../docs/agents/policies/routing.md) và [bản đồ đọc](../../docs/agents/README.md). Nạp context/CRG khi làm source, Git/GitHub API khi thao tác Git/GitHub, Project/DoD khi tracking/nghiệm thu; không đọc toàn bộ policy cho mọi task. Các quyền và gates vẫn áp dụng theo hành động.
 
 Đọc workflow và chi tiết theo hành động trong bản đồ; chỉnh policy tại nguồn chung. Rule này thay năm adapter alwaysApply cũ, không thay đổi quyền hoặc gates.

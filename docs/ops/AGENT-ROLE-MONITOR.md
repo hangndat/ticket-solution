@@ -33,7 +33,7 @@ Lib đã có: `scripts/agent-role-monitor/lib/ledger.mjs` (`buildOpenedEvent`, `
 
 ## 2. Map Role ID (catalog → `--role-id`)
 
-Lấy **Role ID từ Task Spec** lúc `worker-start` — **không** dùng Orca `projection.role` (luôn `worker`). Agent runtime = `cursor` trừ override rõ.
+Lấy **Role ID từ Task Spec** lúc `worker-start` — **không** dùng Orca `projection.role` (luôn `worker`). Agent/model/effort theo Task và `docs/agents/cost-catalog.md`; Cursor hook chỉ là adapter telemetry của Cursor.
 
 | Role ID | File | Khi gắn |
 | ------- | ---- | ------- |
@@ -52,9 +52,9 @@ Catalog đầy đủ: [`docs/agents/README.md`](../agents/README.md).
 
 ---
 
-## 3. Chèn vào mailbox loop (copy-paste)
+## 3. Thu telemetry theo lifecycle V3
 
-Neo process: `.cursor/rules/orca-coordinator-mailbox.mdc` — vòng `check --wait` → settle → ack → idle-fill → `check --wait`.
+Nguồn lifecycle: `docs/agents/workflows/lifecycle.md`. Start/settle qua workflow wrapper; coordinator xử lý wake rồi nhường turn khi không còn hành động. Không long-poll mailbox.
 
 ```text
 worker-start (max fan-out ready)
@@ -62,17 +62,17 @@ worker-start (max fan-out ready)
   → [ARM] record-join            ← khi biết conversation_id ↔ dispatch (IDE session)
   → (async) Cursor hook stop|afterAgentResponse
          → agent-metrics-cursor-turn.sh → ingest-cursor-turn → cursor.turn
-  → check --wait
+  → lưu checkpoint, nhường turn; khi host wake chạy lệnh check trong wake
   → process batch
        worker_done / fail / cancel
          → [ARM] ingest-settlement   ← trước worker-release / reuse
        question → reply
        escalation → xử lý / ghi chú
-  → reuse | retain | worker-release
+  → xử lý next/cleanup theo receipt; không giữ worker rảnh
   → check --ack <delivery_id>
   → idle-fill
   → (cuối wave / cuối Run / trước báo cáo đợt) [ARM] rollup
-  → nếu còn Dispatch live → lặp check --wait
+  → không còn hành động làm được → nhường turn để host wake tiếp
 ```
 
 | Hook / lệnh | Khi nào | Lệnh |
@@ -290,7 +290,7 @@ Anti-vanity: [`05-dod-evidence-gates.md`](../spikes/agent-role-monitor/05-dod-ev
 | **Probe 09** | **Chưa có** — xem `09` khi probe xong (hooks live / CLI·terminal fire?) |
 | [`docs/agents/README.md`](../agents/README.md) | Catalog Role ID |
 | `.cursor/hooks.json` + `.cursor/hooks/agent-metrics-cursor-turn.sh` | Project hooks → `ingest-cursor-turn` |
-| `.cursor/rules/orca-coordinator-mailbox.mdc` | Continuous listen loop |
+| `docs/agents/workflows/lifecycle.md` | Wake, xử lý delivery và nhường turn |
 
 ---
 

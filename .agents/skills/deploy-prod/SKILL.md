@@ -70,7 +70,7 @@ Only with explicit whole-stack production authorization, verify the exact source
 
 ## Login check
 
-Use this when web, api, keycloak, or nginx auth changed. Headless HTTP or Playwright only. Do not drive the desktop mouse.
+Use this when web, api, keycloak, or nginx auth changed. Use HTTP for smoke checks; when UI login evidence is required, use the Orca embedded browser under `docs/agents/workflows/uat.md`. Do not run Playwright directly from an agent session or drive the desktop mouse.
 
 `https://vemoki.com/api/bff/me` with no session is 401. Demo users are named in `docs/reviews/D1-P4-KEYCLOAK-SMOKE.md`. Each login must land on `https://vemoki.com/auth` with no hop through `0.0.0.0`, and `/api/bff/me` must return that email.
 

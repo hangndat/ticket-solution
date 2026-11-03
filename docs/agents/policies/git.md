@@ -5,4 +5,4 @@
 - Cloud resources, production deploy và store cần ủy quyền riêng; trạng thái `Sẵn sàng` không cấp quyền ngoài task.
 - Không bỏ hooks, amend hoặc force-push khi chưa có yêu cầu rõ của user; không reset bỏ công việc. Worker không tự merge; coordinator chỉ merge khi được giao, đạt DoD đúng nhánh và CI trên exact SHA. Nhánh B cần reviewer độc lập; nhánh A theo Project/DoD.
 - DoD phải dẫn SHA, checks/findings/limitations; nhánh B thêm reviewer độc lập. Commit mới cần revalidation theo diff. Không coi local pass là acceptance/pilot ready, hoặc thiếu GitHub Approve là thiếu Orca DoD. Docs/tooling (nhánh A) không bắt buộc reviewer độc lập.
-- Trước branch/commit/push/PR/merge: đọc [git-workflow-details.mdc](git-details.md) một lần/session; đọc lại khi thay đổi. Trước GitHub mutation/evidence: đọc [github-api-hygiene-details.mdc](github-api-details.md).
+- Trước branch/commit/push/PR/merge: đọc [Git chi tiết](git-details.md) một lần/session; đọc lại khi thay đổi. Trước GitHub mutation/evidence: đọc [GitHub API chi tiết](github-api-details.md).
