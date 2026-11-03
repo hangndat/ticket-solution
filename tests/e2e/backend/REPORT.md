@@ -1,5 +1,21 @@
 # Backend E2E regression — kết quả tại baseline `022cb80fd159dad2a7ebd0eeeea07fd64391f90a`
 
+## DB-18 — kiểm kê assertion theo PLAN §6.1 và §15.2 (Issue #1030, 03/11/2026)
+
+| AC còn cần chứng minh             | Assertion thực                                                                                                                                                                                                                                                | Giới hạn còn lại                                                                                                                                                  |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ACK bền vững, phiên bị thu hồi    | D `account-ack-session-revoke.test.cjs` SEC-1 ACK/SEC-R1: ACK idempotent, revoke mọi session của actor qua hai tenant trong transaction, race raw INSERT, Gate từ chối session cũ/mở mới; `account-session-revoke.test.cjs` kiểm apply lần nữa                | Membership vẫn ACTIVE theo quyết định owner ở PLAN §15.2; D kiểm `revoked_at IS NULL` hai tenant; metadata cũ có thể bị đọc sai bởi đường bỏ qua identity/session |
+| IdP retry không bypass            | D `account-idp-erasure.test.cjs` T4–T16/SEC-D-01/05: DELETE/NOT_FOUND, 503/404/disable, tombstone deny, lease fencing; H `[DB-18] live HTTP` dùng bearer Keycloak thật, fault 503 trên Admin DELETE, REQUESTED+bị deny, retry DELETE tới COMPLETED và IdP 404 | H cần chạy trên SHA sạch để có verdict; không suy H từ adapter D                                                                                                  |
+| Dữ liệu audit/đối soát còn nguyên | D SEC-1 ACK: hai event report trước/sau bằng nhau (ticket state/quota/current check-in), ticket của actor xóa và tenant khác còn nguyên, check-in và audit giữ; `platform.test.cjs` kiểm PII scrub/audit. H kiểm audit proof và PII scrub                     | O06 TTL 365/730 ngày là POL riêng, không được chứng minh bằng một lần account deletion; rủi ro đọc metadata membership cũ như quyền thực còn lại                  |
+
+Mutation-check D: thay tạm ticket của actor từ ACTIVE sang REVOKED sau apply làm SEC-1 ACK fail tại aggregate `ticketsByState` (ACTIVE 1→0, REVOKED 0→1); thay đổi đã được hoàn nguyên trước lượt chạy sạch.
+
+## DB-15 / DB-16 (Issue #1030)
+
+Đã bổ sung test PostgreSQL cô lập cho DB-15: đối soát confirm, reject, undo và audit history; `USED` đơn lẻ không làm tăng check-in; retry SMTP lỗi qua relay thật đi từ chưa terminal tới DEAD; cancel event giữ các số report. Test DB-16 kiểm Owner/Manager, event chưa assignment, tenant khác, cursor, clamp limit, watermark và transaction RLS. Hai selector D cũ cùng selector mới đã PASS trong lượt phát triển; cần chạy lại trên SHA sạch cuối và review độc lập.
+
+H Keycloak/API thật đã PASS diagnostic run `mvxkyku6-2a175b` (worktree chưa commit, không phải evidence exact SHA): DB-15 issue/confirm/reject/undo/cancel và DB history; DB-16 assignment, phân trang, giới hạn, watermark, tenant khác và digest snapshot dưới role `ticket_runtime`. H thiết lập trực tiếp notification UNKNOWN/DEAD để kiểm report; retry tới DEAD thực chạy ở D. Review O12 trước đây tại `docs/reviews/D11-EVENTREPORT-O12-DOD.md` giải nghĩa KPI là confirm chưa undo; câu chữ O12 “operation APPLIED” có thể đọc thành lũy kế và cần làm rõ riêng, không đổi runtime trong task này. Kết quả chạy sạch và SHA sẽ được báo trên PR; James cần review độc lập.
+
 ## Cập nhật sau sửa product
 
 `pnpm test:integration:local --suite D` đã chạy lại trên PostgreSQL cô lập: **38/38 selector PASS**, exit 0. Riêng POL-01 xác nhận metric `account_deletion_idp_sla_overdue` đếm 1 theo fixture quá 30 ngày. Sửa ở `packages/backend/src/account-deletion.ts` và migration `202610280003_account_deletion_sla_metric`; migration phải áp dụng trước runtime. Kết quả baseline 37/38 bên dưới là lịch sử trước sửa, không phải trạng thái hiện tại. Full 46 ID acceptance vẫn chưa được chứng minh vì các nhánh H/R và gap nêu cuối báo cáo.
@@ -47,6 +63,7 @@ H Keycloak/HTTP cho DB-11 **BLOCKED**: `tests/e2e/http/live.test.mjs` + `tests/e
 Thêm case `[DB-11] live HTTP` vào `tests/e2e/http/live.test.mjs` (đăng ký ở `CASE_IDS` cùng file, và ở `tests/e2e/http/entry.mjs`/`tests/e2e/harness/run.mjs` — hai danh sách case trùng lặp khác cần sửa riêng), cộng fixture generic cho DB-11 trong `tests/e2e/harness/seed.mjs` (`controlDatabaseUrl`, `formVersion`/`termsVersion`). Không dùng account/harness mới — chỉ tái dùng `owner`/`attendee`/`otherAttendee` sẵn có của mọi case để tránh rủi ro cho DB-09/DB-10.
 
 `pnpm test:e2e:http -- --case=DB-11` **PASS** qua endpoint thật + Keycloak password grant thật cho owner/attendee/otherAttendee:
+
 - Staff invite (`POST /tenants/:id/invites`, `POST /me/membership-invites/accept`): TTL đúng 48h (`security.inviteTtlSeconds`); accept thành công tạo đúng 1 membership; replay cùng actor/cùng token idempotent không tạo membership thứ hai; backdate `expires_at` qua control DB → `INVITE_INVALID_OR_EXPIRED` (422), không membership; token đúng nhưng actor verified khác email → cùng mã, không đổi membership hiện có.
 - Attendee claim (import GUESTS thật qua `/imports/files` → job → preview → commit, rồi `dispatch-preview`/`dispatch`, rồi `POST invitations/claim`): happy-path mint đúng 1 ticket và +1 `quota_buckets.allocated`; replay cùng Idempotency-Key idempotent (cùng `ticketId`, không mint thêm); replay Idempotency-Key mới trên invitation đã `CLAIMED` → `INVITATION_TOKEN_INVALID` (410), không ticket thứ hai; backdate `expires_at` qua control DB → `INVITATION_EXPIRED` (410), không ticket/quota mutation; actor khác (otherAttendee, email khác) claim invitation của attendee → `INVITATION_EMAIL_MISMATCH` (403), không ticket.
 - Cross-use cả hai chiều: token staff invite gọi `invitations/claim` → `INVITATION_TOKEN_INVALID` (410); token guest invitation gọi `me/membership-invites/accept` → `INVITE_INVALID_OR_EXPIRED` (422); không bên nào đổi membership/ticket/quota.
@@ -57,7 +74,7 @@ Evidence trên checkout sạch đúng SHA (sau commit): SHA `730c78fea5745947bcf
 
 **Finding khi viết test (đã sửa trong test, không sửa runtime):** `invited_email` ở `guest_invitations` được backend canonicalize (trim + lowercase) tại commit; test ban đầu dùng case gốc của account `otherAttendee` (camelCase) để tra lại invitation id nên không khớp — đã sửa test tự lowercase trước khi tra. Không phải bug runtime.
 
-Giới hạn: không tạo thêm Keycloak account mới để test "một lần dùng" theo đúng nghĩa hai actor khác nhau *cùng một email thật* (D-layer đã chứng minh trực tiếp qua actorUserId khác nhau trong DB); ở H, "một lần dùng" được chứng minh tương đương qua idempotency-key mới trên invitation đã CLAIMED (cùng actor) — đủ để phủ accept-path thực tế qua HTTP mà không thêm fixture/account chung mới có thể ảnh hưởng case khác.
+Giới hạn: không tạo thêm Keycloak account mới để test "một lần dùng" theo đúng nghĩa hai actor khác nhau _cùng một email thật_ (D-layer đã chứng minh trực tiếp qua actorUserId khác nhau trong DB); ở H, "một lần dùng" được chứng minh tương đương qua idempotency-key mới trên invitation đã CLAIMED (cùng actor) — đủ để phủ accept-path thực tế qua HTTP mà không thêm fixture/account chung mới có thể ảnh hưởng case khác.
 
 ## Cập nhật DB-12 (PR liên kết #1030, worktree `f04-db12-published`)
 
@@ -108,11 +125,36 @@ Checks (SHA `d54f3e3d8ce2d4f177fb8f6d2957e89b09516f19`): `node tests/e2e/backend
 
 ## Giới hạn còn mở
 
+### POL-02 — điều chỉnh AC do owner chốt (03/11/2026)
+
+| ID     | Phần giảm                                       | Lý do                                                                                                                                             | Rủi ro còn lại                                                                                                                                 |
+| ------ | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| POL-02 | Xóa audit vật lý sau 730 ngày; restore re-sweep | O06 handoff giao audit deletion cho task riêng, restore cần bằng chứng ops ngoài local; owner chuyển hai phần này sang task riêng theo PLAN §15.2 | Audit quá hạn vẫn còn trong DB dù API lọc khỏi list; restore từ backup có thể làm PII đã scrub xuất hiện lại cho đến khi có quy trình re-sweep |
+
+Trong POL-02 hiện tại, D kiểm mốc trước/sau 365 ngày, clock hủy/null, tenant isolation, lock hai thứ tự, replay và giữ ticket/check-in làm đầu vào KPI. Test H không nằm trong AC của ID này. Probe PostgreSQL cô lập với 50.000 attendee và 50.000 redemption request có PII đo apply trực tiếp 657 ms, dưới budget worker step 60 s; đây là phép đo local, chưa đo worker process hoặc VPS đích. `ACCEPTANCE.md` giữ verdict chưa PASS cho đến khi đủ evidence trên SHA cuối.
+
+| Assertion → AC còn lại                      | Bằng chứng D hiện có                                                                                                                           | Phần chưa chứng minh                                                   |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| 365 ngày, `ends_at` NULL, event `CANCELLED` | `o06-retention-db` kiểm trước/sau cutoff, loại NULL và dùng `cancelled_at`; apply sớm trả false; probe 50.000 attendee/50.000 request đo 657 ms | Chưa đo worker process/VPS đích                                        |
+| Anonymize PII theo event và tenant          | `canonical_email`/`answers_json` NULL đúng event; tenant khác còn nguyên; writer/sweep lock cả hai thứ tự và replay không ghi lại PII          | Restore re-sweep chuyển task riêng                                     |
+| Giữ vé, check-in và KPI                     | So snapshot ticket/check-in, count `USED`/check-in chưa undo trước và sau; `ticket_credentials` và `users.email` giữ nguyên theo ranh giới O06 | D chỉ xác nhận dữ liệu và phép đếm trên PostgreSQL local               |
+| Audit TTL 730 ngày                          | Row 729 ngày còn sau sweep 365 ngày và hiện trong `listEventAudit`; row 731 ngày bị lọc khỏi list                                              | Xóa vật lý row quá 730 ngày chuyển task riêng; không ghi PASS phần này |
+
+POL-02 probe thêm selector D `O06 POL-02 50k attendee` trong catalog/coverage; local `pnpm test:integration:local --case POL-02 --no-build` PASS 4/4 trên working tree trước commit. Mutation check: đổi tạm cutoff đọc audit từ 730 xuống 728 ngày làm assertion 729 ngày fail (`0 !== 1`); bỏ tạm UPDATE `redemption_requests` trong migration làm probe 50k fail (`answers: 50000`), rồi hoàn nguyên cả hai thay đổi. CRG stats và query dùng worktree này tại HEAD `370ffa71a8cdbb93f0884e61cfe795bf859c834d`; graph source/test là điểm khởi đầu, các assertion và run PostgreSQL là bằng chứng quyết định. Run trên SHA sạch và verdict cuối cần ghi ở handoff/coordinator.
+
 ### JOB-03 revalidation F01 (code SHA `ffb997d2be34b436c62eec7d1a06b3330c6ee35e`)
 
 `markOutboxDeadFenced` xóa `outbox.next_attempt_at` khi chuyển DEAD, giữ nguyên điều kiện lease fence. R cap test đọc cả `outbox.next_attempt_at` và `notifications.next_attempt_at`: NULL tại DEAD và sau quiet window 2,5 giây; worker process còn sống, đúng 3 attempts/provider calls, vé ACTIVE. Trên checkout sạch code SHA này: `node tests/e2e/backend/entry.mjs --case JOB-03 --suite D` PASS 1/1; `node tests/e2e/backend/entry.mjs --case JOB-03 --suite R --no-build` PASS 3/3; `pnpm --filter @ticket/backend test:worker-budget-db` PASS. `pnpm --filter @ticket/backend test:architecture-recovery` bị giới hạn output/time 120 giây của lean-ctx, exit 137 sau nhiều test pass; không ghi là PASS. F02 giữ giới hạn relay subprocess sau SMTP accept trước PG ack, chưa chứng minh SIGKILL main worker.
 
 - Các ca H cần HTTPS hostname run, Keycloak issuer/JWT thật và manifest case riêng từ harness; local verifier hay `app.inject` fixture không đủ. Các ca R cần worker process, Mailpit, restart/kill/lease và tài nguyên run riêng. Xem `FIXTURES.md`.
-- POL-02 có test D lọc audit quá 730 ngày khi đọc, nhưng chưa thấy sweeper anonymize ticket/check-in 365 ngày hoặc xóa audit quá 730 ngày trong worker hiện hành; POL-03 thiếu object cleanup 90 ngày theo O06. Đây là gap feature/test, không đánh PASS bằng hằng số retention.
+- POL-02 đã có worker step anonymize PII event-scoped 365 ngày; audit quá 730 ngày hiện chỉ bị lọc khi đọc, chưa xóa vật lý theo phần owner đã chuyển task riêng. POL-03 vẫn có giới hạn object cleanup riêng, không tính vào POL-02.
 - JOB-08 là OUT theo PLAN: không có provider callback handler/transport hiện hành để kiểm chữ ký/raw body/order.
 - Không có kết luận full 46 ID PASS; `coverage.json` giữ blocked khi còn nhánh chưa được chứng minh.
+
+## SEC-04 D-layer rate-limit matrix (#1036)
+
+`apps/api/test/redemptions-resolve-rls.test.cjs` dùng PostgreSQL cô lập, runtime role có RLS và `app.inject` với JWT local đã ký. Test bão hòa riêng từng bucket của global resolve, redeem, Gate reserve/confirm/offline-sync và receipt; mỗi route trả `429`, `RATE_LIMITED`, `retryable: true`, có `requestId`. Counter của request bị từ chối không tăng; snapshot mã đổi vé, quota, request/operation, ticket, Gate reservation/check-in/offline ledger, audit và outbox không đổi. Actor B vẫn resolve được khi bucket resolve của actor A đã đầy. Test reset bucket sau mỗi nhánh để route kế tiếp không PASS nhầm nếu dùng bucket trước; receipt được kiểm với bucket riêng của offline-sync.
+
+`catalog.mjs`/`coverage.json` map thêm D resend staff/recipient cooldown và hourly cap từ `job04-resend-caps.test.cjs`, cùng U invitation list `Retry-After` đã tồn tại. `pnpm test:integration:local --case SEC-04 --no-build` PASS 5/5 selector trên working tree sau build current checkout; exact clean SHA và run sau commit được ghi ở Draft PR. Không yêu cầu `Retry-After` cho Gate/redeem/resolve vì PLAN §6.4 chỉ ràng buộc header cho các route dùng `RateLimitedWithRetryAfter`.
+
+**SEC-04 full acceptance: BLOCKED.** H cần Keycloak/HTTPS/ingress thật để kiểm identity và bucket qua HTTP, admission token signature/expiry/scope, resend cooldown/limit/status qua endpoint, và toàn bộ ma trận 429/`Retry-After` cho import/invitation/tenant limits. Fixture H trong `tests/e2e/harness/seed.mjs` đang bị source admission chặn theo Dispatch; không đọc hoặc sửa nguồn đó, không suy H từ D/U. Không đổi runtime hoặc policy.

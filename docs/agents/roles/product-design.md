@@ -10,7 +10,7 @@ Trước hoặc chặn nhẹ coding UI: cần handoff rõ để web/iOS implemen
 
 **Không** thêm Role graphic/brand riêng: visual system gói trong Role này (mục 0 / Epic revamp) để giảm token và tránh hai handoff chồng.
 
-Khi Task giao đặc tả hoặc duy trì Vemoki Design System, vẫn dùng role `product-design` và chỉ nạp [capability `vemoki-design-system`](../../../.cursor/skills/vemoki-design-system/SKILL.md) cho Task đó. PD sở hữu spec/governance trong path được giao; không tự sửa Brand Kit, token/code production hoặc mở rộng quyền review/dispatch.
+Khi Task giao đặc tả hoặc duy trì Vemoki Design System, vẫn dùng role `product-design` và chỉ nạp [capability `vemoki-design-system`](../../../.agents/skills/vemoki-design-system/SKILL.md) cho Task đó. PD sở hữu spec/governance trong path được giao; không tự sửa Brand Kit, token/code production hoặc mở rộng quyền review/dispatch.
 
 Chọn skill theo [ui-workflow.md](../ui-workflow.md): thiết kế thuần dùng `impeccable` playbook liên quan; không nạp skill coding/backend. Sửa nhỏ theo mẫu đã có giao thẳng `web`/`ios`, không tạo handoff PD mới.
 
@@ -75,7 +75,7 @@ Bổ sung state đặc thù nghiệp vụ (offline Gate, sync pending, …) nế
 ### 4. Tiêu chí nghiệm thu (UI)
 
 - AC quan sát được (Given/When/Then hoặc checklist screenshot headless).
-- Map evidence sang Orca browser/emulator theo [uat-headless.mdc](../../../.cursor/rules/uat-headless.mdc); không điều khiển desktop của user hoặc tự chạy UAT wrapper legacy ngoài rule.
+- Map evidence sang Orca browser/emulator theo [workflow UAT](../workflows/uat.md); không điều khiển desktop của user hoặc tự chạy UAT wrapper legacy ngoài rule.
 
 ### 5. Hướng dẫn triển khai
 
@@ -88,7 +88,7 @@ Bổ sung state đặc thù nghiệp vụ (offline Gate, sync pending, …) nế
 
 Khi user ủy quyền Epic đổi diện toàn user surface:
 
-1. **Một** Task `product-design` (Cost tier: `standard`; pin `composer-2.5`) → **một** artifact `docs/design/<slug>/` gồm mục 0–5.
+1. **Một** Task `product-design` (Cost tier theo scope; agent/model/effort theo cost catalog) → **một** artifact `docs/design/<slug>/` gồm mục 0–5.
 2. Không spawn BA riêng nếu scope/persona/AC đã chốt trên Epic/Issue.
 3. Không spawn Architect trừ khi đổi IA/route/contract thật sự chặn consumer.
 4. Sau handoff: fan-out `web` ∥ `ios` theo màn priority (mục 0); mỗi coding Task Spec chỉ link artifact PD — không paste lại PRD.
@@ -112,6 +112,6 @@ Epic Spec (gợi ý khối tối thiểu):
 
 ## Orca / Project
 
-- Agent: `--agent cursor`.
+- Agent/model/effort theo [routing](../policies/routing.md) và [cost catalog](../cost-catalog.md); giữ chỉ định user và route của Task, không chọn provider theo tên role.
 - Cây phẳng: chỉ coordinator spawn; PD không spawn coding worker.
 - Sau handoff: status Issue theo Project; coding workers nhận link artifact PD trong Task Spec.

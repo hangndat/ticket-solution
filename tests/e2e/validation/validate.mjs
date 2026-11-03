@@ -133,6 +133,8 @@ function checkControls(value, field, allowedOrigins, runDir) {
   }
 }
 
+const LANE_NAME = /^lane([1-9]|1[0-6])$/;
+
 /** Validate an isolated E2E manifest without modifying it or exposing credentials in errors. */
 export function validateManifest(value, options = {}) {
   const manifest = record(value, 'manifest');
@@ -140,7 +142,14 @@ export function validateManifest(value, options = {}) {
   label(manifest.runId, 'runId');
   if (manifest.runId.length > 59)
     blocked('runId', 'is too long for an E2E hostname');
-  const suffix = `e2e-${manifest.runId}.test`;
+  // Lane dùng hostname cố định theo lane để build frontend còn hiệu lực
+  // giữa các run; stack riêng vẫn dùng hostname theo runId.
+  let suffix = `e2e-${manifest.runId}.test`;
+  if (manifest.lane !== undefined) {
+    if (typeof manifest.lane !== 'string' || !LANE_NAME.test(manifest.lane))
+      blocked('lane', 'must be a lane name such as lane1');
+    suffix = `e2e-${manifest.lane}.test`;
+  }
   const origins = record(manifest.origins, 'origins');
   const allowedOrigins = new Set();
   for (const [key, prefix] of Object.entries(HOSTS)) {

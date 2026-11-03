@@ -8,7 +8,7 @@
 
 ## Vai trò
 
-- Epic planner theo `.cursor/rules/orca-epic-orchestrator.mdc`
+- Epic planner theo `docs/agents/workflows/dispatch.md`
 - **Không** gắn Role coding catalog (`product-ba` / `web` / …)
 - Agent: cursor
 - **Không** spawn worker con; không commit/push/PR/merge; không sửa ngoài ownership

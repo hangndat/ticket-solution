@@ -1,10 +1,16 @@
 import { randomUUID } from 'node:crypto';
+import { chromium } from 'playwright/test';
 import { test, expect, loadManifest, fixtureFor } from '../harness/fixtures';
 import {
+  annotateAuth07BfcacheDirection,
   annotateAuth07BfcacheEvidence,
+  annotateAuth07BfcacheTimeline,
+  annotateAuth07ControlGap,
   assertAuth07AuditTableNotActorA,
   auth07BfcacheProbeInit,
+  installAuth07BfcacheTimeline,
   readAuth07BfcacheEvidence,
+  readAuth07NavigationObservation,
   readForwardPageshowPersisted,
   resetAuth07PageshowObservation,
 } from './auth07-bfcache-probe';
@@ -20,6 +26,11 @@ test('[AUTH-07] Portal drops held staff document and audit JSON after another st
   const auditUrl = portalUrl(manifest, auditPath);
   const auditBff = eventBff(fixture, '/audit');
   const context = await browser.newContext();
+  const timeline = await installAuth07BfcacheTimeline(context);
+  test.info().annotations.push({
+    type: 'auth07-browser',
+    description: `channel=chromium-new-headless version=${browser.version()} executable=${chromium.executablePath().split('/').pop()}`,
+  });
   const switchPage = await context.newPage();
   let releaseDocument!: () => void;
   let releaseJson!: () => void;
@@ -49,15 +60,18 @@ test('[AUTH-07] Portal drops held staff document and audit JSON after another st
     const staffHomePath = eventPath(fixture);
     const staffHome = portalUrl(manifest, staffHomePath);
     await oldTab.goto(staffHome);
+    const controlTimelineMark = timeline.mark();
     await oldTab.goBack();
     await expect(oldTab).toHaveURL(auditUrl, { ignoreTrailingSlash: true });
     await oldTab.waitForLoadState('domcontentloaded');
+    const controlBack = await readAuth07NavigationObservation(oldTab);
     await resetAuth07PageshowObservation(oldTab);
     const controlForwardDocument = await oldTab.goForward();
     if (controlForwardDocument) noStore(controlForwardDocument.headers()['cache-control']);
     await expect(oldTab).toHaveURL(staffHome);
     await oldTab.waitForLoadState('domcontentloaded');
     const controlForwardPersisted = await readForwardPageshowPersisted(oldTab);
+    const controlForward = await readAuth07NavigationObservation(oldTab);
     const controlCookieEpoch = (await context.cookies(auditUrl)).find(
       (cookie) => cookie.name === 'portal_staff_epoch',
     )?.value;
@@ -68,6 +82,22 @@ test('[AUTH-07] Portal drops held staff document and audit JSON after another st
       actorBEpoch: actorA.authEpoch,
       cookieStaffEpoch: controlCookieEpoch,
     }, { phase: 'control' });
+    annotateAuth07BfcacheDirection(test.info(), 'control', 'back', controlBack);
+    annotateAuth07BfcacheDirection(test.info(), 'control', 'forward', controlForward);
+    annotateAuth07BfcacheTimeline(test.info(), timeline.since(controlTimelineMark), 'control');
+    const controlValid = controlForwardPersisted === true;
+    test.info().annotations.push({
+      type: 'auth07-control-gate',
+      description: controlValid ? 'valid' : 'gap',
+    });
+    if (!controlValid) {
+      annotateAuth07ControlGap(test.info(), {
+        browserVersion: browser.version(),
+        back: controlBack,
+        forward: controlForward,
+        notRestoredReasons: controlBfcacheEvidence.notRestoredReasons,
+      });
+    }
     await oldTab.goto(auditUrl);
     await expect(oldTab.getByTestId('audit-table')).toBeVisible();
 
@@ -124,26 +154,41 @@ test('[AUTH-07] Portal drops held staff document and audit JSON after another st
     for (const tab of [oldTab, jsonTab, documentTab]) {
       await expect(tab.getByTestId('audit-table')).toHaveCount(0);
     }
+    const switchTimelineMark = timeline.mark();
     await oldTab.goBack();
     await oldTab.waitForLoadState('domcontentloaded');
+    const switchBack = await readAuth07NavigationObservation(oldTab);
     await resetAuth07PageshowObservation(oldTab);
     const forwardDocument = await oldTab.goForward();
     if (forwardDocument) noStore(forwardDocument.headers()['cache-control']);
     await expect(oldTab).toHaveURL(auditUrl);
     await oldTab.waitForLoadState('domcontentloaded');
     const forwardPersisted = await readForwardPageshowPersisted(oldTab);
+    const switchForward = await readAuth07NavigationObservation(oldTab);
+    if (controlValid) {
+      annotateAuth07BfcacheDirection(test.info(), 'post-switch', 'back', switchBack);
+      annotateAuth07BfcacheDirection(test.info(), 'post-switch', 'forward', switchForward);
+      annotateAuth07BfcacheTimeline(test.info(), timeline.since(switchTimelineMark), 'post-switch');
+      const bfcacheEvidence = await readAuth07BfcacheEvidence(oldTab, forwardPersisted);
+      annotateAuth07BfcacheEvidence(test.info(), bfcacheEvidence, {
+        actorAEpoch: actorA.authEpoch,
+        actorBEpoch: actorB.authEpoch,
+        cookieStaffEpoch: (await context.cookies(auditUrl)).find(
+          (cookie) => cookie.name === 'portal_staff_epoch',
+        )?.value,
+      }, { phase: 'post-switch' });
+    } else {
+      test.info().annotations.push({
+        type: 'auth07-switch-measurement',
+        description: 'skipped-invalid-control',
+      });
+    }
     await assertAuth07AuditTableNotActorA(oldTab, actorA);
     await oldTab.waitForTimeout(0);
     const cookieStaffEpoch = (await context.cookies(auditUrl)).find(
       (cookie) => cookie.name === 'portal_staff_epoch',
     )?.value;
     expect(cookieStaffEpoch).toBe(actorB.authEpoch);
-    const bfcacheEvidence = await readAuth07BfcacheEvidence(oldTab, forwardPersisted);
-    annotateAuth07BfcacheEvidence(test.info(), bfcacheEvidence, {
-      actorAEpoch: actorA.authEpoch,
-      actorBEpoch: actorB.authEpoch,
-      cookieStaffEpoch,
-    }, { phase: 'post-switch' });
     const reloaded = await oldTab.reload();
     noStore(reloaded?.headers()['cache-control']);
     await expect(oldTab.getByTestId('audit-table')).toHaveCount(0);

@@ -83,6 +83,27 @@
     "reason": "Đã viết H invalid ticket UUID, missing ticket, assignment deny và reject audit; chờ runtime. API Gate nhận ticketId, không có HTTP QR parser; QR audience/kid/version/hash, revoked/cancelled còn thiếu."
   },
   {
+    "caseId": "GATE-02",
+    "tests": ["H:tests/e2e/http/live.test.mjs#[GATE-02]"],
+    "layers": ["H"],
+    "status": "blocked",
+    "reason": "H PASS run mvz7c12y-668d9f (cây dirty, chưa là evidence nghiệm thu): reserve không làm report checkInSuccessCount đổi; session khác 409 HELD_BY_OTHER_SESSION; retry cùng holder 200 cùng reservationId và token mới; token cũ confirm 409 RESERVATION_TOKEN_MISMATCH; hold bị ép hết hạn thì session khác reserve được và holder cũ confirm 409 RESERVATION_EXPIRED. Huỷ hold chủ động (run mvz9g6bj-1d59a1, cây dirty): phiên khác cancel 409 HELD_BY_OTHER_SESSION, holder cancel 200 RELEASED replayed=false và report không đổi, confirm hold đã huỷ 409 RESERVATION_EXPIRED, cancel lại 200 replayed=true không giải phóng hold mới của phiên khác, hold mới confirm 200 rồi cancel 409 ALREADY_CHECKED_IN."
+  },
+  {
+    "caseId": "GATE-04",
+    "tests": ["H:tests/e2e/http/live.test.mjs#[GATE-04]"],
+    "layers": ["H"],
+    "status": "blocked",
+    "reason": "H PASS run mvz7c12y-668d9f (cây dirty): session khác confirm 409 HELD_BY_OTHER_SESSION, sai token 409 RESERVATION_TOKEN_MISMATCH, report không đổi; hai confirm đồng thời cùng một hold cho đúng [200, 409 ALREADY_CHECKED_IN] và report +1; retry confirm sau đó 409 ALREADY_CHECKED_IN, report vẫn +1. Revoke session giữa chừng đã có ở H [AUTH-06]. Đột biến kiểm chứng ở GATE-05 (xem đó); chưa đột biến riêng GATE-04. Thiếu: revoke permission giữa request đang bay."
+  },
+  {
+    "caseId": "GATE-05",
+    "tests": ["H:tests/e2e/http/live.test.mjs#[GATE-05]"],
+    "layers": ["H"],
+    "status": "blocked",
+    "reason": "H PASS run mvz7c12y-668d9f (cây dirty): Scanner undo 403, lý do trống 422 REASON_REQUIRED cho undo, revoke và reissue (thống nhất, không mutation), Supervisor undo 201 replayed=false và report về baseline, hàng check-in còn lại với undone_at/undo_reason, đúng một audit gate.undo, undo lại cùng lý do 201 replayed=true cùng checkinId và vẫn một audit, lý do khác 409 CHECKIN_ALREADY_UNDONE, checkin lạ 404 CHECKIN_NOT_FOUND (run mvz9g6bj-1d59a1, cây dirty). Đột biến (cho Scanner undo) làm test fail đúng ở '201 !== 403' (run mvz7d7i0-fbb980, trước thay đổi contract). Thiếu: undo đồng thời với scan/revoke."
+  },
+  {
     "caseId": "DB-01",
     "tests": ["H:tests/e2e/http/live.test.mjs#[DB-01]"],
     "layers": ["H"],
@@ -116,6 +137,41 @@
     "layers": ["H"],
     "status": "blocked",
     "reason": "Partial H PASS run mvum30ad-4c7c2e: PATCH owner reassignment refused (404) on CS `/tenants/.../tickets/:id`, attendee `/me/tickets/:id`, gate `/gate/events/:e/tickets/:id` with authorized cs/scanner; ticket_runtime snapshot unchanged for owner/state, credential versions, code CONSUMED+allocation, audit/outbox counts. Full DB-09 vẫn BLOCKED (GATE-03 QR credential validation, broader lifecycle H)."
+  },
+  {
+    "caseId": "DB-18",
+    "tests": ["H:tests/e2e/http/live.test.mjs#[DB-18]"],
+    "layers": ["H"],
+    "status": "blocked",
+    "reason": "DB-18 live Keycloak Admin DELETE + bearer HTTP harness implemented; exact-SHA run and IdP retry branch remain required before H verdict."
+  },
+  {
+    "caseId": "DB-19",
+    "tests": ["H:tests/e2e/http/live.test.mjs#[DB-19]"],
+    "layers": ["H"],
+    "status": "blocked",
+    "reason": "Live Keycloak/HTTP v1 code được API v2+legacy ring cấp vé, v2 code mới cũng cấp vé; version không hỗ trợ và hai digest v1/v2 cùng raw code bị CODE_INVALID, đối soát không mutation. QR credential keyring vẫn là product gap; chờ run sạch exact SHA."
+  },
+  {
+    "caseId": "DB-15",
+    "tests": ["H:tests/e2e/http/live.test.mjs#[DB-15] live HTTP"],
+    "layers": ["H"],
+    "status": "implemented",
+    "reason": "Keycloak/API thật: issue, confirm/reject/undo/cancel và report; kiểm checkin + undo audit trong PostgreSQL. Notification UNKNOWN/DEAD được tạo synthetic ở H, retry provider thực được kiểm ở D. Chờ SHA sạch, DoD độc lập và làm rõ câu chữ O12."
+  },
+  {
+    "caseId": "DB-16",
+    "tests": ["H:tests/e2e/http/live.test.mjs#[DB-16] live HTTP"],
+    "layers": ["H"],
+    "status": "implemented",
+    "reason": "Keycloak/API thật: Owner/Manager assignment filter, cursor/limit/asOf, foreign tenant/event và digest snapshot PostgreSQL dưới RLS không đổi sau deny. Chờ SHA sạch và reviewer độc lập."
+  },
+  {
+    "caseId": "DB-17",
+    "tests": ["H:tests/e2e/http/live.test.mjs#[DB-17] live HTTP"],
+    "layers": ["H"],
+    "status": "implemented",
+    "reason": "Keycloak/API thật: role preset named/versioned và deny, self-serve PENDING/replay + 503, Operator MFA activation, event limit race một winner/một 409, staff limit 409, usage và PG snapshot không mutation sau deny. Chờ clean exact-SHA run."
   },
   {
     "caseId": "WEB-04",

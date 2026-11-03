@@ -1,5 +1,9 @@
 # HTTP integration — trạng thái 28/10/2026
 
+## DB-15 / DB-16 — Issue #1030
+
+Diagnostic `mvxkyku6-2a175b` PASS 2/2 qua HTTPS API và Keycloak thật trên stack cô lập, nhưng worktree đang sửa nên không dùng làm evidence exact SHA. DB-15 đối soát report sau confirm/reject/undo/cancel và kiểm check-in/audit PG; notification UNKNOWN/DEAD là fixture PG, còn retry provider tới DEAD được chạy ở D. DB-16 kiểm Owner/Manager assignment, cursor/limit/watermark và cross-tenant deny; snapshot digest PG dưới tenant RLS không đổi qua các request deny. Chờ chạy lại trên commit sạch và review độc lập; câu chữ O12 về APPLIED và cách loại undo cần làm rõ riêng như trong báo cáo backend.
+
 Đã viết runner Node `--list`/`--case` và năm ca H vào HTTPS API với JWT từ Keycloak thật. Source assertion lấy từ `apps/api/src/{tickets,gate,reporting}.ts`, `packages/backend/src/{issue,gate,reporting}.ts`; không giả auth, không gọi Playwright.
 
 **Runtime:** Chưa chạy; coordinator cần manifest và isolated stack. `node --check` hai file PASS; `--list` liệt kê đủ năm ID, `--case DB-03 --list` chọn đúng một ID; `coverage.json` parse PASS. Không có `E2E_MANIFEST`, runner thoát mã 2 với `BLOCKED`, không skip. Những kiểm tra này không là HTTP PASS. `coverage.json` giữ `blocked` cho full AC, kể cả khi các nhánh H này PASS.
@@ -32,3 +36,22 @@ Sau Web commit `289e5200` (F01), H thêm so sánh direct-upstream với `Host` t
 Run thứ hai ghi product robots `Disallow: /`, không sitemap; marketing robots `Allow: /` và sitemap. Product sitemap không có `<loc>`, marketing có URL marketing. Cả hai policy và sitemap giữ nguyên trước/giả/sau. Analytics trên product luôn `403 FORBIDDEN_HOST`; trên marketing luôn `400 INVALID_EVENT`, kể cả forwarded host giả. Đây là bằng chứng hành vi F01 trên local direct upstream, chờ reviewer độc lập xác minh.
 
 Cache headers direct upstream: robots và sitemap trên cả hai Host trả `Cache-Control: public, max-age=0, must-revalidate`, `Vary: rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch`; analytics thiếu `Cache-Control`. Các redirect SEC-03 cũng thiếu `Cache-Control`. `Age`, `ETag`, `Via` và cache-status headers không xuất hiện trong các response được ghi. Trình tự trước/giả/sau không thấy lẫn response trong Next upstream local, nhưng H bypass shared edge, không chứng minh edge triển khai không lưu response hoặc dùng cache key theo Host. **F02 và full SEC-03 vẫn BLOCKED/FAIL**; cần bằng chứng edge/cache thực tế hoặc một sửa runtime/header được owner ủy quyền rồi H trên SHA mới. Chi tiết response: `tests/e2e/.artifacts/mvxz652h-b3984a/http-SEC-03.log`; provenance: `summary.json` cùng thư mục.
+## DB-19 — inventory assertion theo PLAN §6.1 (snapshot trước nghiệm thu keyring)
+
+| AC | Assertion hiện có | Còn thiếu |
+| --- | --- | --- |
+| Pepper v1 còn hỗ trợ, v2 là current | D `db19-code-pepper-rotation.test.cjs`: lookup code v1 sau rotate; H `[DB-19]`: bearer Keycloak redeem v1 và v2 qua API thật, ticket/outbox/quota tăng đúng hai | Không |
+| Version bỏ khỏi ring fail-closed | D bỏ v1 khỏi ring → `CODE_INVALID`; H code v3 ngoài ring → `422 CODE_INVALID`, snapshot code/ticket/outbox/quota không đổi | Không |
+| Trùng raw code qua hai pepper fail-closed; code đã dùng không sống lại | D selector duplicate rows và consumed; H v1/v2 digest trùng → `CODE_INVALID`, consumed → `CODE_CONSUMED`, snapshot không đổi | Không |
+| Không lộ material | D kiểm DB chỉ giữ HMAC/version; H kiểm digest khác raw code và không có pepper/credential key trong API response/log của run | Không chứng minh mọi kênh telemetry ngoài run local |
+| QR credential key cũ, revoked | Chưa có versioned credential keyring: `kid` cố định `local-v1`; trạng thái `REVOKED` của credential được kiểm riêng trong DB-09 | Owner cần chốt giữ DB-19 AC và thiết kế keyring, hoặc điều chỉnh AC QR có ghi rủi ro theo PLAN §15.2 |
+
+Chạy H riêng bằng `E2E_LANES=1 pnpm test:e2e:http --lane --case=DB-19`; fixture v2 current/v1 legacy được cô lập, nên không ghép ID này với các HTTP case dùng cấu hình pepper mặc định. Kết quả exact SHA và verdict ghi ở báo cáo bàn giao, không đổi `ACCEPTANCE.md` trong Task này.
+
+## SEC-03 — tích hợp 03/11/2026
+
+Các snapshot FAIL phía trên được giữ nguyên làm lịch sử. PR #1118 hiện có thay đổi runtime ở Web/Portal: dùng Host đã tin cậy cho routing/robots/sitemap/analytics và ngăn shared caching cho các response phụ thuộc Host.
+
+Theo [quyết định scope của coordinator](https://github.com/hangndat/ticket-solution/pull/1118#issuecomment-6597982870), gate F04 giữ đầy đủ assertion Host/forwarded/origin/redirect và cache-header qua proxy/upstream local. Phép chứng minh shared edge/cache production chuyển sang D5, vẫn GAP/chưa chạy; không kết luận production/pilot ready. Lý do và rủi ro cache/origin poisoning ngoài local stack được ghi trong quyết định đó.
+
+Lần tích hợp này giữ các probe SEC-03 cùng các assertion SEC-04/06 và JOB-04 đã có trên main; chưa tự chuyển verdict sang PASS. H trên SHA sạch, CI và revalidation độc lập phải hoàn tất trước merge. Lịch sử sửa 2/2 + ngoại lệ của PR #1118 không được reset; không mở thêm business fix từ việc giải conflict.

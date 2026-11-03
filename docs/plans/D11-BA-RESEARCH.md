@@ -38,7 +38,7 @@
 | --- | --- | --- |
 | Personas / journeys | [`docs/PRD.md`](../PRD.md) §3, §5, §7 | Quan sát (tài liệu sản phẩm) |
 | Quyết định / non-goals | [`docs/DECISION-LOG.md`](../DECISION-LOG.md) O01–O10, ADR liên quan | Quan sát |
-| UX plan đã làm | [`docs/plans/D6-UX-UI-PLAN.md`](./D6-UX-UI-PLAN.md) | Quan sát (audit D6 + DoD) |
+| UX plan đã làm | [`docs/plans/D6-UX-UI-PLAN.md`](../archive/plans/D6-UX-UI-PLAN.md) | Quan sát (audit D6 + DoD) |
 | Pain / known gaps | `docs/reviews/D4-*`, `D5-*`, `D6-*`, `D7-*`, `D8-*`, `D10-*` | Quan sát (DoD/UAT artifacts) |
 | Kiến trúc | code-review-graph-ticket `get_architecture_overview_tool` | Quan sát có hạn chế (graph **stale**: built SHA ≠ HEAD) |
 | Benchmark | Trang chính thức Eventbrite, Ticketbox, Accelevents, Fever, Splash — **ngày truy cập 2026-10-18** | Quan sát public web |
@@ -105,7 +105,7 @@ Nguồn personas: PRD §3. Journeys demo: PRD §7 (10 bước). Ma trận platfo
 
 ### 3.3 Gap UX đã ghi nhận trước D11 (từ D6 plan + DoD)
 
-Từ [`D6-UX-UI-PLAN.md`](./D6-UX-UI-PLAN.md) §3.4 (audit trước polish) và DoD D6/D8/D10:
+Từ [`D6-UX-UI-PLAN.md`](../archive/plans/D6-UX-UI-PLAN.md) §3.4 (audit trước polish) và DoD D6/D8/D10:
 
 | Gap | Evidence | Fix vs mở rộng |
 | --- | --- | --- |

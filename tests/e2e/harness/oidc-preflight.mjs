@@ -5,7 +5,8 @@ import { ROOT } from './runtime.mjs';
 
 const manifest = JSON.parse(readFileSync(process.env.E2E_MANIFEST, 'utf8'));
 const account = manifest.accounts.attendee;
-const issuer = `${manifest.origins.auth}/realms/e2e-${manifest.runId}`;
+const realm = manifest.runtime.realm ?? `e2e-${manifest.runId}`;
+const issuer = `${manifest.origins.auth}/realms/${realm}`;
 const response = await fetch(`${issuer}/protocol/openid-connect/token`, {
   method: 'POST',
   body: new URLSearchParams({

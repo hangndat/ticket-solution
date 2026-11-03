@@ -1,0 +1,59 @@
+# GitHub Project tracking (worker)
+
+**Project:** https://github.com/users/hangndat/projects/3 (`hangndat`, `3`). Board: Tiếng Việt. `worker_done` ≠ **Hoàn thành**. Authority: Project #3.
+
+## Hierarchy
+
+Epic → Story → Task trên board. **Đơn vị ship mặc định = một Story / một PR / một owner.** Tách Task (và PR) chỉ khi khác ownership slice hoặc thiếu contract/PD/artifact. Không tách web/iOS/docs thành 3 PR chỉ để khớp hierarchy.
+
+Cập nhật Status trên đơn vị đang ship (Story/PR); sub-task cùng PR không mỗi cái một vòng DoD.
+
+## Status
+
+`Chưa lên lịch` · `Sẵn sàng` · `Đang làm` · `Chờ duyệt` · `Bị chặn` · `Hoàn thành`
+
+| Event                   | Status                              | Who                                         |
+| ----------------------- | ----------------------------------- | ------------------------------------------- |
+| Bắt đầu code / dispatch | `Đang làm`                          | Worker hoặc coordinator                     |
+| Blocked                 | `Bị chặn` + comment                 | Ai phát hiện                                |
+| Impl xong, chờ review   | `Chờ duyệt`                         | Coding worker (nhánh B)                     |
+| Impl xong, nhánh A      | `Chờ duyệt` hoặc thẳng `Hoàn thành` | Coordinator: CI + SHA; không spawn reviewer |
+| DoD đủ                  | `Hoàn thành`                        | Coordinator sau cổng đúng nhánh             |
+
+Không chờ user duyệt board; không `Hoàn thành` chỉ vì user nói xong. Comment Issue (VI) khi `Chờ duyệt` / `Hoàn thành`.
+
+## DoD — hai nhánh
+
+### Nhánh A — docs / tooling / copy / test không đổi hành vi
+
+Không spawn reviewer độc lập. `Hoàn thành` khi:
+
+1. Diff đúng scope
+2. Merge `main` nếu cần integration
+3. CI hoặc check đã chọn xanh trên SHA (docs-only: `git diff --check` đủ nếu không có CI bắt buộc)
+4. Comment Issue/PR (hoặc báo cáo ngắn) + **exact SHA**
+
+### Nhánh B — product rủi ro
+
+Auth, tenant/RLS, vé/tiền/check-in, race/idempotency, migration, contract phá tương thích, UI đổi hành vi, store/prod. **Một** reviewer độc lập trên **một PR** (gộp dod±sec±ux cùng SHA). `Hoàn thành` khi:
+
+1. Review pass (reviewer ≠ implementer)
+2. Merge `main` khi cần integration (`docs/agents/policies/git.md`)
+3. CI xanh trên integrated commit
+4. Evidence khớp AC — ưu tiên comment Issue/PR; `docs/reviews/*.md` chỉ khi comment không đủ, ≤ ~40 dòng, không commit PNG
+5. Exact SHA + verdict
+
+Ba lớp code complete ≠ acceptance complete ≠ pilot ready **bắt buộc ở Epic phát hành / store / prod UAT**, không áp đủ năm cổng xuống Task docs/tooling.
+
+## Evidence (exact SHA)
+
+| Trường       | Yêu cầu                                                                                                       |
+| ------------ | ------------------------------------------------------------------------------------------------------------- |
+| Reviewer     | Nhánh B: khác implementer. Nhánh A: không bắt buộc                                                            |
+| Scope        | Issue #, PR #, paths                                                                                          |
+| SHA          | Exact từ `git rev-parse`                                                                                      |
+| Checks       | Lệnh/CI trên SHA đó                                                                                           |
+| Verdict      | PASS / FAIL / PASS with known gap                                                                             |
+| Revalidation | SHA mới → kiểm diff + findings + vùng ảnh hưởng, kết luận trên SHA mới theo `docs/agents/workflows/review.md` |
+
+Coordinator: spawn reviewer, WIP, milestone, `gh` → `docs/agents/policies/project-coordinator.md`.

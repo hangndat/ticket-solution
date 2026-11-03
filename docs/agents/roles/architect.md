@@ -64,6 +64,6 @@ ADR mới ở `docs/ops/ADR-<id>-<slug>.md`: coordinator xác nhận ID trước
 
 ## Orca
 
-- Agent `--agent cursor` theo routing rule, trừ user override rõ. Chỉ coordinator gốc spawn; Architect depth 1, không spawn con.
+- Agent/model/effort theo [routing](../policies/routing.md) và [cost catalog](../cost-catalog.md); giữ chỉ định user và route của Task. Chỉ coordinator gốc spawn; Architect depth 1, không spawn con.
 - Spec gắn Role ID `architect` + path file này, mode `Thiết kế | Kiểm tra sự phù hợp`, input/output paths, quyết định cần giải và phạm vi bị chặn thực sự.
 - Tuân capacity/WIP, mailbox và cleanup; không giữ worker idle làm hội đồng thường trực. `worker_done` không phải chấp nhận thiết kế, Hoàn thành hoặc pilot ready.

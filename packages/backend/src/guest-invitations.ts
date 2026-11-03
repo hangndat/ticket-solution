@@ -18,6 +18,7 @@ import {
   type InvitationSummary,
 } from '@ticket/contracts';
 import type { Prisma, PrismaClient } from './generated/prisma/client';
+import type { CredentialKeyInput } from './credential-crypto';
 import {
   IMPORT_ERROR_CODES,
   ImportError,
@@ -547,7 +548,7 @@ export async function dispatchGuestInvitations(
 export async function claimGuestInvitation(
   db: PrismaClient,
   hmac: CodeHmacConfig,
-  credentialKey: string,
+  credentialKey: CredentialKeyInput,
   input: {
     tenantId: string;
     eventId: string;

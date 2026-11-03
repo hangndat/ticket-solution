@@ -1,25 +1,9 @@
 {
   "version": 1,
   "hooks": {
-    "sessionStart": [
-      {
-        "command": ".cursor/hooks/crg-session-start.sh",
-        "timeout": 60
-      }
-    ],
     "beforeSubmitPrompt": [
       {
-        "command": ".cursor/hooks/crg-before-prompt.sh",
-        "timeout": 60
-      },
-      {
         "command": ".cursor/hooks/agent-metrics-auto-join.sh",
-        "timeout": 10
-      }
-    ],
-    "afterFileEdit": [
-      {
-        "command": ".cursor/hooks/crg-update.sh",
         "timeout": 10
       }
     ],
