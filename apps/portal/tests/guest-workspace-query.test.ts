@@ -12,6 +12,7 @@ import {
   validateInvitationIdSearch,
   validateTicketIdSearch,
 } from '../src/guests/guest-list-query';
+import { readGuestListPage } from '../src/guests/guest-list-page';
 
 const tenantId = '11111111-1111-4111-8111-111111111111';
 const eventId = '22222222-2222-4222-8222-222222222222';
@@ -120,5 +121,53 @@ describe('guest workspace list query (F01/F02/F04)', () => {
     assert.match(path, /cursor=cursor-page-2/);
     assert.doesNotMatch(path, /[?&]q=/);
     assert.equal(invitationSearchBlocksPagination(''), false);
+  });
+
+  it('retains the server cursor when a ticket page is parsed', () => {
+    const page = readGuestListPage(
+      'tickets',
+      200,
+      {
+        items: [
+          {
+            ticketId: ticketId,
+            state: 'ACTIVE',
+            ownerEmailMasked: 'ab•••@example.com',
+            sourceId: 'source-1',
+            ticketTypeId: 'type-1',
+            createdAt: '2026-01-01T00:00:00Z',
+            lastCheckInAt: null,
+            notification: null,
+          },
+        ],
+        nextCursor: 'next-ticket-page',
+      },
+      false,
+    );
+    assert.equal(page?.nextCursor, 'next-ticket-page');
+    assert.equal(page?.rows[0]?.key, ticketId);
+  });
+
+  it('rejects redemption rows that contain unmasked personal data', () => {
+    const page = readGuestListPage(
+      'redemptions',
+      200,
+      {
+        items: [
+          {
+            requestId: ticketId,
+            status: 'PENDING_REVIEW',
+            sourceId: 'source-1',
+            ticketTypeId: 'type-1',
+            submittedAt: '2026-01-01T00:00:00Z',
+            actorEmailMasked: null,
+            actorEmail: 'person@example.com',
+          },
+        ],
+        nextCursor: null,
+      },
+      false,
+    );
+    assert.equal(page, null);
   });
 });
