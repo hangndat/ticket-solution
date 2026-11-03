@@ -43,6 +43,7 @@ const CASE_IDS = [
   'DB-16',
   'DB-17',
   'JOB-04',
+  'JOB-07',
   'PLAT-03',
   'WEB-04',
   'WEB-05',
@@ -4221,6 +4222,54 @@ for (const caseId of CASE_IDS) {
       assert.deepEqual(await noteState(recipientDenied), { state: 'FAILED', attempts: 1 });
       assert.equal(await capCount(staffKey), 1, 'recipient denial must roll back the staff counter');
       assert.equal(await capCount(`recipient:${f.eventId}:${recipient}`), 3);
+      return;
+    }
+    if (caseId === 'JOB-07') {
+      const owner = await bearer(ctx, 'owner');
+      const scanner = await bearer(ctx, 'scanner');
+      const foreignTenant = required(f.data.foreignTenantId, 'JOB-07 foreign tenant');
+      const foreignEvent = required(f.data.foreignEventId, 'JOB-07 foreign event');
+      const assetPath = `/tenants/${f.tenantId}/events/${f.eventId}/assets/upload-init`;
+      const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/aS0AAAAASUVORK5CYII=', 'base64');
+      const assetBody = { filename: 'job07.png', contentType: 'image/png', byteLength: png.length };
+      const noPermission = await request(ctx, 'POST', assetPath, scanner, assetBody);
+      expectStatus(noPermission, 403);
+      assert.ok(!noPermission.body.uploadUrl);
+      const wrongTenant = await request(ctx, 'POST', `/tenants/${foreignTenant}/events/${foreignEvent}/assets/upload-init`, owner, assetBody);
+      expectStatus(wrongTenant, 403);
+      assert.ok(!wrongTenant.body.uploadUrl);
+      const before = Date.now();
+      const init = await request(ctx, 'POST', assetPath, owner, assetBody);
+      expectStatus(init, 201);
+      const signed = new URL(required(init.body.uploadUrl, 'JOB-07 upload URL'));
+      assert.equal(signed.searchParams.get('X-Amz-Expires'), '900');
+      const expiry = Date.parse(init.body.expiresAt);
+      assert.ok(expiry >= before + 890000 && expiry <= Date.now() + 910000, 'upload capability must have bounded expiry');
+      const put = await fetch(signed, { method: 'PUT', headers: { 'content-type': 'image/png' }, body: png });
+      assert.equal(put.status, 200, 'signed upload must reach isolated object storage');
+      const wrongMethod = await fetch(signed, { headers: { 'content-type': 'image/png' } });
+      assert.equal(wrongMethod.status, 403, 'PUT capability must not authorize GET');
+      const unsigned = new URL(signed);
+      unsigned.search = '';
+      const direct = await fetch(unsigned);
+      assert.equal(direct.status, 403, 'unsigned object read must be private');
+      const exportsPath = `/tenants/${f.tenantId}/events/${f.eventId}/exports`;
+      const created = await request(ctx, 'POST', exportsPath, owner, { format: 'csv', filter: { states: ['ACTIVE'] } },
+        { 'idempotency-key': randomUUID() });
+      expectStatus(created, 201);
+      const exportId = required(created.body.exportId, 'JOB-07 exportId');
+      await waitExportReady(ctx, f, owner, exportId);
+      const downloadPath = `${exportsPath}/${exportId}/download`;
+      const anonymous = await fetch(new URL(`/v1${downloadPath}`, ctx.api));
+      assert.equal(anonymous.status, 401, 'export download must require authentication');
+      const denied = await request(ctx, 'GET', downloadPath, scanner);
+      expectStatus(denied, 403);
+      const foreignDownload = await request(ctx, 'GET', `/tenants/${foreignTenant}/events/${f.eventId}/exports/${exportId}/download`, owner);
+      expectStatus(foreignDownload, 403);
+      const file = await fetch(new URL(`/v1${downloadPath}`, ctx.api), { headers: { authorization: `Bearer ${owner}` } });
+      assert.equal(file.status, 200);
+      assert.match(file.headers.get('cache-control') ?? '', /private.*no-store/i);
+      assert.ok((await file.text()).includes('ownerEmailMasked'));
       return;
     }
     if (caseId === 'SEC-05') {
