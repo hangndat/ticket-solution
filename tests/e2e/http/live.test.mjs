@@ -6458,7 +6458,7 @@ for (const caseId of CASE_IDS) {
         return response.body.sessionId;
       };
       const originalSession = await open(supervisor);
-      await open(scanner);
+      const scannerSession = await open(scanner);
       const clientEventId = randomUUID();
       const applied = await request(ctx, 'POST', gatePath(f, 'offline-sync'), supervisor, {
         tenantId: f.tenantId, staffSessionId: originalSession, deviceId: randomUUID(),
@@ -6469,10 +6469,28 @@ for (const caseId of CASE_IDS) {
       expectStatus(applied, 201);
       assert.equal(applied.body.results[0].status, 'APPLIED');
       const checkinId = applied.body.results[0].checkinId;
+      const attendee = await bearer(ctx, 'attendee');
+      const secondTicket = await request(ctx, 'POST', redemptionPath(f), attendee, {
+        code: required(f.secondCode, `${caseId} second code`), formVersion: 'form-v1',
+        termsVersion: 'terms-v1', answers: f.data.answers, termsAccepted: true,
+      }, { 'idempotency-key': randomUUID() });
+      expectStatus(secondTicket, 201);
+      const secondApplied = await request(ctx, 'POST', gatePath(f, 'offline-sync'), supervisor, {
+        tenantId: f.tenantId, staffSessionId: originalSession, deviceId: randomUUID(),
+        clientClockAt: new Date().toISOString(), events: [{ clientEventId: randomUUID(), type: 'CHECKIN_OFFLINE',
+          eventId: f.eventId, ticketId: secondTicket.body.ticketId,
+          clientOccurredAt: new Date().toISOString(), clientSeq: 0, payloadVersion: 1 }],
+      });
+      expectStatus(secondApplied, 201);
+      assert.equal(secondApplied.body.results[0].status, 'APPLIED');
+      const secondCheckinId = secondApplied.body.results[0].checkinId;
+      assert.notEqual(secondCheckinId, checkinId);
       const receiptPath = `${gatePath(f, 'offline-sync/receipts')}/${clientEventId}?tenantId=${f.tenantId}`;
       const snapshot = async () => db03Query(f,
-        `SELECT (SELECT count(*)::int FROM checkins WHERE tenant_id=$1::uuid AND event_id=$2::uuid) AS checkins,
-                (SELECT count(*)::int FROM offline_sync_events WHERE tenant_id=$1::uuid AND event_id=$2::uuid) AS events`,
+        `SELECT COALESCE((SELECT jsonb_agg(to_jsonb(c) ORDER BY c.id) FROM checkins c
+                          WHERE c.tenant_id=$1::uuid AND c.event_id=$2::uuid), '[]'::jsonb) AS checkins,
+                COALESCE((SELECT jsonb_agg(to_jsonb(o) ORDER BY o.client_event_id) FROM offline_sync_events o
+                          WHERE o.tenant_id=$1::uuid AND o.event_id=$2::uuid), '[]'::jsonb) AS events`,
         [f.tenantId, f.eventId]);
       const beforeReads = await snapshot();
       const current = await request(ctx, 'GET', receiptPath, supervisor);
@@ -6484,7 +6502,49 @@ for (const caseId of CASE_IDS) {
       assert.equal(current.body.checkinId, checkinId);
       assert.equal(current.body.staffSessionId, originalSession);
       assert.ok(!Object.hasOwn(current.body, 'admissionEligible'));
+      await db03Query(f, `UPDATE tickets SET state='ACTIVE' WHERE tenant_id=$1::uuid AND id=$2::uuid`,
+        [f.tenantId, f.ticketId]);
+      try {
+        const noLongerCurrent = await request(ctx, 'GET', receiptPath, supervisor);
+        expectStatus(noLongerCurrent, 200);
+        assert.equal(noLongerCurrent.body.checkinState, 'NO_LONGER_CURRENT');
+        assert.equal(noLongerCurrent.body.checkinId, checkinId);
+      } finally {
+        await db03Query(f, `UPDATE tickets SET state='USED' WHERE tenant_id=$1::uuid AND id=$2::uuid`,
+          [f.tenantId, f.ticketId]);
+      }
       expectStatus(await request(ctx, 'GET', receiptPath, scanner), 404, 'OFFLINE_SYNC_RECEIPT_NOT_FOUND');
+      const otherEvent = required(f.data.receiptOtherEventId, `${caseId} other event`);
+      expectStatus(await request(ctx, 'POST', `/gate/events/${otherEvent}/sessions`, supervisor,
+        { tenantId: f.tenantId }), 200);
+      expectStatus(await request(ctx, 'GET', `/gate/events/${otherEvent}/offline-sync/receipts/${clientEventId}?tenantId=${f.tenantId}`, supervisor),
+        404, 'OFFLINE_SYNC_RECEIPT_NOT_FOUND');
+      const otherTenant = required(f.data.receiptOtherTenantId, `${caseId} other tenant`);
+      const otherTenantEvent = required(f.data.receiptOtherTenantEventId, `${caseId} other tenant event`);
+      expectStatus(await request(ctx, 'POST', `/gate/events/${otherTenantEvent}/sessions`, supervisor,
+        { tenantId: otherTenant }), 200);
+      expectStatus(await request(ctx, 'GET', `/gate/events/${otherTenantEvent}/offline-sync/receipts/${clientEventId}?tenantId=${otherTenant}`, supervisor),
+        404, 'OFFLINE_SYNC_RECEIPT_NOT_FOUND');
+      const changedSession = await db03Query(f, `UPDATE offline_sync_events SET staff_session_id=$3::uuid
+        WHERE tenant_id=$1::uuid AND client_event_id=$2::uuid RETURNING client_event_id`,
+        [f.tenantId, clientEventId, scannerSession]);
+      assert.equal(changedSession.length, 1, 'fixture must change original session');
+      try {
+        expectStatus(await request(ctx, 'GET', receiptPath, supervisor), 404, 'OFFLINE_SYNC_RECEIPT_NOT_FOUND');
+      } finally {
+        await db03Query(f, `UPDATE offline_sync_events SET staff_session_id=$3::uuid
+          WHERE tenant_id=$1::uuid AND client_event_id=$2::uuid`, [f.tenantId, clientEventId, originalSession]);
+      }
+      const changedJoin = await db03Query(f, `UPDATE offline_sync_events SET checkin_id=$3::uuid
+        WHERE tenant_id=$1::uuid AND client_event_id=$2::uuid RETURNING client_event_id`,
+        [f.tenantId, clientEventId, secondCheckinId]);
+      assert.equal(changedJoin.length, 1, 'fixture must corrupt the check-in join');
+      try {
+        expectStatus(await request(ctx, 'GET', receiptPath, supervisor), 404, 'OFFLINE_SYNC_RECEIPT_NOT_FOUND');
+      } finally {
+        await db03Query(f, `UPDATE offline_sync_events SET checkin_id=$3::uuid
+          WHERE tenant_id=$1::uuid AND client_event_id=$2::uuid`, [f.tenantId, clientEventId, checkinId]);
+      }
       expectStatus(await request(ctx, 'GET', `${gatePath(f, 'offline-sync/receipts')}/${randomUUID()}?tenantId=${f.tenantId}`, supervisor),
         404, 'OFFLINE_SYNC_RECEIPT_NOT_FOUND');
       expectStatus(await request(ctx, 'GET', `${gatePath(f, 'offline-sync/receipts')}/not-a-uuid?tenantId=${f.tenantId}`, supervisor), 422);
@@ -6502,13 +6562,24 @@ for (const caseId of CASE_IDS) {
       const undone = await request(ctx, 'GET', receiptPath, supervisor);
       expectStatus(undone, 200);
       assert.equal(undone.body.checkinState, 'UNDONE');
+      expectStatus(await request(ctx, 'POST', gatePath(f, `tickets/${f.ticketId}/revoke`), owner,
+        { tenantId: f.tenantId, reason: 'receipt revoke test' }), 201);
+      const revoked = await request(ctx, 'GET', receiptPath, supervisor);
+      expectStatus(revoked, 200);
+      assert.equal(revoked.body.checkinState, 'TICKET_REVOKED');
       await db03Query(f, `UPDATE events SET check_in_closes_at=clock_timestamp()-interval '1 hour'
         WHERE tenant_id=$1::uuid AND id=$2::uuid`, [f.tenantId, f.eventId]);
       const beforeClosedRead = await snapshot();
       const closed = await request(ctx, 'GET', receiptPath, supervisor);
       expectStatus(closed, 200);
-      assert.equal(closed.body.checkinState, 'UNDONE');
+      assert.equal(closed.body.checkinState, 'TICKET_REVOKED');
       assert.deepEqual(await snapshot(), beforeClosedRead, 'closed-gate receipt lookup must remain read-only');
+      await auth06Revoke(f, `UPDATE event_assignments SET revoked_at=now()
+        WHERE tenant_id=$1::uuid AND event_id=$2::uuid
+          AND membership_id=(SELECT id FROM memberships WHERE tenant_id=$1::uuid AND user_id=$3::uuid)
+          AND revoked_at IS NULL`, [f.tenantId, f.eventId, f.accounts.supervisor.userId]);
+      expectStatus(await request(ctx, 'GET', receiptPath, supervisor), 403);
+      assert.deepEqual(await snapshot(), beforeClosedRead, 'denied receipt lookup must remain read-only');
       return;
     }
     if (caseId === 'GATE-07') {
