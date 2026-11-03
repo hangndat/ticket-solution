@@ -223,24 +223,43 @@ test('[AUTH-07] late real Keycloak refresh cannot replace a same-sub callback to
       httpOnly: true, secure: true, sameSite: 'Lax' }]);
 
     let held = false;
+    let identityRequests = 0;
+    let probeError: unknown;
     await context.route('**/api/auth/identity?surface=staff', async (route) => {
-      if (held) { await route.continue(); return; }
+      identityRequests += 1;
+      const requestNumber = identityRequests;
+      const probe = route.request().headers()['x-e2e-auth07-probe'] === 'refresh';
+      const cookieHeader = (await route.request().allHeaders()).cookie ?? '';
+      const accessCookie = cookieHeader.split(';').map((part) => part.trim())
+        .find((part) => part.startsWith(`${oldAccessName}=`));
+      test.info().annotations.push({ type: 'auth07-identity-request', description:
+        `request=${requestNumber} time=${Date.now()} probe=${probe} accessPresent=${Boolean(accessCookie)} accessExpiredFixture=${accessCookie === `${oldAccessName}=expired`}` });
+      if (!probe || held) { await route.continue(); return; }
       held = true;
-      const upstream = await route.fetch();
-      expect(upstream.status()).toBe(200);
-      noStore(upstream.headers()['cache-control']);
-      const setCookie = upstream.headers()['set-cookie'] ?? '';
-      expect(setCookie).toContain(`${oldAccessName}=`);
-      expect(setCookie).not.toContain('portal_staff_epoch=');
-      fetched();
-      await released;
-      await route.fulfill({ response: upstream });
+      try {
+        const upstream = await route.fetch();
+        const setCookie = upstream.headers()['set-cookie'] ?? '';
+        test.info().annotations.push({ type: 'auth07-refresh-probe', description:
+          `request=${requestNumber} time=${Date.now()} status=${upstream.status()} accessCookie=${setCookie.includes(`${oldAccessName}=`)} epochCookie=${setCookie.includes('portal_staff_epoch=')}` });
+        expect(upstream.status()).toBe(200);
+        noStore(upstream.headers()['cache-control']);
+        expect(setCookie).toContain(`${oldAccessName}=`);
+        expect(setCookie).not.toContain('portal_staff_epoch=');
+        fetched();
+        await released;
+        await route.fulfill({ response: upstream });
+      } catch (error) {
+        probeError = error;
+        fetched();
+        await route.abort().catch(() => {});
+      }
     });
     const late = page.evaluate(async () => {
-      const response = await fetch('/api/auth/identity?surface=staff', { cache: 'no-store' });
+      const response = await fetch('/api/auth/identity?surface=staff', { cache: 'no-store', headers: { 'x-e2e-auth07-probe': 'refresh' } });
       return response.status;
     });
     await ready;
+    if (probeError) { await late.catch(() => {}); throw probeError; }
 
     const switchPage = await context.newPage();
     await switchPage.goto(portalUrl(manifest, '/api/auth/logout'));
@@ -269,20 +288,28 @@ test('[AUTH-07] late real Keycloak refresh cannot replace a same-sub callback to
     const logoutReleased = new Promise<void>((resolve) => { releaseLogout = resolve; });
     const logoutReady = new Promise<void>((resolve) => { fetchedLogout = resolve; });
     let heldLogout = false;
+    let logoutProbeError: unknown;
     await context.route('**/api/auth/identity?surface=staff', async (route) => {
-      if (heldLogout) { await route.continue(); return; }
+      if (route.request().headers()['x-e2e-auth07-probe'] !== 'logout' || heldLogout) { await route.continue(); return; }
       heldLogout = true;
-      const upstream = await route.fetch();
-      expect(upstream.status()).toBe(200);
-      noStore(upstream.headers()['cache-control']);
-      expect(upstream.headers()['set-cookie']).toContain(`${newerAccessName}=`);
-      fetchedLogout();
-      await logoutReleased;
-      await route.fulfill({ response: upstream });
+      try {
+        const upstream = await route.fetch();
+        expect(upstream.status()).toBe(200);
+        noStore(upstream.headers()['cache-control']);
+        expect(upstream.headers()['set-cookie']).toContain(`${newerAccessName}=`);
+        fetchedLogout();
+        await logoutReleased;
+        await route.fulfill({ response: upstream });
+      } catch (error) {
+        logoutProbeError = error;
+        fetchedLogout();
+        await route.abort().catch(() => {});
+      }
     });
     const lateLogout = page.evaluate(async () =>
-      (await fetch('/api/auth/identity?surface=staff', { cache: 'no-store' })).status);
+      (await fetch('/api/auth/identity?surface=staff', { cache: 'no-store', headers: { 'x-e2e-auth07-probe': 'logout' } })).status);
     await logoutReady;
+    if (logoutProbeError) { await lateLogout.catch(() => {}); throw logoutProbeError; }
     await switchPage.goto(portalUrl(manifest, '/api/auth/logout'));
     await switchPage.goto(portalUrl(manifest, '/auth'));
     const loggedOut = await context.cookies(manifest.origins.portal);
