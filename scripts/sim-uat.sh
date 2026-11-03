@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Legacy/local helper — AXe HID + simctl (CI or non-Orca shells).
-# Agent UAT sessions: use `orca emulator` per `.cursor/rules/uat-headless.mdc`.
+# Agent UAT sessions: use `orca emulator` per `docs/agents/workflows/uat.md`.
 # Never moves the macOS mouse via cliclick / AppleScript / Computer Use.
 set -euo pipefail
 

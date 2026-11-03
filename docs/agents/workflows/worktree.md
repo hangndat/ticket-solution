@@ -1,6 +1,6 @@
 # Orca — worktree hygiene + DAG/gates (ROI cao)
 
-**Coordinator-only** (`alwaysApply: false`): **coordinator gốc** (depth 0) áp dụng khi tạo/gắn worktree, wave Epic và fleet hygiene. Worker **không** tạo worktree hay gắn Issue/PR mặc định — chỉ Read file này khi Task Spec giao việc tạo/đụng worktree (pointer `docs/agents/policies/routing.md`). DAG/ready queue/caps/gates theo [dispatch](dispatch.md); settlement theo [lifecycle](lifecycle.md).
+**Coordinator-only**: **coordinator gốc** (depth 0) áp dụng khi tạo/gắn worktree, wave Epic và fleet hygiene. Worker **không** tạo worktree hay gắn Issue/PR mặc định — chỉ Read file này khi Task Spec giao việc tạo/đụng worktree (pointer `docs/agents/policies/routing.md`). DAG/ready queue/caps/gates theo [dispatch](dispatch.md); settlement theo [lifecycle](lifecycle.md).
 
 ## 1. Worktree phải có link + comment sống
 

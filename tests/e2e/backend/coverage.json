@@ -221,11 +221,12 @@
       "D:packages/backend/test/account-idp-erasure.test.cjs#SEC-2 B1:",
       "U:packages/backend/test/issue-unit.test.cjs#CODE_HMAC_PEPPER",
       "D:packages/backend/test/db19-code-pepper-rotation.test.cjs#DB-19: code issued under v1 keeps resolving after v2 rotation; removed v1 fails closed; no plaintext",
-      "D:packages/backend/test/db19-code-pepper-rotation.test.cjs#DB-19: consumed code cannot be re-issued after pepper rotation (fail-closed)"
+      "D:packages/backend/test/db19-code-pepper-rotation.test.cjs#DB-19: consumed code cannot be re-issued after pepper rotation (fail-closed)",
+      "D:packages/backend/test/db19-code-pepper-rotation.test.cjs#DB-19: duplicate rows for the same raw code across a pepper rotation fail closed with zero mutation"
     ],
     "layers": ["D", "U"],
     "status": "blocked",
-    "reason": "D code pepper rotation (v1 alias giữ sau rotate v2, removed v1 fail-closed, không lộ plaintext; consumed code không cấp lại sau rotation, mutation-verified). QR credential rotation (credential-crypto key đơn, kid local-v1) chưa có versioned keyring — product gap cần owner. H chưa có."
+    "reason": "D code pepper rotation (v1 alias giữ sau rotate v2, removed v1 fail-closed, không lộ plaintext; consumed/ambiguous code không cấp lại sau rotation). H Keycloak/HTTP ở http/coverage.json. QR credential rotation (credential-crypto key đơn, kid local-v1) chưa có versioned keyring — product gap cần owner."
   },
   {
     "caseId": "GATE-01",
@@ -494,12 +495,12 @@
     "caseId": "POL-02",
     "tests": [
       "D:packages/backend/test/portal-audit-codes.test.cjs#H-A1/H-C1/H-P-AUDIT",
-      "D:packages/backend/test/o06-retention-db.test.cjs#O06 POL-02/03",
+      "D:packages/backend/test/o06-retention-db.test.cjs#O06 DB clocks",
       "D:packages/backend/test/o06-retention-db.test.cjs#O06 PII writer"
     ],
     "layers": ["D"],
     "status": "blocked",
-    "reason": "D POL-02 kiểm clock ends_at NULL, CANCELLED lấy cancelled_at, PII writer/sweep hai thứ tự row lock, tenant isolation và replay. Cần ops đo event lớn, restore re-sweep. Audit TTL 730 ngày là gap policy riêng: chưa có deletion job."
+    "reason": "D POL-02 kiểm biên 365 ngày, ends_at NULL, CANCELLED lấy cancelled_at, PII writer/sweep hai thứ tự row lock, tenant isolation, replay và giữ ticket/check-in/KPI input. Owner giảm AC theo PLAN §15.2: xóa audit vật lý 730 ngày và restore re-sweep chuyển task riêng; còn rủi ro audit cũ vẫn nằm trong DB và PII có thể hồi sinh sau restore. Cần ops đo event lớn."
   },
   {
     "caseId": "POL-03",

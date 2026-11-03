@@ -8,7 +8,7 @@ Base SHA thiết kế: `c76657c35bd876e425b247234e5fde57fa80e322` (worktree `see
 
 ## Bối cảnh
 
-Cần đưa dataset fixture (4 org / 6 event theo Epic #686, membership staff, event assignment, mã redeem, marketing config ADR-19, media MinIO) lên **PostgreSQL + MinIO production** trên VPS (`infra/deploy`, `.cursor/skills/deploy-prod/SKILL.md`) để pilot GTM / UAT thật, **không** làm bẩn tenant/event do khách vận hành.
+Cần đưa dataset fixture (4 org / 6 event theo Epic #686, membership staff, event assignment, mã redeem, marketing config ADR-19, media MinIO) lên **PostgreSQL + MinIO production** trên VPS (`infra/deploy`, `.agents/skills/deploy-prod/SKILL.md`) để pilot GTM / UAT thật, **không** làm bẩn tenant/event do khách vận hành.
 
 Hiện trạng code (D9): `packages/backend/src/demo-seed.ts` + `packages/backend/scripts/demo-seed.cjs` — idempotent theo **UUID cố định**, fail-closed khi slug/id trùng dữ liệu không thuộc fixture. Epic #686 mở rộng dataset (4 tenant, 6 event) — BE wave dùng namespace UUID **`686f0001-…`** (SoT: [`PROD-SEED-DATASET.md`](../demo/PROD-SEED-DATASET.md), PR #688); **không** tái dùng D9 `d9d9f001-*`.
 
