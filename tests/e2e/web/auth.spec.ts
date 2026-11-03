@@ -1413,6 +1413,12 @@ test('[AUTH-08] account deletion needs consent and acknowledges one request', as
   const actor = manifest.accounts.attendee;
   expect(await readOpenDeletions(actor.userId)).toEqual([]);
   await login(page, manifest, actor, '/account');
+  const initialCookies = await page.context().cookies(manifest.origins.web);
+  const initialSubject = initialCookies.find((cookie) => cookie.name === 'web_oidc_sub')?.value;
+  const initialAccess = initialCookies.find((cookie) => cookie.name === 'oidc_access_token');
+  expect(Boolean(initialSubject && initialAccess?.httpOnly && initialAccess.secure)).toBe(true);
+  const initialClaims = decodeJwtPayload(initialAccess!.value);
+  expect(initialClaims.sub === initialSubject && initialClaims.email === actor.username).toBe(true);
   await page.goto(webUrl(manifest, '/account'));
   await page.locator('summary').filter({ hasText: 'Xóa tài khoản' }).click();
   await expect(page.getByTestId('account-load-empty')).toBeVisible();
@@ -1474,8 +1480,27 @@ test('[AUTH-08] account deletion needs consent and acknowledges one request', as
   await expect(page).toHaveURL(new RegExp(`^${manifest.origins.auth.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
   await page.locator('#username').fill(actor.username);
   await page.locator('#password').fill(actor.password);
+  const callbackPromise = page.waitForResponse((response) =>
+    new URL(response.url()).pathname === '/api/auth/callback',
+  );
   await page.locator('#kc-login').click();
-  await page.waitForURL((url) => url.origin === manifest.origins.web && !url.pathname.startsWith('/api/auth/'));
+  const callback = await callbackPromise;
+  expect([302, 307]).toContain(callback.status());
+  const destination = new URL(callback.headers().location, manifest.origins.web);
+  expect(destination.origin).toBe(manifest.origins.web);
+  expect(destination.pathname).toBe('/account');
+  expect(destination.searchParams.has('error')).toBe(false);
+  const setCookies = (await callback.headersArray())
+    .filter((header) => header.name.toLowerCase() === 'set-cookie')
+    .map((header) => header.value);
+  const subjectCookie = setCookies.find((cookie) => cookie.startsWith('web_oidc_sub='));
+  const accessCookie = setCookies.find((cookie) => cookie.startsWith('oidc_access_token='));
+  expect(Boolean(subjectCookie && accessCookie && /httponly/i.test(accessCookie) && /secure/i.test(accessCookie))).toBe(true);
+  const subject = decodeURIComponent(subjectCookie!.split(';', 1)[0].slice('web_oidc_sub='.length));
+  const token = decodeURIComponent(accessCookie!.split(';', 1)[0].slice('oidc_access_token='.length));
+  const claims = decodeJwtPayload(token);
+  expect(subject === initialSubject && claims.sub === initialSubject && claims.email === actor.username).toBe(true);
+  await page.waitForURL((url) => url.origin === manifest.origins.web && url.pathname === '/account' && !url.searchParams.has('error'));
   expect((await page.request.get(webUrl(manifest, '/api/bff/me'))).status()).toBe(401);
   await page.goto(webUrl(manifest, '/account'));
   await page.reload();
