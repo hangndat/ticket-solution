@@ -34,6 +34,7 @@ import {
   writeProviderBaseline,
 } from './provider-baseline.mjs';
 import { sanitizeOrchestrationBlock } from './transcript-sanitize.mjs';
+import { discoverSessionUsage } from './provider-session-usage.mjs';
 
 export { providerFileMetadata } from './provider-file.mjs';
 
@@ -68,7 +69,8 @@ export function listActiveWorkersOnWorktree(worktreePath, env = process.env) {
   const workers = wl.result?.workers ?? [];
   return workers.filter((w) => {
     if (w.terminalState !== 'active') return false;
-    const ws = w.projection?.workspace?.id || '';
+    const ws = w.workspace?.id || w.workspace || w.projection?.workspace?.id || '';
+    if (typeof ws !== 'string' || !ws) return false;
     return resolvedWorkspacePath(ws) === resolved;
   });
 }
@@ -303,6 +305,7 @@ export function parseProviderTokenJsonl(filePath, opts = {}) {
     modelCoverage: models.size > 1 ? 'mixed_session' : models.size === 1 ? 'session_single_model' : 'missing',
     provenance: {
       thread_id: opts.threadId ?? sessionThreadFromFile ?? null,
+      observed_thread_id: sessionThreadFromFile,
       provider_session: true,
       file: meta,
     },
@@ -453,6 +456,9 @@ export function readWorkerTranscriptMetadata(dispatchId, options = {}) {
     const resp = orcaJson(args, env);
     const r = resp.result;
     if (!r) break;
+    if (r.dispatchId && r.dispatchId !== dispatchId) {
+      throw new TelemetryError('dispatch_identity_mismatch', 'worker-read returned another dispatch');
+    }
     pagesRead += 1;
     lastSource = r.source ?? lastSource;
     provider = r.provider ?? r.projection?.provider?.id ?? provider;
@@ -485,7 +491,11 @@ export function readWorkerTranscriptMetadata(dispatchId, options = {}) {
       });
     }
 
-    const next = r.cursor ?? r.terminal?.nextCursor;
+    const next = r.transcript?.nextCursor ?? r.cursor ?? r.terminal?.nextCursor;
+    // A stable resume cursor with no more records is EOF, not a cycle.
+    const pageComplete = r.transcript?.limited === false || r.terminal?.limited === false;
+    const emptyPage = r.source === 'transcript' && r.transcript?.messages?.length === 0;
+    if (pageComplete || (next === cursor && emptyPage)) break;
     if (next) {
       if (seenCursors.has(next)) {
         clipping.add('cursor_cycle');
@@ -565,14 +575,21 @@ function addNullable(sum, value) {
 
 function workerShowProvenance(dispatchId, env) {
   try {
-    const show = orcaJson(['orchestration', 'worker-show', '--dispatch', dispatchId, '--json'], env);
-    const w = show.result?.worker;
+    const show = orcaJson(['orchestration', 'worker-show', '--dispatch', dispatchId, '--json', '--full'], env);
+    const w = show.result?.worker ?? show.result?.dispatch ?? show.result;
+    const d = show.result?.dispatch ?? w;
+    const projection = show.result?.projection ?? w?.projection;
     const launch = w?.startOptions?.launch;
     return {
       model: launch?.effective?.model ?? show.result?.projection?.provider?.model ?? null,
-      provider: w?.projection?.provider?.id ?? show.result?.projection?.provider?.id ?? null,
-      taskId: w?.projection?.taskId ?? show.result?.projection?.taskId ?? null,
-      runId: w?.projection?.runId ?? show.result?.projection?.runId ?? null,
+      provider: launch?.effective?.agent ?? projection?.provider?.id ?? null,
+      effective: launch?.effective ?? null,
+      requested: launch?.requested ?? null,
+      sessionIncarnation: d?.processIncarnation ?? null,
+      dispatchId: d?.dispatchId ?? d?.dispatch_id ?? d?.id ?? null,
+      workspace: projection?.workspace?.id ?? w?.workspace?.id ?? w?.workspace ?? w?.worktreeId ?? null,
+      taskId: d?.taskId ?? d?.task_id ?? projection?.taskId ?? null,
+      runId: d?.runId ?? d?.run_id ?? projection?.runId ?? null,
       archive:
         show.result?.terminalResource?.archive ??
         w?.terminalResource?.archive ??
@@ -617,7 +634,7 @@ export function collectTelemetry(opts) {
   const dispatchId = opts.dispatchId || null;
   const roleId = opts.roleId;
   const runId = opts.runId || null;
-  const threadId = opts.threadId || null;
+  let threadId = opts.threadId || null;
 
   if (!roleId) throw new TelemetryError('missing_role', '--role-id is required');
   if (!dispatchId && !opts.providerFile) {
@@ -638,18 +655,30 @@ export function collectTelemetry(opts) {
   };
 
   if (dispatchId) {
-    joinAmbiguous = isWorktreeDispatchAmbiguous(root, env, dispatchId);
-    transcript = readWorkerTranscriptMetadata(dispatchId, { env });
     provenance = workerShowProvenance(dispatchId, env);
+    if (provenance.dispatchId && provenance.dispatchId !== dispatchId) {
+      throw new TelemetryError('dispatch_identity_mismatch', 'worker-show returned another dispatch');
+    }
+    if (runId && provenance.runId && runId !== provenance.runId) {
+      throw new TelemetryError('run_identity_mismatch', 'worker-show returned another run');
+    }
+    // Explicit collection binds to a historical receipt, not current live workers.
+    joinAmbiguous = !(provenance.dispatchId === dispatchId && provenance.runId && provenance.taskId
+      && typeof provenance.workspace === 'string'
+      && resolvedWorkspacePath(provenance.workspace) === path.resolve(root));
+    transcript = readWorkerTranscriptMetadata(dispatchId, { env });
+    provenance.provider ??= transcript.provider;
   }
 
   const gitSha = resolveGitSha(root, env);
 
   let providerTokens = null;
   let providerMeta = null;
+  let providerUsageReason = 'provider_usage_not_supplied';
   if (opts.providerFile) {
     providerMeta = providerFileMetadata(opts.providerFile);
     providerTokens = parseProviderTokenJsonl(opts.providerFile, { threadId });
+    providerUsageReason = providerTokens.completeness === 'missing' ? 'provider_usage_missing' : null;
     if (opts.baselineFile) {
       providerTokens = applyProviderBaseline(
         providerTokens,
@@ -658,6 +687,18 @@ export function collectTelemetry(opts) {
         providerMeta,
         opts.providerFile,
       );
+    }
+  }
+
+  if (!opts.providerFile && dispatchId && !joinAmbiguous) {
+    try {
+      const discovered = discoverSessionUsage({dispatchId,root,provenance,orcaJson,parseCodex:parseProviderTokenJsonl,env});
+      providerTokens = discovered.usage ?? null;
+      threadId = discovered.threadId ?? threadId;
+      providerUsageReason = discovered.reason;
+    } catch {
+      // Do not leak provider paths/messages or silently claim zero usage.
+      providerUsageReason = 'provider_usage_read_failed';
     }
   }
 
@@ -701,6 +742,12 @@ export function collectTelemetry(opts) {
       git_sha: gitSha,
       thread_id: threadId,
       join_ambiguous: joinAmbiguous,
+      join_source: dispatchId ? 'worker-show' : 'provider-file',
+      join_reason: dispatchId ? (joinAmbiguous ? 'dispatch_binding_incomplete_or_workspace_mismatch' : 'exact_dispatch_run_task_workspace') : null,
+      token_delta_reason: providerTokens?.task_delta ? null : !providerTokens ? providerUsageReason : 'task_boundary_unverified',
+      provider_usage_reason: providerUsageReason,
+      effective_route: provenance.effective ?? null,
+      requested_route: provenance.requested ?? null,
       model: provenance.model,
       provider: provenance.provider,
       archive: provenance.archive
@@ -883,7 +930,10 @@ export function buildTelemetryReport(opts = {}) {
       workload_fingerprint: e.attrs?.workload_fingerprint ?? null,
       tokens_task_delta: e.attrs?.tokens_provider?.task_delta ?? null,
       tokens_session_range_delta: e.attrs?.tokens_provider?.session_range_delta ?? null,
-      tokens_provider_session: e.attrs?.tokens_provider?.session_latest ?? null,
+      tokens_provider_session: e.attrs?.tokens_provider?.session_latest ?? e.attrs?.tokens_provider?.tokens ?? null,
+      effective_route: e.attrs?.effective_route ?? null,
+      usage_scope: e.attrs?.tokens_provider ? 'provider_session' : null,
+      token_delta_reason: e.attrs?.token_delta_reason ?? null,
       cache_input_ratio: e.attrs?.tokens_provider?.cache_input_ratio ?? null,
       tokens_cursor_hooks: e.attrs?.tokens_cursor_hooks?.tokens ?? null,
       coverage: {

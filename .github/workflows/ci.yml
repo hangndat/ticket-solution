@@ -283,10 +283,12 @@ jobs:
             files: test/demo-seed-rebrand.test.cjs
           - shard: backend-fences
             files: test/outbox-fence.test.cjs test/event-quota-suspended.test.cjs test/apns-atleast-once.test.cjs test/apns-env-fallback.test.cjs
+          - shard: worker-budget
+            files: test/worker-db-cancel.test.cjs ../../tests/e2e/backend/job-06-worker-budget.test.cjs
           - shard: minio-real
             files: test/minio-real.test.cjs
           - shard: resend-caps
-            files: test/job04-resend-caps.test.cjs
+            files: test/job04-resend-caps.test.cjs test/email-budget.test.cjs
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-pnpm
@@ -305,6 +307,9 @@ jobs:
             done
           done
           wait "$build_pid"
+      - name: Build worker for JOB-06 D shard
+        if: matrix.shard == 'worker-budget'
+        run: pnpm --filter @ticket/worker build
       - name: Build worker for POL-02 process probe
         if: matrix.shard == 'o06-retention'
         run: pnpm exec turbo run build --filter=@ticket/worker...

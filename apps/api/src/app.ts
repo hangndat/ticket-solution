@@ -22,12 +22,14 @@ import {
 } from '@ticket/backend';
 import { ConfigPublishController, ConfigPublishService } from './config';
 import { InventoryController, InventoryService } from './inventory';
+import { InvitationController, InvitationService } from './invitations';
 import { TenantLimitsController, TenantLimitsService } from './tenant-limits';
 import { ApprovalController, ApprovalService } from './approval';
 import { ReportController, ReportService } from './reporting';
 import { GateController, GateService } from './gate';
 import { CsController, CsService } from './cs';
 import { ExportController, ExportApiService } from './exports';
+import { EventCatalogService } from './event-catalog';
 import { EventAdminController, EventAdminService } from './events';
 import { DeviceTokenController, DeviceTokenService } from './device-tokens';
 import {
@@ -166,6 +168,7 @@ export async function createApp(
       GateController,
       ConfigPublishController,
       InventoryController,
+      InvitationController,
       TenantLimitsController,
       ApprovalController,
       ReportController,
@@ -198,6 +201,10 @@ export async function createApp(
         useValue: new EventAdminService(ticketDeps),
       },
       {
+        provide: EventCatalogService,
+        useValue: new EventCatalogService(ticketDeps),
+      },
+      {
         provide: TicketIssueService,
         useValue: new TicketIssueService(ticketIssueDeps),
       },
@@ -216,6 +223,10 @@ export async function createApp(
       {
         provide: InventoryService,
         useValue: new InventoryService({ ...ticketDeps, env }),
+      },
+      {
+        provide: InvitationService,
+        useValue: new InvitationService(ticketDeps),
       },
       {
         provide: TenantLimitsService,

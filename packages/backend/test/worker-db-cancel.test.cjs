@@ -60,7 +60,9 @@ test('PG lock cancels reconcile, next due row expires, shutdown and reclaim stay
       const type = randomUUID(), source = randomUUID(), code = randomUUID(), request = randomUUID();
       const outbox = randomUUID();
       await admin.query('INSERT INTO tenants(id,slug,name) VALUES($1,$2,$3)', [tenant,'cancel-fixture','Cancel fixture']);
-      await admin.query('INSERT INTO tenant_limits(tenant_id,email_per_day) VALUES($1,NULL)', [tenant]);
+      // A finite tenant cap must remain enforced while the scheduler handles
+      // unrelated reconciliation and export work under pool contention.
+      await admin.query('INSERT INTO tenant_limits(tenant_id,email_per_day) VALUES($1,8)', [tenant]);
       await admin.query('INSERT INTO events(tenant_id,id,slug,name) VALUES($1,$2,$3,$4)', [tenant,event,'event','Event']);
       await admin.query('INSERT INTO users(id,issuer,subject,email) VALUES($1,$2,$3,$4)', [user,'fixture','user','fixture@example.test']);
       await admin.query('INSERT INTO ticket_types(tenant_id,event_id,id,label) VALUES($1,$2,$3,$4)', [tenant,event,type,'Entry']);
@@ -186,8 +188,8 @@ test('PG lock cancels reconcile, next due row expires, shutdown and reclaim stay
         const rows = await collectWorkerDueJobSnapshot(restarted);
         samples += 1;
         for (const row of rows) oldest[row.jobClass] = Math.max(oldest[row.jobClass] ?? 0, row.oldestDueAgeSeconds);
-        const state = await admin.query("SELECT (SELECT count(*)::int FROM exports WHERE status='READY') exports, (SELECT count(*)::int FROM outbox WHERE status='COMPLETE') outbox, (SELECT count(*)::int FROM redemption_requests WHERE status='PENDING_REVIEW') pending");
-        if (state.rows[0].exports === 5 && state.rows[0].outbox === 12 && state.rows[0].pending === 0) { complete = true; break; }
+        const state = await admin.query("SELECT (SELECT count(*)::int FROM exports WHERE status='READY') exports, (SELECT count(*)::int FROM outbox WHERE payload ? 'inviteId' AND status='COMPLETE') accepted, (SELECT count(*)::int FROM outbox WHERE payload ? 'inviteId' AND status='PENDING' AND payload->>'emailBudgetDeferred'='email_budget_deferred') deferred, (SELECT count(*)::int FROM redemption_requests WHERE status='PENDING_REVIEW') pending");
+        if (state.rows[0].exports === 5 && state.rows[0].accepted === 8 && state.rows[0].deferred === 4 && state.rows[0].pending === 0) { complete = true; break; }
         await delay(150);
       }
       await contention;
@@ -201,7 +203,11 @@ test('PG lock cancels reconcile, next due row expires, shutdown and reclaim stay
       assert.equal(complete, true, 'all real due jobs must settle under combined load');
       assert.equal(exported.rows[0].n, 5);
       assert.equal(exported.rows[0].min_rows, 20000);
-      assert.equal(smtpAccepted, 12);
+      assert.equal(smtpAccepted, 8, 'finite tenant cap admits only eight SMTP attempts');
+      const emailUsage = await admin.query("SELECT sent_count, held_count FROM tenant_email_usage WHERE tenant_id=$1 AND usage_date=(clock_timestamp() AT TIME ZONE 'UTC')::date", [tenant]);
+      assert.deepEqual(emailUsage.rows[0], { sent_count: 8, held_count: 0 });
+      const deferred = await admin.query("SELECT count(*)::int n FROM outbox WHERE payload ? 'inviteId' AND status='PENDING' AND payload->>'emailBudgetDeferred'='email_budget_deferred' AND next_attempt_at > clock_timestamp()");
+      assert.equal(deferred.rows[0].n, 4, 'remaining tenant jobs are durably deferred beyond the current budget window');
       assert.equal(objectBytes.length, 5);
       assert.ok(objectBytes.every((bytes) => bytes > 1000000), 'each CSV must be over 1 MB');
       const metrics = renderPrometheusText();
@@ -213,7 +219,8 @@ test('PG lock cancels reconcile, next due row expires, shutdown and reclaim stay
       }
       const result = {
         event: 'worker_combined_fault_sample', environment: 'isolated_local_synthetic',
-        ticketRows: 20000, exportJobs: 5, outboxJobs: 12, pendingJobs: 120,
+        ticketRows: 20000, exportJobs: 5, outboxJobs: 12, emailBudgetCap: 8,
+        smtpAccepted, emailDeferred: deferred.rows[0].n, pendingJobs: 120,
         poolSize: 1, poolContentionQueries: 6, smtpDelayMs: 120,
         objectDelayMs: 350, csvBytes: objectBytes,
         durationMs: Math.round(performance.now() - loadStart), snapshotSamples: samples,
