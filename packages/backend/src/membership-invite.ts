@@ -134,10 +134,7 @@ export async function createMembershipInvite(
   }
   const parsedRole = parseInviteRole(input.role);
   if (!parsedRole) {
-    throw new PlatformError(
-      PLATFORM_ERROR_CODES.INVALID_INPUT,
-      'Invalid role',
-    );
+    throw new PlatformError(PLATFORM_ERROR_CODES.INVALID_INPUT, 'Invalid role');
   }
   for (const a of input.eventAssignments ?? []) {
     if (!isMembershipRole(a.role)) {
@@ -160,7 +157,13 @@ export async function createMembershipInvite(
 
     if (typeof parsedRole !== 'string') {
       // Unknown / cross-tenant preset → 404 (RLS + explicit load).
-      await loadPresetInTenant(tx, parsedRole.presetId);
+      const preset = await loadPresetInTenant(tx, parsedRole.presetId);
+      if (preset.schemaVersion !== ROLE_SCHEMA_VERSION) {
+        throw new PlatformError(
+          PLATFORM_ERROR_CODES.INVALID_INPUT,
+          'Unsupported role preset schema version',
+        );
+      }
     }
 
     const limits = await tx.$queryRaw<{ max_staff: number | null }[]>`
@@ -344,7 +347,8 @@ export async function revokeMembershipKeepingLastOwner(
 
     if (target.role === 'Owner') {
       const activeOwners = members.filter(
-        (m) => m.role === 'Owner' && m.revoked_at === null && m.id !== target.id,
+        (m) =>
+          m.role === 'Owner' && m.revoked_at === null && m.id !== target.id,
       );
       if (activeOwners.length === 0) {
         throw new PlatformError(

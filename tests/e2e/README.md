@@ -1,6 +1,6 @@
 # Test local Web/Portal và backend
 
-Phạm vi theo [PLAN.md](PLAN.md): 86 nhóm acceptance. Thư mục này cung cấp runner local, 42 test Playwright (Web/Portal, cookie/CSRF, lỗi upstream và phục hồi), 5 ca HTTP với Keycloak thật và catalog selector integration PostgreSQL. Có test mới chạy được không đồng nghĩa toàn bộ 86 nhóm đã hoàn tất. Coverage từng slice ghi rõ assertion còn thiếu, gap sản phẩm và JOB-08 ngoài scope khi chưa có callback handler.
+Phạm vi theo [PLAN.md](PLAN.md): 86 nhóm acceptance. Thư mục này cung cấp runner local, 42 test Playwright (Web/Portal, cookie/CSRF, lỗi upstream và phục hồi), các ca HTTP với Keycloak thật và catalog selector integration PostgreSQL. Có test mới chạy được không đồng nghĩa toàn bộ 86 nhóm đã hoàn tất. Coverage từng slice ghi rõ assertion còn thiếu, gap sản phẩm và JOB-08 ngoài scope khi chưa có callback handler.
 
 ## Chạy
 

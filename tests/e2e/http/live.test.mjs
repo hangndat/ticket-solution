@@ -37,6 +37,7 @@ const CASE_IDS = [
   'DB-19',
   'DB-15',
   'DB-16',
+  'DB-17',
   'JOB-04',
   'PLAT-03',
   'WEB-04',
@@ -2006,6 +2007,321 @@ for (const caseId of CASE_IDS) {
         { ...afterCancel, asOf: null },
         { ...finalFailure, asOf: null },
       );
+      return;
+    }
+    if (caseId === 'DB-17') {
+      const control = {
+        ...f,
+        data: { ...f.data, controlDatabaseUrl: process.env.DATABASE_URL },
+      };
+      const owner = await bearer(ctx, 'owner');
+      const manager = await bearer(ctx, 'manager');
+      const scanner = await bearer(ctx, 'scanner');
+      const attendee = await bearer(ctx, 'attendee');
+      const presetsPath = `/tenants/${f.tenantId}/role-presets`;
+      const presetBody = {
+        name: `DB17 ${randomUUID()}`,
+        tenantPermissions: ['members.manage'],
+        eventPermissions: ['report.read'],
+      };
+      const snapshot = (tenantId = f.tenantId) =>
+        web04Query(
+          control,
+          tenantId,
+          `SELECT
+            (SELECT count(*)::int FROM role_presets WHERE tenant_id=$1::uuid) AS presets,
+            (SELECT count(*)::int FROM events WHERE tenant_id=$1::uuid) AS events,
+            (SELECT count(*)::int FROM membership_invites WHERE tenant_id=$1::uuid) AS invites`,
+          [tenantId],
+        );
+      const beforeDeny = (await snapshot())[0];
+      for (const token of [manager, scanner]) {
+        deny(await request(ctx, 'GET', presetsPath, token));
+        deny(await request(ctx, 'POST', presetsPath, token, presetBody));
+      }
+      expectStatus(
+        await request(ctx, 'POST', presetsPath, owner, {
+          ...presetBody,
+          tenantPermissions: ['platform.operator'],
+        }),
+        422,
+        'INVALID_INPUT',
+      );
+      expectStatus(
+        await request(ctx, 'POST', `/tenants/${f.tenantId}/invites`, owner, {
+          email: `forged-${randomUUID()}@example.test`,
+          role: 'Scanner',
+          permissions: ['members.manage'],
+        }, { 'idempotency-key': randomUUID() }),
+        422,
+        'INVALID_INPUT',
+      );
+      assert.deepEqual((await snapshot())[0], beforeDeny);
+      const created = await request(
+        ctx,
+        'POST',
+        presetsPath,
+        owner,
+        presetBody,
+      );
+      expectStatus(created, 201);
+      assert.equal(created.body.name, presetBody.name);
+      assert.equal(created.body.schemaVersion, 2);
+      assert.deepEqual(
+        created.body.tenantPermissions,
+        presetBody.tenantPermissions,
+      );
+      const listed = await request(ctx, 'GET', presetsPath, owner);
+      expectStatus(listed, 200);
+      assert.ok(
+        listed.body.items.some(
+          (item) => item.presetId === created.body.presetId,
+        ),
+      );
+      const preset = await request(
+        ctx,
+        'GET',
+        `${presetsPath}/${created.body.presetId}`,
+        owner,
+      );
+      expectStatus(preset, 200);
+      assert.deepEqual(preset.body, created.body);
+
+      const setPresetVersion = (version) =>
+        web04Query(
+          control,
+          f.tenantId,
+          `UPDATE role_presets SET schema_version=$1
+           WHERE tenant_id=$2::uuid AND id=$3::uuid`,
+          [version, f.tenantId, created.body.presetId],
+        );
+      const invitesPath = `/tenants/${f.tenantId}/invites`;
+      const presetInviteBody = {
+        email: f.accounts.attendee.username,
+        role: { presetId: created.body.presetId },
+      };
+      await setPresetVersion(1);
+      const beforeStaleInvite = (await snapshot())[0];
+      expectStatus(
+        await request(ctx, 'POST', invitesPath, owner, presetInviteBody, {
+          'idempotency-key': randomUUID(),
+        }),
+        422,
+        'INVALID_INPUT',
+      );
+      assert.deepEqual((await snapshot())[0], beforeStaleInvite);
+      await setPresetVersion(2);
+      const presetInvite = await request(
+        ctx,
+        'POST',
+        invitesPath,
+        owner,
+        presetInviteBody,
+        { 'idempotency-key': randomUUID() },
+      );
+      expectStatus(presetInvite, 201);
+      const [inviteToken] = await web04Query(
+        control,
+        f.tenantId,
+        `SELECT payload->>'token' AS token FROM outbox
+         WHERE tenant_id=$1::uuid AND type='MembershipInvite'
+           AND aggregate_id=$2::uuid`,
+        [f.tenantId, presetInvite.body.inviteId],
+      );
+      assert.ok(inviteToken?.token);
+      await setPresetVersion(1);
+      const [beforeStaleAccept] = await web04Query(
+        control,
+        f.tenantId,
+        `SELECT count(*)::int AS memberships FROM memberships
+         WHERE tenant_id=$1::uuid AND user_id=$2::uuid`,
+        [f.tenantId, f.accounts.attendee.userId],
+      );
+      expectStatus(
+        await request(ctx, 'POST', '/me/membership-invites/accept', attendee, {
+          token: inviteToken.token,
+        }),
+        422,
+        'INVITE_INVALID_OR_EXPIRED',
+      );
+      const [afterStaleAccept] = await web04Query(
+        control,
+        f.tenantId,
+        `SELECT accepted_at,
+          (SELECT count(*)::int FROM memberships
+           WHERE tenant_id=$1::uuid AND user_id=$2::uuid) AS memberships
+         FROM membership_invites
+         WHERE tenant_id=$1::uuid AND id=$3::uuid`,
+        [f.tenantId, f.accounts.attendee.userId, presetInvite.body.inviteId],
+      );
+      assert.equal(afterStaleAccept.accepted_at, null);
+      assert.equal(afterStaleAccept.memberships, beforeStaleAccept.memberships);
+      await setPresetVersion(2);
+
+      const registrationKey = randomUUID();
+      const registrationBody = {
+        slug: `db17-${registrationKey}`,
+        name: 'DB17 Pending Tenant',
+      };
+      const register = () =>
+        request(
+          ctx,
+          'POST',
+          '/public/tenant-registrations',
+          attendee,
+          registrationBody,
+          {
+            'idempotency-key': registrationKey,
+          },
+        );
+      const pending = await register();
+      expectStatus(pending, 201);
+      assert.equal(pending.body.status, 'PENDING');
+      const replay = await register();
+      expectStatus(replay, 201);
+      assert.deepEqual(replay.body, pending.body);
+      const pendingPath = `/tenants/${pending.body.tenantId}/events`;
+      const pendingCreate = await request(
+        ctx,
+        'POST',
+        pendingPath,
+        attendee,
+        {
+          slug: 'before-activation',
+          name: 'Before activation',
+        },
+        { 'idempotency-key': randomUUID() },
+      );
+      expectStatus(pendingCreate, 503, 'TENANT_PENDING');
+      const pendingRows = await web04Query(
+        control,
+        pending.body.tenantId,
+        'SELECT count(*)::int AS events FROM events WHERE tenant_id=$1::uuid',
+        [pending.body.tenantId],
+      );
+      assert.equal(pendingRows[0].events, 0);
+
+      const suffix = required(process.env.E2E_HOST_SUFFIX, 'E2E_HOST_SUFFIX');
+      const trust = required(process.env.E2E_TLS_SPKI, 'E2E_TLS_SPKI');
+      const browser = await chromium.launch({
+        headless: true,
+        args: [
+          `--host-resolver-rules=MAP *.${suffix} 127.0.0.1, MAP ${suffix} 127.0.0.1`,
+          `--ignore-certificate-errors-spki-list=${trust}`,
+        ],
+      });
+      let operator;
+      try {
+        operator = await realPlatformMfaToken(browser, ctx);
+      } finally {
+        await browser.close();
+      }
+      const pendingDetail = await request(
+        ctx,
+        'GET',
+        `/platform/tenants/${pending.body.tenantId}`,
+        operator,
+      );
+      expectStatus(pendingDetail, 200);
+      assert.equal(pendingDetail.body.status, 'PENDING');
+      const activated = await request(
+        ctx,
+        'POST',
+        `/platform/tenants/${pending.body.tenantId}/status`,
+        operator,
+        {
+          status: 'ACTIVE',
+          reason: 'DB17 activation',
+          expectedVersion: pendingDetail.body.version,
+        },
+      );
+      expectStatus(activated, 201);
+      assert.equal(activated.body.status, 'ACTIVE');
+      const afterActivation = await request(
+        ctx,
+        'POST',
+        pendingPath,
+        attendee,
+        {
+          slug: 'after-activation',
+          name: 'After activation',
+        },
+        { 'idempotency-key': randomUUID() },
+      );
+      expectStatus(afterActivation, 201);
+
+      const detail = await request(
+        ctx,
+        'GET',
+        `/platform/tenants/${pending.body.tenantId}`,
+        operator,
+      );
+      expectStatus(detail, 200);
+      const limitsPath = `/platform/tenants/${pending.body.tenantId}/limits`;
+      const maxEvents = detail.body.usage.events + 1;
+      const [limitsVersion] = await web04Query(
+        control,
+        pending.body.tenantId,
+        'SELECT version FROM tenant_limits WHERE tenant_id=$1::uuid',
+        [pending.body.tenantId],
+      );
+      const limit = await request(ctx, 'PUT', limitsPath, operator, {
+        limits: {
+          ...detail.body.limits,
+          maxEvents,
+          maxStaff: detail.body.usage.staffActive,
+        },
+        flags: detail.body.flags,
+        reason: 'DB17 limit probe',
+        expectedVersion: limitsVersion.version,
+      });
+      expectStatus(limit, 200);
+      const race = await Promise.all(
+        ['a', 'b'].map((label) =>
+          request(
+            ctx,
+            'POST',
+            pendingPath,
+            attendee,
+            {
+              slug: `db17-race-${label}-${registrationKey}`,
+              name: `DB17 race ${label}`,
+            },
+            { 'idempotency-key': randomUUID() },
+          ),
+        ),
+      );
+      assert.deepEqual(
+        race.map((result) => [result.status, result.body.code ?? null]).sort(),
+        [
+          [201, null],
+          [409, 'TENANT_LIMIT_REACHED'],
+        ],
+      );
+      const usage = await request(
+        ctx,
+        'GET',
+        `/tenants/${pending.body.tenantId}/limits`,
+        attendee,
+      );
+      expectStatus(usage, 200);
+      assert.equal(usage.body.limits.maxEvents, maxEvents);
+      assert.equal(usage.body.usage.events, maxEvents);
+      assert.equal(usage.body.limits.maxStaff, detail.body.usage.staffActive);
+      const beforeInviteDeny = (await snapshot(pending.body.tenantId))[0];
+      const invite = await request(
+        ctx,
+        'POST',
+        `/tenants/${pending.body.tenantId}/invites`,
+        attendee,
+        {
+          email: `db17-${registrationKey}@example.test`,
+          role: 'Scanner',
+        },
+        { 'idempotency-key': randomUUID() },
+      );
+      expectStatus(invite, 409, 'TENANT_LIMIT_REACHED');
+      assert.deepEqual((await snapshot(pending.body.tenantId))[0], beforeInviteDeny);
       return;
     }
     if (caseId === 'DB-16') {
