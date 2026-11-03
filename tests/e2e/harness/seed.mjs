@@ -2666,6 +2666,16 @@ export async function seedRuntime(state, caseIds) {
               status: 'PUBLISHED',
             },
           });
+          if (caseId === 'JOB-07') {
+            const member = await backend.grantMembership(tx, {
+              tenantId: foreignTenantId, userId: accounts.manager.userId, role: 'Manager',
+              permissions: backend.tenantPermissionsForRole('Manager'),
+            });
+            await backend.grantEventAssignment(tx, {
+              tenantId: foreignTenantId, eventId: foreignEventId, membershipId: member.membershipId,
+              permissions: backend.eventPermissionsForRole('Manager'),
+            });
+          }
         });
         fixture.data.foreignTenantId = foreignTenantId;
         fixture.data.foreignEventId = foreignEventId;

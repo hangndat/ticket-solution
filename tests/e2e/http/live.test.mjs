@@ -4266,6 +4266,17 @@ for (const caseId of CASE_IDS) {
       expectStatus(denied, 403);
       const foreignDownload = await request(ctx, 'GET', `/tenants/${foreignTenant}/events/${f.eventId}/exports/${exportId}/download`, owner);
       expectStatus(foreignDownload, 403);
+      const manager = await bearer(ctx, 'manager');
+      const foreignFixture = { ...f, tenantId: foreignTenant, eventId: foreignEvent };
+      const foreignExports = `/tenants/${foreignTenant}/events/${foreignEvent}/exports`;
+      const foreignCreated = await request(ctx, 'POST', foreignExports, manager,
+        { format: 'csv', filter: { states: ['ACTIVE'] } }, { 'idempotency-key': randomUUID() });
+      expectStatus(foreignCreated, 201);
+      const foreignExportId = required(foreignCreated.body.exportId, 'JOB-07 foreign exportId');
+      await waitExportReady(ctx, foreignFixture, manager, foreignExportId);
+      assert.ok((await downloadExportCsv(ctx, foreignFixture, manager, foreignExportId)).includes('ownerEmailMasked'));
+      const foreignOwnerAttempt = await request(ctx, 'GET', `${foreignExports}/${foreignExportId}/download`, owner);
+      expectStatus(foreignOwnerAttempt, 403);
       const file = await fetch(new URL(`/v1${downloadPath}`, ctx.api), { headers: { authorization: `Bearer ${owner}` } });
       assert.equal(file.status, 200);
       assert.match(file.headers.get('cache-control') ?? '', /private.*no-store/i);
