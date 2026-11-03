@@ -575,7 +575,9 @@ export function recommendRoute(
   if (!HEAVY_TIERS.has(costTier)) {
     return { costTier, routes: COST_TIER_ROUTES[costTier] || [], recommendation: null, reason: 'tier_not_preflighted' };
   }
-  const routes = COST_TIER_ROUTES[costTier] || [];
+  // Optional selection for non-coding work only. Coding primary/fallback is
+  // prescribed by the catalog; an untracked OpenCode quota is not a failure.
+  const routes = (COST_TIER_ROUTES[costTier] || []).filter((route) => ['claude', 'codex'].includes(route.agent));
   const evaluated = [];
   for (const route of routes) {
     const check = checkProvider(
@@ -609,7 +611,7 @@ export function recommendRoute(
   } else if (claude?.check.availability === 'unknown' || codex?.check.availability === 'unknown') {
     reason = 'route_unknown';
   }
-  return { costTier, routes: evaluated, recommendation, reason };
+  return { costTier, purpose: 'non-coding', routes: evaluated, recommendation, reason };
 }
 
 export function recoveryTelemetryPath() {

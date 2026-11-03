@@ -15,8 +15,8 @@
 ## Stack neo
 
 - React Native / Expo; bundle `com.hangndat.ticket`; team personal `BLUA62D52G`.
-- Build: local `expo prebuild` + Xcode/xcodebuild/fastlane — **không bao giờ** EAS Cloud Build / cloud fallback. USB/máy thật: [ios-usb-device](../../../.cursor/skills/ios-usb-device/SKILL.md) — mode **prod** vs **local API**.
-- UAT: `scripts/sim-uat.sh` (AXe + simctl) — không điều khiển Simulator bằng chuột desktop user.
+- Build: local `expo prebuild` + Xcode/xcodebuild/fastlane — **không bao giờ** EAS Cloud Build / cloud fallback. USB/máy thật: [ios-usb-device](../../../.agents/skills/ios-usb-device/SKILL.md) — mode **prod** vs **local API**.
+- UAT: Orca emulator theo [workflow UAT](../workflows/uat.md); không chạy AXe/sim-uat.sh trực tiếp trong agent session hoặc điều khiển Simulator bằng chuột desktop user.
 - Offline xem vé / Gate sync theo ADR đợt — không tự invent sync protocol lệch backend.
 
 ## Chuyên môn bổ sung (rút từ upstream — đã cắt Android-first)
@@ -41,7 +41,7 @@
 
 ## Orca
 
-- Agent: `--agent cursor`.
+- Agent/model/effort theo [routing](../policies/routing.md) và [cost catalog](../cost-catalog.md); giữ chỉ định user và route của Task, không chọn provider theo tên role.
 - Coordinator spawn song song `web` / `backend` / BA/PD khi contract ổn; không chờ Story khác đóng nếu Task đã ready.
 - Một lúc chỉ một feature coding Dispatch trên slice iOS.
 - Reviewer ≠ session này; security review khi đụng token/Keychain/APNs secrets handling.

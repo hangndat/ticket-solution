@@ -1744,3 +1744,98 @@ test(
     }
   },
 );
+
+test(
+  'POL-01: pending push after device hard-delete → device_revoked_or_reassigned',
+  { timeout: 240000, skip: !dockerAvailable() },
+  async () => {
+    let pgName;
+    let db;
+    try {
+      const boot = await startIsolatedPostgres();
+      pgName = boot.name;
+      db = createDatabase(boot.url, 2);
+      const hmac = readCodeHmacEnvironment({
+        CODE_HMAC_PEPPER: 'pol01-pending-push-pepper',
+        CODE_HMAC_VERSION: '1',
+      });
+      const key = 'pol01-pending-push-credential';
+      const { tenantId, ticketId, ownerUserId } = await seedTicketIssuedFixture(
+        db,
+        hmac,
+        key,
+      );
+      const apns = countingApnsAdapter();
+      const opts = {
+        credentialKeyMaterial: key,
+        publicWebBaseUrl: 'https://tickets.example.test',
+        env: { NODE_ENV: 'test' },
+        apns: apns.adapter,
+      };
+
+      // First relay snapshots the delivery (deviceRegistrationId) and sends push.
+      await relayOutboxOnce(db, createNoopEmailAdapter(), 'pol01-snapshot', 10, opts);
+      assert.equal(apns.getSends(), 1);
+
+      // Reset push + outbox to pending so the delivery is pending again.
+      const prefix = `ticket:${ticketId}:issued:push:%`;
+      await withTenant(db, tenantId, async (tx) => {
+        await tx.$executeRaw`
+          UPDATE notifications SET state = 'PENDING', provider_ref = NULL,
+            next_attempt_at = clock_timestamp() - interval '1 second'
+          WHERE tenant_id = ${tenantId}::uuid AND channel = 'push'
+            AND business_key LIKE ${prefix}
+        `;
+        await tx.$executeRaw`
+          UPDATE outbox SET status = 'PENDING',
+            next_attempt_at = clock_timestamp() - interval '1 second',
+            lease_owner = NULL, lease_token = NULL, lease_expires_at = NULL
+          WHERE tenant_id = ${tenantId}::uuid AND aggregate_id = ${ticketId}::uuid
+            AND type = 'TicketIssued'
+        `;
+      });
+
+      // PG scrub now hard-deletes the device registration row.
+      const admin = new Client({ connectionString: boot.url });
+      await admin.connect();
+      await admin.query(`DELETE FROM device_tokens WHERE user_id = $1`, [
+        ownerUserId,
+      ]);
+      await admin.end();
+
+      // Relay again → lookup-miss on the snapshot registration id.
+      const result = await relayOutboxOnce(
+        db,
+        createNoopEmailAdapter(),
+        'pol01-erased',
+        10,
+        opts,
+      );
+      assert.equal(result.failed, 1);
+      assert.equal(
+        apns.getSends(),
+        1,
+        'no second APNs send after device hard-delete',
+      );
+      await withTenant(db, tenantId, async (tx) => {
+        const notes = await tx.$queryRaw`
+          SELECT state, last_error FROM notifications
+          WHERE tenant_id = ${tenantId}::uuid AND channel = 'push'
+            AND business_key LIKE ${prefix}
+        `;
+        assert.deepEqual(
+          notes.map((n) => [n.state, n.last_error]),
+          [['DEAD', 'device_revoked_or_reassigned']],
+        );
+        const outbox = await tx.$queryRaw`
+          SELECT status FROM outbox WHERE tenant_id = ${tenantId}::uuid
+            AND aggregate_id = ${ticketId}::uuid AND type = 'TicketIssued'
+        `;
+        assert.equal(outbox[0].status, 'DEAD');
+      });
+    } finally {
+      if (db) await db.$disconnect();
+      if (pgName) docker('rm', '-f', '-v', pgName);
+    }
+  },
+);

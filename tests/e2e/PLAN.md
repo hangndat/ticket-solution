@@ -1,6 +1,6 @@
 # Kế hoạch kiểm thử local — Web, Portal và backend
 
-> Đối chiếu 01/11/2026: [ACCEPTANCE.md](ACCEPTANCE.md) gom evidence theo từng ID từ các PR đã tích hợp: **33 nhóm có nghiệm thu tại mốc lịch sử, 52 nhóm còn thiếu gate toàn phần, JOB-08 OUT**. Đây không phải full regression mới trên main hiện tại; các checkpoint ngày 30/10 bên dưới giữ nguyên SHA và phạm vi.
+> Đối chiếu 02/11/2026: [ACCEPTANCE.md](ACCEPTANCE.md) gom evidence theo từng ID từ các PR đã tích hợp: **39 nhóm có nghiệm thu tại mốc lịch sử, 46 nhóm còn thiếu gate toàn phần, JOB-08 OUT**. DB-15/16 thêm qua PR #1109, merge `569a9aad`, CI main `41330364325` SUCCESS; PORT-06 qua PR #1120, merge `52120d9c`, CI main `41333248069` SUCCESS. PORT-08 qua PR #1127, merge `ace18977`, CI main `41339139778` SUCCESS, B/H sạch `3/3` và review DoD/Security/UX độc lập PASS. POL-01 qua PR #1125, merge `f60e0bab`, CI main `41340112075` SUCCESS; D chuẩn 8 selector/10 case PASS sau review Security độc lập và revalidation delta config. Đây không phải full regression mới trên main hiện tại; các checkpoint ngày 30/10 bên dưới giữ nguyên SHA và phạm vi.
 
 Ngày đối chiếu: **28/10/2026**. Source baseline: `022cb80fd159dad2a7ebd0eeeea07fd64391f90a`.
 
@@ -35,7 +35,7 @@ Trên `main` `34c2d638fa974376dc21a05381eba132a1c41feb`, F04 có **10 PASS, 75 B
 
 - Người phụ trách tài liệu: Minh — `coordinator`, hồ sơ [company/employees.json](../../company/employees.json). Biên soạn trong phiên trực tiếp hiện có; không tạo worker chỉ cho tracking.
 - Architecture impact: **Không** — tài liệu không đổi kiến trúc, API, policy hoặc runtime.
-- Routing worker theo yêu cầu user mới nhất: ưu tiên **Claude** khi khả dụng, Codex fallback theo cost catalog; tier phải được phân loại theo task khi thực thi. Các lượt Codex trước đây giữ nguyên provenance trong báo cáo riêng.
+- Routing worker theo [cost catalog](../../docs/agents/cost-catalog.md) và chỉ định user hiện tại; Task Spec ghi tier, model pin và employee cố định. Giữ receipt requested/effective, reviewer độc lập và provenance của các lượt trước.
 - Phạm vi ban đầu của tài liệu là đối chiếu yêu cầu và tạo plan trong `tests/e2e`; tiến độ implementation sau đó được ghi ở `IMPLEMENTATION.md` và các issue F04 bên dưới.
 
 ## 1. Mục tiêu và cách xác định kết quả đúng
@@ -422,3 +422,156 @@ Giữ nguyên findings F01–F07 và lịch sử lượt 1; các mục bổ sung
 | F11 — Sót số 85 trong phần mở đầu       | Đúng; sửa thành 86, không thêm hoặc xóa ca                                                                                                                                                                                                                                  | Mục mở đầu và kiểm đếm bảng                                                                                                                      |
 
 Số lượng giữ nguyên **86 nhóm ca: 70 P0, 16 P1**; smoke vẫn 10 ID. Không đổi scope sản phẩm, auth gate hoặc semantics claim để làm test pass.
+
+## 15. Phân tầng nghiệm thu và điều chỉnh AC — quyết định user 02/11/2026
+
+Sau đánh giá lại tiến độ F04 (40/85 nhóm sau 5 ngày, 85 merge mang nhãn f04, `tests/e2e` +28.792 dòng trong 218 commit), user quyết định hai việc: **chia 45 nhóm còn lại thành ba tầng**, và **bỏ ràng buộc cấm hạ AC**. Mục này thay phần tương ứng trong §3, §9, §10 và [ROADMAP §1.3](../../docs/ROADMAP.md); các bảng expected outcome ở §5–§6 vẫn là nguồn AC, chỉ độ rộng bắt buộc thay đổi theo tầng. Danh sách ID từng tầng: [ACCEPTANCE.md](ACCEPTANCE.md).
+
+### 15.1 Vì sao phân tầng
+
+Gate cũ tính một đơn vị hoàn thành = một ID × đủ lớp B/H/D/R × reviewer độc lập × CI main × cây sạch, nên throughput đo được là ~0,47 ID trên mỗi PR merge. Với 45 ID còn lại, giữ nguyên mô hình nghĩa là ~90 PR nữa. Thêm vào đó: 19/45 ID chưa từng bắt đầu (PLAT-01/02/04/05, GATE-01–09, SEC-01–06 mang cùng một câu template), và ~9 ID bị chặn bởi quyết định sản phẩm mà test không đóng được. Chi phí mỗi vòng chạy cũng cao: build production bốn service rồi dựng Compose riêng (PostgreSQL, Redis, Keycloak, MinIO, Mailpit, proxy TLS, realm/cert/hostname riêng), không song song được trong cùng checkout vì dùng chung `.next`.
+
+### 15.2 Quy tắc AC mới
+
+AC **được phép điều chỉnh** khi chi phí chứng minh không tương xứng với rủi ro. Điều chỉnh gồm: giảm lớp bằng chứng, thu ma trận vét cạn về ca đại diện, hoặc chuyển ID sang known gap. Mỗi lần điều chỉnh ghi đủ: **ID · phần bị giảm · lý do · rủi ro còn lại**, trong `ACCEPTANCE.md` hoặc comment Issue gắn SHA.
+
+Hai ranh giới giữ nguyên, vì chúng nói về tính trung thực của bằng chứng chứ không về độ cao của gate:
+
+1. Không đổi expected outcome để khớp một bug đã biết. Gặp drift giữa contract và implementation thì ghi drift và đưa owner quyết định, không viết assertion theo hành vi sai.
+2. Không ghi PASS cho lớp chưa chạy. Giảm yêu cầu từ B/H xuống H là hợp lệ và phải ghi; tuyên bố H đã PASS khi chưa chạy thì không.
+
+Agent vẫn không tự hạ AC: điều chỉnh cần quyết định owner hoặc nằm trong khung tầng đã duyệt ở mục này.
+
+**DB-18 — diễn giải owner đã duyệt (03/11/2026).** Phần giảm: bỏ yêu cầu chuyển `memberships` sang `REVOKED` hoặc đặt `memberships.revoked_at` khi ACK; membership vẫn `ACTIVE` trong dữ liệu. Lý do: D13 thu hồi `staff_sessions` ngay trong transaction ACK, sau đó OIDC/Keycloak xóa identity và tombstone chặn upsert/re-entry; đổi trạng thái membership là thay đổi contract sản phẩm ngoài quyết định này. Rủi ro còn lại: metadata membership `ACTIVE` cũ vẫn tồn tại và có thể bị đọc như quyền còn hiệu lực nếu một đường truy cập bỏ qua kiểm tra session/identity; D/H phải xác nhận bearer cũ bị từ chối, session bị thu hồi, các tenant khác không bị xóa nhầm, còn ticket/check-in/audit và aggregate đối soát. Không dùng diễn giải này để đổi trạng thái membership của sản phẩm.
+
+### 15.3 Ba tầng
+
+**Tầng 1 — giữ nguyên gate đầy đủ (16 ID):** AUTH-06/07/08, SEC-01/02/05, PORT-02/03/10/11/12/14, PLAT-01/02/04, JOB-05. Đây là nhóm chỉ chứng minh được khi ghép thật: cookie host-only/CSRF/session boundary, SSR và BFF, mutation thực hiện qua UI, và với PORT-11/JOB-05 là worker process thật gửi Mailpit. Không thu gọn.
+
+**Tầng 2 — kiểm kê + vòng chạy gộp, AC thu gọn (20 ID):** GATE-01–09, SEC-03/04/06, DB-13/17/18/19, JOB-04/06/07, POL-02. §5–§6 đã chỉ yêu cầu D/H cho các ID này (GATE không kiểm native UI theo O23; SEC-03 là H; SEC-04/06 là H/D), và test nền đã tồn tại — xem inventory trong `ACCEPTANCE.md`. **Hiệu chỉnh sau thử nghiệm GATE (02/11/2026):** "test nền đã tồn tại" không đồng nghĩa phủ đủ AC; GATE chỉ có H cho 2/9 ID và bốn ID dùng chung một test D, nên tầng 2 phải bắt đầu bằng kiểm kê assertion→AC trước khi hứa là chỉ cần chạy gộp. Chi tiết: `ACCEPTANCE.md`. Cách làm:
+
+1. Kiểm kê theo §8: mỗi ID có test path/test name, assertion đã phủ, phần thiếu.
+2. Bổ sung assertion còn thiếu **có giá trị phát hiện lỗi**; bỏ qua phần chỉ làm đầy ma trận.
+3. Một vòng `test:integration:local` + `test:e2e:http` trên SHA gắn tag, một verdict gộp cho mọi ID vòng chạy phủ.
+
+Phần được thu gọn, ghi rõ khi nghiệm thu từng ID: ma trận 429/Retry-After của SEC-04 lấy một nhánh đại diện cho mỗi nhóm endpoint ở bảng §6.4 thay vì toàn bộ route; biên skew GATE-06 lấy đúng hai ca trong/ngoài ±300s thay vì quét; GATE-08/09 lấy một ca cho mỗi trạng thái receipt thay vì tổ hợp actor × tenant × event; DB-13 lấy hai timezone thay vì ma trận IANA; DB-19 lấy một cặp key version đang hỗ trợ/không hỗ trợ; POL-02 lấy biên trước/sau cutoff, không quét nhiều mốc.
+
+**Tầng 3 — known gap, chờ quyết định owner (9 ID):** DB-06 (quota-reduction command và retry budget), DB-09 (signed QR, phụ thuộc GATE-03 handoff), DB-12 (canonical cache key và invalidation khi publish/rollback), PORT-01 (quota trong wizard; public projection 404 sau publish), PORT-04 (mutation surface của quota), PORT-13 (contract sort UI/API), PLAT-05 (surface fail-closed khi platform/MFA lỗi), POL-03 (object write fence, restore — live ops), POL-04 (RPO/RTO — evidence ops production). Các ID này không bị chặn bởi thiếu test mà bởi quyết định chưa có hoặc evidence chỉ lấy được ngoài local. Ghi known gap theo mẫu [ROADMAP §1.1](../../docs/ROADMAP.md) và giữ trong Issue tương ứng; mở lại khi có quyết định, không mở feature mới từ đây.
+
+### 15.4 Thay đổi quy trình
+
+- Tầng 2 bỏ mô hình một PR cho một ID. Một vòng chạy gộp trên SHA gắn tag và một lần cập nhật ledger; reviewer gộp theo vòng chạy, không theo ID.
+- Tầng 1 giữ nhánh B: reviewer độc lập khác implementer cho từng PR.
+- Ledger: `ACCEPTANCE.md` là nơi ghi verdict; `PLAN.md` và `ROADMAP.md` chỉ trỏ tới, không chép lại số liệu mỗi lần nghiệm thu.
+- Chạy song song và tái sử dụng infra là đòn bẩy throughput chính, chi tiết ở §16.
+- 429 trên bucket `api.public.read` khi chạy full 13 fixture được xử lý như cấu hình harness (quota riêng mỗi run), không để treo [#1037](https://github.com/hangndat/ticket-solution/issues/1037) như câu hỏi capacity sản phẩm; đo capacity production là việc riêng của gate D5.
+
+### 15.5 Phần mất khi điều chỉnh
+
+Tầng 2 không chứng minh cookie/CSRF trong browser thật hay dây SSR/BFF cho các ID thuộc tầng, và các ma trận thu gọn để lại rủi ro ở nhánh không được chọn làm đại diện. Tầng 3 mang known gap vào gate pilot. Hoàn tất tầng 1 và 2 vẫn chỉ là **local regression evidence** trên SHA/profile đã chạy: không chứng minh pilot ready, inbox delivery, native camera/offline, production restore hay App Store.
+
+## 16. Chạy song song và tái sử dụng infra — ưu tiên user 02/11/2026
+
+User đặt ưu tiên cao nhất vào **chạy song song** và **tái sử dụng infra càng nhiều càng tốt**. Đây là đòn bẩy throughput lớn hơn việc phân tầng AC ở §15: phân tầng giảm số việc, mục này giảm thời gian mỗi việc.
+
+### 16.1 Hiện trạng — phần nào đã song song được
+
+Ba lớp sau **đã** an toàn khi chạy đồng thời, không cần sửa gì:
+
+- Published port đều ephemeral (`127.0.0.1::<inner>` trong `composeConfig`), Docker tự cấp → không đụng port giữa các run.
+- Compose project `e2e-<runId>` kèm label `vemoki.e2e.run` → container/network/volume đã tách theo run.
+- Proxy TLS là HTTPS server in-process với cert riêng của run; resolver và CA nằm trong process, Chromium chỉ tin SPKI của run → không chạm `/etc/hosts` hay trust store hệ thống.
+
+### 16.2 Thứ đang chặn: origin của run bị nướng vào build frontend
+
+`runtime.mjs` đặt `suffix = e2e-<runId>.test` và `origins.* = https://<app>.<suffix>:<tlsPort>`, trong đó `tlsPort` cũng cấp theo run. `run.mjs` build Web/Portal bằng `pnpm --filter @ticket/<name> build` với `WEB_PUBLIC_ORIGIN` là origin đó, ghi vào `apps/web/.next` và `apps/portal/.next` **trong checkout**. Hệ quả kép:
+
+1. Hai run trong cùng checkout ghi đè `.next` của nhau → phải tuần tự.
+2. Build của run A không dùng lại được cho run B: trang prerender giữ origin lúc build, nên `--skip-build` chỉ hợp lệ khi origin không đổi.
+
+Vì vậy mỗi run hiện phải build lại toàn bộ frontend production. Đây là chi phí lặp lớn nhất của bộ e2e.
+
+### 16.3 Làm được ngay, không sửa code
+
+- **Pool worktree:** N worktree cùng một SHA, mỗi worktree chạy một run. `.next` tách theo worktree nên hết xung đột — đúng cách [README](README.md) đã khuyến nghị.
+- **Shard theo case group:** ba vòng Web tuần tự `WEB-01–04` / `WEB-05–09` / `WEB-10–13` (`mvxomaja-f033ff`, `mvxoo1n7-64f925`, `mvxosf1l-6a95d0`) chạy song song trên ba worktree. Tầng 2 ở §15 chủ yếu là `test:integration:local` và `test:e2e:http` — nhẹ hơn nhiều, shard được rộng hơn.
+- **Trần tài nguyên:** mỗi run là năm container, Keycloak nặng nhất. Bắt đầu 2–3 run song song, đo RAM/CPU rồi mới tăng; không đẩy số lane vượt khả năng máy rồi quy kết quả cho flaky.
+
+### 16.4 Lane cố định — bỏ rebuild mỗi run (đã triển khai)
+
+Thay `runId` trong origin bằng `laneId` cố định:
+
+- `suffix = e2e-lane<N>.test`, `tlsPort` cố định theo lane, cert phát một lần cho mỗi lane.
+- Build Web/Portal một lần cho mỗi cặp (SHA, lane); mọi run trên lane đó chạy `--skip-build` **hợp lệ** vì origin không đổi. Chi phí build rơi từ "mỗi run" xuống "mỗi SHA × số lane", và còn tăng tiến nhờ cache turbo/Next.
+- Lane giữ lock liên tiến trình (file lock theo lane); run lấy lane rảnh và trả lại trong `finally` — đúng cơ chế §4.2 đã dự trù, chỉ áp cho nhiều lane thay vì một stack.
+- Cookie isolation giữ nguyên: hai run song song nằm ở hai host khác nhau. Run tuần tự trong cùng lane phải reset fixture do harness sở hữu trước khi release lock.
+
+### 16.5 Tái dùng container, cấp phát logic cho mỗi run (đã triển khai)
+
+Giữ stack theo lane sống lâu, tách run ở mức logic thay vì dựng container mới:
+
+- **PostgreSQL:** `CREATE DATABASE e2e_<runId> TEMPLATE e2e_seeded` — bỏ migrate và seed nền mỗi run, chỉ seed phần riêng của case.
+- **Keycloak:** import realm theo run qua admin API vào instance test của lane; §4.2 đã cho phép realm/users/clients riêng theo run trong một instance test. Không restart container.
+- **MinIO:** bucket/prefix theo run trên instance của lane.
+- **Mailpit:** lọc theo địa chỉ người nhận mang `runId`; account fixture đã có dạng `<actor>.<suffix>@example.test` nên tách sẵn.
+- **Redis:** prefix key theo run. Không `FLUSHDB`/`FLUSHALL` trên instance dùng chung — ràng buộc §4.2 giữ nguyên.
+
+Cleanup chuyển từ "compose down" sang "drop database/realm/bucket/prefix của run": vẫn chỉ xóa tài nguyên mang nhãn run, và vẫn chạy trong `finally` kể cả khi fail hoặc bị interrupt.
+
+### 16.6 Tùy chọn — bỏ phụ thuộc origin lúc build
+
+Nếu Web/Portal đọc public origin lúc chạy thay vì nướng lúc build (resolve theo `Host` header, hoặc chuyển các trang prerender có nhúng origin sang dynamic), thì **một** artifact build cho mỗi SHA phục vụ mọi lane và mọi run; lane chỉ còn là đơn vị cấp phát tài nguyên. Đây là thay đổi trong `apps/web` và `apps/portal`, không thuộc `tests/e2e`: cần contract với hai slice đó trước khi làm. Ghi ở đây là **đề xuất, chưa duyệt**.
+
+### 16.7 Thứ tự đề nghị
+
+1. Pool worktree + shard theo case group — dùng được ngay, không sửa code.
+2. Lane cố định, `--skip-build` hợp lệ theo lane.
+3. Template database + realm import theo lane, bỏ cold start container.
+4. Quota rate-limit riêng theo lane cho bucket `api.public.read`; xử lý 429 như cấu hình harness, không để treo [#1037](https://github.com/hangndat/ticket-solution/issues/1037).
+5. Cân nhắc §16.6 nếu vẫn cần thêm throughput.
+
+Mỗi bước phải đo lại wall-clock một vòng tầng 2, số run song song ổn định và tỉ lệ flake. Không tuyên bố tăng throughput khi chưa có số trước/sau.
+
+### 16.8 Trạng thái triển khai
+
+Bước 2 và 3 đã có code trong harness; chế độ mặc định (stack riêng cho mỗi run) **không đổi**, lane là opt-in.
+
+| Thành phần                                                                         | Nơi triển khai                                                                  |
+| ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| Lane pool, lock liên tiến trình, build marker                                      | [`harness/lane.mjs`](harness/lane.mjs)                                          |
+| Template database, realm import qua admin API, dọn mailbox/object storage theo run | [`harness/lane-infra.mjs`](harness/lane-infra.mjs)                              |
+| `createRuntime`/`destroyRuntime` nhận lane, compose dùng lại, cert theo lane       | [`harness/runtime.mjs`](harness/runtime.mjs)                                    |
+| Cờ `--lane[=N]`, `--rebuild`, nhả lock trong `finally`, `lane` trong summary       | [`harness/run.mjs`](harness/run.mjs)                                            |
+| Bỏ migration khi đã có template, manifest mang `lane`                              | [`harness/seed.mjs`](harness/seed.mjs)                                          |
+| Chấp nhận hostname lane trong manifest                                             | [`validation/validate.mjs`](validation/validate.mjs)                            |
+| `status` / `down` cho lane pool                                                    | [`harness/lane-cli.mjs`](harness/lane-cli.mjs) · `pnpm test:e2e:lane`           |
+| Test logic lane (định danh, lock, build key, manifest)                             | [`validation/lane.test.mjs`](validation/lane.test.mjs) · `pnpm test:e2e:guards` |
+
+Quy ước: lane `N` dùng `*.e2e-lane<N>.test`, cổng TLS `44300+N`, Compose project và realm `e2e-lane<N>`; mỗi run vẫn có database riêng (`e2e_<runId>` tạo từ `e2e_tpl_<fingerprint migration>`), realm import lại, bucket/user/policy MinIO riêng và hộp thư được xoá đầu run. Build dùng lại khi git commit, fingerprint working tree và origin của lane không đổi.
+
+**Đã đo (02/11/2026, `main` `34f6b97e` + bản sửa lane, cây dirty nên không là evidence nghiệm thu):** smoke 10 nhóm, máy 14 CPU/16 GB, các run tuần tự trên cùng checkout.
+
+| Cách chạy                               | Thời gian | Kết quả                     |
+| --------------------------------------- | --------: | --------------------------- |
+| Mặc định (stack riêng mỗi run)          |      86 s | 26/27 browser + SEC-01 HTTP |
+| Lane, lần đầu (dựng lane + build)       |      84 s | như trên                    |
+| Lane, lần hai (dùng lại stack và build) |      73 s | như trên                    |
+
+Trong 73 s, test browser chiếm ~53 s; phần dựng stack + seed + build chỉ còn ~19 s. Vì vậy **lane tuần tự chỉ tiết kiệm ~13 s (~15%) mỗi run**: build đã rẻ nhờ cache turbo/Next và phần còn lại là chính các test. Lợi ích của lane nằm ở chạy song song. Một checkout chỉ có một `.next` nên hai lane trong cùng checkout bị lock tuần tự; song song thật cần mỗi run một worktree. Đo hai worktree (`main-2` và một worktree sạch cùng SHA), mỗi bên `--lane`, khởi động cùng lúc:
+
+| Cặp song song                           | Run A (lane1) | Run B (lane2) | Thời gian tường | Tuần tự tương đương | Tăng tốc |
+| --------------------------------------- | ------------: | ------------: | --------------: | ------------------: | -------: |
+| Lần đầu (lane2 và build của B còn lạnh) |          88 s |         104 s |          ~104 s |  ~170 s (2 × 84–86) |    ~1,6× |
+| Lần hai (stack và build đã nóng)        |          75 s |          76 s |           ~76 s |     ~146 s (2 × 73) |    ~1,9× |
+
+Hai run tự lấy hai lane khác nhau xuyên worktree (lane1/lane2), và cả hai dùng lại build trong checkout của chính nó, nên lock toàn máy và marker theo checkout hoạt động như thiết kế. Chạy hai run song song trên 14 CPU/16 GB không làm chậm đáng kể từng run (75–76 s so với 73 s tuần tự).
+
+**Thời gian đi đâu** (run xanh đầu tiên sau khi sửa AUTH-01, 77 s, `mvz5zbvs-ece4a8`): dựng stack, import realm, tạo database từ template, MinIO và seed ~17 s; Playwright 54 s, trong đó **một test `[WEB-04] suspended tenant blocks redeem without leaking owner email` chiếm 31,5 s (58%)**; 26 test còn lại cộng ~22 s. 31,5 s là chờ, không phải tính toán: `assertRedeemRejectedWithoutTicket` chấp nhận `denied | error | unknown` với timeout 90 s, còn client Web poll operation tối đa `POLL_MAX_MS = 30_000` (`apps/web/src/redeem/poll-operation.ts`) trước khi hiện trạng thái không rõ. Chưa kiểm chứng panel nào thực sự hiện ra. Nếu server từ chối tenant bị suspend ngay lập tức thay vì để client poll hết 30 s thì test chỉ còn ~1 s và người dùng thật cũng không phải chờ 30 s; đó là quyết định sản phẩm, chưa thuộc F04 và chưa được quyết.
+
+Thử `E2E_WORKERS=2` (smoke, lane nóng): Playwright 54 → 48 s, tổng 77 → 75 s, tức không đáng. Playwright chia worker theo file spec và test chờ 31,5 s nằm chung `redeem.spec.ts` với các test redeem khác nên file đó vẫn là đoạn dài nhất. Không nối `E2E_WORKERS` vào harness: smoke không có WEB-10/PORT-08 nên không phản ánh rủi ro, còn full e2e có hai nhóm bật lỗi transport dùng chung ở proxy nên không an toàn khi chạy song song trong một run.
+
+Cả ba run đều fail đúng một test, `[AUTH-01] staff … bounces to Portal`, **kể cả run mặc định không lane** nên không do lane: từ ADR-23 Portal đặt tên cookie staff có hậu tố epoch (`staffTokenCookieName(SESSION_COOKIES.idToken, epoch)`), còn test vẫn tìm đúng tên `oidc_id_token`. Test lỗi thời. Đã sửa sau đó: test lấy `portal_staff_epoch` rồi tìm đúng `oidc_id_token__<epoch>` / `oidc_access_token__<epoch>` (cùng quy ước `portal/auth07.spec.ts`), nên tên cookie vẫn bị ràng buộc với epoch của phiên. Sau bản sửa, smoke trên lane đạt PASS toàn phần lần đầu (HTTP + 27/27 browser, 77 s).
+
+Bốn lỗi của chính cách triển khai lane đã lộ ra khi chạy thật và đã sửa: `composePath` thiếu trong `state.lane`; ba chỗ trong `seed.mjs` còn nối thẳng database `e2e`; sáu chỗ dựng realm từ `runId` (nay đọc `manifest.runtime.realm`); và marker build theo lane không phát hiện `.next` bị ghi đè bởi lane khác hay run không-lane. Cách sửa cuối: marker theo checkout (`tests/e2e/.artifacts/frontend-build.json`, xoá trước mỗi lần build), lock `frontend.lock` độc quyền `.next` cho run cần frontend, và state/lock của lane nằm ở `~/.cache/vemoki-e2e-lanes` (đổi bằng `E2E_LANES_DIR`) vì container, cổng và realm của lane là tài nguyên của cả máy chứ không của một checkout.
+
+**Chưa xác minh:** tính đúng của `CREATE DATABASE … TEMPLATE` mới chỉ được chứng minh gián tiếp qua các run xanh trên lane; mới thử 2 lane đồng thời, chưa đo trần số lane trên máy; `[PORT-05] foreign tenant and event cannot read owner import jobs or files` fail với `page.evaluate: Execution context was destroyed … navigation` (helper `bffMutate`) trong 2 trong 6 run có tải chồng (một run song song hai worktree, một run `E2E_WORKERS=2`) và 0 trong 7 run tuần tự một worker. Giả thuyết, chưa kiểm chứng: `relogin` chỉ chờ cookie `portal_csrf`, trong khi trang sau đăng nhập của `otherAttendee` còn có thể đang chuyển hướng khi `bffMutate` chạy `page.evaluate`. Chưa sửa vì không có cách rẻ để tái hiện; cần ổn định hoá trước khi dùng số song song làm gate nghiệm thu; và fingerprint working tree (nằm trong khoá build) đổi khi `company/work-events.jsonl` bị ghi giữa hai run làm mất tái dùng build. Không dùng mục này làm bằng chứng nghiệm thu cho ID nào.

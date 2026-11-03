@@ -2,7 +2,7 @@
 /**
  * Cinematic journey design frames (desktop / mobile / short landscape, key scroll
  * positions + reduced-motion full page). Design artefacts only — UAT runs in the
- * Orca browser per .cursor/rules/uat-headless.mdc.
+ * Orca browser per docs/agents/workflows/uat.md.
  * Usage: node apps/web/scripts/journey-frames.mjs http://127.0.0.1:3010 [outDir] [path]
  * Fails on page errors, failed requests or console errors.
  */

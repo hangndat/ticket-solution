@@ -30,7 +30,7 @@ Thiếu mẫu cho màn revamp hoặc thiếu runtime bắt buộc: ghi rõ phầ
 3. Nhìn bản render ở các kích thước mục tiêu: thứ bậc thông tin, CTA, bố cục/spacing/typography, token/component, copy, text dài và overflow. Ở **mỗi** viewport × persona, soát chrome (header/nav/tab, nút, nhãn form): chữ bị xuống dòng/cắt/chồng là finding, không phải sở thích. Không dựa mắt thường: chạy [ui-chrome-wrap-probe.js](../tools/ui-chrome-wrap-probe.js) qua `orca exec --page <id> --command "eval -b <base64>"` ở mỗi viewport × persona và đưa kết quả vào evidence. Probe thêm một bề rộng trung gian (vd. 1024) ngoài kích thước mục tiêu — layout thường vỡ ở khoảng giữa. Đối chiếu mẫu bằng cùng viewport/state; không đánh giá chỉ từ source.
 4. Thực hiện hành trình được giao: navigation/back, form/validation, feedback sau thao tác; empty/loading/error/retry/denied/offline khi thuộc scope. Không tự mở thêm nghiệp vụ để thử.
 5. Kiểm a11y liên quan: keyboard/focus/labels/contrast/reduced motion trên web; touch target/labels/Dynamic Type trên iOS khi áp dụng. Ghi rõ checks tự động, thủ công và phần chưa kiểm.
-6. Browser/emulator phải theo [uat-headless.mdc](../../../.cursor/rules/uat-headless.mdc). Dùng dữ liệu giả lập được phép; không đưa secrets/PII thật vào ảnh. Ảnh tĩnh không đủ chứng minh focus, tương tác hay trải nghiệm người dùng thật.
+6. Browser/emulator phải theo [workflow UAT](../workflows/uat.md). Dùng dữ liệu giả lập được phép; không đưa secrets/PII thật vào ảnh. Ảnh tĩnh không đủ chứng minh focus, tương tác hay trải nghiệm người dùng thật.
 7. Kiểm evidence trước khi kết luận:
    - Chụp sau khi state đã render xong. Mở lại từng ảnh, xác nhận route/URL, state, persona, viewport và **locale đang active** (đọc từ toggle trong ảnh, không suy từ thao tác đã làm) khớp tên file và mô tả; ảnh trùng nội dung (cùng hash) hoặc lệch nhãn phải chụp lại, không dùng làm căn cứ.
    - Mỗi finding phải dẫn ảnh/lệnh tái hiện mà nội dung **thật sự** cho thấy vấn đề; claim mâu thuẫn với ảnh của chính mình thì bỏ hoặc chuyển Limitations.
@@ -40,7 +40,7 @@ Thiếu mẫu cho màn revamp hoặc thiếu runtime bắt buộc: ghi rõ phầ
    - Viewport phải **đo**, không lấy từ nhãn nút prototype. Media query theo viewport thật, không theo khung mockup: đặt `orca exec --command "set viewport <W> <H>"` bằng kích thước mục tiêu (mobile: 390–430; desktop: khung + lề, vd. 1440 cho khung 1280), rồi ghi cả `viewport` và `frameWidth` từ probe. Khung mobile trong viewport desktop **không** phải bằng chứng mobile; lỗi chỉ thấy ở tổ hợp đó là lỗi công cụ prototype, không phải lỗi sản phẩm.
    - Prototype có API JS đổi state/viewport/locale (vd. `setView`, `choose`, `setLocale`): ưu tiên gọi qua `eval` thay vì click nút review, rồi xác nhận state bằng probe/DOM trước khi chụp. Probe control ở vùng dưới trang phải chạy **sau** khi cuộn tới đó.
    - Trước `worker_done`, chạy `bash docs/agents/tools/ui-evidence-check.sh <assets>`; phải `OK` (không file trùng nội dung). Ghi hash hoặc danh sách ảnh đã kiểm trong artifact. Viewport/khung mobile không đổi layout thì ghi là chưa kiểm, không suy ra kết luận.
-8. Gom feedback đầy đủ một lượt theo [review-convergence](../../../.cursor/rules/orca-review-convergence.mdc). Revalidate findings + diff/vùng ảnh hưởng trên SHA mới; giữ giới hạn sửa và điều kiện ngắt hiện hành.
+8. Gom feedback đầy đủ một lượt theo [review-convergence](../workflows/review.md). Revalidate findings + diff/vùng ảnh hưởng trên SHA mới; giữ giới hạn sửa và điều kiện ngắt hiện hành.
 
 ## Artifact
 

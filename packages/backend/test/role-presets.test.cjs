@@ -91,11 +91,15 @@ async function startIsolatedPostgres() {
       await new Promise((r) => setTimeout(r, 400));
     }
   }
-  await admin.query('CREATE ROLE ticket_runtime NOLOGIN NOSUPERUSER NOBYPASSRLS');
+  await admin.query(
+    'CREATE ROLE ticket_runtime NOLOGIN NOSUPERUSER NOBYPASSRLS',
+  );
   await admin.query(
     'CREATE ROLE ticket_platform_runtime NOLOGIN NOSUPERUSER NOBYPASSRLS',
   );
-  await admin.query('CREATE ROLE migration_owner NOLOGIN NOSUPERUSER NOBYPASSRLS');
+  await admin.query(
+    'CREATE ROLE migration_owner NOLOGIN NOSUPERUSER NOBYPASSRLS',
+  );
   await admin.query('GRANT CREATE, USAGE ON SCHEMA public TO migration_owner');
   await admin.query('SET ROLE migration_owner');
   for (const file of migrationFiles()) {
@@ -254,6 +258,46 @@ test(
       });
       assert.ok(listed.some((p) => p.presetId === scannerPreset.presetId));
 
+      const setPresetVersion = (version) =>
+        withTenant(
+          db,
+          tenantA.tenantId,
+          (tx) => tx.$executeRaw`
+          UPDATE role_presets SET schema_version = ${version}
+          WHERE tenant_id = ${tenantA.tenantId}::uuid
+            AND id = ${scannerPreset.presetId}::uuid
+        `,
+        );
+      const inviteEffects = () =>
+        withTenant(db, tenantA.tenantId, async (tx) => {
+          const rows = await tx.$queryRaw`
+            SELECT
+              (SELECT count(*)::int FROM membership_invites
+               WHERE tenant_id = ${tenantA.tenantId}::uuid) AS invites,
+              (SELECT count(*)::int FROM outbox
+               WHERE tenant_id = ${tenantA.tenantId}::uuid
+                 AND type = 'MembershipInvite') AS deliveries
+          `;
+          return rows[0];
+        });
+
+      // A stale preset cannot create an invite or outbox delivery.
+      await setPresetVersion(1);
+      const beforeStaleInvite = await inviteEffects();
+      await assert.rejects(
+        () =>
+          createMembershipInvite(db, security, {
+            tenantId: tenantA.tenantId,
+            actorUserId: ownerA.userId,
+            email: 'stale@example.com',
+            role: { presetId: scannerPreset.presetId },
+            clientKey: 'stale-preset',
+          }),
+        (e) => e.code === PLATFORM_ERROR_CODES.INVALID_INPUT,
+      );
+      assert.deepEqual(await inviteEffects(), beforeStaleInvite);
+      await setPresetVersion(ROLE_SCHEMA_VERSION);
+
       // Cross-tenant preset → RESOURCE_NOT_FOUND (404)
       await assert.rejects(
         () =>
@@ -298,6 +342,30 @@ test(
         role: { presetId: scannerPreset.presetId },
         clientKey: 'inv-scanner-preset',
       });
+      // A preset downgraded after invite creation cannot grant at acceptance.
+      await setPresetVersion(1);
+      await assert.rejects(
+        () =>
+          acceptMembershipInvite(db, {
+            userId: scannerUser.userId,
+            email: 'scanner@example.com',
+            emailVerified: true,
+            token: inv.rawToken,
+          }),
+        (e) => e.code === PLATFORM_ERROR_CODES.INVITE_INVALID_OR_EXPIRED,
+      );
+      await withTenant(db, tenantA.tenantId, async (tx) => {
+        const rows = await tx.$queryRaw`
+          SELECT i.accepted_at,
+            (SELECT count(*)::int FROM memberships m
+             WHERE m.tenant_id = i.tenant_id AND m.user_id = ${scannerUser.userId}::uuid) AS memberships
+          FROM membership_invites i
+          WHERE i.tenant_id = ${tenantA.tenantId}::uuid AND i.id = ${inv.inviteId}::uuid
+        `;
+        assert.equal(rows[0].accepted_at, null);
+        assert.equal(rows[0].memberships, 0);
+      });
+      await setPresetVersion(ROLE_SCHEMA_VERSION);
       const accepted = await acceptMembershipInvite(db, {
         userId: scannerUser.userId,
         email: 'scanner@example.com',

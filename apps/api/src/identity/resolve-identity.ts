@@ -5,6 +5,7 @@ import {
   IdentityError,
   readOidcEnvironment,
   type CodeHmacConfig,
+  type CredentialKeyInput,
   type IdentityUserRepository,
   type OidcVerifier,
   type PrismaClient,
@@ -20,7 +21,7 @@ export function resolveIdentity(options: CreateAppOptions): {
   db: PrismaClient | null;
   ownsDb: boolean;
   hmac: CodeHmacConfig | null;
-  credentialKey: string | null;
+  credentialKey: CredentialKeyInput | null;
 } {
   if (options.identityBootError) {
     return {

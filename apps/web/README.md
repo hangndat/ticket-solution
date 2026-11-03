@@ -68,7 +68,7 @@ inventory (not the fictional demo event fixture IDs). Optional query prefills:
 
 ## Web UAT (Orca browser — agent sessions)
 
-Trong Orca/agent: **chỉ** embedded browser — `orca tab create`, `orca exec --command "…"` (agent-browser: `goto`, `snapshot`, `click`, `screenshot`, …). Không Playwright trực tiếp, không Computer Use trên Chrome/Safari user. Chi tiết: `.cursor/rules/uat-headless.mdc`, skill `orca-cli`.
+Trong Orca/agent: **chỉ** embedded browser — `orca tab create`, `orca exec --command "…"` (agent-browser: `goto`, `snapshot`, `click`, `screenshot`, …). Không Playwright trực tiếp, không Computer Use trên Chrome/Safari user. Chi tiết: `docs/agents/workflows/uat.md`, skill `orca-cli`.
 
 ```bash
 orca tab create --url http://localhost:3000 --worktree active --json

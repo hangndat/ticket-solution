@@ -43,7 +43,7 @@ import {
   listOwnerTicketsAggregated,
   listTicketsForOwner,
   readCodeHmacEnvironment,
-  readCredentialKeyEnvironment,
+  readCredentialKeyringEnvironment,
   readResolveTokenSecret,
   readSupportedPepperConfigs,
   redeemAndIssueTicket,
@@ -53,6 +53,7 @@ import {
   type PendingApprovalResult,
   withTenant,
   type CodeHmacConfig,
+  type CredentialKeyInput,
   type IdentityUserRepository,
   type OidcVerifier,
   type PrismaClient,
@@ -187,7 +188,7 @@ export type TicketServices = {
   users: IdentityUserRepository | null;
   bootError: IdentityError | null;
   hmac: CodeHmacConfig | null;
-  credentialKey: string | null;
+  credentialKey: CredentialKeyInput | null;
   routingPeppers?: CodeHmacConfig[] | null;
   resolveTokenSecret?: string | null;
 };
@@ -621,21 +622,24 @@ export class TicketIssueController {
 
 export function resolveIssueDeps(env: NodeJS.ProcessEnv): {
   hmac: CodeHmacConfig | null;
-  credentialKey: string | null;
+  credentialKey: CredentialKeyInput | null;
   issueBootError: IdentityError | null;
   routingPeppers: CodeHmacConfig[] | null;
   resolveTokenSecret: string | null;
 } {
   try {
     const hmac = readCodeHmacEnvironment(env);
-    const credentialKey = readCredentialKeyEnvironment(env);
+    const credentialKey = readCredentialKeyringEnvironment(env);
     let routingPeppers: CodeHmacConfig[] | null = null;
     let resolveTokenSecret: string | null = null;
     try {
       routingPeppers = readSupportedPepperConfigs(env);
-      resolveTokenSecret = readResolveTokenSecret(env);
     } catch {
       routingPeppers = null;
+    }
+    try {
+      resolveTokenSecret = readResolveTokenSecret(env);
+    } catch {
       resolveTokenSecret = null;
     }
     return {

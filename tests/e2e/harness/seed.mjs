@@ -122,44 +122,53 @@ function eventPayload(tenantName, eventName) {
 }
 
 export async function seedRuntime(state, caseIds) {
+  // Lane đã dựng sẵn database từ template và tạo role ở mức cluster;
+  // chỉ chế độ stack-riêng mới chạy migration ở đây.
+  const databaseName = state.databaseName || 'e2e';
   const { Client } = requireBackend('pg');
   const backend = requireBackend('./dist/index.js');
   const { migrationFiles } = requireBackend('./test/migration-files.cjs');
-  const admin = new Client({
-    connectionString: `postgresql://postgres:${state.secrets.pg}@127.0.0.1:${state.ports.pg}/e2e`,
-  });
-  await admin.connect();
-  try {
-    for (const role of [
-      'ticket_runtime',
-      'ticket_platform_runtime',
-      'migration_owner',
-    ]) {
-      await admin.query(`CREATE ROLE ${role} NOLOGIN NOSUPERUSER NOBYPASSRLS`);
+  if (!state.lane) {
+    const admin = new Client({
+      connectionString: `postgresql://postgres:${state.secrets.pg}@127.0.0.1:${state.ports.pg}/${databaseName}`,
+    });
+    await admin.connect();
+    try {
+      for (const role of [
+        'ticket_runtime',
+        'ticket_platform_runtime',
+        'migration_owner',
+      ]) {
+        await admin.query(
+          `CREATE ROLE ${role} NOLOGIN NOSUPERUSER NOBYPASSRLS`,
+        );
+      }
+      await admin.query(
+        'GRANT CREATE, USAGE ON SCHEMA public TO migration_owner',
+      );
+      await admin.query('SET ROLE migration_owner');
+      for (const file of migrationFiles())
+        await admin.query(readFileSync(file, 'utf8'));
+      await admin.query('RESET ROLE');
+      // Generated hex password, no user input interpolation.
+      await admin.query(
+        `CREATE ROLE e2e_runtime LOGIN PASSWORD '${state.secrets.pg}' NOSUPERUSER NOBYPASSRLS INHERIT`,
+      );
+      await admin.query(
+        'GRANT ticket_runtime, ticket_platform_runtime TO e2e_runtime',
+      );
+    } finally {
+      await admin.end();
     }
-    await admin.query(
-      'GRANT CREATE, USAGE ON SCHEMA public TO migration_owner',
-    );
-    await admin.query('SET ROLE migration_owner');
-    for (const file of migrationFiles())
-      await admin.query(readFileSync(file, 'utf8'));
-    await admin.query('RESET ROLE');
-    // Generated hex password, no user input interpolation.
-    await admin.query(
-      `CREATE ROLE e2e_runtime LOGIN PASSWORD '${state.secrets.pg}' NOSUPERUSER NOBYPASSRLS INHERIT`,
-    );
-    await admin.query(
-      'GRANT ticket_runtime, ticket_platform_runtime TO e2e_runtime',
-    );
-  } finally {
-    await admin.end();
   }
-  state.databaseUrl = `postgresql://e2e_runtime:${state.secrets.pg}@127.0.0.1:${state.ports.pg}/e2e`;
+  state.databaseUrl = `postgresql://e2e_runtime:${state.secrets.pg}@127.0.0.1:${state.ports.pg}/${databaseName}`;
   const db = backend.createDatabase(state.databaseUrl, 8);
   const users = backend.createPrismaIdentityUserRepository(db);
   const issuer = `${state.origins.auth}/realms/${state.realm}`;
   const hmac = backend.readCodeHmacEnvironment({
-    CODE_HMAC_PEPPER: state.secrets.hmac,
+    CODE_HMAC_PEPPER: caseIds.includes('DB-19')
+      ? state.secrets.hmacLegacy
+      : state.secrets.hmac,
     CODE_HMAC_VERSION: '1',
   });
   const roles = {
@@ -172,6 +181,7 @@ export async function seedRuntime(state, caseIds) {
   const manifest = {
     schemaVersion: 1,
     runId: state.id,
+    ...(state.lane ? { lane: state.lane.name } : {}),
     origins: state.origins,
     accounts: state.accounts,
     cases: {},
@@ -194,7 +204,7 @@ export async function seedRuntime(state, caseIds) {
           // Provision the test's explicit Operator via the isolated seed admin.
           // Runtime API still verifies the real OIDC MFA token and DB grant.
           const provision = new Client({
-            connectionString: `postgresql://postgres:${state.secrets.pg}@127.0.0.1:${state.ports.pg}/e2e`,
+            connectionString: `postgresql://postgres:${state.secrets.pg}@127.0.0.1:${state.ports.pg}/${databaseName}`,
           });
           await provision.connect();
           try {
@@ -216,6 +226,13 @@ export async function seedRuntime(state, caseIds) {
       const codes = [
         `E2E-${state.id}-${caseId}-A`,
         `E2E-${state.id}-${caseId}-B`,
+        ...(caseId === 'DB-19'
+          ? [
+              `E2E-${state.id}-${caseId}-C`,
+              `E2E-${state.id}-${caseId}-D`,
+              `E2E-${state.id}-${caseId}-E`,
+            ]
+          : []),
         ...(['DB-03', 'DB-04', 'DB-07'].includes(caseId)
           ? [`E2E-${state.id}-${caseId}-C`]
           : []),
@@ -263,8 +280,15 @@ export async function seedRuntime(state, caseIds) {
           'DB-10',
           'DB-11',
           'DB-12',
+          'DB-13',
           'DB-14',
+          'DB-18',
+          'DB-19',
+          'DB-17',
           'JOB-04',
+          'PLAT-03',
+          'GATE-02',
+          'GATE-05',
         ].includes(caseId)
       ) {
         // Private, run-scoped control for H/DB reconciliation under tenant RLS.
@@ -290,11 +314,13 @@ export async function seedRuntime(state, caseIds) {
           'DB-07',
           'DB-10',
           'DB-11',
+          'DB-13',
           'DB-14',
           'SEC-04',
           'SEC-05',
           'WEB-04',
           'WEB-05',
+          'PLAT-03',
         ].includes(caseId)
       ) {
         fixture.data.formVersion = 'form-v1';
@@ -379,6 +405,28 @@ export async function seedRuntime(state, caseIds) {
             SET approval_mode='MANUAL', pending_ttl_hours=3
             WHERE tenant_id=${tenantId}::uuid AND id=${inventory.sourceId}::uuid`;
           fixture.data.pendingTtlHours = 3;
+        }
+        if (caseId === 'DB-19') {
+          fixture.data.formVersion = 'form-v1';
+          fixture.data.termsVersion = 'terms-v1';
+          fixture.data.unsupportedCode = codes[1];
+          fixture.data.ambiguousCode = codes[2];
+          fixture.data.currentCode = codes[4];
+          const unsupported = backend.hashRedemptionCode(
+            { pepper: state.secrets.hmacLegacy, version: 3 },
+            codes[1],
+          );
+          const currentDuplicate = backend.hashRedemptionCode(
+            { pepper: state.secrets.hmac, version: 2 },
+            codes[2],
+          );
+          const current = backend.hashRedemptionCode(
+            { pepper: state.secrets.hmac, version: 2 },
+            codes[4],
+          );
+          await tx.$executeRaw`UPDATE redemption_codes SET code_hmac=${unsupported}, code_pepper_version=3 WHERE tenant_id=${tenantId}::uuid AND id=${inventory.codeIds[1]}::uuid`;
+          await tx.$executeRaw`UPDATE redemption_codes SET code_hmac=${currentDuplicate}, code_pepper_version=2 WHERE tenant_id=${tenantId}::uuid AND id=${inventory.codeIds[3]}::uuid`;
+          await tx.$executeRaw`UPDATE redemption_codes SET code_hmac=${current}, code_pepper_version=2 WHERE tenant_id=${tenantId}::uuid AND id=${inventory.codeIds[4]}::uuid`;
         }
         if (caseId === 'DB-04') {
           await tx.$executeRaw`
@@ -1515,7 +1563,10 @@ export async function seedRuntime(state, caseIds) {
           'PORT-04',
           'PORT-08',
           'PORT-09',
+          'GATE-02',
           'GATE-03',
+          'GATE-04',
+          'GATE-05',
           'DB-09',
           'SEC-04',
           'SEC-05',
@@ -1919,12 +1970,52 @@ export async function seedRuntime(state, caseIds) {
               reason: null,
             }),
           );
+          const exhaustedBuckets = await tx.$queryRaw`
+            SELECT id, scope, scope_id, capacity, allocated FROM quota_buckets
+            WHERE tenant_id=${tenantId}::uuid AND event_id=${eventId}::uuid
+              AND ((scope='TICKET_TYPE' AND scope_id=${exhausted.ticketTypeId}::uuid)
+                OR (scope='ISSUANCE_SOURCE' AND scope_id=${exhausted.sourceId}::uuid))
+            ORDER BY scope
+          `;
+          const targetState = await tx.$queryRaw`
+            SELECT r.status AS request_status, c.status AS code_status,
+                   c.active_request_id, c.source_id, c.ticket_type_id
+            FROM redemption_requests r
+            JOIN redemption_codes c ON c.tenant_id=r.tenant_id AND c.id=r.redemption_code_id
+            WHERE r.tenant_id=${tenantId}::uuid AND r.id=${quotaOutcome.result.requestId}::uuid
+          `;
+          if (
+            exhaustedBuckets.length !== 2 ||
+            exhaustedBuckets[0].scope !== 'ISSUANCE_SOURCE' ||
+            exhaustedBuckets[1].scope !== 'TICKET_TYPE' ||
+            exhaustedBuckets.some(
+              (row) => row.capacity !== 1 || row.allocated !== 1,
+            ) ||
+            targetState.length !== 1 ||
+            targetState[0].request_status !== 'PENDING_REVIEW' ||
+            targetState[0].code_status !== 'HELD' ||
+            targetState[0].active_request_id !==
+              quotaOutcome.result.requestId ||
+            targetState[0].source_id !== exhausted.sourceId ||
+            targetState[0].ticket_type_id !== exhausted.ticketTypeId
+          )
+            throw new Error(
+              'PORT-06 quota decoy did not exhaust its dedicated buckets',
+            );
+          fixture.data.quotaExhaustedState = {
+            buckets: exhaustedBuckets,
+            requestStatus: targetState[0].request_status,
+            codeStatus: targetState[0].code_status,
+          };
         });
       }
       if (caseId === 'PORT-08') {
         const pendingHoldCodeId = fixture.data.pendingHoldCodeId;
         if (!pendingHoldCodeId) {
           throw new Error('PORT-08 seed missing pendingHoldCodeId');
+        }
+        if (!fixture.ticketId) {
+          throw new Error('PORT-08 seed missing ticketId for confirm/undo');
         }
         await backend.withTenant(db, tenantId, async (tx) => {
           await backend.holdCodeForReview(tx, {
@@ -1951,6 +2042,46 @@ export async function seedRuntime(state, caseIds) {
             )
           `;
         });
+        // PORT-08 boundary fixtures: a sibling event in the same tenant with no
+        // owner assignment, and a foreign tenant/event. Real rows only — the
+        // staff token must be denied by API authz, never by a mocked check.
+        const unassignedEventId = randomUUID();
+        const foreignTenantId = randomUUID();
+        const foreignEventId = randomUUID();
+        await backend.withTenant(db, tenantId, async (tx) => {
+          await tx.event.create({
+            data: {
+              tenantId,
+              id: unassignedEventId,
+              slug: `unassigned-${state.id}`,
+              name: `Unassigned ${caseId}`,
+              status: 'PUBLISHED',
+              visibility: 'PUBLIC',
+            },
+          });
+        });
+        await backend.withTenant(db, foreignTenantId, async (tx) => {
+          await tx.tenant.create({
+            data: {
+              id: foreignTenantId,
+              slug: `foreign-${slug}`,
+              name: `Foreign Tenant ${caseId}`,
+            },
+          });
+          await tx.event.create({
+            data: {
+              tenantId: foreignTenantId,
+              id: foreignEventId,
+              slug: 'event',
+              name: `Foreign Event ${caseId}`,
+              status: 'PUBLISHED',
+              visibility: 'PUBLIC',
+            },
+          });
+        });
+        fixture.data.unassignedEventId = unassignedEventId;
+        fixture.data.foreignTenantId = foreignTenantId;
+        fixture.data.foreignEventId = foreignEventId;
         fixture.data.report = await backend.withTenant(db, tenantId, (tx) =>
           backend.readEventReport(tx, {
             tenantId,
@@ -2340,7 +2471,7 @@ export async function seedRuntime(state, caseIds) {
         const resolveBucket = 'redemption.resolve';
         const resolveLimit = 30;
         const prime = new Client({
-          connectionString: `postgresql://postgres:${state.secrets.pg}@127.0.0.1:${state.ports.pg}/e2e`,
+          connectionString: `postgresql://postgres:${state.secrets.pg}@127.0.0.1:${state.ports.pg}/${databaseName}`,
         });
         await prime.connect();
         try {
@@ -2374,6 +2505,18 @@ export async function seedRuntime(state, caseIds) {
             API_RATE_BUCKETS.importJobsList,
             API_RATE_LIMITS.importJobsListPerUser,
           );
+          await primeUserRateCounter(
+            prime,
+            accounts.owner.userId,
+            API_RATE_BUCKETS.invitationsList,
+            API_RATE_LIMITS.invitationsListPerUser,
+          );
+          await primeUserRateCounter(
+            prime,
+            accounts.owner.userId,
+            API_RATE_BUCKETS.tenantLimitsRead,
+            API_RATE_LIMITS.tenantLimitsReadPerUser,
+          );
         } finally {
           await prime.end();
         }
@@ -2382,7 +2525,12 @@ export async function seedRuntime(state, caseIds) {
           redeemLimit: API_RATE_LIMITS.redeemPerUser,
         };
       }
-      if (caseId === 'SEC-01' || caseId === 'SEC-02' || caseId === 'DB-01') {
+      if (
+        caseId === 'SEC-01' ||
+        caseId === 'SEC-02' ||
+        caseId === 'DB-01' ||
+        caseId === 'PLAT-03'
+      ) {
         const foreignTenantId = randomUUID();
         const foreignEventId = randomUUID();
         await backend.withTenant(db, foreignTenantId, async (tx) => {
@@ -2407,7 +2555,41 @@ export async function seedRuntime(state, caseIds) {
         fixture.data.foreignEventId = foreignEventId;
       }
       if (caseId === 'SEC-06') {
+        fixture.data.controlDatabaseUrl = state.databaseUrl;
         await backend.withTenant(db, tenantId, async (tx) => {
+          const csMembership = await tx.membership.findFirstOrThrow({
+            where: { tenantId, userId: accounts.cs.userId },
+          });
+          const csAssignment = await tx.eventAssignment.findFirstOrThrow({
+            where: {
+              tenantId,
+              eventId,
+              membershipId: csMembership.id,
+            },
+          });
+          fixture.data.csAssignmentId = csAssignment.id;
+          const csTicket = backend.unwrapRedeemOutcome(
+            await backend.redeemAndIssueTicket(
+              tx,
+              hmac,
+              state.secrets.credential,
+              {
+                tenantId,
+                eventId,
+                actorUserId: accounts.attendee.userId,
+                actorEmail: accounts.attendee.username,
+                emailVerified: true,
+                rawCode: codes[0],
+                idempotencyKey: randomUUID(),
+                formVersion: 'form-v1',
+                termsVersion: 'terms-v1',
+                termsAccepted: true,
+                answers: formAnswers(accounts.attendee.username),
+              },
+            ),
+          );
+          fixture.ticketId = csTicket.ticketId;
+          fixture.data.csTicketId = csTicket.ticketId;
           const bulkCodes = Array.from(
             { length: 110 },
             (_, i) => `E2E-${state.id}-${caseId}-BULK-${i}`,
@@ -2467,6 +2649,19 @@ export async function seedRuntime(state, caseIds) {
           fixture.data.auditCount = auditCount;
         });
       }
+      if (caseId === 'DB-18') {
+        await backend.withTenant(db, tenantId, (tx) => tx.$executeRaw`
+          INSERT INTO audit_logs (
+            tenant_id, event_id, id, actor_user_id, action,
+            resource_type, resource_id, reason, sanitized_diff, operation_id
+          ) VALUES (
+            ${tenantId}::uuid, ${eventId}::uuid, ${randomUUID()}::uuid,
+            ${accounts.owner.userId}::uuid, 'db18.erasure.proof',
+            'event', ${eventId}::uuid, 'retain for audit', '{}'::jsonb,
+            ${randomUUID()}::uuid
+          )
+        `);
+      }
       manifest.cases[caseId] = fixture;
     }
   } finally {
@@ -2477,10 +2672,17 @@ export async function seedRuntime(state, caseIds) {
     profile: 'isolated-https',
     tlsSpki: state.spki,
     hostSuffix: state.suffix,
+    realm: state.realm,
     httpClientId: 'e2e-http',
     httpClientSecret: state.clientSecrets['e2e-http'],
     httpPlatformClientId: 'e2e-http-platform',
     httpPlatformClientSecret: state.clientSecrets['e2e-http-platform'],
+    ...(caseIds.includes('DB-18')
+      ? {
+          erasureClientId: 'e2e-erasure',
+          erasureClientSecret: state.clientSecrets['e2e-erasure'],
+        }
+      : {}),
     sourceProvenance: state.sourceProvenance,
     ...(state.secondaryRealm
       ? {
