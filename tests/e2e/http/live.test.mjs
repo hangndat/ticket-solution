@@ -5521,6 +5521,7 @@ for (const caseId of CASE_IDS) {
       const manager = await bearer(ctx, 'manager');
       const supervisor = await bearer(ctx, 'supervisor');
       const owner = await bearer(ctx, 'owner');
+      const attendee = await bearer(ctx, 'attendee');
       const sessions = gatePath(f, 'sessions');
       const scannerSession = await request(ctx, 'POST', sessions, scanner, {
         tenantId: f.tenantId,
@@ -5564,6 +5565,11 @@ for (const caseId of CASE_IDS) {
       expectStatus(session, 200);
       const before = await request(ctx, 'GET', reportPath(f), owner);
       expectStatus(before, 200);
+      const ticket = await request(ctx, 'GET',
+        `/me/tickets/${required(f.ticketId, 'AUTH-06 ticketId')}?tenantId=${f.tenantId}`,
+        attendee);
+      expectStatus(ticket, 200);
+      const jws = required(ticket.body.gateCredential?.jws, 'AUTH-06 signed QR');
       const reservation = await request(
         ctx,
         'POST',
@@ -5572,7 +5578,7 @@ for (const caseId of CASE_IDS) {
         {
           tenantId: f.tenantId,
           staffSessionId: session.body.sessionId,
-          ticketId: required(f.ticketId, 'AUTH-06 ticketId'),
+          presented: { kind: 'qr', jws },
         },
       );
       expectStatus(reservation, 200);
