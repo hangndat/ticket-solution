@@ -22,6 +22,7 @@ const CASE_IDS = [
   'GATE-03',
   'GATE-04',
   'GATE-05',
+  'GATE-06',
   'GATE-07',
   'GATE-08',
   'GATE-09',
@@ -6446,6 +6447,57 @@ for (const caseId of CASE_IDS) {
         reportBefore.body.checkInSuccessCount + 1,
         'only the confirmed valid credential may create a check-in',
       );
+      return;
+    }
+    if (caseId === 'GATE-06') {
+      const scanner = await bearer(ctx, 'scanner');
+      const opened = await request(ctx, 'POST', gatePath(f, 'sessions'), scanner, { tenantId: f.tenantId });
+      expectStatus(opened, 200);
+      const now = Date.now();
+      const item = (seq, overrides = {}) => ({ clientEventId: randomUUID(), type: 'CHECKIN_OFFLINE',
+        eventId: f.eventId, ticketId: randomUUID(), clientOccurredAt: new Date(now).toISOString(),
+        clientSeq: seq, payloadVersion: 1, ...overrides });
+      const body = { tenantId: f.tenantId, staffSessionId: opened.body.sessionId, deviceId: randomUUID(),
+        clientClockAt: new Date(now).toISOString(), events: [] };
+      const sync = (payload) => request(ctx, 'POST', gatePath(f, 'offline-sync'), scanner, payload);
+      const fifty = Array.from({ length: 50 }, (_, i) => item(i));
+      const bounded = await sync({ ...body, events: fifty });
+      expectStatus(bounded, 201);
+      assert.equal(bounded.body.results.length, 50);
+      assert.ok(bounded.body.results.every((r) => r.status === 'REJECTED' && r.code === 'TICKET_NOT_FOUND'));
+      expectStatus(await sync({ ...body, events: [...fifty, item(50)] }), 422, 'OFFLINE_SYNC_BATCH_TOO_LARGE');
+      for (const delta of [-295000, 295000]) {
+        const value = new Date(Date.now() + delta).toISOString();
+        const accepted = await sync({ ...body, clientClockAt: value, events: [item(0, { clientOccurredAt: value })] });
+        expectStatus(accepted, 201);
+        assert.equal(accepted.body.results[0].code, 'TICKET_NOT_FOUND');
+      }
+      for (const delta of [-305000, 305000]) {
+        const value = new Date(Date.now() + delta).toISOString();
+        expectStatus(await sync({ ...body, clientClockAt: value, events: [item(0)] }), 422, 'OFFLINE_SYNC_CLOCK_SKEW_EXCEEDED');
+        expectStatus(await sync({ ...body, clientClockAt: new Date().toISOString(), events: [item(0, { clientOccurredAt: value })] }),
+          422, 'OFFLINE_SYNC_CLOCK_SKEW_EXCEEDED');
+      }
+      for (const [event, code] of [
+        [item(0, { eventId: randomUUID() }), 'OFFLINE_SYNC_REPLAY_ORDER_INVALID'],
+        [item(0, { payloadVersion: 2 }), 'OFFLINE_SYNC_PAYLOAD_VERSION_UNSUPPORTED'],
+        [item(-1), 'OFFLINE_SYNC_REPLAY_ORDER_INVALID'],
+        [item(0, { type: 'UNSUPPORTED' }), 'OFFLINE_SYNC_EVENT_TYPE_UNSUPPORTED'],
+      ]) expectStatus(await sync({ ...body, clientClockAt: new Date().toISOString(), events: [event] }), 422, code);
+      const duplicate = item(0);
+      expectStatus(await sync({ ...body, clientClockAt: new Date().toISOString(), events: [duplicate, duplicate] }),
+        422, 'OFFLINE_SYNC_IDEMPOTENCY_CONFLICT');
+      expectStatus(await sync({ ...body, staffSessionId: randomUUID(), clientClockAt: new Date().toISOString(), events: [item(0)] }),
+        409, 'SESSION_NOT_ACTIVE');
+      const ordered = [item(2), item(0), item(1)];
+      const sorted = await sync({ ...body, clientClockAt: new Date().toISOString(), events: ordered });
+      expectStatus(sorted, 201);
+      assert.deepEqual(sorted.body.results.map((r) => r.clientEventId), [ordered[1], ordered[2], ordered[0]].map((e) => e.clientEventId));
+      const state = await db03Query(f, `SELECT
+        (SELECT count(*)::int FROM checkins WHERE tenant_id=$1::uuid AND event_id=$2::uuid) AS checkins,
+        (SELECT count(*)::int FROM offline_sync_events WHERE tenant_id=$1::uuid AND event_id=$2::uuid) AS events`,
+        [f.tenantId, f.eventId]);
+      assert.deepEqual(state[0], { checkins: 0, events: 0 });
       return;
     }
     if (caseId === 'GATE-08' || caseId === 'GATE-09') {

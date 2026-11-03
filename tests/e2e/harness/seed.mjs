@@ -294,6 +294,7 @@ export async function seedRuntime(state, caseIds) {
           'PLAT-03',
           'GATE-02',
           'GATE-05',
+          'GATE-06',
           'GATE-07',
           'GATE-08',
           'GATE-09',
