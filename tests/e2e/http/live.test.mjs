@@ -4175,6 +4175,52 @@ for (const caseId of CASE_IDS) {
         needsCsBefore + 1,
         'JOB-04 terminal DEAD (not transient FAILED/UNKNOWN) must increment emailNeedsCs, not the earlier cooldown-denied transient retry',
       );
+      // Isolated counters and synthetic FAILED notifications exercise both HTTP caps
+      // without generating provider mail or relying on wall-clock cooldown waits.
+      const createCapNote = async (email) => {
+        const id = randomUUID();
+        await web04Query(f, f.tenantId, `INSERT INTO notifications
+          (tenant_id,event_id,id,business_key,channel,kind,state,attempts,payload,created_at,updated_at)
+          VALUES ($1::uuid,$2::uuid,$3::uuid,$4,'email','TicketIssued','FAILED',1,$5::jsonb,
+            now()-interval '2 minutes',now()-interval '2 minutes')`,
+          [f.tenantId, f.eventId, id, `ticket:${randomUUID()}:issued:email`, JSON.stringify({ email })]);
+        return id;
+      };
+      const primeCap = (key, count) => web04Query(f, f.tenantId, `INSERT INTO notification_rate_counters
+        (tenant_id,bucket_key,window_started_at,count,updated_at)
+        VALUES ($1::uuid,$2,date_trunc('hour',now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC',$3,now())
+        ON CONFLICT (tenant_id,bucket_key,window_started_at) DO UPDATE SET count=EXCLUDED.count,updated_at=now()`,
+        [f.tenantId, key, count]);
+      const capRetry = (id) => request(ctx, 'POST',
+        `/tenants/${f.tenantId}/events/${f.eventId}/notifications/${id}/retry`, owner, { reason: 'JOB-04 cap test' });
+      const noteState = async (id) => (await web04Query(f, f.tenantId,
+        `SELECT state, attempts FROM notifications WHERE tenant_id=$1::uuid AND id=$2::uuid`, [f.tenantId, id]))[0];
+      const capCount = async (key) => (await web04Query(f, f.tenantId, `SELECT count FROM notification_rate_counters
+        WHERE tenant_id=$1::uuid AND bucket_key=$2
+          AND window_started_at=date_trunc('hour',now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'`,
+        [f.tenantId, key]))[0]?.count;
+      const staffKey = `staff-resend:${f.accounts.owner.userId}`;
+      await primeCap(staffKey, 9);
+      const staffAllowed = await createCapNote('staff-allowed@job04.example.test');
+      const staffDenied = await createCapNote('staff-denied@job04.example.test');
+      expectStatus(await capRetry(staffAllowed), 201);
+      const deniedStaff = await capRetry(staffDenied);
+      assertRateLimited(deniedStaff, { code: 'RESEND_LIMIT', retryable: true, noRetryAfter: true }, 'JOB-04 staff cap');
+      assert.match(deniedStaff.body.message, /staff/i);
+      assert.deepEqual(await noteState(staffDenied), { state: 'FAILED', attempts: 1 });
+      assert.equal(await capCount(staffKey), 10);
+      await primeCap(staffKey, 0);
+      const recipient = 'recipient-cap@job04.example.test';
+      await primeCap(`recipient:${f.eventId}:${recipient}`, 2);
+      const recipientAllowed = await createCapNote(recipient);
+      const recipientDenied = await createCapNote(recipient);
+      expectStatus(await capRetry(recipientAllowed), 201);
+      const deniedRecipient = await capRetry(recipientDenied);
+      assertRateLimited(deniedRecipient, { code: 'RESEND_LIMIT', retryable: true, noRetryAfter: true }, 'JOB-04 recipient cap');
+      assert.match(deniedRecipient.body.message, /recipient/i);
+      assert.deepEqual(await noteState(recipientDenied), { state: 'FAILED', attempts: 1 });
+      assert.equal(await capCount(staffKey), 1, 'recipient denial must roll back the staff counter');
+      assert.equal(await capCount(`recipient:${f.eventId}:${recipient}`), 3);
       return;
     }
     if (caseId === 'SEC-05') {
