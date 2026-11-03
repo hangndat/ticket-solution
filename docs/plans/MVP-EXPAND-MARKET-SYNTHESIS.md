@@ -7,7 +7,7 @@
 | Run | `run_1246840dce98` |
 | BA A | `ctx_093a43c7ad89` → [`MVP-EXPAND-BA-A-DAYOF-OPS.md`](./MVP-EXPAND-BA-A-DAYOF-OPS.md) |
 | BA B | `ctx_a914057036e4` → [`MVP-EXPAND-BA-B-RESIDUAL-GAPS.md`](./MVP-EXPAND-BA-B-RESIDUAL-GAPS.md) |
-| Frame | [`MVP-EXPAND-RESEARCH-CONTINUATION.md`](./MVP-EXPAND-RESEARCH-CONTINUATION.md) |
+| Frame | [`MVP-EXPAND-RESEARCH-CONTINUATION.md`](../archive/runs/MVP-EXPAND-RESEARCH-CONTINUATION.md) |
 | O12 P1 | PR [#242](https://github.com/hangndat/ticket-solution/pull/242) **merged** · merge SHA `5a24f4beece3c2c95ed4ddfa071ba59b3466e1c2` · tip reviewed `4f6530bf…` · DoD [`D11-EVENTREPORT-O12-DOD.md`](../reviews/D11-EVENTREPORT-O12-DOD.md) **PASS with known gap** |
 | Trạng thái | **Đã duyệt O14** (2026-10-18) — xem [DECISION-LOG O14](../DECISION-LOG.md#o14--phê-duyệt-mở-rộng-mvp-day-of--residual-18102026). Coding theo §2 + O14; không tự mở OUT |
 

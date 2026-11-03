@@ -265,6 +265,17 @@ test(
             clock_timestamp() - make_interval(days => ${O06_AUDIT_TTL_DAYS + 1})
           )
         `;
+        await tx.$executeRaw`
+          INSERT INTO audit_logs (
+            tenant_id, event_id, id, actor_user_id, action,
+            resource_type, resource_id, created_at
+          ) VALUES (
+            ${tenantId}::uuid, ${eventId}::uuid, ${randomUUID()}::uuid,
+            ${manager.userId}::uuid, 'demo.within-ttl',
+            'event', ${eventId}::uuid,
+            clock_timestamp() - make_interval(days => ${O06_AUDIT_TTL_DAYS - 1})
+          )
+        `;
 
         const page1 = await listEventAudit(tx, {
           tenantId,
@@ -303,6 +314,13 @@ test(
           ...page2.items.map((i) => i.action),
         ]);
         assert.equal(actions.has('demo.ancient'), false);
+        const withinTtl = await listEventAudit(tx, {
+          tenantId,
+          eventId,
+          actorUserId: manager.userId,
+          action: 'demo.within-ttl',
+        });
+        assert.equal(withinTtl.items.length, 1);
 
         await assert.rejects(
           () =>

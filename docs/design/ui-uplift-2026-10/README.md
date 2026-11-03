@@ -1,10 +1,12 @@
-# UI uplift 2026-10 — canonical marketing + consumer web mockups
+# UI uplift 2026-10 — snapshot marketing + consumer web
 
-| Surface | Path | Runner URL (docs server `:57277`) |
-| --- | --- | --- |
-| Marketing | `marketing/index.html` | `/design/ui-uplift-2026-10/marketing/index.html` |
-| Consumer app | `app/index.html` | `/design/ui-uplift-2026-10/app/index.html` |
-| Mobile header spec | `../ui-framework-2026-10/prototype/header-mobile-sheet.html` | cross-reference #789 |
+> **Handoff/prototype theo phiên bản.** Đây là nguồn tại mốc Issue/SHA ghi bên dưới, không phải điểm vào thiết kế toàn sản phẩm hiện tại. Trước khi triển khai đọc [nguồn theo surface](../README.md), handoff delta và Decision Log mới hơn. Flow/state hoặc token còn được handoff mới dẫn chiếu vẫn có giá trị trong phạm vi đó; không copy palette hoặc gate cũ thành yêu cầu mới.
+
+| Surface            | Path                                                         | Runner URL (docs server `:57277`)                |
+| ------------------ | ------------------------------------------------------------ | ------------------------------------------------ |
+| Marketing          | `marketing/index.html`                                       | `/design/ui-uplift-2026-10/marketing/index.html` |
+| Consumer app       | `app/index.html`                                             | `/design/ui-uplift-2026-10/app/index.html`       |
+| Mobile header spec | `../ui-framework-2026-10/prototype/header-mobile-sheet.html` | cross-reference #789                             |
 
 ## D-2 stack (handoff)
 
@@ -13,11 +15,11 @@
 
 ## Sheet provenance
 
-| Piece | Version / path |
-| --- | --- |
-| React | 18.3.1 (esm.sh) |
-| Radix Dialog | 1.1.4 (esm.sh) |
-| Loader | `docs/design/ui-framework-2026-10/prototype/sheet-nav-loader.mjs` |
+| Piece        | Version / path                                                    |
+| ------------ | ----------------------------------------------------------------- |
+| React        | 18.3.1 (esm.sh)                                                   |
+| Radix Dialog | 1.1.4 (esm.sh)                                                    |
+| Loader       | `docs/design/ui-framework-2026-10/prototype/sheet-nav-loader.mjs` |
 
 ## Mockup states (consumer app)
 
@@ -30,9 +32,9 @@ Review bar presets cover: guest/user catalog, detail, redeem flow (form → term
 
 ## Evidence
 
-| Pack | Path |
-| --- | --- |
-| MR-MKT-WEB (baseline) | `docs/reviews/assets/MR-MKT-WEB-2026-10-23/` |
+| Pack                             | Path                                          |
+| -------------------------------- | --------------------------------------------- |
+| MR-MKT-WEB (baseline)            | `docs/reviews/assets/MR-MKT-WEB-2026-10-23/`  |
 | MR-FIX1-WEB (Issue #859 batch 1) | `docs/reviews/assets/MR-FIX1-WEB-2026-10-23/` |
 
 PD report: `.orca-metrics/mockup-refresh/REPORT-FIX1-WEB-2026-10-23.md` · Base review SHA `b2faa48a1ce4` + dirty `source-manifest.json`.

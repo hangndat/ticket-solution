@@ -84,7 +84,22 @@ export const catalog = {
     b('published-events', 'public published events'),
     { file: 'tests/e2e/http/live.test.mjs', name: '[DB-12] live HTTP', layer: 'H' },
   ],
-  'DB-13': [b('event-lifecycle', 'C-E event lifecycle')],
+  'DB-13': [
+    b('event-lifecycle', 'C-E event lifecycle'),
+    b(
+      'db13-event-windows',
+      'DB-13: isWindowOpen is half-open with null bounds unbounded',
+    ),
+    b(
+      'db13-event-windows',
+      'DB-13: two IANA timezones stored independently; invalid timezone/window rejected',
+    ),
+    {
+      file: 'tests/e2e/http/live.test.mjs',
+      name: '[DB-13] live HTTP',
+      layer: 'H',
+    },
+  ],
   'DB-14': [
     b('form-consent', 'F-BE: form/consent'),
     b('config-publish', 'config publish is versioned'),
@@ -108,26 +123,93 @@ export const catalog = {
   'DB-17': [
     b('role-presets', 'P2-ROLES-PRESET'),
     b('tenant-registration', 'P2 self-serve PENDING registration'),
+    b('event-quota-suspended', '#632 concurrent createEvent at max_events — one winner, one TENANT_LIMIT_REACHED'),
+    b('tenant-limits-usage', 'G-10 runtime role reads only authorized tenant counters and UTC day'),
+    b(
+      'db17-role-escalation',
+      'DB-17: non-Owner cannot create/list role presets; catalogue stays the only grantable surface',
+    ),
+    b(
+      'db17-tenant-limits-mutation',
+      'DB-17: maxEvents/maxStaff enforced at mutation; usage reflects committed counts',
+    ),
+    { file: 'tests/e2e/http/live.test.mjs', name: '[DB-17] live HTTP', layer: 'H' },
   ],
   'DB-18': [
-    b('account-idp-erasure', 'SEC-2 T4/T14'),
-    b('account-idp-erasure', 'SEC-2 T9/T11/T12/T13'),
+    b('account-ack-session-revoke', 'SEC-1 ACK'),
+    b('account-ack-session-revoke', 'SEC-R1'),
     b('account-session-revoke', 'session'),
+    b('account-idp-erasure', 'SEC-2 T4/T14'),
+    b('account-idp-erasure', 'SEC-2 T5:'),
+    b('account-idp-erasure', 'SEC-2 T6/T7/T8'),
+    b('account-idp-erasure', 'SEC-2 T9/T11/T12/T13'),
+    b('account-idp-erasure', 'SEC-2 T16'),
+    b('account-idp-erasure', 'SEC-D-01'),
+    b('account-idp-erasure', 'SEC-D-05'),
+    b('platform', 'deletion acceptance'),
+    { file: 'tests/e2e/http/live.test.mjs', name: '[DB-18] live HTTP', layer: 'H' },
   ],
   'DB-19': [
     b('account-idp-erasure', 'SEC-2 B1:'),
     b('issue-unit', 'CODE_HMAC_PEPPER', 'U'),
+    b('db19-code-pepper-rotation', 'DB-19: code issued under v1 keeps resolving after v2 rotation; removed v1 fails closed; no plaintext'),
+    b('db19-code-pepper-rotation', 'DB-19: consumed code cannot be re-issued after pepper rotation (fail-closed)'),
+    b('db19-code-pepper-rotation', 'DB-19: duplicate rows for the same raw code across a pepper rotation fail closed with zero mutation'),
+    b('credential-keyring-unit', 'DB-19 QR keyring: old credential opens after rotation and unknown key fails closed', 'U'),
   ],
   'GATE-01': [b('gates', 'O31 gates:')],
-  'GATE-02': [b('gate', 'gate: one confirm wins')],
-  'GATE-03': [b('gate', 'gate: one confirm wins')],
-  'GATE-04': [b('gate', 'gate: one confirm wins')],
-  'GATE-05': [b('gate', 'gate: one confirm wins')],
+  'GATE-02': [
+    b('gate', 'gate: one confirm wins'),
+    b('gate-acceptance', 'GATE-02/04/05 acceptance'),
+    b('gate-concurrency', 'GATE-02/04/05 concurrency'),
+  ],
+  'GATE-04': [
+    b('gate', 'gate: one confirm wins'),
+    b('gate-acceptance', 'GATE-02/04/05 acceptance'),
+    b('gate-concurrency', 'GATE-02/04/05 concurrency'),
+  ],
+  'GATE-05': [
+    b('gate', 'gate: one confirm wins'),
+    b('gate-acceptance', 'GATE-02/04/05 acceptance'),
+    b('gate-concurrency', 'GATE-02/04/05 concurrency'),
+  ],
+  'GATE-03': [
+    b('gate', 'gate: one confirm wins'),
+    b(
+      'gate03-signed-qr-d',
+      'gate03 signed-QR D: reserve current/old version + confirm reissue-between-hold TOCTOU',
+    ),
+    b(
+      'gate03-signed-qr-d',
+      'gate03 signed-QR D: manual proof bound to staffSessionId and current version',
+    ),
+    b(
+      'gate03-signed-qr-d',
+      'gate03 signed-QR D: stale manual proof minted before reissue, used after',
+    ),
+    b(
+      'gate03-signed-qr-d',
+      'gate03 signed-QR D: manual hold then reissue then confirm returns CREDENTIAL_VERSION_STALE',
+    ),
+    b(
+      'gate03-signed-qr-d',
+      'gate03 signed-QR D: keyring rotation — two kids verify, unknown kid denied',
+    ),
+    {
+      file: 'tests/e2e/backend/gate03-runtime-rotation.test.mjs',
+      name: 'GATE-03 R: real /me/tickets JWS + reserve/confirm + kid rotation between API restarts',
+      layer: 'R',
+    },
+  ],
   'GATE-06': [
     b('offline-sync-apply', 'offline sync: apply'),
     b('offline-sync-unit', 'validateOfflineSyncRequest', 'U'),
   ],
-  'GATE-07': [b('offline-sync-apply', 'offline sync: apply')],
+  'GATE-07': [
+    b('offline-sync-apply', 'offline sync: apply'),
+    b('offline-sync-authz-retry', 'GATE-07 authz on retry'),
+    b('offline-sync-authz-retry', 'GATE-07 two sessions replay one ticket'),
+  ],
   'GATE-08': [b('offline-sync-receipt', 'offline receipt lookup: matrix')],
   'GATE-09': [
     b('offline-sync-receipt', 'offline receipt lookup: matrix'),
@@ -177,6 +259,9 @@ export const catalog = {
     b('csv-guard', 'providerStatus maps', 'U'),
     b('reporting', 'event report counts'),
     b('outbox-fence', 'TicketIssued: email outside tx'),
+    b('email-budget', 'JOB04 D: concurrent admission, settlement CAS, config and replay isolation'),
+    b('email-budget', 'JOB04 D: InvitationReady worker shares budget and typed preflight releases holds'),
+    b('email-budget', 'JOB04 D: worker invite calls SMTP once and defers another at tenant cap'),
     b(
       'job04-resend-caps',
       '[JOB-04] D staff resend: cooldown, staff hourly cap, recipient hourly cap, retry(transient)!=terminal for emailNeedsCs',
@@ -187,6 +272,8 @@ export const catalog = {
     b('worker-db-cancel', 'PG lock cancels reconcile'),
     w('worker-budget-fault', 'slow SMTP/APNs'),
     w('worker-relay-tick-timeout', 'hung tick step'),
+    { file: 'tests/e2e/backend/job-06-worker-budget.test.cjs', name: '[JOB-06] R real worker process bounds a stuck step while reconciliation continues', layer: 'R' },
+    { file: 'tests/e2e/backend/job-06-worker-budget.test.cjs', name: '[JOB-06] R stalled SMTP after claim times out, then lease reclaim preserves finite tenant cap', layer: 'R' },
   ],
   'JOB-07': [
     b('cs-export', 'CS lookup/export/events'),
@@ -202,8 +289,9 @@ export const catalog = {
     'H:tests/e2e/http/live.test.mjs#[SEC-02]',
     'B:tests/e2e/harness/security.spec.ts#[SEC-02]',
   ],
-  'SEC-03': [],
+  'SEC-03': ['H:tests/e2e/http/live.test.mjs#[SEC-03]'],
   'SEC-04': [
+    'H:tests/e2e/http/live.test.mjs#[SEC-04]',
     a('redemptions-resolve-rls', 'resolve rate limit and API endpoint matrix', 'D'),
     b('job04-resend-caps', '[JOB-04] D staff resend: cooldown'),
     a('import-list', 'G-09 API limits'),
@@ -216,6 +304,7 @@ export const catalog = {
     b('notification-unit', 'template allowlist', 'U'),
   ],
   'SEC-06': [
+    'H:tests/e2e/http/live.test.mjs#[SEC-06]',
     b('cs-export', 'CS lookup/export/events'),
     b('portal-audit-codes', 'H-A1/H-C1/H-P-AUDIT'),
     w('worker-budget-fault', 'queue alert emits only aggregate'),
@@ -236,8 +325,9 @@ export const catalog = {
   ],
   'POL-02': [
     b('portal-audit-codes', 'H-A1/H-C1/H-P-AUDIT'),
-    b('o06-retention-db', 'O06 POL-02/03'),
+    b('o06-retention-db', 'O06 DB clocks'),
     b('o06-retention-db', 'O06 PII writer'),
+    b('o06-retention-db', 'O06 POL-02 50k attendee worker process', 'R'),
   ],
   'POL-03': [
     b('minio-real', 'MinIO'),
@@ -270,7 +360,7 @@ export const notes = {
   'DB-12':
     'D publish/projection/rollback optimistic concurrency PASS; H publish/rollback/draft-non-leak qua Keycloak/HTTP thật PASS run mvuphcyf-88857a. BLOCKED thật (không phải thiếu test): public cache key host+tenant+event+published version+locale và Cache-Control no-store trên preview không có ở runtime (apps/api/src/published-events.ts, apps/api/src/config.ts ~L374) — đã báo coordinator, chờ review sản phẩm riêng trước khi mở Task runtime.',
   'DB-13':
-    'D lifecycle; thiếu UTC/IANA/deadline sau lock và archived ticket policy.',
+    'D lifecycle + db13-event-windows; H Keycloak/HTTP kiểm hai IANA timezone, windows độc lập, DB deadline sau event lock, clone zero-copy, archive/cancel và vé đã cấp sau đóng redeem. Chờ SHA sạch và review.',
   'DB-14':
     'D PostgreSQL PASS: form/terms version + consent hashes on request, structural allowlist rejects script/unknown keys/non-allowlisted field types, entitlement_snapshot on ticket immutable after publish/rebrand and ticket_type mutation; stale terms rejected. H Keycloak/HTTP PASS qua redeem + config-versions/publish + public projection và control DB snapshot. Chờ DoD độc lập trên SHA cuối.',
   'DB-15':
@@ -278,22 +368,23 @@ export const notes = {
   'DB-16':
     'D/H portfolio tenant RLS, assignment, cursor/limit/watermark và owner/manager deny-by-default; chờ reviewer độc lập.',
   'DB-17':
-    'D presets/onboarding; thiếu H usage/mutation limit và arbitrary permissions matrix.',
+    'D presets/onboarding + tenant limit mutation/usage (event-quota-suspended #632 race, tenant-limits-usage) + non-Owner escalation deny (catalogue là surface duy nhất, cross-tenant 404) + maxEvents/maxStaff mutation limit/usage (rollback, race xác định, không oversell). H Keycloak/HTTP: presets deny, PENDING, Operator activation, maxEvents race và maxStaff deny; cần run sạch exact SHA.',
   'DB-18':
-    'D deletion/tombstone; thiếu H session/IdP end-to-end và audit retention.',
-  'DB-19': 'Keyring tombstone tests không chứng minh code/QR rotation.',
+    'D ACK/apply session revoke, raw INSERT race, IdP retry/tombstone/lease, PII scrub, audit kept; SEC-1 ACK còn kiểm membership ACTIVE theo PLAN §15.2, ticket/check-in và aggregate report hai tenant giữ nguyên; mutation-check ticket ACTIVE→REVOKED làm aggregate assertion fail. H live Keycloak Admin DELETE + bearer HTTP đã có selector, chờ run SHA sạch.',
+  'DB-19': 'D code pepper rotation, consumed và ambiguous fail-closed; H Keycloak/HTTP cặp v1/v2 cùng nhánh từ chối. QR credential rotation (credential-crypto key đơn, kid local-v1) chưa có versioned keyring — product gap cần owner.',
   'GATE-01': 'D gate FK/list/open; thiếu H permission và response contract.',
-  'GATE-02': 'D reserve conflict; thiếu H retry/cancel/expiry matrix.',
+  'GATE-02':
+    'D hold/retry/expiry + huỷ hold chủ động + race cancel vs confirm/hết hạn + H.',
   'GATE-03':
     'Thiếu H QR audience/kid/version/hash/manual rejection và reject-audit.',
   'GATE-04':
-    'D concurrent confirm; thiếu wrong holder/token, revoke/session race và H retry.',
+    'D confirm đồng thời, sai holder/token, session revoke, retry, race với cancel + H; thiếu revoke permission giữa request đang bay.',
   'GATE-05':
-    'D undo; thiếu H permission/idempotency và concurrent scan/revoke.',
+    'D undo quyền/lý do (REASON_REQUIRED)/lịch sử/audit/replay-safe, race với scan và revoke + H.',
   'GATE-06':
     'D replay và U validation; thiếu H batch boundary, skew ±300s và mixed items.',
   'GATE-07':
-    'D duplicate/conflict; thiếu H authz-on-retry và mixed batch audit.',
+    'D duplicate/conflict + authz-on-retry (thu quyền/revoke session rồi replay bị chặn, sổ cái không đổi); H giảm xuống D theo ACCEPTANCE.',
   'GATE-08': 'D read-only receipt; thiếu H live authz và closed gate.',
   'GATE-09':
     'D receipt matrix và H validation; thiếu H real authz/ownership/rate matrix.',
@@ -304,9 +395,9 @@ export const notes = {
   'JOB-03':
     'D issue relay fail/retry; U SMTP deadline; R worker reject đến DEAD ở cap=3, không gọi thêm provider, ticket ACTIVE; stall/Mailpit recovery và exit-after-smtp subprocess recovery (chưa SIGKILL main worker đúng crash window; ADR-17 không assert exactly-once SMTP).',
   'JOB-04':
-    'D/U/H cooldown+user/staff/recipient hourly cap+dedup+retry-vs-terminal emailNeedsCs; tenant-wide resend cap BLOCKED chờ contract wiring (xem .artifacts/job04-report.md).',
+    'D/U/H cooldown+user/staff/recipient hourly cap+dedup+retry-vs-terminal emailNeedsCs; D tenant delivery-budget admission/settlement/reclaim added; tenant-wide resend cap BLOCKED chờ contract wiring (xem .artifacts/job04-report.md).',
   'JOB-05': 'U template; thiếu D/H preview/publish/reminder schedule.',
-  'JOB-06': 'D/U bounded timeout; thiếu R process kill/overlap and tenant cap.',
+  'JOB-06': 'D finite tenant cap under combined scheduler load (8 accepted, 4 deferred); R post-claim SMTP stall, timeout, shutdown and lease reclaim preserve cap; exact-SHA evidence pending.',
   'JOB-07': 'D object access; thiếu H signed URL authz/expiry across tenants.',
   'JOB-08':
     'OUT: không có HTTP callback/transport nhận provider event trong API hiện hành.',
@@ -324,7 +415,7 @@ export const notes = {
   'POL-01':
     'D scrub/retry/tombstone đạt; metric slaOverdue fail 0 vs admin count 1 do runtime RLS; chưa đủ kết luận toàn bộ SLA.',
   'POL-02':
-    'D clock ends_at NULL, CANCELLED dùng cancelled_at, PII writer/sweep row lock hai thứ tự, tenant isolation và replay. Cần ops đo event lớn và restore re-sweep. Audit TTL 730 ngày là gap policy riêng, chưa có deletion job.',
+    'D biên 365 ngày, ends_at NULL, CANCELLED dùng cancelled_at, PII writer/sweep row lock hai thứ tự, tenant isolation, replay và giữ ticket/check-in/KPI input. Probe 50k attendee/request đo apply local dưới 60s; audit 729 ngày hiện, 731 ngày ẩn. Owner giảm AC: xóa audit vật lý 730 ngày và restore re-sweep chuyển task riêng; chưa đo worker process/VPS đích.',
   'POL-03':
     'D clock ends_at + 90 ngày kể cả CANCELLED, event fence, lease/reclaim, delete 404 và token cũ không finalize. F01 còn mở: stale PUT sau purge có thể tái tạo bytes; thiếu MinIO barrier/object-store write fence, signed URL expiry và ops restore.',
   'POL-04': 'Privacy copy và restore/RPO/RTO cần bằng chứng browser/ops riêng.',

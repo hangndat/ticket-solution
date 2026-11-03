@@ -14,22 +14,83 @@ function fixture(fn) {
  writeFileSync(orca,`#!/usr/bin/env node
 const fs=require('node:fs'),a=process.argv.slice(2);fs.appendFileSync(process.env.FIX_LOG,JSON.stringify(a)+'\\n');
 const value=flag=>a[a.indexOf(flag)+1];
+if(a[1]==='worker-start' && process.env.FIX_BLOCK_HANDOFF){const path=require('node:path');for(const dir of fs.readdirSync(path.join(process.cwd(),'receipts')))fs.mkdirSync(path.join(process.cwd(),'receipts',dir,'handoff.json'));}
 if(a[1]==='worker-start' && a.includes('--display-name') && !['new-child','new-top-level'].includes(value('--worktree'))) {console.log(JSON.stringify({ok:false,error:{code:'creation_flag_for_existing_worktree'}}));process.exit(1);}
 let result={};if(a[1]==='worker-start')result={runId:'run1',taskId:'task1',dispatchId:'ctx1',state:process.env.FIX_START||'ready',launch:{effective:process.env.FIX_EFFECTIVE_JSON?JSON.parse(process.env.FIX_EFFECTIVE_JSON):{agent:value('--agent'),model:value('--model'),effort:a.includes('--effort')?value('--effort'):null}}};
 if(a[1]==='worker-show')result={dispatch:{id:'ctx1',taskId:'task1',runId:process.env.FIX_RUN||'run1',status:process.env.FIX_STATUS||'completed'}};
+if(a[1]==='worker-show' && process.env.FIX_FLAT)result={dispatchId:process.env.FIX_DISPATCH||'ctx1',taskId:'task1',runId:process.env.FIX_RUN||'run1',state:process.env.FIX_STATUS||'succeeded',stage:'settled',terminalState:'reclaimable'};
+if(a[1]==='worker-start' && !a.includes('--full'))delete result.launch;
 if(a[1]==='worker-release')result={state:process.env.FIX_RELEASE||'released'};
 console.log(JSON.stringify({ok:true,result}));
 `,{mode:0o700});
  writeFileSync(telemetry,`import fs from 'node:fs';const a=process.argv.slice(2);fs.appendFileSync(process.env.FIX_LOG,JSON.stringify(a)+'\\n');if(a[0]==='collect'&&process.env.FIX_COLLECT_FAIL){console.error('collect failed');process.exit(1);}if(a[0]==='snapshot'){const p=a[a.indexOf('--out')+1];if(process.env.FIX_SNAPSHOT_FAIL){console.error('unavailable');process.exit(1);}fs.writeFileSync(p,JSON.stringify(process.env.FIX_QUOTA_JSON?JSON.parse(process.env.FIX_QUOTA_JSON):{source:'codex.app-server.account/rateLimits/read',timestamp:new Date().toISOString(),accountIdHash:'fixture',buckets:[{limitId:'codex',primary:{usedPercent:1,windowDurationMins:10080,resetsAt:Math.floor(Date.now()/1000)+3600},secondary:null}]}),{mode:0o600,flag:'wx'});}console.log(JSON.stringify({ok:true}));`);
- const claudeAuth=join(dir,'claude-auth'), claudeProbe=join(dir,'claude-probe');
- writeFileSync(claudeAuth,`#!/usr/bin/env node\nconsole.log(JSON.stringify({loggedIn:true,authMethod:'claude.ai',apiProvider:'firstParty',email:'fixture@example.com'}));\n`,{mode:0o700});
- writeFileSync(claudeProbe,`#!/usr/bin/env node\nconsole.log(JSON.stringify({type:'result',subtype:'success',is_error:false,result:'OK'}));\n`,{mode:0o700});
- const run=(args,extra={})=>spawnSync(process.execPath,[cli,...args,'--dir',join(dir,'receipts')],{cwd:dir,encoding:'utf8',env:{...process.env,ORCA_CLI_COMMAND:orca,AGENT_TELEMETRY_CLI:telemetry,ORCA_METRICS_LEDGER:join(dir,'metrics.jsonl'),COMPANY_WORKLOG_FILE:join(dir,'work-events.jsonl'),AGENT_PROVIDER_CLAUDE_AUTH_BIN:claudeAuth,AGENT_PROVIDER_CLAUDE_BIN:claudeProbe,FIX_LOG:log,...extra}});
+ const claudeAuth=join(dir,'claude-auth'), claudeProbe=join(dir,'claude-probe'), claudeLog=join(dir,'claude-calls');
+ writeFileSync(claudeLog,'');
+ writeFileSync(claudeAuth,`#!/usr/bin/env node\nrequire('node:fs').appendFileSync(process.env.FIX_CLAUDE_LOG,'auth\\n');if(process.env.FIX_CLAUDE_FAIL)process.exit(1);console.log(JSON.stringify({loggedIn:true,authMethod:'claude.ai',apiProvider:'firstParty',email:'fixture@example.com'}));\n`,{mode:0o700});
+ writeFileSync(claudeProbe,`#!/usr/bin/env node\nrequire('node:fs').appendFileSync(process.env.FIX_CLAUDE_LOG,'probe\\n');console.log(JSON.stringify({type:'result',subtype:'success',is_error:false,result:'OK'}));\n`,{mode:0o700});
+ const run=(args,extra={})=>spawnSync(process.execPath,[cli,...args,'--dir',join(dir,'receipts')],{cwd:dir,encoding:'utf8',env:{...process.env,ORCA_CLI_COMMAND:orca,AGENT_TELEMETRY_CLI:telemetry,ORCA_METRICS_LEDGER:join(dir,'metrics.jsonl'),COMPANY_WORKLOG_FILE:join(dir,'work-events.jsonl'),AGENT_PROVIDER_CLAUDE_AUTH_BIN:claudeAuth,AGENT_PROVIDER_CLAUDE_BIN:claudeProbe,FIX_CLAUDE_LOG:claudeLog,FIX_LOG:log,...extra}});
  const calls=()=>readFileSync(log,'utf8').trim().split('\n').filter(Boolean).map(JSON.parse);
- try {fn({dir,run,calls});}finally{rmSync(dir,{recursive:true,force:true});}
+ const claudeCalls=()=>readFileSync(claudeLog,'utf8').trim().split('\n').filter(Boolean);
+ try {fn({dir,run,calls,claudeCalls});}finally{rmSync(dir,{recursive:true,force:true});}
 }
 const start=['start','--task','task1','--run-id','run1','--role-id','coordinator','--cost-tier','standard','--agent','cursor','--model','composer-2.5','--employee','minh','--task-title','Minh · wave'];
 const settle=['settle','--dispatch-id','ctx1','--run-id','run1','--role-id','coordinator'];
+test('real flat Orca settlement accepts succeeded but rejects wrong identity and active state',()=>fixture(({run,calls})=>{
+ const r=run(settle,{FIX_FLAT:'1'});assert.equal(r.status,0,r.stderr);
+ const result=JSON.parse(readFileSync(JSON.parse(r.stdout).resultPath,'utf8'));
+ assert.equal(result.executionStatus,'complete');
+ const before=calls().filter(a=>a[0]==='collect').length;
+ for(const extra of [{FIX_RUN:'other'},{FIX_DISPATCH:'other'},{FIX_STATUS:'ready'}]) {
+  assert.equal(run([...settle,'--release'],{FIX_FLAT:'1',...extra}).status,1);
+ }
+ assert.equal(calls().filter(a=>a[0]==='collect').length,before);
+ assert.equal(calls().filter(a=>a[1]==='worker-release').length,0);
+}));
+test('artifact failure after launch preserves dispatch and does not restart worker',()=>fixture(({run,calls})=>{
+ const r=run(start,{FIX_BLOCK_HANDOFF:'1'});assert.equal(r.status,1,r.stderr);
+ const output=JSON.parse(r.stdout);assert.equal(output.dispatchId,'ctx1');
+ assert.equal(output.artifactStatus,'degraded');assert.equal(output.handoffPath,null);
+ assert.equal(output.nextAction,'repair_artifacts_do_not_restart_worker');
+ assert.equal(calls().filter(a=>a[1]==='worker-start').length,1);
+}));
+test('manifest and handoff add evidence without extra Orca calls or task completion claims',()=>fixture(({run,calls})=>{
+ const launched=run(start);assert.equal(launched.status,0,launched.stderr);
+ const output=JSON.parse(launched.stdout);
+ const manifest=JSON.parse(readFileSync(join(output.receiptDirectory,'dispatch-manifest.json'),'utf8'));
+ assert.deepEqual(manifest.command.args,calls().find(a=>a[1]==='worker-start'));
+ assert.equal(manifest.authority,'orca');assert.equal(manifest.employeeId,'minh');
+ assert.equal(manifest.effective,null);
+ const result=JSON.parse(readFileSync(output.resultPath,'utf8'));
+ assert.equal(result.operationStatus,'complete');assert.equal(result.executionStatus,'running');
+ assert.equal(result.acceptance,'unverified');assert.equal(result.routingStatus,'verified');
+ const handoff=JSON.parse(readFileSync(output.handoffPath,'utf8'));
+ assert.equal(handoff.resultPath,output.resultPath);assert.equal(handoff.dispatchId,'ctx1');
+ assert.ok(handoff.evidence.every(path=>statSync(path).isFile()));
+ assert.equal(statSync(output.handoffPath).mode&0o777,0o600);
+ assert.equal(calls().filter(a=>a[0]==='orchestration').length,1);
+}));
+test('unknown launch and route mismatch preserve dispatch and never imply execution success',()=>fixture(({run,calls})=>{
+ for(const env of [{FIX_START:'outcome_unknown'},{FIX_EFFECTIVE_JSON:JSON.stringify({agent:'codex',model:'wrong'})}]) {
+  const output=JSON.parse(run(start,env).stdout);
+  const result=JSON.parse(readFileSync(output.resultPath,'utf8'));
+  assert.equal(result.operationStatus,'partial');assert.equal(result.dispatchId,'ctx1');
+  assert.notEqual(result.executionStatus,'complete');assert.equal(result.acceptance,'unverified');
+  assert.equal(result.nextAction,'observe_existing_dispatch_do_not_restart');
+ }
+ assert.equal(calls().filter(a=>a[1]==='worker-start').length,2);
+}));
+test('settlement keeps execution failure separate from successful collection and retains raw receipt',()=>fixture(({run,calls})=>{
+ const output=JSON.parse(run(settle,{FIX_STATUS:'failed'}).stdout);
+ const result=JSON.parse(readFileSync(output.resultPath,'utf8'));
+ assert.equal(result.operationStatus,'complete');assert.equal(result.executionStatus,'failed');
+ assert.equal(result.acceptance,'unverified');assert.equal(result.taskId,'task1');
+ const receipt=JSON.parse(readFileSync(join(output.receiptDirectory,'settle-receipt.json'),'utf8'));
+ assert.equal(receipt.result.dispatch.status,'failed');
+ assert.equal(calls().filter(a=>a[1]==='worker-release').length,0);
+ const degraded=JSON.parse(run(settle,{FIX_COLLECT_FAIL:'1'}).stdout);
+ const partial=JSON.parse(readFileSync(degraded.resultPath,'utf8'));
+ assert.equal(partial.operationStatus,'partial');assert.equal(partial.executionStatus,'complete');
+}));
 test('company events normalize source UTC, dedupe and reject conflicting identities',()=>fixture(({dir})=>{
  const path=join(dir,'company.jsonl');
  const e={id:'checkpoint-1',employeeId:'linh',type:'checkpoint',runId:'run1',taskId:'task1',dispatchId:'ctx1',summary:'Kiểm tra card trên local.',occurredAt:'2026-10-24 08:00:00'};
@@ -186,18 +247,46 @@ test('high reason required and remains local metadata',()=>fixture(({run,calls})
  assert.equal(calls().find(a=>a[1]==='worker-start').includes('--tier-reason'),false);
 }));
 
-test('Claude routes preserve requested model and effort; quota stays explicitly unknown',()=>fixture(({run,calls})=>{
+test('Claude routes preserve requested model and effort; quota stays explicitly unknown',()=>fixture(({run,calls,claudeCalls})=>{
  for(const [tier,model,effort] of [['focused','claude-sonnet-5','low'],['advanced','claude-sonnet-5','medium'],['high','claude-sonnet-5','high']]) {
   const args=start.map(v=>v==='standard'?tier:v==='cursor'?'claude':v==='composer-2.5'?model:v);
   const r=run([...args,'--effort',effort,...(tier==='high'?['--tier-reason','tenant isolation']:[])],{FIX_SNAPSHOT_FAIL:'1'});
   assert.equal(r.status,0,r.stderr);const j=JSON.parse(r.stdout);
   assert.deepEqual(j.quotaCheck,{enforced:false,provider:'claude',state:'unknown',reason:'adapter_unavailable'});
   assert.equal(j.quotaSnapshotProvider,'codex');assert.equal(j.quotaAvailable,false);
+  assert.equal(j.providerRecovery.reason,'selected_route_check');
+  assert.equal(j.providerRecovery.recommendation,null);
+  assert.equal(j.providerRecovery.routes.length,1);
   const launch=calls().filter(a=>a[1]==='worker-start').at(-1);
   assert.equal(launch[launch.indexOf('--agent')+1],'claude');
   assert.equal(launch[launch.indexOf('--model')+1],model);assert.equal(launch[launch.indexOf('--effort')+1],effort);
   assert.equal(launch.includes('--cost-tier'),false);assert.equal(launch.includes('--tier-reason'),false);
  }
+ assert.ok(claudeCalls().includes('probe'));
+}));
+
+test('pinned Codex and OpenCode never probe Claude, including heavy tiers',()=>fixture(({run,calls,claudeCalls})=>{
+ for(const tier of ['focused','advanced','high']) {
+  for(const [agent,model,effort] of [['codex','gpt-6-luna',tier==='focused'?'low':tier==='advanced'?'medium':'high'],['opencode','opencode-go/deepseek-v4-pro',null]]) {
+   const args=start.map(v=>v==='standard'?tier:v==='cursor'?agent:v==='composer-2.5'?model:v);
+   const r=run([...args,...(effort?['--effort',effort]:[]),...(tier==='high'?['--tier-reason','tenant isolation']:[])],{FIX_CLAUDE_FAIL:'1'});
+   assert.equal(r.status,0,r.stderr);const j=JSON.parse(r.stdout);
+   assert.equal(j.providerRecovery,undefined);
+   const launch=calls().filter(a=>a[1]==='worker-start').at(-1);
+   assert.equal(launch[launch.indexOf('--agent')+1],agent);
+   assert.equal(launch[launch.indexOf('--model')+1],model);
+  }
+ }
+ assert.deepEqual(claudeCalls(),[]);
+}));
+
+test('selected Claude unavailable still blocks before launch',()=>fixture(({run,calls,claudeCalls})=>{
+ const args=start.map(v=>v==='standard'?'focused':v==='cursor'?'claude':v==='composer-2.5'?'claude-sonnet-5':v);
+ const r=run([...args,'--effort','low'],{FIX_CLAUDE_FAIL:'1'});
+ assert.equal(r.status,1);
+ assert.equal(JSON.parse(r.stdout).errorCode,'provider_recovery_unknown');
+ assert.deepEqual(claudeCalls(),['auth']);
+ assert.equal(calls().some(a=>a[1]==='worker-start'),false);
 }));
 
 test('Persona is local for existing worktrees and forwarded only for new placement',()=>fixture(({run,calls})=>{

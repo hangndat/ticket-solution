@@ -1,6 +1,6 @@
 import * as jose from 'jose';
 import { createHmac, createPrivateKey, createPublicKey, randomBytes, randomUUID } from 'node:crypto';
-import { openCredentialToken, sealCredentialToken } from './credential-crypto';
+import { openCredentialToken, sealCredentialToken, type CredentialKeyInput } from './credential-crypto';
 import { GateError, GATE_ERROR_CODES } from './gate-error';
 import type { CodeHmacConfig } from './code-hmac';
 
@@ -136,18 +136,31 @@ export function deriveGateSigningSealKey(credentialKeyMaterial: string): string 
     .digest('base64url');
 }
 
-function deriveManualCodeSealKey(credentialKeyMaterial: string): string {
-  return createHmac('sha256', credentialKeyMaterial)
+function deriveManualCodeSealKey(credentialKeyMaterial: CredentialKeyInput): CredentialKeyInput {
+  const derive = (material: string) => createHmac('sha256', material)
     .update(MANUAL_SEAL_CONTEXT)
     .digest('base64url');
+  if (typeof credentialKeyMaterial === 'string') return derive(credentialKeyMaterial);
+  return {
+    currentKid: credentialKeyMaterial.currentKid,
+    keys: Object.fromEntries(Object.entries(credentialKeyMaterial.keys)
+      .map(([kid, material]) => [kid, derive(material)])),
+  };
 }
 
-export function sealManualEntryCode(rawCode: string, credentialKeyMaterial: string): string {
-  return sealCredentialToken(rawCode, deriveManualCodeSealKey(credentialKeyMaterial)).encryptedToken;
+export function sealManualEntryCode(rawCode: string, credentialKeyMaterial: CredentialKeyInput): string {
+  const sealed = sealCredentialToken(rawCode, deriveManualCodeSealKey(credentialKeyMaterial));
+  // Preserve the legacy format; keyring seals carry the kid needed after rotation.
+  return typeof credentialKeyMaterial === 'string'
+    ? sealed.encryptedToken
+    : `${sealed.kid}:${sealed.encryptedToken}`;
 }
 
-export function openManualEntryCode(sealedCode: string, credentialKeyMaterial: string): string {
-  return openCredentialToken(sealedCode, deriveManualCodeSealKey(credentialKeyMaterial));
+export function openManualEntryCode(sealedCode: string, credentialKeyMaterial: CredentialKeyInput): string {
+  const separator = sealedCode.indexOf(':');
+  const kid = separator < 0 ? 'local-v1' : sealedCode.slice(0, separator);
+  const encryptedToken = separator < 0 ? sealedCode : sealedCode.slice(separator + 1);
+  return openCredentialToken(encryptedToken, deriveManualCodeSealKey(credentialKeyMaterial), kid);
 }
 
 /** Ten unbiased Crockford characters carry exactly 50 bits of entropy. */
@@ -167,17 +180,36 @@ export function mintManualEntryCode(): string {
 /** Unseal the PKCS#8 signing key using a domain-separated sealing key. */
 export function unsealSigningKey(
   sealedToken: string,
-  credentialKeyMaterial: string,
+  credentialKeyMaterial: CredentialKeyInput,
 ): string {
-  const pem = openCredentialToken(sealedToken, deriveGateSigningSealKey(credentialKeyMaterial));
-  // Parse eagerly so a malformed/wrong-key value fails closed at boot.
-  createPrivateKey(pem);
-  return pem;
+  // Existing signing-key seals do not carry a kid. Try the configured current
+  // material, then retained keys, so rotating the storage key preserves them.
+  if (typeof credentialKeyMaterial !== 'string' &&
+      !Object.hasOwn(credentialKeyMaterial.keys, credentialKeyMaterial.currentKid)) {
+    throw invalidConfig('Gate signing key could not be unsealed');
+  }
+  const materials = typeof credentialKeyMaterial === 'string'
+    ? [credentialKeyMaterial]
+    : [credentialKeyMaterial.keys[credentialKeyMaterial.currentKid]!,
+      ...Object.entries(credentialKeyMaterial.keys)
+        .filter(([kid]) => kid !== credentialKeyMaterial.currentKid)
+        .map(([, material]) => material)];
+  for (const material of materials) {
+    try {
+      const pem = openCredentialToken(sealedToken, deriveGateSigningSealKey(material));
+      // Parse eagerly so malformed values fail closed at boot.
+      createPrivateKey(pem);
+      return pem;
+    } catch {
+      // A retained key may be needed for a seal created before rotation.
+    }
+  }
+  throw invalidConfig('Gate signing key could not be unsealed');
 }
 
 export async function readGateCredentialSigningConfig(
   env: NodeJS.ProcessEnv,
-  credentialKeyMaterial: string,
+  credentialKeyMaterial: CredentialKeyInput,
 ): Promise<GateCredentialSigningConfig> {
   const currentKeyId = env['GATE_CREDENTIAL_CURRENT_KEY_ID']?.trim();
   const sealed = env['GATE_CREDENTIAL_SIGNING_KEY_SEALED']?.trim();
@@ -201,7 +233,7 @@ export async function readGateCredentialSigningConfig(
 
 export async function readGateCredentialConfig(
   env: NodeJS.ProcessEnv,
-  credentialKeyMaterial: string,
+  credentialKeyMaterial: CredentialKeyInput,
 ): Promise<GateCredentialConfig> {
   const signing = await readGateCredentialSigningConfig(env, credentialKeyMaterial);
   return {

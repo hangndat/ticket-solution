@@ -2,9 +2,10 @@
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { execFileSync } = require('node:child_process');
+const { execFileSync, spawn } = require('node:child_process');
 const { randomBytes, randomUUID } = require('node:crypto');
 const { readFileSync } = require('node:fs');
+const { performance } = require('node:perf_hooks');
 const { Client } = require('pg');
 const { migrationFiles } = require('./migration-files.cjs');
 const { processDueObjectRetentions } = require('../dist/retention-o06');
@@ -268,6 +269,41 @@ async function seedEvent(db, tenant, user, label, endsOffset, cancelledOffset = 
   return { tenant, event, attendee, request, exported };
 }
 
+async function seedCheckedInTicket(db, fixture, user) {
+  const ticket = randomUUID();
+  const session = randomUUID();
+  const reservation = randomUUID();
+  const checkin = randomUUID();
+  const { rows: [request] } = await db.query(`SELECT r.redemption_code_id,
+    c.ticket_type_id, c.source_id FROM redemption_requests r
+    JOIN redemption_codes c ON c.tenant_id=r.tenant_id AND c.id=r.redemption_code_id
+    WHERE r.tenant_id=$1 AND r.id=$2`, [fixture.tenant, fixture.request]);
+  await db.query(`INSERT INTO tickets
+    (tenant_id,event_id,id,owner_user_id,ticket_type_id,source_id,request_id,
+     redemption_code_id,state)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'USED')`,
+  [fixture.tenant, fixture.event, ticket, user, request.ticket_type_id,
+    request.source_id, fixture.request, request.redemption_code_id]);
+  await db.query(`INSERT INTO staff_sessions (tenant_id,event_id,id,user_id)
+    VALUES ($1,$2,$3,$4)`, [fixture.tenant, fixture.event, session, user]);
+  await db.query(`INSERT INTO checkin_reservations
+    (tenant_id,event_id,id,ticket_id,staff_session_id,token_hash,status,expires_at)
+    VALUES ($1,$2,$3,$4,$5,'fixture-hash','CONFIRMED',clock_timestamp())`,
+  [fixture.tenant, fixture.event, reservation, ticket, session]);
+  await db.query(`INSERT INTO checkins
+    (tenant_id,event_id,id,ticket_id,reservation_id,staff_session_id,actor_user_id)
+    VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+  [fixture.tenant, fixture.event, checkin, ticket, reservation, session, user]);
+  return { ticket, checkin };
+}
+
+async function eventKpi(db, tenant, event) {
+  return (await db.query(`SELECT
+    (SELECT count(*)::int FROM tickets WHERE tenant_id=$1 AND event_id=$2 AND state='USED') AS used,
+    (SELECT count(*)::int FROM checkins WHERE tenant_id=$1 AND event_id=$2
+      AND undone_at IS NULL) AS admitted`, [tenant, event])).rows[0];
+}
+
 test('O06 DB clocks, tenant scope, operator fence and no-finalize gates',
   { timeout: 240000 }, async () => {
     let db;
@@ -283,17 +319,43 @@ test('O06 DB clocks, tenant scope, operator fence and no-finalize gates',
         [user, 'o06-test', user, 'user@example.test']);
 
       const day = 86400;
-      const due = await seedEvent(admin, tenantA, user, 'due', -365 * day - 10);
-      const future = await seedEvent(admin, tenantA, user, 'future', -365 * day + 20);
+      const due = await seedEvent(admin, tenantA, user, 'due', -365 * day - 3600);
+      const future = await seedEvent(admin, tenantA, user, 'future', -365 * day + 3600);
       const noEnd = await seedEvent(admin, tenantA, user, 'no-end', null);
       const cancelledNoEnd = await seedEvent(admin, tenantA, user,
         'cancelled-no-end', null, -400 * day);
       const cancelledDue = await seedEvent(admin, tenantA, user,
-        'cancelled-due', -10 * day, -365 * day - 10);
+        'cancelled-due', -10 * day, -365 * day - 3600);
       const cancelledFuture = await seedEvent(admin, tenantA, user,
         'cancelled-future', -365 * day - 10, -10 * day);
       const otherTenant = await seedEvent(admin, tenantB, user,
-        'other-tenant', -365 * day - 10);
+        'other-tenant', -365 * day - 3600);
+      const dueLedger = await seedCheckedInTicket(admin, due, user);
+      const futureLedger = await seedCheckedInTicket(admin, future, user);
+      const otherLedger = await seedCheckedInTicket(admin, otherTenant, user);
+      const credential = { version: 1, kid: 'fixture-kid',
+        token_hash: 'fixture-hash', encrypted_token: 'fixture-ciphertext', status: 'ACTIVE' };
+      await admin.query(`INSERT INTO ticket_credentials
+        (tenant_id,ticket_id,version,kid,token_hash,encrypted_token,status)
+        VALUES ($1,$2,$3,$4,$5,$6,$7)`, [tenantA, dueLedger.ticket,
+        credential.version, credential.kid, credential.token_hash,
+        credential.encrypted_token, credential.status]);
+      const recentAudit = randomUUID();
+      await admin.query(`INSERT INTO audit_logs
+        (tenant_id,event_id,id,action,resource_type,created_at)
+        VALUES ($1,$2,$3,'fixture.retention','event',clock_timestamp()-interval '729 days')`,
+      [tenantA, due.event, recentAudit]);
+      const kpiBefore = [];
+      for (const fixture of [due, future, otherTenant]) {
+        kpiBefore.push(await eventKpi(admin, fixture.tenant, fixture.event));
+      }
+      assert.deepEqual(kpiBefore, [{ used: 1, admitted: 1 },
+        { used: 1, admitted: 1 }, { used: 1, admitted: 1 }]);
+      const ledgerBefore = (await admin.query(`SELECT t.tenant_id, t.event_id,
+        t.id AS ticket_id, t.state, c.id AS checkin_id, c.confirmed_at, c.undone_at
+        FROM tickets t JOIN checkins c ON c.tenant_id=t.tenant_id AND c.ticket_id=t.id
+        WHERE t.id = ANY($1::uuid[]) ORDER BY t.id`,
+      [[dueLedger.ticket, futureLedger.ticket, otherLedger.ticket]])).rows;
       const beforeFence = await seedEvent(admin, tenantA, user,
         'before-day-89', -89 * day + 60);
       // Simulate a corrupt/legacy CANCELLED row; normal schema disallows this state.
@@ -330,8 +392,10 @@ test('O06 DB clocks, tenant scope, operator fence and no-finalize gates',
       for (const row of pii) {
         const scrubbed = [due.event, cancelledDue.event].includes(row.id);
         assert.equal(row.ticket_pii_anonymized_at !== null, scrubbed);
-        assert.equal(row.canonical_email === null, scrubbed);
-        assert.equal(row.answers_json === null, scrubbed);
+        assert.equal(row.canonical_email === null, scrubbed,
+          `attendee PII for event ${row.id}, scrubbed=${scrubbed}, marker=${row.ticket_pii_anonymized_at !== null}`);
+        assert.equal(row.answers_json === null, scrubbed,
+          `redemption PII for event ${row.id}, scrubbed=${scrubbed}, marker=${row.ticket_pii_anonymized_at !== null}`);
         assert.equal(row.terms_accepted, true);
         assert.equal(row.form_definition_hash, 'form-hash');
         assert.equal(row.terms_content_hash, 'terms-hash');
@@ -340,6 +404,33 @@ test('O06 DB clocks, tenant scope, operator fence and no-finalize gates',
       const bPii = (await admin.query('SELECT canonical_email FROM event_attendees WHERE tenant_id=$1',
         [tenantB])).rows;
       assert.ok(bPii[0].canonical_email, 'tenant B remains untouched by tenant A apply');
+      const ledgerAfter = (await admin.query(`SELECT t.tenant_id, t.event_id,
+        t.id AS ticket_id, t.state, c.id AS checkin_id, c.confirmed_at, c.undone_at
+        FROM tickets t JOIN checkins c ON c.tenant_id=t.tenant_id AND c.ticket_id=t.id
+        WHERE t.id = ANY($1::uuid[]) ORDER BY t.id`,
+      [[dueLedger.ticket, futureLedger.ticket, otherLedger.ticket]])).rows;
+      assert.deepEqual(ledgerAfter, ledgerBefore,
+        '365-day PII sweep retains ticket/check-in history and KPI inputs across tenants');
+      assert.equal(ledgerAfter.length, 3);
+      assert.ok(ledgerAfter.some((row) => row.checkin_id === dueLedger.checkin));
+      assert.ok(ledgerAfter.some((row) => row.checkin_id === futureLedger.checkin));
+      assert.ok(ledgerAfter.some((row) => row.checkin_id === otherLedger.checkin));
+      const kpiAfter = [];
+      for (const fixture of [due, future, otherTenant]) {
+        kpiAfter.push(await eventKpi(admin, fixture.tenant, fixture.event));
+      }
+      assert.deepEqual(kpiAfter, kpiBefore,
+        'reporting ticket-state and active check-in counts survive PII anonymization');
+      assert.deepEqual((await admin.query(`SELECT version,kid,token_hash,encrypted_token,status
+        FROM ticket_credentials WHERE tenant_id=$1 AND ticket_id=$2`,
+      [tenantA, dueLedger.ticket])).rows, [credential],
+      'QR credential lifecycle is outside POL-02');
+      assert.equal((await admin.query('SELECT email FROM users WHERE id=$1',
+        [user])).rows[0].email, 'user@example.test',
+      'shared user identity is outside event-scoped POL-02');
+      assert.equal((await admin.query('SELECT count(*)::int AS n FROM audit_logs WHERE tenant_id=$1 AND id=$2',
+        [tenantA, recentAudit])).rows[0].n, 1,
+      'audit within its 730-day TTL must not be deleted by the 365-day sweep');
       await runtime.query('BEGIN');
       await runtime.query("SELECT set_config('app.tenant_id',$1,true)", [tenantA]);
       assert.equal((await runtime.query('SELECT count(*)::int AS n FROM event_attendees WHERE tenant_id=$1',
@@ -517,6 +608,118 @@ test('O06 PII writer and sweep serialize on event lock in both orders',
       await assert.rejects(admin.query('UPDATE events SET ends_at=ends_at + interval \'1 day\' WHERE id=$1',
         [second.event]), /EVENT_RETENTION_FENCED/);
     } finally {
+      if (db?.runtime) await db.runtime.end().catch(() => {});
+      if (db?.admin) await db.admin.end().catch(() => {});
+      if (db?.name) docker('rm', '-f', db.name);
+    }
+  });
+
+test('O06 POL-02 50k attendee worker process completes within the step budget',
+  { timeout: 240000 }, async () => {
+    let db;
+    let worker;
+    try {
+      db = await database();
+      const { admin } = db;
+      const tenant = randomUUID();
+      const otherTenant = randomUUID();
+      const user = randomUUID();
+      await admin.query('INSERT INTO tenants (id,slug,name) VALUES ($1,$2,$2),($3,$4,$4)',
+        [tenant, 'o06-large', otherTenant, 'o06-other']);
+      await admin.query('INSERT INTO users (id,issuer,subject,email) VALUES ($1,$2,$3,$4)',
+        [user, 'o06-large', user, 'first@example.test']);
+      const fixture = await seedEvent(admin, tenant, user, 'large', -366 * 86400);
+      const other = await seedEvent(admin, otherTenant, user, 'other', -364 * 86400);
+      const ledger = await seedCheckedInTicket(admin, fixture, user);
+      const ledgerBefore = (await admin.query(`SELECT t.id, t.state, c.id AS checkin_id,
+        c.confirmed_at, c.undone_at FROM tickets t JOIN checkins c
+        ON c.tenant_id=t.tenant_id AND c.ticket_id=t.id
+        WHERE t.tenant_id=$1 AND t.id=$2`, [tenant, ledger.ticket])).rows;
+      const kpiBefore = await eventKpi(admin, tenant, fixture.event);
+      assert.deepEqual(kpiBefore, { used: 1, admitted: 1 });
+      const code = (await admin.query('SELECT redemption_code_id FROM redemption_requests WHERE id=$1',
+        [fixture.request])).rows[0].redemption_code_id;
+      await admin.query(`CREATE TEMP TABLE o06_bulk_users AS
+        SELECT gen_random_uuid() AS id FROM generate_series(1, 49999)`);
+      await admin.query(`INSERT INTO users (id,issuer,subject,email)
+        SELECT id,'o06-large',id::text,id::text || '@example.test' FROM o06_bulk_users`);
+      await admin.query(`INSERT INTO event_attendees
+        (tenant_id,event_id,id,user_id,canonical_email)
+        SELECT $1,$2,gen_random_uuid(),id,id::text || '@example.test'
+        FROM o06_bulk_users`, [tenant, fixture.event]);
+      await admin.query(`INSERT INTO redemption_requests
+        (tenant_id,event_id,id,actor_user_id,redemption_code_id,status,answers_json)
+        SELECT $1,$2,gen_random_uuid(),id,$3,'ISSUED',
+          jsonb_build_object('phone', 'fixture-only')
+        FROM o06_bulk_users`, [tenant, fixture.event, code]);
+      const before = (await admin.query(`SELECT
+        (SELECT count(*)::int FROM event_attendees WHERE tenant_id=$1 AND event_id=$2
+          AND canonical_email IS NOT NULL) AS emails,
+        (SELECT count(*)::int FROM redemption_requests WHERE tenant_id=$1 AND event_id=$2
+          AND answers_json IS NOT NULL) AS answers`, [tenant, fixture.event])).rows[0];
+      assert.deepEqual(before, { emails: 50000, answers: 50000 });
+
+      const started = performance.now();
+      worker = spawn(process.execPath, ['apps/worker/dist/main.js'], {
+        cwd: require('node:path').resolve(__dirname, '../../..'),
+        stdio: ['ignore', 'ignore', 'pipe'],
+        env: {
+          PATH: process.env.PATH,
+          NODE_ENV: 'test',
+          DATABASE_URL: db.runtimeUrl,
+          EMAIL_ALLOW_NOOP: '1',
+          OUTBOX_POLL_MS: '1000',
+          TICKET_CREDENTIAL_KEY: 'pol02-synthetic-credential-key',
+        },
+      });
+      let startupDiagnostic = 'no recognized startup error';
+      worker.stderr.on('data', (chunk) => {
+        const line = String(chunk);
+        if (line.includes("Cannot find module") && line.includes('apps/worker/dist/main.js')) {
+          startupDiagnostic = 'worker entrypoint missing';
+        } else if (line.includes('Worker startup failed')) {
+          startupDiagnostic = 'worker startup failed';
+        }
+      });
+      worker.on('error', () => { startupDiagnostic = 'worker process spawn failed'; });
+      let completed = false;
+      for (let attempt = 0; attempt < 600; attempt++) {
+        assert.equal(worker.exitCode, null,
+          `worker must remain alive through the sweep (${startupDiagnostic})`);
+        const marker = (await admin.query('SELECT ticket_pii_anonymized_at FROM events WHERE tenant_id=$1 AND id=$2',
+          [tenant, fixture.event])).rows[0].ticket_pii_anonymized_at;
+        if (marker !== null) { completed = true; break; }
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+      const elapsedMs = Math.round(performance.now() - started);
+      console.log(`POL-02 50k worker process sweep: ${elapsedMs} ms`);
+      assert.ok(completed, 'worker must commit the 50k event sweep');
+      const after = (await admin.query(`SELECT
+        (SELECT count(*)::int FROM event_attendees WHERE tenant_id=$1 AND event_id=$2
+          AND canonical_email IS NOT NULL) AS emails,
+        (SELECT count(*)::int FROM redemption_requests WHERE tenant_id=$1 AND event_id=$2
+          AND answers_json IS NOT NULL) AS answers`, [tenant, fixture.event])).rows[0];
+      assert.deepEqual(after, { emails: 0, answers: 0 });
+      assert.deepEqual((await admin.query(`SELECT canonical_email, answers_json FROM event_attendees a
+        JOIN redemption_requests r ON r.tenant_id=a.tenant_id AND r.event_id=a.event_id
+        WHERE a.tenant_id=$1 AND a.event_id=$2`, [otherTenant, other.event])).rows,
+      [{ canonical_email: 'other@example.test', answers_json: { phone: 'fixture-only' } }],
+      'the younger event in another tenant retains PII');
+      assert.deepEqual((await admin.query(`SELECT t.id, t.state, c.id AS checkin_id,
+        c.confirmed_at, c.undone_at FROM tickets t JOIN checkins c
+        ON c.tenant_id=t.tenant_id AND c.ticket_id=t.id
+        WHERE t.tenant_id=$1 AND t.id=$2`, [tenant, ledger.ticket])).rows, ledgerBefore);
+      assert.deepEqual(await eventKpi(admin, tenant, fixture.event), kpiBefore);
+      assert.ok(elapsedMs < 60000, `sweep ${elapsedMs} ms exceeds 60s worker step budget`);
+    } finally {
+      if (worker?.exitCode === null) {
+        worker.kill('SIGTERM');
+        await Promise.race([
+          new Promise((resolve) => worker.once('close', resolve)),
+          new Promise((resolve) => setTimeout(resolve, 5000)),
+        ]);
+        if (worker.exitCode === null) worker.kill('SIGKILL');
+      }
       if (db?.runtime) await db.runtime.end().catch(() => {});
       if (db?.admin) await db.admin.end().catch(() => {});
       if (db?.name) docker('rm', '-f', db.name);

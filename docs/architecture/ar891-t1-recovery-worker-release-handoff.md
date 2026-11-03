@@ -1,8 +1,19 @@
 # AR891-T1 — Handoff F02/F03/F04/F07
 
-Ngày: 25/10/2026. Trạng thái: **Đề xuất — chờ coordinator xác nhận trong scope**. Role: `architect`; employee: Dexter. Source runtime/base SHA: `152b6383d0127c13b9373dfd9ead3105bb510409`. Issue: [#891](https://github.com/hangndat/ticket-solution/issues/891), [#895](https://github.com/hangndat/ticket-solution/issues/895).
+Ngày handoff gốc: 25/10/2026. Trạng thái gốc: **Đề xuất**; trạng thái tiếp nhận từng phần được phân biệt dưới đây. Role: `architect`; employee: Dexter. Source runtime/base SHA: `152b6383d0127c13b9373dfd9ead3105bb510409`. Issue: [#891](https://github.com/hangndat/ticket-solution/issues/891), [#895](https://github.com/hangndat/ticket-solution/issues/895).
 
-## Kết luận và ranh giới
+## Trạng thái tiếp nhận — đối chiếu tài liệu 03/11/2026
+
+| Phần | Nguồn tiếp nối / giới hạn |
+| --- | --- |
+| F02 delivery/recovery | [Baseline kiến trúc](ar891-current-architecture.md) dẫn implementation PR [#907](https://github.com/hangndat/ticket-solution/pull/907); [release contract](../ops/IMMUTABLE-RELEASE.md) chặn pin worker trước `710b5714`. State machine dưới đây là handoff chi tiết, không còn mô tả bug như quan sát mới trên HEAD |
+| F03 budget worker | Baseline kiến trúc ghi **Tested fixture local** qua PR [#909](https://github.com/hangndat/ticket-solution/pull/909) và [evidence](../reviews/ar891-t4-worker-budget-evidence.md). Ngưỡng tách loop/process/broker bên dưới vẫn là đề xuất có điều kiện, không phải topology đã vận hành |
+| F04 release bất biến | Đã có [quy trình ops](../ops/IMMUTABLE-RELEASE.md) ghi cutover đầu tiên 27/10/2026, source SHA `2645999f0ad535276b63a95c6c96bace9cff025e`. Dùng contract pin/manifest/compatibility/rollback trong ops; image self-contained theo digest còn là phương án thay thế |
+| F07 cap Gate | Handoff đề nghị giữ `240/user/UTC-hour`, chờ roster/arrival curve nếu cần đổi policy. Đợt dọn docs không kiểm lại runtime và không có approval mới để đổi cap; dùng Task/contract có evidence khi đánh giá trạng thái hiện tại |
+
+Bảng này đối chiếu **các tài liệu đã publish**, không chạy lại runtime/capacity hoặc xác nhận cấu hình production hôm nay. Các finding/source line, điều kiện “sau coordinator xác nhận” và số đo trong phần dưới giữ bối cảnh **25/10 tại SHA `152b6383…`**. Không dùng chúng để mở lại tự động một consumer đã hoàn tất, hoặc coi mọi đề xuất F02/F03/F04/F07 cùng được chấp nhận.
+
+## Kết luận và ranh giới (handoff gốc 25/10)
 
 1. **F02:** giữ một PG `TicketIssued` outbox row, nhưng xử lý email và từng device push như các delivery độc lập. `COMPLETE` chỉ khi mọi delivery bắt buộc được provider `ACCEPTED` hoặc có lý do **không cần gửi** được ghi bền vững. Delivery hết retry hay lỗi vĩnh viễn dẫn outbox `DEAD`, không được biến thành `COMPLETE` giả. Không hứa `DELIVERED` hoặc exactly-once SMTP/APNs.
 2. **F03:** giữ một worker process ban đầu; đặt deadline và đo queue age theo job class. Chỉ tách loop/process khi fault injection hoặc số đo vượt budget bên dưới. Không thêm BullMQ; PostgreSQL vẫn là nguồn chuẩn job theo [ADR-17](../ops/ADR-17-OUTBOX-PG-DIRECT.md).

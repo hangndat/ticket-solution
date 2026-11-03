@@ -79,3 +79,20 @@ test('issue boot misconfig does not echo env variable names', async () => {
   assert.match(deps.issueBootError?.message ?? '', /not configured/i);
   assert.doesNotMatch(deps.issueBootError?.message ?? '', /CODE_HMAC_PEPPER/);
 });
+
+test('DB-19 F2: misconfigured resolve-token secret does not null the supported pepper ring', async () => {
+  const { resolveIssueDeps } = require('../dist/tickets');
+  const deps = resolveIssueDeps({
+    CODE_HMAC_PEPPER: 'db19-f2-current-pepper-16b',
+    CODE_HMAC_VERSION: '1',
+    TICKET_CREDENTIAL_KEY: 'db19-f2-credential-key-material',
+    // Too short: readResolveTokenSecret must fail without disturbing the
+    // unrelated legacy pepper ring used by direct raw-code redeem lookup.
+    REDEMPTION_RESOLVE_TOKEN_SECRET: 'too-short',
+  });
+  assert.equal(deps.issueBootError, null);
+  assert.equal(deps.resolveTokenSecret, null);
+  assert.ok(Array.isArray(deps.routingPeppers));
+  assert.equal(deps.routingPeppers.length, 1);
+  assert.equal(deps.routingPeppers[0].version, 1);
+});

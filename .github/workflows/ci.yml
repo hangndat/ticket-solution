@@ -104,6 +104,8 @@ jobs:
               - 'packages/backend/**'
               - 'packages/contracts/**'
               - 'tests/e2e/backend/**'
+              - 'tests/e2e/http/**'
+              - 'tests/e2e/harness/**'
             hardening:
               - 'scripts/d5-**'
               - 'scripts/load/scanner-context.*'
@@ -254,11 +256,13 @@ jobs:
           - shard: membership-report
             files: test/membership.test.cjs test/reporting.test.cjs test/db02-identity-issuer-subject.test.cjs
           - shard: issue-gate
-            files: test/issue.test.cjs test/gate.test.cjs test/db04-db05-acceptance.test.cjs
+            files: test/issue.test.cjs test/gate.test.cjs test/gate-acceptance.test.cjs test/gate-concurrency.test.cjs test/db04-db05-acceptance.test.cjs test/db19-code-pepper-rotation.test.cjs test/credential-keyring-unit.test.cjs
           - shard: account-deletion
             files: test/platform.test.cjs test/account-session-revoke.test.cjs test/account-ack-session-revoke.test.cjs test/account-idp-erasure.test.cjs
           - shard: approval-config-lifecycle
-            files: test/approval.test.cjs test/config-publish.test.cjs test/event-lifecycle.test.cjs test/form-consent.test.cjs
+            files: test/approval.test.cjs test/config-publish.test.cjs test/event-lifecycle.test.cjs test/form-consent.test.cjs test/db13-event-windows.test.cjs
+          - shard: o06-retention
+            files: test/o06-retention-db.test.cjs
           - shard: n1-email
             files: test/n1-email-mime.test.cjs
           - shard: branding
@@ -270,17 +274,21 @@ jobs:
           - shard: tenant-limits-usage
             files: test/tenant-limits-usage.test.cjs
           - shard: offline-sync-apply
-            files: test/offline-sync-apply.test.cjs test/offline-sync-receipt.test.cjs
+            files: test/offline-sync-apply.test.cjs test/offline-sync-authz-retry.test.cjs test/offline-sync-receipt.test.cjs
           - shard: cs-export
             files: test/cs-export.test.cjs
           - shard: tenant-registration
-            files: test/tenant-registration.test.cjs test/role-presets.test.cjs test/portal-audit-codes.test.cjs
+            files: test/tenant-registration.test.cjs test/role-presets.test.cjs test/portal-audit-codes.test.cjs test/db17-role-escalation.test.cjs test/db17-tenant-limits-mutation.test.cjs
           - shard: demo-seed-rebrand
             files: test/demo-seed-rebrand.test.cjs
           - shard: backend-fences
             files: test/outbox-fence.test.cjs test/event-quota-suspended.test.cjs test/apns-atleast-once.test.cjs test/apns-env-fallback.test.cjs
+          - shard: worker-budget
+            files: test/worker-db-cancel.test.cjs ../../tests/e2e/backend/job-06-worker-budget.test.cjs
           - shard: minio-real
             files: test/minio-real.test.cjs
+          - shard: resend-caps
+            files: test/job04-resend-caps.test.cjs test/email-budget.test.cjs
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-pnpm
@@ -299,6 +307,12 @@ jobs:
             done
           done
           wait "$build_pid"
+      - name: Build worker for JOB-06 D shard
+        if: matrix.shard == 'worker-budget'
+        run: pnpm --filter @ticket/worker build
+      - name: Build worker for POL-02 process probe
+        if: matrix.shard == 'o06-retention'
+        run: pnpm exec turbo run build --filter=@ticket/worker...
       - name: DB tests (${{ matrix.shard }})
         working-directory: packages/backend
         run: node --test --test-concurrency=4 --test-force-exit ${{ matrix.files }}
@@ -307,6 +321,42 @@ jobs:
       - name: POL-01 standard D command (catalog + retention-db)
         if: matrix.shard == 'account-deletion'
         run: pnpm test:integration:local --case POL-01 --suite D --no-build
+      - name: POL-02 standard D command (catalog + retention-db)
+        if: matrix.shard == 'o06-retention'
+        run: pnpm test:integration:local --case POL-02 --suite D --no-build
+      - name: POL-02 worker process probe
+        if: matrix.shard == 'o06-retention'
+        run: pnpm test:integration:local --case POL-02 --suite R --no-build
+      - name: DB-18 live Keycloak and bearer HTTP
+        if: matrix.shard == 'account-deletion'
+        env:
+          E2E_LANES: '1'
+        run: pnpm test:e2e:http --lane --case=DB-18
+      - name: DB-13 live Keycloak and bearer HTTP
+        if: matrix.shard == 'approval-config-lifecycle'
+        env:
+          E2E_LANES: '1'
+        run: pnpm test:e2e:http --lane --case=DB-13
+      - name: DB-19 live pepper and QR key rotation HTTP
+        if: matrix.shard == 'account-deletion'
+        env:
+          E2E_LANES: '1'
+        run: pnpm test:e2e:http --lane --case=DB-19
+      - name: DB-17 live tenant roles and limits HTTP
+        if: matrix.shard == 'tenant-registration'
+        env:
+          E2E_LANES: '1'
+        run: |
+          pnpm exec playwright install --with-deps chromium --only-shell
+          pnpm test:e2e:http --lane --case=DB-17
+      - name: DB-17 sanitized failure diagnostic
+        if: failure() && matrix.shard == 'tenant-registration'
+        uses: actions/upload-artifact@v4
+        with:
+          name: db17-http-failure
+          path: tests/e2e/.artifacts/*/db17-failure.json
+          retention-days: 1
+          if-no-files-found: ignore
 
   # D5 drills tách 3 job song song (ports/container name độc lập).
   d5-observability:

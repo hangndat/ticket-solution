@@ -4,12 +4,13 @@
 | --- | --- |
 | Epic / Task | [#891](https://github.com/hangndat/ticket-solution/issues/891) · [#902](https://github.com/hangndat/ticket-solution/issues/902) (F06) |
 | Role | `architect` (Dexter) · [`docs/agents/roles/architect.md`](../agents/roles/architect.md) |
-| **Ngày** | 2026-10-25 |
+| **Ngày baseline** | 2026-10-25 |
+| **Đối chiếu docs ops** | 03/11/2026 — bổ sung F04 theo release contract; không revalidate source/runtime trên HEAD |
 | **SHA đối chiếu repo** | `5587dce9a8e4e7c96186ae60d7590e6b7722fa2c` (branch tích hợp Epic #891 tại thời điểm viết) |
 | **SHA baseline Atlas** | `152b6383d0127c13b9373dfd9ead3105bb510409` (findings F01–F07; không thay thế SHA đối chiếu implementation mới hơn) |
 | **Kết luận tài liệu** | **Hiện trạng có bằng chứng** — không khẳng định pilot ready, HA production, hay capacity SLO |
 
-Tài liệu này là **nguồn đọc đầu** cho hiện trạng kiến trúc. [Technical Design](./../TECHNICAL-DESIGN.md) giữ bản đề xuất dài hạn; các mục **superseded** ở đây và trong TD được đánh dấu rõ. Không rewrite lịch sử trong [Decision Log](./../DECISION-LOG.md).
+Tài liệu này là **nguồn đọc đầu** cho baseline kiến trúc có SHA và cập nhật ops có nguồn riêng. Các nhãn Deployed/Tested gắn với evidence được dẫn, không tự xác nhận trạng thái production hiện tại. [Technical Design](./../TECHNICAL-DESIGN.md) giữ bản đề xuất dài hạn; các mục **superseded** ở đây và trong TD được đánh dấu rõ. Không rewrite lịch sử trong [Decision Log](./../DECISION-LOG.md).
 
 ## Chú giải trạng thái
 
@@ -85,16 +86,16 @@ Trust boundary: client không nối PG/Redis/SMTP; worker không tin payload que
 
 ## Topology triển khai: thực tế vs mục tiêu
 
-### Deployed (VPS / local theo README)
+### Baseline 25/10 và cập nhật release 27/10
 
 | Thành phần | Mô hình |
 | --- | --- |
 | TLS / vhost | nginx trên host (Compose không chiếm 80/443) |
-| `api`, `worker`, `web`, `portal` | Image runtime mỏng + **bind mount** `node_modules` / `dist` / `.next` trên host |
+| `api`, `worker`, `web`, `portal` | Image runtime + bind mount **release directory bất biến** được pin riêng từng service; [release contract](../ops/IMMUTABLE-RELEASE.md) ghi cutover đầu tiên 27/10 tại `2645999f0ad535276b63a95c6c96bace9cff025e` |
 | PostgreSQL, Redis, Keycloak, MinIO, Mailpit | Compose stack |
-| Rollout service | Build artifact → `restart` service tương ứng |
+| Rollout service | Build staging → verify manifest/artifact → pin release → recreate service và verify mount/schema; theo contract ops, không build lại tree đang mount |
 
-Nguồn: [`infra/deploy/README.md`](../../infra/deploy/README.md). Rủi ro trộn phiên bản giữa API/worker khi cùng tree mount — Atlas **F04**; mitigation **Proposed** bên dưới.
+Nguồn baseline: [`infra/deploy/README.md`](../../infra/deploy/README.md). Atlas **F04** mô tả rủi ro tree mutable ở SHA cũ; quy trình giảm rủi ro đã được ghi trong [IMMUTABLE-RELEASE](../ops/IMMUTABLE-RELEASE.md). Đây là cập nhật tài liệu ops có mốc cutover, không phải một lần kiểm tra VPS mới.
 
 ### Proposed / mục tiêu (chưa xác minh ops)
 
@@ -102,7 +103,6 @@ Nguồn: [`infra/deploy/README.md`](../../infra/deploy/README.md). Rủi ro tr�
 | --- | --- |
 | PostgreSQL primary + **standby** / PITR | Mục tiêu TD §12; **không** tuyên bố đã vận hành standby từ tài liệu deploy hiện tại |
 | **Gate API pool** (replica API ưu tiên check-in) | Mục tiêu TD §3.1; **không deployed** |
-| Release directory bất biến theo SHA, pin từng service | **Proposed** · PR [#911](https://github.com/hangndat/ticket-solution/pull/911) (`94728c70…`) — candidate review, **chưa** merge/áp dụng production |
 | Image self-contained theo digest | Alternative F04 trong [handoff T1](./ar891-t1-recovery-worker-release-handoff.md) |
 
 ## Failure domains và recovery semantics
@@ -127,7 +127,7 @@ Nguồn: [`infra/deploy/README.md`](../../infra/deploy/README.md). Rủi ro tr�
 
 ### Handoff recovery (đọc contract, không thay ADR lịch sử)
 
-Chi tiết state machine email/push độc lập, `COMPLETE` chỉ khi mọi delivery bắt buộc terminal: [ar891-t1-recovery-worker-release-handoff.md](./ar891-t1-recovery-worker-release-handoff.md). Implementation F02 theo PR #907; reviewer độc lập và CI trên exact SHA là gate DoD Epic.
+Chi tiết state machine email/push độc lập, `COMPLETE` chỉ khi email và mọi push bắt buộc được `ACCEPTED` (hoặc push được ghi bền vững là không cần gửi); delivery bắt buộc `DEAD` không được coi là `COMPLETE`: [ar891-t1-recovery-worker-release-handoff.md](./ar891-t1-recovery-worker-release-handoff.md). Implementation F02 theo PR #907; reviewer độc lập và CI trên exact SHA là gate DoD Epic.
 
 ### Chưa đủ evidence (Atlas F05 / #901)
 
@@ -150,7 +150,7 @@ Mixed load/soak production-like, RPO/RTO restore đo trên môi trường đích
 | Recovery / worker / release handoff | [`docs/architecture/ar891-t1-recovery-worker-release-handoff.md`](./ar891-t1-recovery-worker-release-handoff.md) |
 | F03 worker budget evidence | [`docs/reviews/ar891-t4-worker-budget-evidence.md`](../reviews/ar891-t4-worker-budget-evidence.md) |
 | Atlas session metrics (local) | [`docs/reviews/atlas-20261025/evidence.json`](../reviews/atlas-20261025/evidence.json), [`context-benchmark.json`](../reviews/atlas-20261025/context-benchmark.json) |
-| F04 release tooling (candidate) | [PR #911](https://github.com/hangndat/ticket-solution/pull/911) — **Proposed**, không link file chỉ có trên branch candidate như canonical |
+| F04 release contract / lịch sử candidate | [IMMUTABLE-RELEASE](../ops/IMMUTABLE-RELEASE.md) là quy trình ops; [PR #911](https://github.com/hangndat/ticket-solution/pull/911) giữ provenance candidate tại ngày 25/10 |
 
 ## Giới hạn tài liệu
 

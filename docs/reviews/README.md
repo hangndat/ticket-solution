@@ -1,36 +1,22 @@
-# D6 UX/UI — curated headless UAT screenshots
+# Evidence và báo cáo review
 
-Evidence for parent Issue [#81](https://github.com/hangndat/ticket-solution/issues/81) (D6 UX/UI).  
-Tracked copies of gitignored `.uat-artifacts` from web/iOS worktrees. **Not** device/TestFlight UAT; **not** pilot ready.
+Đây là kho evidence theo Task/PR/SHA; không phải nguồn Status live hoặc chỉ dẫn deploy/UAT. Bắt đầu từ [docs index](../README.md), thực thi theo workflow hiện hành.
 
-## Capture SHAs
+## Chọn evidence
 
-| Surface | PR | Tip SHA (feature branch) | Merge commit on `main` |
-| --- | --- | --- | --- |
-| Web | [#92](https://github.com/hangndat/ticket-solution/pull/92) | `613518a631ff5f477f48359b6dbd143477d454e1` (`hangndat/d6-web` tip when UX landed; final tip `ec8eac6180c150d96bcc02d0a0242b0c1bd13501`) | `eb0d0784f300571dc7a557c0db3ecd865c4e9cfe` |
-| iOS | [#93](https://github.com/hangndat/ticket-solution/pull/93) | `a3eabf248a4187026df59c4d5725de018ab4b565` | `b93124b58eb1740d263fc5191ddd9a9aad4506f6` |
+- F04 regression: [acceptance matrix](../../tests/e2e/ACCEPTANCE.md), [E2E plan](../../tests/e2e/PLAN.md).
+- Pilot: [PROD-LAUNCH-UAT](../plans/PROD-LAUNCH-UAT.md), đúng scope/authorization #1008.
+- Kiến trúc: [baseline có bằng chứng](../architecture/ar891-current-architecture.md) dẫn evidence theo vấn đề/SHA.
+- [GAP audit 18/10](GAP-AUDIT-2026-10-18-INDEX.md) và [D6 evidence](d6-foundation-evidence-index.md) là checkpoint lịch sử, không phải audit mới.
 
-Screenshots regenerated 2026-10-17 (headless) against local worktrees that include the merged D6 UX + gap-fix commits:
+Khi tìm theo Issue/PR/SHA, kiểm source/tested SHA, environment/build, command/run ID, provenance, verdict/findings và limitations. Evidence cũ có thể tái sử dụng theo diff với lý do; không đổi nhãn SHA và không gọi đó là test mới.
 
-- Web worktree `d6-web` HEAD: `0e5842c3b194e97fa37912d2b982fd00f0d771af`
-- iOS worktree `d6-ios` HEAD: `31490627df2bafbd6ba654b808afd4484f1900fa`
+## Retention
 
-## Commands used
+- Giữ ADR, approval, verdict độc lập, finding IDs/lượt fix và evidence cần để audit/reproduce/rollback.
+- Các file prior/revalidation không tự là bản sao thừa: chúng có thể chứng minh diễn tiến findings. Không xóa dựa tên hoặc ngày.
+- Raw logs, capture lặp và artifact sinh mới ưu tiên gitignored artifact/CI storage theo policy; không thêm PNG hoặc dữ liệu thật vào Git.
+- Dọn artifact đã theo dõi chỉ bằng Task riêng: inventory consumer + path/hash, bản thay thế đã verify, retention/backup và approval đúng scope. Không chạy git clean hoặc xóa cả assets trong đợt dọn docs.
+- Research và run log không dùng làm chỉ dẫn vận hành; đưa archive có index, cập nhật link. Report lịch sử vẫn giữ exact SHA/verdict; không rewrite kết quả.
 
-```bash
-# Web (Playwright headless — scripts/web-uat.sh)
-scripts/web-uat.sh screenshot  # → apps/web/.uat-artifacts/d6-*.png
-
-# iOS Simulator (AXe HID + simctl — scripts/sim-uat.sh; no cliclick)
-scripts/sim-uat.sh screenshot  # → apps/mobile/.uat-artifacts/d6-*.png
-```
-
-## Layout
-
-- `web/` — home, redeem, gate, admin, account, event
-- `ios/` — events, my-tickets, ticket-detail, redeem, staff-scan
-
-See also:
-
-- [d6-web-uat-notes.md](../d6-web-uat-notes.md)
-- [d6-ios-uat-notes.md](../d6-ios-uat-notes.md)
+Lượt tổ chức docs 03/11/2026 giữ nguyên reports/assets khác; README cũ dành riêng D6 được lưu tại link trên để evidence không mất.
