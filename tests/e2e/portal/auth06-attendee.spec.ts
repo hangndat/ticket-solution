@@ -107,7 +107,11 @@ test('[AUTH-06] attendee staff-client login does not grant a staff workspace', a
     await expect(
       page.getByText('Portal quản trị chỉ dành cho nhân sự'),
     ).toBeVisible();
-    expect((await bffGet(page, m, eventBff(f, '/gates'))).status).toBe(403);
+    const deniedGates = await bffGet(page, m, eventBff(f, '/gates'));
+    expect(deniedGates.status).toBe(403);
+    expect(JSON.stringify(deniedGates.json)).not.toContain(
+      'AUTH06 staff control',
+    );
     expect(
       (
         await bffMutate(page, eventBff(f, '/gates'), {
