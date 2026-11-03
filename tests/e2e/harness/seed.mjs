@@ -938,6 +938,30 @@ export async function seedRuntime(state, caseIds) {
           await tx.$executeRaw`INSERT INTO gates (tenant_id, event_id, id, name, sort_order) VALUES (${tenantId}::uuid, ${foreignEventId}::uuid, ${foreignGateId}::uuid, 'Other gate', 0)`;
           fixture.data.foreignGateId = foreignGateId;
         }
+        if (caseId === 'GATE-08' || caseId === 'GATE-09') {
+          const otherEventId = randomUUID();
+          await tx.event.create({ data: { tenantId, id: otherEventId, slug: 'receipt-other',
+            name: `Receipt other ${caseId}`, status: 'PUBLISHED' } });
+          await backend.grantEventAssignment(tx, { tenantId, eventId: otherEventId,
+            membershipId: memberships.supervisor.membershipId,
+            permissions: backend.eventPermissionsForRole('Supervisor') });
+          fixture.data.receiptOtherEventId = otherEventId;
+          const otherTenantId = randomUUID();
+          const otherTenantEventId = randomUUID();
+          await backend.withTenant(db, otherTenantId, async (otherTx) => {
+            await otherTx.tenant.create({ data: { id: otherTenantId,
+              slug: `receipt-other-${state.id}-${caseId.toLowerCase()}`, name: `Receipt tenant ${caseId}` } });
+            const member = await backend.grantMembership(otherTx, { tenantId: otherTenantId,
+              userId: accounts.supervisor.userId, role: 'Supervisor',
+              permissions: backend.tenantPermissionsForRole('Supervisor') });
+            await otherTx.event.create({ data: { tenantId: otherTenantId, id: otherTenantEventId,
+              slug: 'event', name: `Receipt tenant event ${caseId}`, status: 'PUBLISHED' } });
+            await backend.grantEventAssignment(otherTx, { tenantId: otherTenantId, eventId: otherTenantEventId,
+              membershipId: member.membershipId, permissions: backend.eventPermissionsForRole('Supervisor') });
+          });
+          fixture.data.receiptOtherTenantId = otherTenantId;
+          fixture.data.receiptOtherTenantEventId = otherTenantEventId;
+        }
         if (caseId === 'GATE-03') {
           const foreignEventId = randomUUID();
           await tx.event.create({
