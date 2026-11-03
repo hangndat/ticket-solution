@@ -2068,6 +2068,77 @@ for (const caseId of CASE_IDS) {
       expectStatus(preset, 200);
       assert.deepEqual(preset.body, created.body);
 
+      const setPresetVersion = (version) =>
+        web04Query(
+          control,
+          f.tenantId,
+          `UPDATE role_presets SET schema_version=$1
+           WHERE tenant_id=$2::uuid AND id=$3::uuid`,
+          [version, f.tenantId, created.body.presetId],
+        );
+      const invitesPath = `/tenants/${f.tenantId}/invites`;
+      const presetInviteBody = {
+        email: f.accounts.attendee.username,
+        role: { presetId: created.body.presetId },
+      };
+      await setPresetVersion(1);
+      const beforeStaleInvite = (await snapshot())[0];
+      expectStatus(
+        await request(ctx, 'POST', invitesPath, owner, presetInviteBody, {
+          'idempotency-key': randomUUID(),
+        }),
+        422,
+        'INVALID_INPUT',
+      );
+      assert.deepEqual((await snapshot())[0], beforeStaleInvite);
+      await setPresetVersion(2);
+      const presetInvite = await request(
+        ctx,
+        'POST',
+        invitesPath,
+        owner,
+        presetInviteBody,
+        { 'idempotency-key': randomUUID() },
+      );
+      expectStatus(presetInvite, 201);
+      const [inviteToken] = await web04Query(
+        control,
+        f.tenantId,
+        `SELECT payload->>'token' AS token FROM outbox
+         WHERE tenant_id=$1::uuid AND type='MembershipInvite'
+           AND aggregate_id=$2::uuid`,
+        [f.tenantId, presetInvite.body.inviteId],
+      );
+      assert.ok(inviteToken?.token);
+      await setPresetVersion(1);
+      const [beforeStaleAccept] = await web04Query(
+        control,
+        f.tenantId,
+        `SELECT count(*)::int AS memberships FROM memberships
+         WHERE tenant_id=$1::uuid AND user_id=$2::uuid`,
+        [f.tenantId, f.accounts.attendee.userId],
+      );
+      expectStatus(
+        await request(ctx, 'POST', '/me/membership-invites/accept', attendee, {
+          token: inviteToken.token,
+        }),
+        422,
+        'INVITE_INVALID_OR_EXPIRED',
+      );
+      const [afterStaleAccept] = await web04Query(
+        control,
+        f.tenantId,
+        `SELECT accepted_at,
+          (SELECT count(*)::int FROM memberships
+           WHERE tenant_id=$1::uuid AND user_id=$2::uuid) AS memberships
+         FROM membership_invites
+         WHERE tenant_id=$1::uuid AND id=$3::uuid`,
+        [f.tenantId, f.accounts.attendee.userId, presetInvite.body.inviteId],
+      );
+      assert.equal(afterStaleAccept.accepted_at, null);
+      assert.equal(afterStaleAccept.memberships, beforeStaleAccept.memberships);
+      await setPresetVersion(2);
+
       const registrationKey = randomUUID();
       const registrationBody = {
         slug: `db17-${registrationKey}`,
