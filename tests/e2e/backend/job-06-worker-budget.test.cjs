@@ -32,9 +32,11 @@ const docker = (...args) =>
 
 async function startStalledSmtp() {
   let connections = 0;
+  let connectedAtMs;
   const sockets = new Set();
   const server = createNetServer((socket) => {
     connections += 1;
+    connectedAtMs ??= Date.now();
     sockets.add(socket);
     socket.on('close', () => sockets.delete(socket));
     socket.write('220 job06-stall ESMTP\r\n');
@@ -47,11 +49,24 @@ async function startStalledSmtp() {
     get connections() {
       return connections;
     },
+    get connectedAtMs() {
+      return connectedAtMs;
+    },
     close() {
       for (const socket of sockets) socket.destroy();
       server.close();
     },
   };
+}
+
+async function transactionsStartedBefore(admin, timestampMs) {
+  return admin.query(
+    `SELECT pid FROM pg_stat_activity
+     WHERE datname = current_database() AND usename = 'e2e_login'
+       AND xact_start IS NOT NULL
+       AND xact_start <= to_timestamp($1::double precision / 1000)`,
+    [timestampMs],
+  );
 }
 
 async function startMailpit() {
@@ -418,6 +433,26 @@ test(
         );
       await insertInvite(firstOutboxId, firstInviteId, 3);
       await insertInvite(secondOutboxId, secondInviteId, 2);
+      // A transaction held across the SMTP connection must be visible to the
+      // same probe used below; a later independent transaction must not be.
+      const control = new Client({ connectionString: pg.url });
+      await control.connect();
+      try {
+        await control.query('BEGIN');
+        const controlPid = (await control.query('SELECT pg_backend_pid() AS pid')).rows[0].pid;
+        await delay(20);
+        const boundary = Date.now();
+        assert.ok((await transactionsStartedBefore(admin, boundary)).rows.some((row) => row.pid === controlPid),
+          'probe must detect a transaction held across the SMTP boundary');
+        await control.query('ROLLBACK');
+        await delay(20);
+        await control.query('BEGIN');
+        assert.ok(!(await transactionsStartedBefore(admin, boundary)).rows.some((row) => row.pid === controlPid),
+          'probe must exclude a transaction started after the SMTP boundary');
+        await control.query('ROLLBACK');
+      } finally {
+        await control.end();
+      }
       stalledSmtp = await startStalledSmtp();
       workerA = spawnWorker(pg.url, stalledSmtp.smtpUrl, outputA);
 
@@ -519,36 +554,19 @@ test(
         [tenantId, secondOutboxId],
       );
       assert.equal(secondRowBefore.rows[0].status, 'PENDING');
-      const readIdleTransactions = () => admin.query(
-        `SELECT pid, application_name, state, wait_event_type, wait_event,
-                round(extract(epoch FROM clock_timestamp() - xact_start)::numeric, 3) AS transaction_age_seconds,
-                CASE
-                  WHEN query ILIKE '%redemption%' THEN 'redemption'
-                  WHEN query ILIKE '%outbox%' THEN 'outbox'
-                  WHEN query ILIKE '%notification%' THEN 'notification'
-                  WHEN query ILIKE '%tenant_email%' THEN 'email_budget'
-                  WHEN query ILIKE '%set_config%' OR query ILIKE 'SET %' THEN 'tenant_context'
-                  ELSE 'other'
-                END AS query_class
-         FROM pg_stat_activity
-         WHERE datname = current_database() AND usename = 'e2e_login'
-           AND state = 'idle in transaction'`,
-      );
-      const activeTransactions = await readIdleTransactions();
-      if (activeTransactions.rows.length !== 0)
-        console.error(JSON.stringify({ event: 'job06_idle_transaction_diagnostic', sessions: activeTransactions.rows }));
+      assert.ok(stalledSmtp.connectedAtMs, 'SMTP connection time must be recorded');
+      const activeTransactions = await transactionsStartedBefore(admin, stalledSmtp.connectedAtMs);
       assert.equal(
         activeTransactions.rows.length,
         0,
         'stalled SMTP must not hold a worker transaction open',
       );
-      const observed = [];
-      for (let sample = 0; sample < 30; sample++) {
-        await delay(10);
-        const idle = await readIdleTransactions();
-        if (idle.rows.length) observed.push({ sample, sessions: idle.rows });
+      await admin.query('BEGIN');
+      try {
+        await admin.query('SELECT id FROM outbox WHERE tenant_id=$1 AND id=$2 FOR UPDATE NOWAIT', [tenantId, firstOutboxId]);
+      } finally {
+        await admin.query('ROLLBACK');
       }
-      console.log(JSON.stringify({ event: 'job06_idle_transaction_samples', samples: 30, observed }));
 
       const shutdownAt = performance.now();
       const closedA = await stopWorker(workerA);
@@ -651,7 +669,7 @@ test(
           dailySentCount: usage.sent_count,
           dailyHeldCount: usage.held_count,
           deferredCount: 1,
-        idleWorkerTransactions: activeTransactions.rows.length,
+        preSmtpWorkerTransactions: activeTransactions.rows.length,
           replacementShutdown: shutdownB.signal,
         }),
       );
