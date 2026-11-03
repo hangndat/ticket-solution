@@ -163,7 +163,6 @@ export const catalog = {
     b('gate-acceptance', 'GATE-02/04/05 acceptance'),
     b('gate-concurrency', 'GATE-02/04/05 concurrency'),
   ],
-  'GATE-03': [b('gate', 'gate: one confirm wins')],
   'GATE-04': [
     b('gate', 'gate: one confirm wins'),
     b('gate-acceptance', 'GATE-02/04/05 acceptance'),
@@ -173,6 +172,34 @@ export const catalog = {
     b('gate', 'gate: one confirm wins'),
     b('gate-acceptance', 'GATE-02/04/05 acceptance'),
     b('gate-concurrency', 'GATE-02/04/05 concurrency'),
+  ],
+  'GATE-03': [
+    b('gate', 'gate: one confirm wins'),
+    b(
+      'gate03-signed-qr-d',
+      'gate03 signed-QR D: reserve current/old version + confirm reissue-between-hold TOCTOU',
+    ),
+    b(
+      'gate03-signed-qr-d',
+      'gate03 signed-QR D: manual proof bound to staffSessionId and current version',
+    ),
+    b(
+      'gate03-signed-qr-d',
+      'gate03 signed-QR D: stale manual proof minted before reissue, used after',
+    ),
+    b(
+      'gate03-signed-qr-d',
+      'gate03 signed-QR D: manual hold then reissue then confirm returns CREDENTIAL_VERSION_STALE',
+    ),
+    b(
+      'gate03-signed-qr-d',
+      'gate03 signed-QR D: keyring rotation — two kids verify, unknown kid denied',
+    ),
+    {
+      file: 'tests/e2e/backend/gate03-runtime-rotation.test.mjs',
+      name: 'GATE-03 R: real /me/tickets JWS + reserve/confirm + kid rotation between API restarts',
+      layer: 'R',
+    },
   ],
   'GATE-06': [
     b('offline-sync-apply', 'offline sync: apply'),

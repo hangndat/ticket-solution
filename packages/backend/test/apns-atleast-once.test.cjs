@@ -20,9 +20,9 @@ const {
   redeemAndIssueTicket,
   unwrapRedeemOutcome,
   readCodeHmacEnvironment,
-  processClaimedOutbox,
+  processClaimedOutbox: processClaimedOutboxRaw,
   claimOutboxBatch,
-  relayOutboxOnce,
+  relayOutboxOnce: relayOutboxOnceRaw,
   publishNotificationTemplate,
   publishEventConfig,
   saveEventConfigVersion,
@@ -30,6 +30,21 @@ const {
   registerDeviceToken,
   createNoopEmailAdapter,
 } = require('../dist');
+const { emailSignerEnv, withTestEmailSigner } = require('./gate-test-credentials.cjs');
+
+async function relayOutboxOnce(db, email, leaseOwner, limit, options) {
+  return relayOutboxOnceRaw(
+    db,
+    email,
+    leaseOwner,
+    limit,
+    withTestEmailSigner(options),
+  );
+}
+
+async function processClaimedOutbox(db, email, rows, options) {
+  return processClaimedOutboxRaw(db, email, rows, withTestEmailSigner(options));
+}
 
 const TASK_LABEL = 'task_dc75d3a8cd45';
 
@@ -1128,6 +1143,7 @@ test(
             encoding: 'utf8',
             env: {
               ...process.env,
+              ...emailSignerEnv(credentialKey),
               DATABASE_URL: boot.url,
               TEST_CREDENTIAL_KEY: credentialKey,
             },

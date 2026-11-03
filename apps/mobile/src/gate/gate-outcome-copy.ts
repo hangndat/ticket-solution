@@ -44,7 +44,7 @@ const ALREADY_MESSAGE = /đã check-in/i;
 /**
  * Map GateOp → large outcome canvas copy.
  * unknown / queued never use admit (green).
- * ALREADY_CHECKED_IN stays phase=admitted for protocol but distinct title/kind.
+ * Legacy ALREADY_CHECKED_IN entries are rendered as a denial, never permission.
  */
 export function presentGateOutcome(op: GateOp | null): GateOutcomeView {
   if (!op) {
@@ -113,11 +113,9 @@ export function presentGateOutcome(op: GateOp | null): GateOutcomeView {
       return {
         kind: 'already-checked-in',
         title: 'Vé đã được sử dụng',
-        detail:
-          op.message ||
-          'Vé này đã được ghi nhận vào cổng. Cho qua theo kết quả đã có — không tạo lượt mới.',
-        tone: 'admit',
-        assertive: false,
+        detail: 'Vé đã được check-in trước đó. Không cho vào.',
+        tone: 'deny',
+        assertive: true,
       };
     }
     return {

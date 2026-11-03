@@ -99,6 +99,7 @@ async function startIsolatedPostgres() {
   return {
     name,
     url: 'postgresql://d3_login:' + password + '@127.0.0.1:' + port + '/d3_gate_test',
+    adminUrl: 'postgresql://postgres:' + password + '@127.0.0.1:' + port + '/d3_gate_test',
   };
   } finally {
     await admin.end().catch(() => {});
@@ -112,6 +113,7 @@ test(
     let name;
     let db;
     let db2;
+    let admin;
     try {
       const boot = await startIsolatedPostgres();
       name = boot.name;
@@ -688,6 +690,88 @@ test(
       assert.equal(finalCode.manual_entry_code_hash,
         hashManualCode(manualPepper, tenantId, eventId, finalRawCode));
 
+      // Sequence increments survive savepoint rollback, so the trigger can force an
+      // exact number of real unique-index collisions without controlling random minting.
+      admin = new Client({ connectionString: boot.adminUrl });
+      await admin.connect();
+      await admin.query('CREATE SEQUENCE gate_test_manual_collision_attempt');
+      await admin.query('GRANT USAGE ON SEQUENCE gate_test_manual_collision_attempt TO ticket_runtime');
+      await admin.query(`
+        CREATE FUNCTION gate_test_manual_collision() RETURNS trigger
+        LANGUAGE plpgsql AS $$
+        BEGIN
+          IF NEW.id = TG_ARGV[0]::uuid
+             AND nextval('gate_test_manual_collision_attempt') <= TG_ARGV[1]::integer THEN
+            SELECT manual_entry_code_hash INTO NEW.manual_entry_code_hash
+            FROM tickets
+            WHERE id = TG_ARGV[2]::uuid
+              AND tenant_id = NEW.tenant_id AND event_id = NEW.event_id;
+          END IF;
+          RETURN NEW;
+        END $$
+      `);
+      const readManualRow = async (ticketId) => withTenant(db, tenantId, async (tx) => {
+        const rows = await tx.$queryRaw`SELECT tenant_id, event_id, state,
+          credential_version, manual_entry_code_hash, manual_entry_code_sealed
+          FROM tickets WHERE tenant_id = ${tenantId}::uuid AND id = ${ticketId}::uuid`;
+        return rows[0];
+      });
+      const installCollisionTrigger = async (limit) => {
+        await admin.query('DROP TRIGGER IF EXISTS gate_test_manual_collision ON tickets');
+        await admin.query('ALTER SEQUENCE gate_test_manual_collision_attempt RESTART WITH 1');
+        // Ticket IDs come from the database; validate before embedding in DDL.
+        assert.match(third.ticketId, /^[0-9a-f-]{36}$/i);
+        assert.match(issued.ticketId, /^[0-9a-f-]{36}$/i);
+        await admin.query(`CREATE TRIGGER gate_test_manual_collision
+          BEFORE UPDATE OF manual_entry_code_hash ON tickets
+          FOR EACH ROW EXECUTE FUNCTION gate_test_manual_collision(
+            '${third.ticketId}', '${limit}', '${issued.ticketId}')`);
+      };
+      try {
+        const donorBefore = await readManualRow(issued.ticketId);
+        assert.ok(donorBefore.manual_entry_code_hash);
+        await withTenant(db, tenantId, (tx) => tx.$executeRaw`
+          UPDATE tickets SET manual_entry_code_hash = NULL, manual_entry_code_sealed = NULL
+          WHERE tenant_id = ${tenantId}::uuid AND id = ${third.ticketId}::uuid
+        `);
+        const beforeRetry = await readManualRow(third.ticketId);
+        await installCollisionTrigger(1);
+        const retried = await runBackfill();
+        assert.equal(retried.minted, 1);
+        assert.equal(retried.complete, true);
+        const retryAttempts = await admin.query('SELECT last_value FROM gate_test_manual_collision_attempt');
+        assert.equal(Number(retryAttempts.rows[0].last_value), 2);
+        const afterRetry = await readManualRow(third.ticketId);
+        assert.equal(afterRetry.tenant_id, tenantId);
+        assert.equal(afterRetry.event_id, eventId);
+        assert.equal(afterRetry.state, beforeRetry.state);
+        assert.equal(afterRetry.credential_version, beforeRetry.credential_version);
+        const retriedCode = openManualEntryCode(afterRetry.manual_entry_code_sealed, 'd3-cred-key');
+        assert.equal(afterRetry.manual_entry_code_hash,
+          hashManualCode(manualPepper, tenantId, eventId, retriedCode));
+        assert.notEqual(afterRetry.manual_entry_code_hash, donorBefore.manual_entry_code_hash);
+        assert.deepEqual(await readManualRow(issued.ticketId), donorBefore);
+
+        await admin.query('DROP TRIGGER gate_test_manual_collision ON tickets');
+        await withTenant(db, tenantId, (tx) => tx.$executeRaw`
+          UPDATE tickets SET manual_entry_code_hash = NULL, manual_entry_code_sealed = NULL
+          WHERE tenant_id = ${tenantId}::uuid AND id = ${third.ticketId}::uuid
+        `);
+        const beforeExhaustion = await readManualRow(third.ticketId);
+        await installCollisionTrigger(5);
+        await assert.rejects(runBackfill, /tickets_manual_code_hmac_unique/);
+        const exhaustedAttempts = await admin.query('SELECT last_value FROM gate_test_manual_collision_attempt');
+        assert.equal(Number(exhaustedAttempts.rows[0].last_value), 5);
+        assert.deepEqual(await readManualRow(third.ticketId), beforeExhaustion);
+        assert.equal(beforeExhaustion.manual_entry_code_hash, null);
+        assert.equal(beforeExhaustion.manual_entry_code_sealed, null);
+        assert.deepEqual(await readManualRow(issued.ticketId), donorBefore);
+      } finally {
+        await admin.query('DROP TRIGGER IF EXISTS gate_test_manual_collision ON tickets');
+        await admin.query('DROP FUNCTION IF EXISTS gate_test_manual_collision()');
+        await admin.query('DROP SEQUENCE IF EXISTS gate_test_manual_collision_attempt');
+      }
+
       const race = await Promise.allSettled([
         withTenant(db, tenantId, (tx) =>
           reissueTicketCredential(tx, 'd3-cred-key-material-at-least-16', {
@@ -745,6 +829,7 @@ test(
           error.code === GATE_ERROR_CODES.SESSION_NOT_ACTIVE,
       );
     } finally {
+      if (admin) await admin.end();
       if (db) await db.$disconnect();
       if (db2) await db2.$disconnect();
       if (name) {
