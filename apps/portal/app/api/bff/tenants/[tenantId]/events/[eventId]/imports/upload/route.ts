@@ -1,6 +1,10 @@
 import { IMPORT_LIMITS } from '@ticket/contracts';
 import { assertMutatingMultipart } from '../../../../../../../../../src/bff/csrf';
 import {
+  boundedMultipart,
+  MultipartTooLarge,
+} from '../../../../../../../../../src/bff/bounded-multipart';
+import {
   isEventParams,
   requireEventParams,
 } from '../../../../../../../../../src/bff/event-params';
@@ -21,8 +25,18 @@ export async function POST(request: Request, { params }: Props) {
 
   let form: FormData;
   try {
-    form = await request.formData();
-  } catch {
+    form = await boundedMultipart(
+      request,
+      IMPORT_LIMITS.maxBytes + 1024 * 1024,
+    );
+  } catch (error) {
+    if (error instanceof MultipartTooLarge) {
+      return bffApiError(
+        'IMPORT_ROW_LIMIT',
+        'Multipart request is too large.',
+        422,
+      );
+    }
     return bffApiError(
       'INVALID_MULTIPART',
       'Expected multipart form data.',
@@ -31,6 +45,18 @@ export async function POST(request: Request, { params }: Props) {
   }
 
   const kind = String(form.get('kind') ?? '').trim();
+  if (
+    form.getAll('kind').length !== 1 ||
+    [...form.entries()].filter(([, value]) => value instanceof File).length !==
+      1 ||
+    form.getAll('file').length !== 1
+  ) {
+    return bffApiError(
+      'IMPORT_FILE_INVALID',
+      'Exactly one file and kind are required.',
+      422,
+    );
+  }
   if (kind !== 'CODES' && kind !== 'GUESTS') {
     return bffApiError(
       'IMPORT_KIND_REQUIRED',

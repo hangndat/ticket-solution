@@ -16,6 +16,7 @@ export type ImportBusinessSnapshot = {
   commit_ops: number;
   allocated: number | null;
   import_jobs: number;
+  import_files: number;
 };
 
 export type CodeStatusRow = {
@@ -71,7 +72,8 @@ export async function readImportBusinessSnapshot(
           (SELECT count(*)::int FROM audit_logs WHERE tenant_id=$1::uuid AND event_id=$2::uuid) AS audit,
           (SELECT count(*)::int FROM operations WHERE tenant_id=$1::uuid AND event_id=$2::uuid AND command='import.commit') AS commit_ops,
           (SELECT allocated FROM quota_buckets WHERE tenant_id=$1::uuid AND event_id=$2::uuid AND scope='EVENT') AS allocated,
-          (SELECT count(*)::int FROM import_jobs WHERE tenant_id=$1::uuid AND event_id=$2::uuid) AS import_jobs
+          (SELECT count(*)::int FROM import_jobs WHERE tenant_id=$1::uuid AND event_id=$2::uuid) AS import_jobs,
+          (SELECT count(*)::int FROM import_files WHERE tenant_id=$1::uuid AND event_id=$2::uuid) AS import_files
       `,
       [fixture.tenantId, eventId],
     );
