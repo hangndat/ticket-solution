@@ -3,7 +3,8 @@ import fs from 'node:fs';
 import { mkdtempSync, writeFileSync, rmSync, readFileSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { spawnSync } from 'node:child_process';
+import { spawnSync, execFileSync } from 'node:child_process';
+import { discoverSessionUsage } from './lib/provider-session-usage.mjs';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import {
@@ -96,6 +97,77 @@ test('dedupeStructuralEvents collapses duplicate message ids', () => {
     { kind: 'transcript.message', id: 'm1', timestamp: 1 },
   ]);
   assert.equal(events.length, 1);
+});
+
+test('full Orca receipt resolves effective model and exact provider session without matching coordinator mentions',()=>{
+ const root=mkdtempSync(join(tmpdir(),'full-provider-'));
+ const source=join(root,'provider.jsonl');
+ writeFileSync(source,JSON.stringify({type:'session_meta',payload:{id:'thread_abc'}})+'\n'+readFileSync(join(FIXTURES,'provider-codex-actual.jsonl'),'utf8'));
+ const hit={agent:'codex',sessionId:'thread_abc',cwd:root,structuredSession:{sessionId:'native-worker'},source:{presence:'present',filePath:source}};
+ const fake=makeFakeOrca({
+  'orchestration worker-show':{dispatch:{id:'ctx_full',runId:'run_full',taskId:'task_full',processIncarnation:'structured:native-worker'},projection:{workspace:{id:`repo::${root}`}},worker:{startOptions:{launch:{requested:{agent:'codex',model:'requested'},effective:{agent:'codex',model:'gpt-6-sol',effort:'low'}}}}},
+  'orchestration worker-read':{dispatchId:'ctx_full',source:'transcript',transcript:{messages:[],limited:false}},
+  [`search ctx_full --path ${root} --limit 100 --json`]:{hits:[{...hit,structuredSession:{sessionId:'coordinator'},sessionId:'wrong'},hit]},
+ });
+ try {
+  const r=collectTelemetry({root,dispatchId:'ctx_full',runId:'run_full',roleId:'reviewer',env:{...process.env,ORCA_CLI_COMMAND:fake.cli}});
+  assert.equal(r.joinAmbiguous,false);assert.equal(r.event.attrs.model,'gpt-6-sol');
+  assert.equal(r.event.attrs.effective_route.model,'gpt-6-sol');
+  assert.equal(r.event.attrs.thread_id,'thread_abc');assert.equal(r.event.attrs.tokens_provider.tokens.input,160);
+  assert.equal(r.event.attrs.tokens_provider.task_delta,null);
+  assert.equal(r.event.attrs.token_delta_reason,'task_boundary_unverified');
+ } finally {rmSync(root,{recursive:true,force:true});rmSync(fake.dir,{recursive:true,force:true});}
+});
+
+test('OpenCode reads only exact session counters and rejects ambiguous sources or wrong directory',()=>{
+ const root=mkdtempSync(join(tmpdir(),'opencode-usage-'));
+ const db=join(root,'opencode.db');
+ execFileSync('sqlite3',[db,`CREATE TABLE session_v2(id TEXT,directory TEXT,tokens_input INTEGER,tokens_output INTEGER,tokens_reasoning INTEGER,tokens_cache_read INTEGER,tokens_cache_write INTEGER); INSERT INTO session_v2 VALUES('ses_test','${root}',12,3,1,100,0); INSERT INTO session_v2 VALUES('ses_wrong','/other',999,999,999,999,999);`]);
+ const hit={agent:'opencode2',sessionId:'ses_test',cwd:root,structuredSession:{sessionId:'native'},source:{presence:'present',filePath:db}};
+ const options={dispatchId:'ctx_test',root,provenance:{provider:'opencode',sessionIncarnation:'structured:native'},env:process.env};
+ try {
+  const r=discoverSessionUsage({...options,orcaJson:()=>({result:{hits:[hit]}})});
+  assert.deepEqual(r.usage.tokens,{input:12,output:3,reasoning:1,cachedInput:100,cacheWrite:0});
+  assert.equal(r.usage.task_delta,null);
+  assert.equal(discoverSessionUsage({...options,orcaJson:()=>({result:{hits:[hit,{...hit,sessionId:'ses_wrong'}]}})}).reason,'provider_source_ambiguous');
+  assert.equal(discoverSessionUsage({...options,orcaJson:()=>({result:{hits:[{...hit,sessionId:'ses_wrong'}]}})}).reason,'provider_session_mismatch');
+  assert.equal(discoverSessionUsage({...options,orcaJson:()=>({result:{hits:[{...hit,structuredSession:{sessionId:'other'}}]}})}).reason,'provider_source_not_indexed');
+ } finally {rmSync(root,{recursive:true,force:true});}
+});
+
+test('historical flat receipt joins after release without live-worker inference; missing usage stays unknown', () => {
+ const root=mkdtempSync(join(tmpdir(),'historical-join-'));
+ const fake=makeFakeOrca({
+  'orchestration worker-show':{dispatchId:'ctx_old',runId:'run_old',taskId:'task_old',state:'succeeded',workspace:`repo::${root}`,terminalState:'released'},
+  'orchestration worker-read':{dispatchId:'ctx_old',source:'transcript',provider:'opencode',sourceIdentity:'stable',cursor:'end',transcript:{messages:[],limited:false,nextCursor:'end'}},
+ });
+ try {
+  const result=collectTelemetry({root,roleId:'backend',runId:'run_old',dispatchId:'ctx_old',env:{...process.env,ORCA_CLI_COMMAND:fake.cli}});
+  assert.equal(result.joinAmbiguous,false);
+  assert.equal(result.event.task_id,'task_old');
+  assert.equal(result.event.attrs.provider,'opencode');
+  assert.equal(result.event.attrs.token_delta_reason,'session_binding_unavailable');
+  assert.equal(result.event.attrs.tokens_provider,null);
+  assert.deepEqual(result.event.attrs.transcript.clipping,[]);
+  assert.equal(result.event.attrs.transcript.pagesRead,1);
+  assert.throws(()=>collectTelemetry({root,roleId:'backend',runId:'other',dispatchId:'ctx_old',env:{...process.env,ORCA_CLI_COMMAND:fake.cli}}),/another run/);
+  assert.throws(()=>collectTelemetry({root,roleId:'backend',runId:'run_old',dispatchId:'ctx_other',env:{...process.env,ORCA_CLI_COMMAND:fake.cli}}),/another dispatch/);
+ } finally {rmSync(root,{recursive:true,force:true});rmSync(fake.dir,{recursive:true,force:true});}
+});
+
+test('pagination distinguishes EOF, a real cursor cycle, and source changes',()=>{
+ for(const [tail,expected] of [
+  [{sourceIdentity:'A',transcript:{messages:[]}},[]],
+  [{sourceIdentity:'A',transcript:{messages:[{id:'m2'}]}},['cursor_cycle']],
+  [{sourceIdentity:'B',transcript:{messages:[],limited:false}},['source_changed']],
+ ]) {
+  const fake=makeFakeOrca({
+   'orchestration worker-read':{dispatchId:'ctx_p',source:'transcript',sourceIdentity:'A',cursor:'next',transcript:{messages:[{id:'m1'}]}},
+   'orchestration worker-read --dispatch ctx_p --limit 100 --json --cursor next':{dispatchId:'ctx_p',source:'transcript',cursor:'next',...tail},
+  });
+  try {const meta=readWorkerTranscriptMetadata('ctx_p',{env:{...process.env,ORCA_CLI_COMMAND:fake.cli}});assert.deepEqual(meta.clipping,expected);assert.equal(meta.pagesRead,2);}
+  finally {rmSync(fake.dir,{recursive:true,force:true});}
+ }
 });
 
 test('async fake app-server handshake returns rate limits', async () => {
