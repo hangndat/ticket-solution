@@ -48,26 +48,26 @@ test('[AUTH-06] stale Portal capability rejects gate creation after assignment a
       )
     ).rows[0];
   try {
-    for (const actor of ['manager', 'owner'] as const) {
-      const userId = accountFor(m, 'AUTH-06', actor).userId;
-      if (!userId) throw new Error(`BLOCKED: ${actor} userId missing`);
-      await login(page, m, 'AUTH-06', actor);
+    for (const branch of ['assignment', 'membership'] as const) {
+      const userId = accountFor(m, 'AUTH-06', 'owner').userId;
+      if (!userId) throw new Error('BLOCKED: owner userId missing');
+      await login(page, m, 'AUTH-06', 'owner');
       await page.goto(portalUrl(m, eventPath(f, '/gate')));
       const section = page.getByRole('region', { name: 'Cổng vào' });
       const open = section.getByRole('button', { name: 'Thêm cổng' });
       await open.click();
       const dialog = page.getByRole('dialog', { name: 'Thêm cổng' });
-      const positive = `AUTH06 ${actor} positive`;
+      const positive = `AUTH06 ${branch} positive`;
       await dialog.getByRole('textbox').fill(positive);
       await dialog.getByRole('button', { name: 'Thêm cổng' }).click();
       await expect(section.getByRole('cell', { name: positive })).toBeVisible();
       await page.reload();
       await expect(section.getByRole('cell', { name: positive })).toBeVisible();
       await open.click();
-      await dialog.getByRole('textbox').fill(`AUTH06 ${actor} revoked`);
+      await dialog.getByRole('textbox').fill(`AUTH06 ${branch} revoked`);
       const before = await counts();
       const revoked =
-        actor === 'manager'
+        branch === 'assignment'
           ? await query(
               `UPDATE event_assignments SET revoked_at=now() WHERE tenant_id=$1::uuid AND event_id=$2::uuid AND membership_id=(SELECT id FROM memberships WHERE tenant_id=$1::uuid AND user_id=$3::uuid) AND revoked_at IS NULL`,
               [f.tenantId, f.eventId, userId],
@@ -91,6 +91,13 @@ test('[AUTH-06] stale Portal capability rejects gate creation after assignment a
       ).toBeVisible();
       await expect(section.locator('.ant-alert-success')).toHaveCount(0);
       expect(await counts()).toEqual(before);
+      if (branch === 'assignment') {
+        const restored = await query(
+          `UPDATE event_assignments SET revoked_at=NULL WHERE tenant_id=$1::uuid AND event_id=$2::uuid AND membership_id=(SELECT id FROM memberships WHERE tenant_id=$1::uuid AND user_id=$3::uuid) AND revoked_at IS NOT NULL`,
+          [f.tenantId, f.eventId, userId],
+        );
+        expect(restored.rowCount).toBe(1);
+      }
       await page.context().clearCookies();
     }
   } finally {
