@@ -93,6 +93,8 @@ const httpCases = [
   'GATE-04',
   'GATE-05',
   'GATE-07',
+  'GATE-08',
+  'GATE-09',
   'DB-01',
   'DB-02',
   'DB-03',
