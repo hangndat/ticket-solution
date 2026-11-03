@@ -1,5 +1,7 @@
 # Handoff kiến trúc — GATE-03: QR credential ký + mã thủ công đủ entropy tại admission (PRD M08)
 
+**Cập nhật tích hợp 2026-11-03:** Owner chọn email gửi QR Gate ký và vẫn kiểm tra credential AES/kid/hash trước khi gửi. Xem [quyết định DB-19](./DB19-QR-KEYRING.md#quyết-định-tích-hợp-f04--2026-11-03); các mô tả giữ email QR cũ bên dưới là lịch sử của handoff ban đầu.
+
 | Trường | Giá trị |
 | --- | --- |
 | Role | `architect` (Dexter) · [`docs/agents/roles/architect.md`](../agents/roles/architect.md) |

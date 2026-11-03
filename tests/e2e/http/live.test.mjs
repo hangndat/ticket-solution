@@ -1669,9 +1669,24 @@ for (const caseId of CASE_IDS) {
       // Exercise the worker's real claim/render/ack path against the live DB.
       const relayDb = backend.createDatabase(process.env.DATABASE_URL, 3);
       const delivered = [];
+      const { prepareZXingModule, readBarcodes } = requireBackend('zxing-wasm/reader');
+      const nodePath = requireBackend('node:path');
+      const wasm = readFileSync(nodePath.resolve(nodePath.dirname(requireBackend.resolve('zxing-wasm/reader')), '../../reader/zxing_reader.wasm'));
+      await prepareZXingModule({ overrides: { wasmBinary: wasm.buffer.slice(wasm.byteOffset, wasm.byteOffset + wasm.byteLength) }, fireImmediately: true });
+      const verifyKeys = await backend.readGateCredentialVerifyKeys(process.env);
       const email = {
         async sendTicketIssued(payload) {
-          delivered.push(payload);
+          const [decoded] = await readBarcodes(new Uint8Array(payload.qrPng), { formats: ['QRCode'], tryHarder: true, maxNumberOfSymbols: 1 });
+          assert.ok(decoded?.text, 'email QR must decode');
+          const envelope = JSON.parse(decoded.text);
+          assert.deepEqual(Object.keys(envelope).sort(), ['jws', 'kind', 'v']);
+          assert.equal(envelope.kind, 'ticket.gate_credential');
+          assert.equal(envelope.v, 1);
+          const claims = await backend.verifyGateCredentialJws(envelope.jws, verifyKeys);
+          assert.equal(claims.tid, f.tenantId);
+          assert.equal(claims.eid, f.eventId);
+          assert.equal(claims.tkt, payload.ticketId);
+          delivered.push({ ...payload, credentialVersion: claims.ver });
           return { providerRef: `db19:${delivered.length}`, providerStatus: 'ACCEPTED' };
         },
       };
@@ -1683,12 +1698,7 @@ for (const caseId of CASE_IDS) {
           `old-kid ACTIVE credential must be delivered: ${JSON.stringify(firstRelay)}`);
         const oldMail = delivered.find((item) => item.ticketId === issued.body.ticketId);
         assert.ok(oldMail, 'outbox must emit the old-kid QR');
-        assert.equal(oldMail.credentialTokenHash, legacy.tokenHash);
-        assert.deepEqual(oldMail.qrPng, await backend.renderCredentialQrPng({
-          tenantId: f.tenantId, eventId: f.eventId,
-          ticketId: issued.body.ticketId, credentialVersion: 1,
-          token: 'db19-legacy-opaque-token',
-        }));
+        assert.equal(oldMail.credentialVersion, 1, 'legacy storage credential must yield signed version 1');
         // A supported ciphertext under an unknown kid must not reach email.
         const unsupported = backend.sealCredentialToken('db19-unsupported-token', ring);
         await db03Query(f,
