@@ -335,7 +335,9 @@ jobs:
         if: matrix.shard == 'tenant-registration'
         env:
           E2E_LANES: '1'
-        run: pnpm test:e2e:http --lane --case=DB-17
+        run: |
+          pnpm exec playwright install --with-deps chromium --only-shell
+          pnpm test:e2e:http --lane --case=DB-17
       - name: DB-17 sanitized failure diagnostic
         if: failure() && matrix.shard == 'tenant-registration'
         uses: actions/upload-artifact@v4
