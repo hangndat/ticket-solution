@@ -71,7 +71,7 @@ type MultipartRequest = {
     | {
         filename: string;
         mimetype: string;
-        file: AsyncIterable<Buffer>;
+        file: AsyncIterable<Buffer> & { truncated?: boolean };
         fields: Record<string, { value?: string }>;
       }
     | undefined
@@ -608,6 +608,14 @@ export class InventoryController {
           );
         }
         chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+      }
+      // Fastify's multipart parser can stop at its limit without yielding the
+      // excess bytes, so the byte count alone cannot detect a truncated upload.
+      if (file.file.truncated) {
+        throw new ImportError(
+          IMPORT_ERROR_CODES.IMPORT_FILE_INVALID,
+          'CSV exceeds 10 MiB',
+        );
       }
       const body = Buffer.concat(chunks);
       return await this.inventory.uploadFile(
