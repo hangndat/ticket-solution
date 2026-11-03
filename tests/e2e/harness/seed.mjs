@@ -902,6 +902,19 @@ export async function seedRuntime(state, caseIds) {
           fixture.data.consumedCode = codes[0];
         }
         if (caseId === 'GATE-01') {
+          const assignedEventId = randomUUID();
+          const assignedGateId = randomUUID();
+          await tx.event.create({
+            data: { tenantId, id: assignedEventId, slug: 'assigned-event', name: `Assigned ${caseId}`, status: 'PUBLISHED' },
+          });
+          await backend.grantEventAssignment(tx, {
+            tenantId, eventId: assignedEventId,
+            membershipId: memberships.scanner.membershipId,
+            permissions: ['gate.confirm'],
+          });
+          await tx.$executeRaw`INSERT INTO gates (tenant_id, event_id, id, name, sort_order) VALUES (${tenantId}::uuid, ${assignedEventId}::uuid, ${assignedGateId}::uuid, 'Assigned gate', 0)`;
+          fixture.data.assignedEventId = assignedEventId;
+          fixture.data.assignedGateId = assignedGateId;
           const foreignEventId = randomUUID();
           await tx.event.create({
             data: {
