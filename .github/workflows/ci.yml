@@ -305,6 +305,9 @@ jobs:
             done
           done
           wait "$build_pid"
+      - name: Build worker for POL-02 process probe
+        if: matrix.shard == 'o06-retention'
+        run: pnpm exec turbo run build --filter=@ticket/worker...
       - name: DB tests (${{ matrix.shard }})
         working-directory: packages/backend
         run: node --test --test-concurrency=4 --test-force-exit ${{ matrix.files }}
@@ -316,6 +319,9 @@ jobs:
       - name: POL-02 standard D command (catalog + retention-db)
         if: matrix.shard == 'o06-retention'
         run: pnpm test:integration:local --case POL-02 --suite D --no-build
+      - name: POL-02 worker process probe
+        if: matrix.shard == 'o06-retention'
+        run: pnpm test:integration:local --case POL-02 --suite R --no-build
       - name: DB-18 live Keycloak and bearer HTTP
         if: matrix.shard == 'account-deletion'
         env:
