@@ -217,7 +217,8 @@ test('[AUTH-07] late real Keycloak refresh cannot replace a same-sub callback to
     const first = await bffGet(page, manifest, '/api/auth/identity?surface=staff');
     expect(first.status).toBe(200);
     const actorA = first.json as { actorId: string; authEpoch: string };
-    await page.goto(portalUrl(manifest, '/auth'));
+    // A JSON document has no PortalShell background identity requests.
+    await page.goto(portalUrl(manifest, '/api/auth/identity?surface=staff'));
     const oldAccessName = `oidc_access_token__${actorA.authEpoch}`;
     await context.addCookies([{ name: oldAccessName, value: 'expired', url: manifest.origins.portal,
       httpOnly: true, secure: true, sameSite: 'Lax' }]);
@@ -237,6 +238,7 @@ test('[AUTH-07] late real Keycloak refresh cannot replace a same-sub callback to
       if (!probe || held) { await route.continue(); return; }
       held = true;
       try {
+        expect(accessCookie === `${oldAccessName}=expired`, 'probe must send expired access cookie').toBe(true);
         const upstream = await route.fetch();
         const setCookie = upstream.headers()['set-cookie'] ?? '';
         test.info().annotations.push({ type: 'auth07-refresh-probe', description:
@@ -282,6 +284,7 @@ test('[AUTH-07] late real Keycloak refresh cannot replace a same-sub callback to
     expect(afterRelease.find((cookie) => cookie.name === 'portal_staff_epoch')?.value).toBe(actorB.authEpoch);
     expect((await bffGet(switchPage, manifest, '/api/auth/identity?surface=staff')).status).toBe(200);
 
+    await switchPage.goto(portalUrl(manifest, '/api/auth/identity?surface=staff'));
     await context.addCookies([{ name: newerAccessName, value: 'expired', url: manifest.origins.portal,
       httpOnly: true, secure: true, sameSite: 'Lax' }]);
     let fetchedLogout!: () => void;
@@ -293,6 +296,10 @@ test('[AUTH-07] late real Keycloak refresh cannot replace a same-sub callback to
       if (route.request().headers()['x-e2e-auth07-probe'] !== 'logout' || heldLogout) { await route.continue(); return; }
       heldLogout = true;
       try {
+        const cookieHeader = (await route.request().allHeaders()).cookie ?? '';
+        const accessCookie = cookieHeader.split(';').map((part) => part.trim())
+          .find((part) => part.startsWith(`${newerAccessName}=`));
+        expect(accessCookie === `${newerAccessName}=expired`, 'logout probe must send expired access cookie').toBe(true);
         const upstream = await route.fetch();
         expect(upstream.status()).toBe(200);
         noStore(upstream.headers()['cache-control']);
