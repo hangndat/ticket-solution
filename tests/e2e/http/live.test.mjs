@@ -1628,6 +1628,9 @@ for (const caseId of CASE_IDS) {
           mode: 'unavailable',
         }, async () => {
           assert.deepEqual(await open(), []);
+          const currentBefore = await request(ctx, 'GET', '/me/account-deletion-requests/current', access);
+          assert.equal(currentBefore.status, 200);
+          assert.equal(currentBefore.body, null);
           const headers = { 'Idempotency-Key': randomUUID() };
           const denied = await request(ctx, 'POST', '/me/account-deletion-requests', access, { confirmation: false }, headers);
           assert.equal(denied.status, 422);
@@ -1659,6 +1662,8 @@ for (const caseId of CASE_IDS) {
           assert.deepEqual(state, { state: 'REQUESTED', idp_status: 'FAILED', pg_applied: true, subject_cleared: false });
           const freshAccess = await bearer(ctx, 'attendee');
           expectStatus(await request(ctx, 'GET', '/me/tickets', freshAccess), 401, 'UNAUTHENTICATED');
+          expectStatus(await request(ctx, 'GET', '/me/account-deletion-requests/current', freshAccess), 401, 'UNAUTHENTICATED');
+          assert.deepEqual(await open(), [{ id, state: 'REQUESTED' }]);
           return { id, row };
         }, { onCleanupError: () => t.diagnostic('AUTH-08: IdP fault cleanup failed after test failure') });
         let state;
