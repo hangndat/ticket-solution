@@ -161,7 +161,7 @@ WIP đầy (≥3 Chờ duyệt, ≥2 PR/slice chờ merge, ≥4 PR thiếu DoD+C
 
 | Loại task | Reviewer | Checks bắt buộc |
 | --- | --- | --- |
-| Portal chạm quyền/context/PII (S1-*, S3-T02, S3-T04 cấp vé, S3-T05 export/PII, S5-T01 mời/gán quyền) | James · `dod+sec+ux` (`reviewer-merged.md`) | `pnpm --filter @ticket/portal lint typecheck test build`; test resolver/gate mới; Orca browser theo `uat-headless.mdc` với persona S0-T04 (390/1024/1440, VI) |
+| Portal chạm quyền/context/PII (S1-*, S3-T02, S3-T04 cấp vé, S3-T05 export/PII, S5-T01 mời/gán quyền) | James · `dod+sec+ux` (`reviewer-merged.md`) | `pnpm --filter @ticket/portal lint typecheck test build`; test resolver/gate mới; Orca browser theo `docs/agents/workflows/uat.md` với persona S0-T04 (390/1024/1440, VI) |
 | Portal UI khác | James · `dod+ux` | Như trên, states empty/error/unknown/stale |
 | Backend (S3-T01, backend limits nếu có) | James · `dod+sec` | test API + DB/RLS negative tenant; không BYPASSRLS; CI turbo |
 | Web attendee | James · `dod+sec+ux` | `pnpm --filter @ticket/web lint typecheck test build`; Orca browser owner/guest |

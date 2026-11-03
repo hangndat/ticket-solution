@@ -1,5 +1,7 @@
 import type { PortalReasonBody } from '@ticket/contracts';
+import { PLATFORM_ERROR_CODES } from '@ticket/contracts';
 import {
+  PlatformError,
   createSupportGrant,
   getPlatformMe,
   getPlatformTenantDetail,
@@ -15,6 +17,34 @@ import {
 import type { PlatformActors } from './platform-actors';
 import type { PlatformDeps } from './platform-deps';
 import { platformRouteFail } from './platform-errors';
+
+function isSupportGrantEventReferenceError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const databaseError = error as {
+    code?: unknown;
+    meta?: {
+      code?: unknown;
+      message?: unknown;
+      driverAdapterError?: {
+        cause?: {
+          originalCode?: unknown;
+          kind?: unknown;
+          constraint?: { index?: unknown };
+        };
+      };
+    };
+  };
+  const adapterCause = databaseError.meta?.driverAdapterError?.cause;
+  return (
+    databaseError.code === 'P2010' &&
+    ((adapterCause?.originalCode === '23503' &&
+      adapterCause.kind === 'ForeignKeyConstraintViolation' &&
+      adapterCause.constraint?.index === 'support_grants_event_fk') ||
+      (databaseError.meta?.code === '23503' &&
+        typeof databaseError.meta.message === 'string' &&
+        databaseError.meta.message.includes('support_grants_event_fk')))
+  );
+}
 
 export class PlatformOperatorService {
   constructor(
@@ -171,6 +201,14 @@ export class PlatformOperatorService {
             reason: string;
             expiresAt: string;
           }),
+        }).catch((error: unknown) => {
+          if (isSupportGrantEventReferenceError(error)) {
+            throw new PlatformError(
+              PLATFORM_ERROR_CODES.RESOURCE_NOT_FOUND,
+              'Resource not found',
+            );
+          }
+          throw error;
         }),
       )
       .catch(platformRouteFail);

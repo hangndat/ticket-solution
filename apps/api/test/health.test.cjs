@@ -25,6 +25,7 @@ test('Fastify liveness matches contract; redeem and gate routes documented', asy
       '/v1/gate/events/{eventId}/offline-sync',
       '/v1/gate/events/{eventId}/offline-sync/receipts/{clientEventId}',
       '/v1/gate/events/{eventId}/reservations',
+      '/v1/gate/events/{eventId}/reservations/{reservationId}/cancel',
       '/v1/gate/events/{eventId}/reservations/{reservationId}/confirm',
       '/v1/gate/events/{eventId}/sessions',
       '/v1/gate/events/{eventId}/sessions/revoke',

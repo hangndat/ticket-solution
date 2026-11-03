@@ -1,0 +1,14 @@
+# OpenCode lỗi → fallback Codex Luna
+
+User cập nhật ngày 02/11/2026: khi OpenCode Go limit/quota hoặc lỗi runtime, chuyển thẳng sang Codex `gpt-6-luna`. Không dùng Beam Free.
+
+- Trigger là lỗi provider/runtime OpenCode hoặc limit/quota thật; ghi message/receipt làm evidence. HTTP 429 của ứng dụng, test hoặc CI không phải trigger này.
+- Primary vẫn là Flash cho `cheap|standard`, Pro cho `focused|advanced|high`. Fallback dùng `--agent codex --model gpt-6-luna`; effort `low` cho cheap/standard/focused, `medium` cho advanced, `high` cho high.
+- Giữ employee, Task, scope, Cost tier, findings và số lượt sửa; `high` vẫn cần `--tier-reason`. Reviewer độc lập và các gate DoD/security/CI không đổi.
+- Coordinator lưu checkpoint SHA/branch/dirty files/evidence và xác minh turn/attempt cũ đã dừng; settle/release hoặc phục hồi theo receipt Orca. Không cho hai writer cùng sửa scope.
+- Retry **cùng Task** với `--retry-of <dispatch-cũ>` qua `scripts/agent-workflow-run.mjs start ... --employee <id>`; không tạo Task khác để tránh lifecycle/budget. Task mới trong lúc provider vẫn bị limit có thể dùng fallback với cùng evidence.
+- Xác minh pin trên host bằng `opencode models` hoặc Codex host catalog tương ứng; đọc `result.state`, requested/effective và ghi lý do fallback vào checkpoint/journal. Không coi launch receipt là nghiệm thu.
+- Provider limit/quota hoặc lỗi runtime: dùng Codex Luna trực tiếp, giữ nguyên tier. Đây là ngoại lệ user duyệt cho coding, kể cả việc thường.
+- Trước Codex: kiểm pin/effort trong host catalog, allowance đúng tài khoản còn hiệu lực, reserve 20% và cap worker hiện hành. Giữ reviewer độc lập. Nếu Codex cũng lỗi, checkpoint/báo blocker, không loop hoặc nâng model/provider ngầm.
+- Không dùng Beam Free, bật Extra Usage, đổi billing/account hoặc route Cursor bởi fallback này.
+- Chỉ quay về primary khi có evidence hết limit/reset hoặc chỉ định mới; không suy quota/reset từ tên Free. Coordinator Codex và reviewer không đổi route bởi rule này.

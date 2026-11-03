@@ -15,4 +15,4 @@ git rev-parse HEAD
 ./scripts/gh-dod-evidence.sh <pr>
 ```
 
-Nếu GraphQL rate limit: chỉ REST + `git`; xem `.cursor/rules/github-api-hygiene.mdc`.
+Nếu GraphQL rate limit: chỉ REST + `git`; xem `docs/agents/policies/github-api.md`.

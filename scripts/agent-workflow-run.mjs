@@ -7,10 +7,9 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { COST_TIER_ROUTES } from './lib/agent-cost-tiers.mjs';
 import { assessCodexQuota } from './lib/agent-quota-policy.mjs';
-import { recommendRoute } from './lib/agent-provider-recovery.mjs';
+import { checkProvider } from './lib/agent-provider-recovery.mjs';
 import { appendEvent, employee, validateAssignment, events as companyEvents } from './company-worklog.mjs';
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const HEAVY_COST_TIERS = new Set(['focused', 'advanced', 'high']);
 const telemetry = process.env.AGENT_TELEMETRY_CLI || join(ROOT, 'scripts/agent-role-monitor/telemetry.mjs');
 const orca = process.env.ORCA_CLI_COMMAND || 'orca';
 function child(bin, args) {
@@ -53,7 +52,7 @@ function parse(argv) {
 }
 export function main(argv=process.argv.slice(2)) {
   if(argv.includes('--help')) {
-    console.log('agent-workflow-run start --task ID --run-id ID --role-id ID --employee ID --task-title TITLE --cost-tier standard --agent cursor --model composer-2.5 [--worktree current] [--retry-of DISPATCH] [--effort LEVEL] [--tier-reason REASON] [--essential-reason REASON] [--retry-request REQUEST_ID]\nagent-workflow-run settle --dispatch-id ID --run-id ID --role-id ID [--provider-file PATH] [--release]\n--dir defaults to private .orca-metrics/lifecycle. Start validates tier/agent/model/effort, snapshots quota and records receipt. Cost tier is local metadata, not an Orca flag. Never automatically retries a failed/unknown start. Settle requires proven completed/failed dispatch; collects before optional release. Codex starts require fresh quota; reserve 20%, usable only with --essential-reason. Exhausted/unknown quota blocks Codex. Other provider quota requires manual checking.');return;
+    console.log('agent-workflow-run start --task ID --run-id ID --role-id ID --employee ID --task-title TITLE --cost-tier standard --agent opencode --model opencode-go/deepseek-v4.1-flash [--worktree current] [--retry-of DISPATCH] [--effort LEVEL] [--tier-reason REASON] [--essential-reason REASON] [--retry-request REQUEST_ID]\nagent-workflow-run settle --dispatch-id ID --run-id ID --role-id ID [--provider-file PATH] [--release]\n--dir defaults to private .orca-metrics/lifecycle. Start validates tier/agent/model/effort, snapshots quota and records receipt. Cost tier is local metadata, not an Orca flag. Never automatically retries a failed/unknown start. Settle requires proven completed/failed dispatch; collects before optional release. Codex starts require fresh quota; reserve 20%, usable only with --essential-reason. Exhausted/unknown quota blocks Codex. Other provider quota requires manual checking.');return;
   }
   const {command,flags:f}=parse([...argv]);
   const run=f['run-id'], role=f['role-id'];
@@ -77,20 +76,24 @@ export function main(argv=process.argv.slice(2)) {
       console.log(JSON.stringify({ok:false,errorCode:'quota_'+quotaCheck.state,agentReady:false,costTier:f['cost-tier'],quotaCheck,receiptDirectory:dir,nextAction:'defer_or_review_registered_same_tier_route'}));process.exitCode=1;return;
     }
     let providerRecovery=null;
-    if(HEAVY_COST_TIERS.has(f['cost-tier'])) {
-      const routePreflight=recommendRoute({costTier:f['cost-tier'],essential:!!f['essential-reason'],codexSnapshot:quota.snapshot},{root:join(process.cwd(),'.orca-metrics','provider-recovery')});
-      const claudeEval=routePreflight.routes?.find((e)=>e.route.agent==='claude');
+    // Route selection is complete. Only the selected Claude route needs its
+    // recovery probe; Codex uses quotaCheck and OpenCode has no quota adapter.
+    if(f.agent==='claude') {
+      const claudeCheck=checkProvider({provider:f.agent,model:f.model,effort:f.effort||null},{root:join(process.cwd(),'.orca-metrics','provider-recovery')});
       const recoveryReceipt={
-        ...routePreflight,
+        costTier:f['cost-tier'],
+        routes:[{route,check:claudeCheck}],
+        recommendation:null,
+        reason:'selected_route_check',
         quotaAmountKnown:false,
         workerAccountBinding:'unverified',
         cliIdentityBinding:'cli_only',
-        claudeCheck:claudeEval?.check??null,
+        claudeCheck,
       };
       save(dir,'provider-recovery.json',recoveryReceipt);
       providerRecovery=recoveryReceipt;
-      if(f.agent==='claude' && !claudeEval?.check?.serviceAvailable) {
-        console.log(JSON.stringify({ok:false,errorCode:'provider_recovery_'+(claudeEval?.check?.availability||'unknown'),agentReady:false,costTier:f['cost-tier'],providerRecovery,quotaCheck,receiptDirectory:dir,nextAction:'defer_or_pick_registered_codex_route'}));process.exitCode=1;return;
+      if(!claudeCheck.serviceAvailable) {
+        console.log(JSON.stringify({ok:false,errorCode:'provider_recovery_'+(claudeCheck.availability||'unknown'),agentReady:false,costTier:f['cost-tier'],providerRecovery,quotaCheck,receiptDirectory:dir,nextAction:'defer_or_pick_registered_codex_route'}));process.exitCode=1;return;
       }
     }
     const args=['orchestration','worker-start','--run',run,'--task',f.task,'--worktree',f.worktree||'current',...pin,'--json'];
