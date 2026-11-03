@@ -331,6 +331,11 @@ jobs:
         env:
           E2E_LANES: '1'
         run: pnpm test:e2e:http --lane --case=DB-19
+      - name: DB-17 live tenant roles and limits HTTP
+        if: matrix.shard == 'tenant-registration'
+        env:
+          E2E_LANES: '1'
+        run: pnpm test:e2e:http --lane --case=DB-17
 
   # D5 drills tách 3 job song song (ports/container name độc lập).
   d5-observability:

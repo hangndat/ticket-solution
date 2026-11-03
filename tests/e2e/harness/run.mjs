@@ -88,6 +88,7 @@ const httpCases = [
   'DB-14',
   'DB-15',
   'DB-16',
+  'DB-17',
   'DB-18',
   'JOB-04',
   'PLAT-03',
@@ -133,7 +134,7 @@ if (caseIds.includes('DB-19') && (mode !== 'http' || caseIds.length !== 1)) {
 const laneNeedsFrontend =
   mode !== 'http' ||
   caseIds.some((id) =>
-    ['AUTH-03', 'SEC-02', 'SEC-03', 'SEC-05', 'PLAT-03'].includes(id),
+    ['AUTH-03', 'SEC-02', 'SEC-03', 'SEC-05', 'DB-17', 'PLAT-03'].includes(id),
   );
 if (
   !['smoke', 'e2e', 'http', 'regression', 'list'].includes(mode) ||
@@ -471,7 +472,7 @@ if (mode === 'list' || args.includes('--list')) {
     );
     const httpNeedsFrontend =
       mode === 'http' &&
-      caseIds.some((id) => ['AUTH-03', 'SEC-02', 'SEC-03', 'SEC-05', 'PLAT-03'].includes(id));
+      caseIds.some((id) => ['AUTH-03', 'SEC-02', 'SEC-03', 'SEC-05', 'DB-17', 'PLAT-03'].includes(id));
     if (mode !== 'http' || httpNeedsFrontend) {
       if (needsBuild) {
         // `.next` sắp bị ghi đè: marker cũ không còn mô tả đúng nó nữa.

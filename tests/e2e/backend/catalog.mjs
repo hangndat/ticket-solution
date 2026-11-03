@@ -133,6 +133,7 @@ export const catalog = {
       'db17-tenant-limits-mutation',
       'DB-17: maxEvents/maxStaff enforced at mutation; usage reflects committed counts',
     ),
+    { file: 'tests/e2e/http/live.test.mjs', name: '[DB-17] live HTTP', layer: 'H' },
   ],
   'DB-18': [
     b('account-ack-session-revoke', 'SEC-1 ACK'),
@@ -334,7 +335,7 @@ export const notes = {
   'DB-16':
     'D/H portfolio tenant RLS, assignment, cursor/limit/watermark và owner/manager deny-by-default; chờ reviewer độc lập.',
   'DB-17':
-    'D presets/onboarding + tenant limit mutation/usage (event-quota-suspended #632 race, tenant-limits-usage) + non-Owner escalation deny (catalogue là surface duy nhất, cross-tenant 404) + maxEvents/maxStaff mutation limit/usage (rollback, race xác định, không oversell). Thiếu H Keycloak/HTTP presets/PENDING/operator activation.',
+    'D presets/onboarding + tenant limit mutation/usage (event-quota-suspended #632 race, tenant-limits-usage) + non-Owner escalation deny (catalogue là surface duy nhất, cross-tenant 404) + maxEvents/maxStaff mutation limit/usage (rollback, race xác định, không oversell). H Keycloak/HTTP: presets deny, PENDING, Operator activation, maxEvents race và maxStaff deny; cần run sạch exact SHA.',
   'DB-18':
     'D deletion/tombstone + session revoke (ACK và apply, cross-tenant) + race ACK vs raw INSERT (SEC-R1 advisory lock) + REJECTED giữ REVOKED/mở lại có điều kiện + IdP DELETE/NOT_FOUND/404/disable/503-retry không bypass COMPLETED + issuer allowlist/no fuzzy lookup + OIDC maxTokenAge>24h reject + lease fencing + PII anonymize + audit kept; mutation-check xác nhận tắt ACK revoke làm 3 test fail đúng. Thiếu H: live Keycloak Admin erasure DELETE thật qua /v1/me/account-deletion-requests — chưa có client/fixture trong harness, cần Task riêng.',
   'DB-19': 'D code pepper rotation, consumed và ambiguous fail-closed; H Keycloak/HTTP cặp v1/v2 cùng nhánh từ chối. QR credential rotation (credential-crypto key đơn, kid local-v1) chưa có versioned keyring — product gap cần owner.',
