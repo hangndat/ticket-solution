@@ -5,6 +5,7 @@ import {
   marketingHostsFromEnv,
   marketingOriginFromEnv,
   productOriginFromEnv,
+  trustedRequestHost,
 } from './src/marketing/hosts';
 import {
   decideAdminToPortalRedirect,
@@ -19,6 +20,11 @@ const SERVER_ACTION_PROBE_BODY = 'Server Actions are not enabled on this app.';
 
 function withRuntimeCsp(response: NextResponse): NextResponse {
   response.headers.set('Content-Security-Policy', contentSecurityPolicy());
+  return response;
+}
+
+function withNoStore(response: NextResponse): NextResponse {
+  response.headers.set('Cache-Control', 'private, no-store');
   return response;
 }
 
@@ -42,8 +48,7 @@ export default function proxy(request: NextRequest) {
     });
   }
 
-  const hostHeader =
-    request.headers.get('x-forwarded-host') ?? request.headers.get('host');
+  const hostHeader = trustedRequestHost(request.headers);
   const { pathname, search } = request.nextUrl;
 
   // O13: marketing host + product path → absolute PRODUCT_ORIGIN first.
@@ -59,7 +64,7 @@ export default function proxy(request: NextRequest) {
   });
 
   if (decision.type === 'redirect') {
-    return NextResponse.redirect(decision.location, decision.status);
+    return withNoStore(NextResponse.redirect(decision.location, decision.status));
   }
 
   if (isLegacyStaffApiPath(pathname)) {
@@ -77,7 +82,7 @@ export default function proxy(request: NextRequest) {
     search,
   });
   if (portalNav.type === 'redirect') {
-    return NextResponse.redirect(portalNav.location, portalNav.status);
+    return withNoStore(NextResponse.redirect(portalNav.location, portalNav.status));
   }
   if (portalNav.type === 'not_found') {
     return new NextResponse('Not Found', {
@@ -90,7 +95,7 @@ export default function proxy(request: NextRequest) {
     const home = request.nextUrl.clone();
     home.pathname = '/';
     home.search = '';
-    return NextResponse.redirect(home, 308);
+    return withNoStore(NextResponse.redirect(home, 308));
   }
 
   if (decision.type === 'rewrite') {
