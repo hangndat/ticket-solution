@@ -36,6 +36,6 @@ Ngôn ngữ user-facing: **Tiếng Việt**. Giữ ID, API, command, SHA nguyên
 
 ## Orca / Project
 
-- Agent: `--agent cursor`.
+- Agent/model/effort theo [routing](../policies/routing.md) và [cost catalog](../cost-catalog.md); giữ chỉ định user và route của Task, không chọn provider theo tên role.
 - Status Project theo `docs/agents/policies/project.md`; `worker_done` ≠ `Hoàn thành`.
 - Không spawn worker con; bàn giao AC cho coordinator / Epic planner.

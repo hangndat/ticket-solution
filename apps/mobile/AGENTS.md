@@ -1,6 +1,6 @@
 # Mobile working agreement
 
-Read the root AGENTS.md, `.cursor/rules/*.mdc` (Orca parallel/routing/idle-fill, GitHub Project, GitHub Flow), docs/PRD.md, docs/TECHNICAL-DESIGN.md and your current task. Root ownership and dispatch constraints take precedence over generated template guidance. Only edit apps/mobile; coordinator owns root tooling, lockfile and shared contracts. Feature work: branch + PR — không commit thẳng `main`.
+Read the root AGENTS.md, your current task, `docs/agents/roles/ios.md` and the policies selected by `docs/agents/README.md`. For business code/acceptance, read only the relevant sections of PRD, TECHNICAL-DESIGN and DECISION-LOG; expand when a contract or invariant requires it. Do not load coordinator dispatch/lifecycle rules unless assigned that responsibility. Root ownership and dispatch constraints take precedence over generated template guidance. Only edit apps/mobile; coordinator owns root tooling, lockfile and shared contracts. Feature work: branch + PR — không commit thẳng `main`.
 
 Explicit user requirement: NEVER use Expo/EAS Cloud Build or EAS-hosted build workflows, and never fall back to cloud builds. Native binaries must be built locally with Xcode/xcodebuild/fastlane on a Mac or self-managed macOS runner. Local Expo CLI/prebuild is allowed. If local tools are unavailable, report the limitation instead of uploading to Expo build infrastructure.
 
@@ -10,6 +10,6 @@ Before changing APIs, read expo-overview and react-native-best-practices, detect
 
 Keep src/app routes-only and screen bodies outside routes. Label demo content explicitly and preserve tenant scoping. Private identity/cache loads must preserve user partitioning and generation guards; credential presence alone never proves identity.
 
-Run typecheck, lint, meaningful identity tests, Expo config/doctor and iOS JS export. The build script validates JS, not a native binary or App Store release. Simulator UAT from agents: `orca emulator` only (see root `.cursor/rules/uat-headless.mdc`). Follow the live Orca dispatch for checkpoints/heartbeats/completion; do not delegate unless authorized.
+Run typecheck, lint, meaningful identity tests, Expo config/doctor and iOS JS export. The build script validates JS, not a native binary or App Store release. Simulator UAT from agents: `orca emulator` only (see root `docs/agents/workflows/uat.md`). Follow the live Orca dispatch for checkpoints/heartbeats/completion; do not delegate unless authorized.
 
 Roadmap, Issues, task tracking and user-facing progress reports must be in Vietnamese, except technical terms, IDs, commands and raw verification logs. Do not begin new feature implementation before the roadmap is prepared for user review.

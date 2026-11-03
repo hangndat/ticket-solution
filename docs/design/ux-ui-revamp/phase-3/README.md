@@ -186,7 +186,7 @@ Tối thiểu Phase 3: contrast Live Pulse trên invite/marketing/staff CTA; foc
 | Web redeem residual | `scripts/web-uat.sh` | Visual token smoke AC-R1 |
 | iOS staff-access | `scripts/sim-uat.sh` | Deny path screenshot + VoiceOver announce AC-S* |
 
-**Cấm:** `cliclick`, AppleScript click, `ORCA computer click` trên Chrome/Safari/Simulator của user (`.cursor/rules/uat-headless.mdc`).
+**Cấm:** `cliclick`, AppleScript click, `ORCA computer click` trên Chrome/Safari/Simulator của user (`docs/agents/workflows/uat.md`).
 
 ---
 

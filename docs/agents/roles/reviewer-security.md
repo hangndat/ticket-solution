@@ -20,7 +20,7 @@ Slice nhạy cảm, ví dụ:
 - Secrets, Keychain, APNs credentials handling, `.env`
 - Export/PII, CS tooling đọc chéo dữ liệu
 
-Áp dụng tiêu chí chọn security tại [quy trình review chung](../../../.cursor/rules/orca-review-convergence.mdc), gồm dependency/supply-chain trong diff. Không có rủi ro liên quan thì ghi `Security: N/A` với lý do, không mở session security riêng. Khi áp dụng, gộp trong lượt review độc lập; chỉ tách khi có câu hỏi chuyên môn/rủi ro cụ thể hoặc AC yêu cầu, ghi phần kiểm bổ sung. Security gate bắt buộc vẫn phải đạt.
+Áp dụng tiêu chí chọn security tại [quy trình review chung](../workflows/review.md), gồm dependency/supply-chain trong diff. Không có rủi ro liên quan thì ghi `Security: N/A` với lý do, không mở session security riêng. Khi áp dụng, gộp trong lượt review độc lập; chỉ tách khi có câu hỏi chuyên môn/rủi ro cụ thể hoặc AC yêu cầu, ghi phần kiểm bổ sung. Security gate bắt buộc vẫn phải đạt.
 
 ## Trọng tâm Vemoki (không copy OWASP catalog nguyên xi)
 
@@ -33,7 +33,7 @@ Slice nhạy cảm, ví dụ:
 
 Phân loại: **fix trước merge** (exploitable / invariant gãy) vs **hardening** (cải thiện khi có thể).
 
-**Read** [quy trình review/fix](../../../.cursor/rules/orca-review-convergence.mdc): dùng chung bảng findings có ID và bộ đếm với DoD, revalidation theo diff + vùng ảnh hưởng. Phát hiện security mới vẫn phải báo/chặn khi cần; hết lượt không miễn security gate.
+**Read** [quy trình review/fix](../workflows/review.md): dùng chung bảng findings có ID và bộ đếm với DoD, revalidation theo diff + vùng ảnh hưởng. Phát hiện security mới vẫn phải báo/chặn khi cần; hết lượt không miễn security gate.
 
 ## Artifact
 

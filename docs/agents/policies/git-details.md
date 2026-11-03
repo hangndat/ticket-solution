@@ -43,7 +43,7 @@ Use **GitHub Flow**. Integration branch is `main`. Do not land feature work as d
 ### Evidence trên PR / Issue
 
 - Comment nghiệm thu hoặc `docs/reviews/*` phải cite **exact SHA** đã review, reviewer/session, scope, checks, findings/limitations (xem `docs/agents/policies/project.md`).
-- Commit mới sau DoD → **revalidation** theo diff trên SHA mới; không “PASS kế thừa”. Theo [orca-review-convergence.mdc](../../../.cursor/rules/orca-review-convergence.mdc), ưu tiên comment gắn SHA; commit chỉ chứa báo cáo được xác minh bằng comment trên tip mới, không commit cập nhật SHA lặp.
+- Commit mới sau DoD → **revalidation** theo diff trên SHA mới; không “PASS kế thừa”. Theo [quy trình review/fix](../workflows/review.md), ưu tiên comment gắn SHA; commit chỉ chứa báo cáo được xác minh bằng comment trên tip mới, không commit cập nhật SHA lặp.
 - **Thiếu GitHub Review / Approve trên UI không chứng minh thiếu Orca DoD.** Ghi rõ nếu DoD chạy ngoài GitHub (Orca worker) và link/artifact + SHA.
 
 ### WIP trước khi mở PR feature mới

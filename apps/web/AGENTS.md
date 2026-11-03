@@ -12,4 +12,4 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 - **Ownership:** `apps/web/**` only — không sửa API/mobile/backend packages.
 - **Repo:** [AGENTS.md](../../AGENTS.md) · **Role:** [docs/agents/roles/web.md](../../docs/agents/roles/web.md).
-- **UAT:** Task cần browser evidence → Read `.cursor/rules/uat-headless.mdc`.
+- **UAT:** Task cần browser evidence → Read `docs/agents/workflows/uat.md`.

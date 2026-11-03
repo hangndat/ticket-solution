@@ -21,12 +21,14 @@ if(a[1]==='worker-release')result={state:process.env.FIX_RELEASE||'released'};
 console.log(JSON.stringify({ok:true,result}));
 `,{mode:0o700});
  writeFileSync(telemetry,`import fs from 'node:fs';const a=process.argv.slice(2);fs.appendFileSync(process.env.FIX_LOG,JSON.stringify(a)+'\\n');if(a[0]==='collect'&&process.env.FIX_COLLECT_FAIL){console.error('collect failed');process.exit(1);}if(a[0]==='snapshot'){const p=a[a.indexOf('--out')+1];if(process.env.FIX_SNAPSHOT_FAIL){console.error('unavailable');process.exit(1);}fs.writeFileSync(p,JSON.stringify(process.env.FIX_QUOTA_JSON?JSON.parse(process.env.FIX_QUOTA_JSON):{source:'codex.app-server.account/rateLimits/read',timestamp:new Date().toISOString(),accountIdHash:'fixture',buckets:[{limitId:'codex',primary:{usedPercent:1,windowDurationMins:10080,resetsAt:Math.floor(Date.now()/1000)+3600},secondary:null}]}),{mode:0o600,flag:'wx'});}console.log(JSON.stringify({ok:true}));`);
- const claudeAuth=join(dir,'claude-auth'), claudeProbe=join(dir,'claude-probe');
- writeFileSync(claudeAuth,`#!/usr/bin/env node\nconsole.log(JSON.stringify({loggedIn:true,authMethod:'claude.ai',apiProvider:'firstParty',email:'fixture@example.com'}));\n`,{mode:0o700});
- writeFileSync(claudeProbe,`#!/usr/bin/env node\nconsole.log(JSON.stringify({type:'result',subtype:'success',is_error:false,result:'OK'}));\n`,{mode:0o700});
- const run=(args,extra={})=>spawnSync(process.execPath,[cli,...args,'--dir',join(dir,'receipts')],{cwd:dir,encoding:'utf8',env:{...process.env,ORCA_CLI_COMMAND:orca,AGENT_TELEMETRY_CLI:telemetry,ORCA_METRICS_LEDGER:join(dir,'metrics.jsonl'),COMPANY_WORKLOG_FILE:join(dir,'work-events.jsonl'),AGENT_PROVIDER_CLAUDE_AUTH_BIN:claudeAuth,AGENT_PROVIDER_CLAUDE_BIN:claudeProbe,FIX_LOG:log,...extra}});
+ const claudeAuth=join(dir,'claude-auth'), claudeProbe=join(dir,'claude-probe'), claudeLog=join(dir,'claude-calls');
+ writeFileSync(claudeLog,'');
+ writeFileSync(claudeAuth,`#!/usr/bin/env node\nrequire('node:fs').appendFileSync(process.env.FIX_CLAUDE_LOG,'auth\\n');if(process.env.FIX_CLAUDE_FAIL)process.exit(1);console.log(JSON.stringify({loggedIn:true,authMethod:'claude.ai',apiProvider:'firstParty',email:'fixture@example.com'}));\n`,{mode:0o700});
+ writeFileSync(claudeProbe,`#!/usr/bin/env node\nrequire('node:fs').appendFileSync(process.env.FIX_CLAUDE_LOG,'probe\\n');console.log(JSON.stringify({type:'result',subtype:'success',is_error:false,result:'OK'}));\n`,{mode:0o700});
+ const run=(args,extra={})=>spawnSync(process.execPath,[cli,...args,'--dir',join(dir,'receipts')],{cwd:dir,encoding:'utf8',env:{...process.env,ORCA_CLI_COMMAND:orca,AGENT_TELEMETRY_CLI:telemetry,ORCA_METRICS_LEDGER:join(dir,'metrics.jsonl'),COMPANY_WORKLOG_FILE:join(dir,'work-events.jsonl'),AGENT_PROVIDER_CLAUDE_AUTH_BIN:claudeAuth,AGENT_PROVIDER_CLAUDE_BIN:claudeProbe,FIX_CLAUDE_LOG:claudeLog,FIX_LOG:log,...extra}});
  const calls=()=>readFileSync(log,'utf8').trim().split('\n').filter(Boolean).map(JSON.parse);
- try {fn({dir,run,calls});}finally{rmSync(dir,{recursive:true,force:true});}
+ const claudeCalls=()=>readFileSync(claudeLog,'utf8').trim().split('\n').filter(Boolean);
+ try {fn({dir,run,calls,claudeCalls});}finally{rmSync(dir,{recursive:true,force:true});}
 }
 const start=['start','--task','task1','--run-id','run1','--role-id','coordinator','--cost-tier','standard','--agent','cursor','--model','composer-2.5','--employee','minh','--task-title','Minh · wave'];
 const settle=['settle','--dispatch-id','ctx1','--run-id','run1','--role-id','coordinator'];
@@ -186,18 +188,46 @@ test('high reason required and remains local metadata',()=>fixture(({run,calls})
  assert.equal(calls().find(a=>a[1]==='worker-start').includes('--tier-reason'),false);
 }));
 
-test('Claude routes preserve requested model and effort; quota stays explicitly unknown',()=>fixture(({run,calls})=>{
+test('Claude routes preserve requested model and effort; quota stays explicitly unknown',()=>fixture(({run,calls,claudeCalls})=>{
  for(const [tier,model,effort] of [['focused','claude-sonnet-5','low'],['advanced','claude-sonnet-5','medium'],['high','claude-sonnet-5','high']]) {
   const args=start.map(v=>v==='standard'?tier:v==='cursor'?'claude':v==='composer-2.5'?model:v);
   const r=run([...args,'--effort',effort,...(tier==='high'?['--tier-reason','tenant isolation']:[])],{FIX_SNAPSHOT_FAIL:'1'});
   assert.equal(r.status,0,r.stderr);const j=JSON.parse(r.stdout);
   assert.deepEqual(j.quotaCheck,{enforced:false,provider:'claude',state:'unknown',reason:'adapter_unavailable'});
   assert.equal(j.quotaSnapshotProvider,'codex');assert.equal(j.quotaAvailable,false);
+  assert.equal(j.providerRecovery.reason,'selected_route_check');
+  assert.equal(j.providerRecovery.recommendation,null);
+  assert.equal(j.providerRecovery.routes.length,1);
   const launch=calls().filter(a=>a[1]==='worker-start').at(-1);
   assert.equal(launch[launch.indexOf('--agent')+1],'claude');
   assert.equal(launch[launch.indexOf('--model')+1],model);assert.equal(launch[launch.indexOf('--effort')+1],effort);
   assert.equal(launch.includes('--cost-tier'),false);assert.equal(launch.includes('--tier-reason'),false);
  }
+ assert.ok(claudeCalls().includes('probe'));
+}));
+
+test('pinned Codex and OpenCode never probe Claude, including heavy tiers',()=>fixture(({run,calls,claudeCalls})=>{
+ for(const tier of ['focused','advanced','high']) {
+  for(const [agent,model,effort] of [['codex','gpt-6-luna',tier==='focused'?'low':tier==='advanced'?'medium':'high'],['opencode','opencode-go/deepseek-v4-pro',null]]) {
+   const args=start.map(v=>v==='standard'?tier:v==='cursor'?agent:v==='composer-2.5'?model:v);
+   const r=run([...args,...(effort?['--effort',effort]:[]),...(tier==='high'?['--tier-reason','tenant isolation']:[])],{FIX_CLAUDE_FAIL:'1'});
+   assert.equal(r.status,0,r.stderr);const j=JSON.parse(r.stdout);
+   assert.equal(j.providerRecovery,undefined);
+   const launch=calls().filter(a=>a[1]==='worker-start').at(-1);
+   assert.equal(launch[launch.indexOf('--agent')+1],agent);
+   assert.equal(launch[launch.indexOf('--model')+1],model);
+  }
+ }
+ assert.deepEqual(claudeCalls(),[]);
+}));
+
+test('selected Claude unavailable still blocks before launch',()=>fixture(({run,calls,claudeCalls})=>{
+ const args=start.map(v=>v==='standard'?'focused':v==='cursor'?'claude':v==='composer-2.5'?'claude-sonnet-5':v);
+ const r=run([...args,'--effort','low'],{FIX_CLAUDE_FAIL:'1'});
+ assert.equal(r.status,1);
+ assert.equal(JSON.parse(r.stdout).errorCode,'provider_recovery_unknown');
+ assert.deepEqual(claudeCalls(),['auth']);
+ assert.equal(calls().some(a=>a[1]==='worker-start'),false);
 }));
 
 test('Persona is local for existing worktrees and forwarded only for new placement',()=>fixture(({run,calls})=>{

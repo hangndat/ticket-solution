@@ -11,5 +11,5 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 ## Vemoki (portal slice)
 
 - **Ownership:** `apps/portal/**` only — không sửa API/mobile/backend packages.
-- **Repo:** [AGENTS.md](../../AGENTS.md) · **Role:** [docs/agents/roles/web.md](../../docs/agents/roles/web.md) (portal Next.js).
-- **UAT:** Task cần browser evidence → Read `.cursor/rules/uat-headless.mdc`.
+- **Repo:** [AGENTS.md](../../AGENTS.md) · **Role:** [docs/agents/roles/portal.md](../../docs/agents/roles/portal.md).
+- **UAT:** Task cần browser evidence → Read `docs/agents/workflows/uat.md`.

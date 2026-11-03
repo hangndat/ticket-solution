@@ -4,7 +4,7 @@
 
 **Không chạy theo runbook này** cho đến khi: Epic #686 dod+sec PASS, ADR-21 chốt, owner xác nhận cửa sổ (§9).
 
-**Tài liệu liên quan:** [ADR-21](./ADR-21-PROD-DEMO-SEED.md) · [PROD-SEED-DATASET.md](../demo/PROD-SEED-DATASET.md) (SoT UUID/slug/redeem) · [infra/deploy/README.md](../../infra/deploy/README.md) · [deploy-prod skill](../../.cursor/skills/deploy-prod/SKILL.md) · [MEDIA-ASSET-CHECKLIST.md](./MEDIA-ASSET-CHECKLIST.md) · [D9-DEMO-DATASET.md](../demo/D9-DEMO-DATASET.md) (D9 local only — **không** prod seed) · Issue [#686](https://github.com/hangndat/ticket-solution/issues/686)
+**Tài liệu liên quan:** [ADR-21](./ADR-21-PROD-DEMO-SEED.md) · [PROD-SEED-DATASET.md](../demo/PROD-SEED-DATASET.md) (SoT UUID/slug/redeem) · [infra/deploy/README.md](../../infra/deploy/README.md) · [deploy-prod skill](../../.agents/skills/deploy-prod/SKILL.md) · [MEDIA-ASSET-CHECKLIST.md](./MEDIA-ASSET-CHECKLIST.md) · [D9-DEMO-DATASET.md](../demo/D9-DEMO-DATASET.md) (D9 local only — **không** prod seed) · Issue [#686](https://github.com/hangndat/ticket-solution/issues/686)
 
 **SSH host:** alias `conanphong` (không ghi IP trong repo). Tree: `/opt/vemoki/src`. Env: `/opt/vemoki/.env` (mode 600) — **không** in nội dung file.
 

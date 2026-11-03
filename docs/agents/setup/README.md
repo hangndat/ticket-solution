@@ -12,7 +12,7 @@ Giữ hooks đang có. Hook lỗi hoặc chặn sai scope: ghi lỗi/công cụ/
 
 ## Adapter Cursor tối thiểu
 
-- `.cursor/rules/project.mdc`: entrypoint duy nhất luôn nạp; yêu cầu đọc AGENTS, routing, context/CRG, Git, GitHub API và Project/DoD. Context workflow đọc thêm theo hành động.
+- `.cursor/rules/project.mdc`: entrypoint duy nhất luôn nạp; đọc AGENTS, routing và bản đồ đọc. Context/CRG, Git/GitHub API, Project/DoD và workflow được nạp theo hành động, như các host khác.
 - `.cursor/rules/orca-dispatch.mdc`: trigger coordinator cho dispatch/DAG/ready queue, thay bảy adapter cũ cùng nguồn.
 - Chín adapter theo ngữ cảnh còn lại: Git chi tiết, GitHub API chi tiết, Project coordinator, lifecycle, review, worktree, UAT, provider fallback và LeanCTX troubleshooting.
 - Metadata UAT globs giữ nguyên. Không cần giữ một file rule cho mỗi tên workflow cũ; các tài liệu vận hành dẫn thẳng nguồn chuẩn.
