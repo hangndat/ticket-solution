@@ -33,7 +33,7 @@ for (const file of receiptFiles) {
   const data = JSON.parse(readFileSync(file, "utf8"));
   const receipt = data.result ?? data.receipt?.result ?? data;
   if (receipt.runId !== run || !dispatchIds.includes(receipt.dispatchId) ||
-      !receipt.taskId || !receipt.launch || receipts.has(receipt.dispatchId)) {
+      !receipt.taskId || receipts.has(receipt.dispatchId)) {
     throw Error(`Receipt scope mismatch or duplicate: ${file}`);
   }
   receipts.set(receipt.dispatchId, receipt);
@@ -76,10 +76,10 @@ if (!commentsOnly && selected.length !== dispatchIds.length) {
   throw Error(`Missing dispatches in Run ${run}: ${dispatchIds.filter((id) => !selected.some((w) => w.dispatchId === id)).join(", ")}`);
 }
 if (new Set(selected.map((w) => w.dispatchId)).size !== selected.length ||
-    selected.some((w) => w.runId !== run || (receipts.has(w.dispatchId) && receipts.get(w.dispatchId).taskId !== w.taskId))) {
+    selected.some((w) => (w.runId ?? wl.result?.scope?.run) !== run || (receipts.has(w.dispatchId) && receipts.get(w.dispatchId).taskId !== w.taskId))) {
   throw Error(`Worker-list or receipt identity mismatch in Run ${run}`);
 }
-const tasks = orcaJson(["orchestration", "task-list", "--run", run, "--json"]).result?.tasks ?? [];
+const tasks = orcaJson(["orchestration", "task-list", "--run", run, "--json", "--full"]).result?.tasks ?? [];
 const taskById = new Map(tasks.map((t) => [t.id, t]));
 
 const list = orcaJson(["worktree", "list", "--json"]);
@@ -129,7 +129,7 @@ function classifyReceipt(launch, wtBlob) {
 if (commentsOnly) {
   const paths = new Set();
   for (const w of selected) {
-    const id = w.resource?.worktreeId ?? "";
+    const id = w.resource?.worktreeId ?? w.workspace ?? "";
     const path = id.includes("::") ? id.split("::").pop() : id;
     if (path) paths.add(path);
   }
@@ -152,7 +152,7 @@ if (commentsOnly) {
   }
 } else {
   for (const w of selected) {
-    const id = w.resource?.worktreeId ?? "";
+    const id = w.resource?.worktreeId ?? w.workspace ?? "";
     const path = id.includes("::") ? id.split("::").pop() : id;
     const wt = path ? wtByPath.get(path) : null;
     const spec = taskById.get(w.taskId)?.spec || "";
@@ -171,6 +171,7 @@ if (commentsOnly) {
           "--dispatch",
           w.dispatchId,
           "--json",
+          "--full",
         ]);
         launch = show.result?.worker?.startOptions?.launch ?? null;
       } catch {
@@ -214,7 +215,7 @@ const line = `cost-wave | run=${run} | scope=${commentsOnly ? "run-active" : "wa
 console.log(line);
 if (inheritPct > 20) {
   console.error(
-    `WARN inherit%=${inheritPct} > 20 — refresh agent models / pass --model on worker-start (Wave E)`,
+    `WARN unverified effective model share=${inheritPct}% > 20 — inspect launch evidence; missing effective is not proof of inherited routing and does not authorize restarting a dispatch`,
   );
   process.exitCode = 2;
 }

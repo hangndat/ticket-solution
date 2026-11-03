@@ -8,6 +8,8 @@ import { fileURLToPath } from "node:url";
 
 const script = fileURLToPath(new URL("./orca-cost-wave-evidence.mjs", import.meta.url));
 const cases = [
+  { name: "flat scoped worker-list accepts omitted row runId", flat: true },
+  { name: "flat wrong scope is rejected", flat: true, badScope: true, expectedExit: 1 },
   { name: "structured active without fleet status" },
   { name: "focused counted separately", tier: "focused" },
   { name: "high counted separately", tier: "high" },
@@ -34,6 +36,7 @@ const a = process.argv.slice(2);
 let result = {};
 if ((a[1] === 'worker-list' || a[1] === 'task-list') && a[a.indexOf('--run') + 1] !== 'run_test') process.exit(7);
 if (a[1] === 'worker-list') result = {workers: ${JSON.stringify(active ? [{dispatchId:"ctx_test",taskId:"task",taskTitle:title,runId:"run_test",terminalState:"active",resource:{worktreeId:"repo::/fixture"},projection:{liveness:{verdict:"unverifiable"}}}] : [])}};
+if(a[1]==='worker-list' && ${Boolean(options.flat)}) {for(const w of result.workers){delete w.runId;w.workspace='repo::/fixture';delete w.resource;}result.scope={run:${JSON.stringify(options.badScope?'run_other':'run_test')},source:'flag'};}
 if (a[1] === 'task-list') result = {tasks:[{id:'task',spec:${JSON.stringify(spec)}}]};
 if (a[0] === 'worktree') result = {worktrees:[{path:'/fixture',comment:${JSON.stringify(comment)},isMainWorktree:false}]};
 if (a[1] === 'worker-show') result = {worker:{startOptions:{launch:{requested:{model:'gpt-6-sol'},effective:{model:${JSON.stringify(effective)}}}}}};
@@ -43,6 +46,7 @@ console.log(JSON.stringify({ok:true,result}));
       const args = [script, "--run", "run_test", ...(commentsOnly ? ["--comments-only"] : ["--dispatch", "ctx_test"])];
       const result = spawnSync(process.execPath, args, { encoding: "utf8", env: { ...process.env, ORCA_CLI_COMMAND: cli } });
       assert.equal(result.status, expectedExit, result.stderr);
+      if(options.badScope) {assert.match(result.stderr,/identity mismatch/);return;}
       assert.match(result.stdout, new RegExp(`pinned=${expectedPinned} inherit=`));
       assert.match(result.stdout, new RegExp(`n=${active ? 1 : 0} ${commentsOnly ? "active" : "dispatches"}`));
       if (active) assert.match(result.stdout, new RegExp(`(?:\\s|\\|)${expectedTier}=1(?:\\s|\\|)`));
