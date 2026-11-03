@@ -9,14 +9,24 @@ export const PLATFORM_SPLIT_CONTROLLER_KEYS = new Set([
 
 const LEGACY_PLATFORM_CONTROLLER = 'PlatformController';
 
+/** Inventory controllers split from legacy `InventoryController` — OpenAPI operationIds stay prefixed. */
+export const INVENTORY_SPLIT_CONTROLLER_KEYS = new Set([
+  'InvitationController',
+]);
+
+const LEGACY_INVENTORY_CONTROLLER = 'InventoryController';
+
 export function platformAwareOperationIdFactory(
   controllerKey: string,
   methodKey: string,
   version?: string,
 ): string {
-  const key = PLATFORM_SPLIT_CONTROLLER_KEYS.has(controllerKey)
-    ? LEGACY_PLATFORM_CONTROLLER
-    : controllerKey;
+  let key = controllerKey;
+  if (PLATFORM_SPLIT_CONTROLLER_KEYS.has(controllerKey)) {
+    key = LEGACY_PLATFORM_CONTROLLER;
+  } else if (INVENTORY_SPLIT_CONTROLLER_KEYS.has(controllerKey)) {
+    key = LEGACY_INVENTORY_CONTROLLER;
+  }
   return version ? `${key}_${methodKey}_${version}` : `${key}_${methodKey}`;
 }
 
