@@ -618,7 +618,7 @@ test(
         backfillManualEntryCodes(tx, {
           tenantId,
           manualCodePepper: manualPepper,
-          credentialKeyMaterial: 'd3-cred-key',
+        credentialKeyMaterial: 'd3-cred-key-material-at-least-16',
           batchSize: 1,
         }),
       );
@@ -643,7 +643,7 @@ test(
         WHERE tenant_id = ${tenantId}::uuid AND id = ${third.ticketId}::uuid
       `);
       const reissueFirst = await withTenant(db, tenantId, async (tx) => {
-        const reissue = await reissueTicketCredential(tx, 'd3-cred-key', {
+        const reissue = await reissueTicketCredential(tx, 'd3-cred-key-material-at-least-16', {
           tenantId, eventId, ticketId: third.ticketId, actorUserId: staff.userId,
           reason: 'reissue before manual-code backfill', idempotencyKey: randomUUID(),
         });
@@ -673,7 +673,7 @@ test(
       const backfillFirst = await runBackfill();
       assert.equal(backfillFirst.minted, 1);
       const reissueAfterBackfill = await withTenant(db, tenantId, (tx) =>
-        reissueTicketCredential(tx, 'd3-cred-key', {
+        reissueTicketCredential(tx, 'd3-cred-key-material-at-least-16', {
           tenantId, eventId, ticketId: third.ticketId, actorUserId: staff.userId,
           reason: 'reissue after manual-code backfill', idempotencyKey: randomUUID(),
         }),
@@ -685,7 +685,7 @@ test(
           WHERE tenant_id = ${tenantId}::uuid AND id = ${third.ticketId}::uuid`;
         return rows[0];
       });
-      const finalRawCode = openManualEntryCode(finalCode.manual_entry_code_sealed, 'd3-cred-key');
+      const finalRawCode = openManualEntryCode(finalCode.manual_entry_code_sealed, 'd3-cred-key-material-at-least-16');
       assert.equal(finalCode.credential_version, reissueAfterBackfill.credentialVersion);
       assert.equal(finalCode.manual_entry_code_hash,
         hashManualCode(manualPepper, tenantId, eventId, finalRawCode));
@@ -746,7 +746,7 @@ test(
         assert.equal(afterRetry.event_id, eventId);
         assert.equal(afterRetry.state, beforeRetry.state);
         assert.equal(afterRetry.credential_version, beforeRetry.credential_version);
-        const retriedCode = openManualEntryCode(afterRetry.manual_entry_code_sealed, 'd3-cred-key');
+      const retriedCode = openManualEntryCode(afterRetry.manual_entry_code_sealed, 'd3-cred-key-material-at-least-16');
         assert.equal(afterRetry.manual_entry_code_hash,
           hashManualCode(manualPepper, tenantId, eventId, retriedCode));
         assert.notEqual(afterRetry.manual_entry_code_hash, donorBefore.manual_entry_code_hash);
