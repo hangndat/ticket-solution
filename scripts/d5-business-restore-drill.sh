@@ -379,6 +379,11 @@ UPDATE users SET
 WHERE id = '${USER_OWNER}'::uuid;
 SQL
 
+GATE_SMOKE_ENV="$(TICKET_CREDENTIAL_KEY="${CRED_KEY}" node "${ROOT}/scripts/gate-smoke-env.cjs")"
+while IFS= read -r gate_setting; do
+  export "${gate_setting}"
+done <<< "${GATE_SMOKE_ENV}"
+
 DATABASE_URL="postgresql://${RUNTIME_USER}:${RUNTIME_PW}@127.0.0.1:${PG_PORT}/${DST_DB}" \
 PORT="${API_PORT}" HOST=127.0.0.1 \
 OIDC_ISSUER="${MINT_ISSUER}" \
