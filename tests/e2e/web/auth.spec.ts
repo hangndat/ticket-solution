@@ -1408,7 +1408,9 @@ test('[AUTH-08] account deletion needs consent and acknowledges one request', as
 }) => {
   const manifest = loadManifest();
   fixtureFor(manifest, 'AUTH-08');
-  const actor = accountFor(manifest, 'AUTH-08', 'attendee');
+  // The case attendee owns a Scanner membership for HTTP erasure coverage and
+  // is redirected to Portal. The run-local default attendee has no membership.
+  const actor = manifest.accounts.attendee;
   expect(await readOpenDeletions(actor.userId)).toEqual([]);
   await login(page, manifest, actor, '/account');
   await page.goto(webUrl(manifest, '/account'));
