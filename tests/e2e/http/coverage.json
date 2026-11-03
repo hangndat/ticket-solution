@@ -167,6 +167,13 @@
     "reason": "Keycloak/API thật: Owner/Manager assignment filter, cursor/limit/asOf, foreign tenant/event và digest snapshot PostgreSQL dưới RLS không đổi sau deny. Chờ SHA sạch và reviewer độc lập."
   },
   {
+    "caseId": "DB-17",
+    "tests": ["H:tests/e2e/http/live.test.mjs#[DB-17] live HTTP"],
+    "layers": ["H"],
+    "status": "implemented",
+    "reason": "Keycloak/API thật: role preset named/versioned và deny, self-serve PENDING/replay + 503, Operator MFA activation, event limit race một winner/một 409, staff limit 409, usage và PG snapshot không mutation sau deny. Chờ clean exact-SHA run."
+  },
+  {
     "caseId": "WEB-04",
     "tests": ["H:tests/e2e/http/live.test.mjs#[WEB-04]"],
     "layers": ["H"],

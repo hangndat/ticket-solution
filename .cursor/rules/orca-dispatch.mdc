@@ -1,8 +1,0 @@
----
-description: Coordinator — dispatch tasks, planner, DAG/gates, capacity, ready queue and leader handoff
-alwaysApply: false
----
-
-# Orca — dispatch
-
-Khi làm coordinator/leader hoặc chuẩn bị giao Task, đọc và áp dụng [dispatch](../../docs/agents/workflows/dispatch.md) cùng [lifecycle](../../docs/agents/workflows/lifecycle.md). Worker/reviewer chỉ đọc phần được Task giao. Nội dung chuẩn và cập nhật nằm trong docs/agents.

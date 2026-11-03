@@ -99,7 +99,7 @@ export class WorkerRelay implements OnModuleDestroy {
     private readonly leaseOwner: string,
     private readonly ownsDb: boolean,
     private readonly intervalMs: number,
-    private readonly credentialKeyMaterial: string,
+    private readonly credentialKeyMaterial: import('@ticket/backend').CredentialKeyInput,
     private readonly env: NodeJS.ProcessEnv,
     options: WorkerRelayOptions = {},
   ) {

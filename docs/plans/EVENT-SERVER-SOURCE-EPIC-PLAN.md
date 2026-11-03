@@ -228,7 +228,7 @@ Phân biệt: **code complete** (PR) ≠ **acceptance complete** (DoD+CI+evidenc
 ## 8. Liên kết
 
 - Epic: https://github.com/hangndat/ticket-solution/issues/254
-- Rules: `docs/agents/workflows/dispatch.md`, `docs/agents/workflows/dispatch.md`, `docs/agents/policies/project.md`, `uat-headless.mdc`
+- Rules: `docs/agents/workflows/dispatch.md`, `docs/agents/workflows/lifecycle.md`, `docs/agents/policies/project.md`, `docs/agents/workflows/uat.md`
 - Roles: [docs/agents/README.md](../agents/README.md)
 - TD public: `docs/TECHNICAL-DESIGN.md` §10
 - D9 seed: `docs/demo/D9-DEMO-DATASET.md`, `docs/reviews/D9-DEMO-SEED.md`

@@ -1,8 +1,0 @@
----
-description: GitHub CLI — tránh rate limit khi DoD / coordinator / autopilot (hangndat)
-alwaysApply: false
----
-
-# Adapter Cursor
-
-Đọc và áp dụng [nguồn chuẩn](../../docs/agents/policies/github-api-details.md) khi rule được kích hoạt. Chỉnh policy tại nguồn chuẩn; metadata host giữ ở adapter này.

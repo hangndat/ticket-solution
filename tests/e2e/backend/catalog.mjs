@@ -133,6 +133,7 @@ export const catalog = {
       'db17-tenant-limits-mutation',
       'DB-17: maxEvents/maxStaff enforced at mutation; usage reflects committed counts',
     ),
+    { file: 'tests/e2e/http/live.test.mjs', name: '[DB-17] live HTTP', layer: 'H' },
   ],
   'DB-18': [
     b('account-ack-session-revoke', 'SEC-1 ACK'),
@@ -154,6 +155,7 @@ export const catalog = {
     b('db19-code-pepper-rotation', 'DB-19: code issued under v1 keeps resolving after v2 rotation; removed v1 fails closed; no plaintext'),
     b('db19-code-pepper-rotation', 'DB-19: consumed code cannot be re-issued after pepper rotation (fail-closed)'),
     b('db19-code-pepper-rotation', 'DB-19: duplicate rows for the same raw code across a pepper rotation fail closed with zero mutation'),
+    b('credential-keyring-unit', 'DB-19 QR keyring: old credential opens after rotation and unknown key fails closed', 'U'),
   ],
   'GATE-01': [b('gates', 'O31 gates:')],
   'GATE-02': [
@@ -298,6 +300,7 @@ export const catalog = {
     b('portal-audit-codes', 'H-A1/H-C1/H-P-AUDIT'),
     b('o06-retention-db', 'O06 DB clocks'),
     b('o06-retention-db', 'O06 PII writer'),
+    b('o06-retention-db', 'O06 POL-02 50k attendee worker process', 'R'),
   ],
   'POL-03': [
     b('minio-real', 'MinIO'),
@@ -338,9 +341,9 @@ export const notes = {
   'DB-16':
     'D/H portfolio tenant RLS, assignment, cursor/limit/watermark và owner/manager deny-by-default; chờ reviewer độc lập.',
   'DB-17':
-    'D presets/onboarding + tenant limit mutation/usage (event-quota-suspended #632 race, tenant-limits-usage) + non-Owner escalation deny (catalogue là surface duy nhất, cross-tenant 404) + maxEvents/maxStaff mutation limit/usage (rollback, race xác định, không oversell). Thiếu H Keycloak/HTTP presets/PENDING/operator activation.',
+    'D presets/onboarding + tenant limit mutation/usage (event-quota-suspended #632 race, tenant-limits-usage) + non-Owner escalation deny (catalogue là surface duy nhất, cross-tenant 404) + maxEvents/maxStaff mutation limit/usage (rollback, race xác định, không oversell). H Keycloak/HTTP: presets deny, PENDING, Operator activation, maxEvents race và maxStaff deny; cần run sạch exact SHA.',
   'DB-18':
-    'D deletion/tombstone + session revoke (ACK và apply, cross-tenant) + race ACK vs raw INSERT (SEC-R1 advisory lock) + REJECTED giữ REVOKED/mở lại có điều kiện + IdP DELETE/NOT_FOUND/404/disable/503-retry không bypass COMPLETED + issuer allowlist/no fuzzy lookup + OIDC maxTokenAge>24h reject + lease fencing + PII anonymize + audit kept; mutation-check xác nhận tắt ACK revoke làm 3 test fail đúng. Thiếu H: live Keycloak Admin erasure DELETE thật qua /v1/me/account-deletion-requests — chưa có client/fixture trong harness, cần Task riêng.',
+    'D ACK/apply session revoke, raw INSERT race, IdP retry/tombstone/lease, PII scrub, audit kept; SEC-1 ACK còn kiểm membership ACTIVE theo PLAN §15.2, ticket/check-in và aggregate report hai tenant giữ nguyên; mutation-check ticket ACTIVE→REVOKED làm aggregate assertion fail. H live Keycloak Admin DELETE + bearer HTTP đã có selector, chờ run SHA sạch.',
   'DB-19': 'D code pepper rotation, consumed và ambiguous fail-closed; H Keycloak/HTTP cặp v1/v2 cùng nhánh từ chối. QR credential rotation (credential-crypto key đơn, kid local-v1) chưa có versioned keyring — product gap cần owner.',
   'GATE-01': 'D gate FK/list/open; thiếu H permission và response contract.',
   'GATE-02':
@@ -385,7 +388,7 @@ export const notes = {
   'POL-01':
     'D scrub/retry/tombstone đạt; metric slaOverdue fail 0 vs admin count 1 do runtime RLS; chưa đủ kết luận toàn bộ SLA.',
   'POL-02':
-    'D biên 365 ngày, ends_at NULL, CANCELLED dùng cancelled_at, PII writer/sweep row lock hai thứ tự, tenant isolation, replay và giữ ticket/check-in/KPI input. Owner giảm AC: xóa audit vật lý 730 ngày và restore re-sweep chuyển task riêng; cần ops đo event lớn.',
+    'D biên 365 ngày, ends_at NULL, CANCELLED dùng cancelled_at, PII writer/sweep row lock hai thứ tự, tenant isolation, replay và giữ ticket/check-in/KPI input. Probe 50k attendee/request đo apply local dưới 60s; audit 729 ngày hiện, 731 ngày ẩn. Owner giảm AC: xóa audit vật lý 730 ngày và restore re-sweep chuyển task riêng; chưa đo worker process/VPS đích.',
   'POL-03':
     'D clock ends_at + 90 ngày kể cả CANCELLED, event fence, lease/reclaim, delete 404 và token cũ không finalize. F01 còn mở: stale PUT sau purge có thể tái tạo bytes; thiếu MinIO barrier/object-store write fence, signed URL expiry và ops restore.',
   'POL-04': 'Privacy copy và restore/RPO/RTO cần bằng chứng browser/ops riêng.',
