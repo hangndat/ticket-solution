@@ -23,7 +23,6 @@ const {
   GATE_ERROR_CODES,
   openStaffSession,
   revokeStaffSession,
-  reserveCheckin,
   confirmCheckin,
   unwrapReserveOutcome,
   unwrapConfirmOutcome,
@@ -32,6 +31,7 @@ const {
   cancelReservation,
   unwrapCancelOutcome,
 } = require('../dist');
+const { reserveCheckin } = require('./gate-test-credentials.cjs');
 
 const docker = (...args) =>
   execFileSync('docker', args, {

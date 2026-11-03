@@ -5,6 +5,7 @@ const {
   sealCredentialToken,
   openCredentialToken,
 } = require('../dist/credential-crypto');
+const { openCurrentCredentialForQr } = require('../dist/qr-ticket');
 
 const OLD = 'test-old-key-material-at-least-16';
 const NEW = 'test-new-key-material-at-least-16';
@@ -46,6 +47,18 @@ test('DB-19 QR keyring: old credential opens after rotation and unknown key fail
       credential.kid,
     ),
   );
+  assert.throws(() => openCurrentCredentialForQr({
+    encryptedToken: credential.encryptedToken,
+    expectedTokenHash: '0'.repeat(64),
+    kid: credential.kid,
+    credentialKeyMaterial: rotated,
+  }), /credential token hash mismatch/);
+  assert.throws(() => openCurrentCredentialForQr({
+    encryptedToken: credential.encryptedToken.slice(1),
+    expectedTokenHash: credential.tokenHash,
+    kid: credential.kid,
+    credentialKeyMaterial: rotated,
+  }));
 });
 
 test('DB-19 QR keyring: invalid configuration is rejected without exposing material', () => {

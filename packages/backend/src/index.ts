@@ -265,6 +265,7 @@ export {
   type EventAdminErrorCode,
 } from './event-admin-error';
 export { GateError, GATE_ERROR_CODES, type GateErrorCode } from './gate-error';
+export * from './gate-credential';
 export {
   openStaffSession,
   listEventGates,
@@ -277,11 +278,15 @@ export {
   cancelReservation,
   revokeTicket,
   reissueTicketCredential,
+  assignManualEntryCode,
+  manualLookupTicket,
+  backfillManualEntryCodes,
   recordGateReject,
   unwrapReserveOutcome,
   unwrapConfirmOutcome,
   unwrapCancelOutcome,
   unwrapReissueOutcome,
+  unwrapManualLookupOutcome,
   type StaffSessionResult,
   type ReserveResult,
   type ConfirmResult,
@@ -293,6 +298,9 @@ export {
   type ReissueOutcome,
   type GateDenyOutcome,
   type UndoResult,
+  type ManualLookupResult,
+  type ManualLookupOutcome,
+  type BackfillManualCodesResult,
 } from './gate';
 export {
   sortOfflineEventsForReplay,
@@ -519,6 +527,8 @@ export {
   readPublishedGuideContact,
 } from './notification-templates';
 export {
+  buildGateCredentialQrJson,
+  renderGateCredentialQrPng,
   buildCredentialQrJson,
   renderCredentialQrPng,
   openCurrentCredentialForQr,

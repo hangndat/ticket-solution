@@ -43,6 +43,8 @@ import {
   listOwnerTicketsAggregated,
   listTicketsForOwner,
   readCodeHmacEnvironment,
+  openManualEntryCode,
+  signGateCredentialJws,
   readCredentialKeyringEnvironment,
   readResolveTokenSecret,
   readSupportedPepperConfigs,
@@ -53,6 +55,7 @@ import {
   type PendingApprovalResult,
   withTenant,
   type CodeHmacConfig,
+  type GateCredentialConfig,
   type CredentialKeyInput,
   type IdentityUserRepository,
   type OidcVerifier,
@@ -104,6 +107,16 @@ class TicketSummaryDto implements TicketSummary {
   @ApiProperty({ format: 'uuid' }) sourceId!: string;
   @ApiProperty() state!: string;
   @ApiProperty() credentialVersion!: number;
+  @ApiProperty({
+    type: 'object',
+    properties: {
+      v: { type: 'number', enum: [1] },
+      kind: { type: 'string', enum: ['ticket.gate_credential'] },
+      jws: { type: 'string' },
+    },
+  })
+  gateCredential!: TicketSummary['gateCredential'];
+  @ApiProperty({ nullable: true, type: String }) manualEntryCode!: string | null;
   @ApiProperty() createdAt!: string;
   @ApiProperty({ required: false }) eventName?: string;
 }
@@ -189,6 +202,7 @@ export type TicketServices = {
   bootError: IdentityError | null;
   hmac: CodeHmacConfig | null;
   credentialKey: CredentialKeyInput | null;
+  gateCredentialConfig?: GateCredentialConfig | null;
   routingPeppers?: CodeHmacConfig[] | null;
   resolveTokenSecret?: string | null;
 };
@@ -196,6 +210,49 @@ export type TicketServices = {
 @Injectable()
 export class TicketIssueService {
   constructor(private readonly deps: TicketServices) {}
+
+  private async ticketSummary(
+    ticket: Awaited<ReturnType<typeof getTicketForOwner>> | Awaited<ReturnType<typeof listTicketsForOwner>>[number] | Awaited<ReturnType<typeof listOwnerTicketsAggregated>>[number],
+    tenantId: string,
+  ): Promise<TicketSummary> {
+    const config = this.deps.gateCredentialConfig;
+    const credentialKey = this.deps.credentialKey;
+    if (!config || !credentialKey) {
+      throw new IdentityError(
+        IDENTITY_ERROR_CODES.OIDC_MISCONFIGURED,
+        'Gate credential services are not configured',
+      );
+    }
+    const jws = await signGateCredentialJws({
+      claims: {
+        tid: tenantId,
+        eid: ticket.eventId,
+        tkt: ticket.ticketId,
+        ver: ticket.credentialVersion,
+      },
+      privateKeyPem: config.signingPrivateKeyPem,
+      kid: config.currentKeyId,
+    });
+    let manualEntryCode: string | null = null;
+    if (ticket.state === 'ACTIVE' && ticket.manualEntryCodeSealed) {
+      manualEntryCode = openManualEntryCode(ticket.manualEntryCodeSealed, credentialKey);
+    }
+    return {
+      ticketId: ticket.ticketId,
+      tenantId,
+      eventId: ticket.eventId,
+      ticketTypeId: ticket.ticketTypeId,
+      sourceId: ticket.sourceId,
+      state: ticket.state,
+      credentialVersion: ticket.credentialVersion,
+      gateCredential: { v: 1, kind: 'ticket.gate_credential', jws },
+      manualEntryCode,
+      createdAt: ticket.createdAt.toISOString(),
+      ...('eventName' in ticket && ticket.eventName != null
+        ? { eventName: ticket.eventName }
+        : {}),
+    };
+  }
 
   private async requireUser(
     authorization: string | undefined,
@@ -264,6 +321,7 @@ export class TicketIssueService {
             resolveToken: resolveTokenHeader?.trim() || undefined,
             resolveTokenSecret: this.deps.resolveTokenSecret ?? undefined,
             routingPeppers: this.deps.routingPeppers ?? undefined,
+            manualCodePepper: this.deps.gateCredentialConfig?.manualCodePepper,
           },
         );
       });
@@ -319,19 +377,7 @@ export class TicketIssueService {
     const tickets = await withTenant(this.deps.db, tenantId, (tx) =>
       listTicketsForOwner(tx, tenantId, user.userId),
     );
-    return {
-      tickets: tickets.map((t): TicketSummary => ({
-        ticketId: t.ticketId,
-        tenantId,
-        eventId: t.eventId,
-        ticketTypeId: t.ticketTypeId,
-        sourceId: t.sourceId,
-        state: t.state,
-        credentialVersion: t.credentialVersion,
-        createdAt: t.createdAt.toISOString(),
-        ...(t.eventName != null ? { eventName: t.eventName } : {}),
-      })),
-    };
+    return { tickets: await Promise.all(tickets.map((ticket) => this.ticketSummary(ticket, tenantId))) };
   }
 
   async listMineAll(
@@ -345,19 +391,7 @@ export class TicketIssueService {
       );
     }
     const tickets = await listOwnerTicketsAggregated(this.deps.db, user.userId);
-    return {
-      tickets: tickets.map((t): TicketSummary => ({
-        ticketId: t.ticketId,
-        tenantId: t.tenantId,
-        eventId: t.eventId,
-        ticketTypeId: t.ticketTypeId,
-        sourceId: t.sourceId,
-        state: t.state,
-        credentialVersion: t.credentialVersion,
-        createdAt: t.createdAt.toISOString(),
-        ...(t.eventName != null ? { eventName: t.eventName } : {}),
-      })),
-    };
+    return { tickets: await Promise.all(tickets.map((ticket) => this.ticketSummary(ticket, ticket.tenantId))) };
   }
 
   async getMine(
@@ -375,16 +409,7 @@ export class TicketIssueService {
     const ticket = await withTenant(this.deps.db, tenantId, (tx) =>
       getTicketForOwner(tx, tenantId, user.userId, ticketId),
     );
-    return {
-      ticketId: ticket.ticketId,
-      tenantId,
-      eventId: ticket.eventId,
-      ticketTypeId: ticket.ticketTypeId,
-      sourceId: ticket.sourceId,
-      state: ticket.state,
-      credentialVersion: ticket.credentialVersion,
-      createdAt: ticket.createdAt.toISOString(),
-    };
+    return this.ticketSummary(ticket, tenantId);
   }
 
   async operationStatus(
