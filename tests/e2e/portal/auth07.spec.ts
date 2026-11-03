@@ -373,6 +373,18 @@ test('[AUTH-07] held staff CSV download cannot commit after platform login', asy
   const context = await browser.newContext();
   const staffPage = await context.newPage();
   const exportsPath = eventBff(fixture, '/exports');
+  const navigationEvents: string[] = [];
+  staffPage.on('framenavigated', (frame) => {
+    if (frame === staffPage.mainFrame()) {
+      const url = new URL(frame.url());
+      if (url.origin === new URL(manifest.origins.portal).origin)
+        navigationEvents.push(`navigation:${url.pathname}`);
+    }
+  });
+  staffPage.on('requestfailed', (request) => {
+    if (new URL(request.url()).pathname === exportsPath)
+      navigationEvents.push(`export-request-failed:${request.failure()?.errorText ?? 'unknown'}`);
+  });
   let release!: () => void;
   let fetched!: () => void;
   let routeSettled!: () => void;
@@ -381,6 +393,11 @@ test('[AUTH-07] held staff CSV download cannot commit after platform login', asy
   const settled = new Promise<void>((resolve) => { routeSettled = resolve; });
   try {
     await login(staffPage, manifest, 'AUTH-07', 'owner');
+    // The home page redirects asynchronously after discovery; wait for the
+    // actual audit route before issuing a fetch in this document's context.
+    await staffPage.goto(portalUrl(manifest, `${eventPath(fixture, '/audit')}#jobs`));
+    const input = staffPage.getByTestId('export-id-input');
+    await expect(input).toBeVisible();
     await expect.poll(() => staffPage.evaluate(() => document.cookie.includes('portal_csrf='))).toBe(true);
     const created = await bffMutate(staffPage, exportsPath,
       { format: 'csv', filter: {}, idempotencyKey: randomUUID() });
@@ -394,9 +411,6 @@ test('[AUTH-07] held staff CSV download cannot commit after platform login', asy
       return (status.json as { status?: string }).status;
     }, { timeout: 30_000 }).toBe('READY');
 
-    await staffPage.goto(portalUrl(manifest, `${eventPath(fixture, '/audit')}#jobs`));
-    const input = staffPage.getByTestId('export-id-input');
-    await expect(input).toBeVisible();
     await input.fill(exportId!);
     const downloadPath = `${statusPath}/download`;
     let held = false;
@@ -435,6 +449,7 @@ test('[AUTH-07] held staff CSV download cannot commit after platform login', asy
     expect(downloads).toBe(0);
     await expect(platformPage.getByTestId('audit-table')).toHaveCount(0);
   } finally {
+    test.info().annotations.push({ type: 'auth07-csv-navigation', description: navigationEvents.join(' ') });
     release();
     await context.close();
   }
