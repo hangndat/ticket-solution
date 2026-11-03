@@ -6486,12 +6486,32 @@ for (const caseId of CASE_IDS) {
       const winner = [resultA, resultB].find((response) => response.body.results[0].status === 'APPLIED').body.results[0];
       const loser = [resultA, resultB].find((response) => response.body.results[0].status === 'CONFLICT').body.results[0];
       assert.equal(loser.winningCheckinId, winner.checkinId);
+      const extraCodes = required(f.data.moreRaceCodes, 'GATE-07 moreRaceCodes');
+      assert.equal(extraCodes.length, 3);
+      for (const code of extraCodes) {
+        const ticket = await request(ctx, 'POST', redemptionPath(f), attendee, {
+          code, formVersion: 'form-v1', termsVersion: 'terms-v1',
+          answers: f.data.answers, termsAccepted: true,
+        }, { 'idempotency-key': randomUUID() });
+        expectStatus(ticket, 201);
+        const makeRace = (staffSessionId) => ({ ...body, staffSessionId, deviceId: randomUUID(),
+          events: [{ ...event, clientEventId: randomUUID(), ticketId: ticket.body.ticketId }] });
+        const [a, b] = await Promise.all([
+          sync(scanner, makeRace(scannerSession)), sync(supervisor, makeRace(supervisorSession)),
+        ]);
+        expectStatus(a, 201);
+        expectStatus(b, 201);
+        assert.deepEqual([a.body.results[0].status, b.body.results[0].status].sort(), ['APPLIED', 'CONFLICT']);
+        const winning = [a, b].find((r) => r.body.results[0].status === 'APPLIED').body.results[0];
+        const losing = [a, b].find((r) => r.body.results[0].status === 'CONFLICT').body.results[0];
+        assert.equal(losing.winningCheckinId, winning.checkinId);
+      }
       const ledger = async () => db03Query(f,
         `SELECT (SELECT count(*)::int FROM checkins WHERE tenant_id=$1::uuid AND event_id=$2::uuid AND undone_at IS NULL) AS checkins,
                 (SELECT count(*)::int FROM offline_sync_events WHERE tenant_id=$1::uuid AND event_id=$2::uuid) AS events`,
         [f.tenantId, f.eventId]);
       const beforeRevoke = await ledger();
-      assert.equal(beforeRevoke[0].checkins, 2, 'each ticket must have one current check-in');
+      assert.equal(beforeRevoke[0].checkins, 5, 'each ticket must have one current check-in');
       expectStatus(await request(ctx, 'POST', gatePath(f, 'sessions/revoke'), owner,
         { tenantId: f.tenantId, staffSessionId: scannerSession }), 201);
       expectStatus(await sync(scanner, body), 409, 'SESSION_NOT_ACTIVE');
@@ -6514,17 +6534,31 @@ for (const caseId of CASE_IDS) {
         termsVersion: 'terms-v1', answers: f.data.answers, termsAccepted: true,
       }, { 'idempotency-key': randomUUID() });
       expectStatus(thirdTicket, 201);
-      const mixed = await sync(supervisor, { ...supervisorBody, events: [
+      const mixedBody = { ...supervisorBody, events: [
         supervisorBody.events[0],
         { ...event, clientEventId: randomUUID(), ticketId: thirdTicket.body.ticketId, clientSeq: 1 },
         { ...event, clientEventId: randomUUID(), clientSeq: 2 },
         { ...event, clientEventId: randomUUID(), ticketId: randomUUID(), clientSeq: 3 },
-      ] });
+      ] };
+      const auditCounts = async () => (await db03Query(f,
+        `SELECT count(*) FILTER (WHERE action='gate.offline_sync.apply')::int AS applied,
+                count(*) FILTER (WHERE action='gate.reject')::int AS rejected
+         FROM audit_logs WHERE tenant_id=$1::uuid AND event_id=$2::uuid`,
+        [f.tenantId, f.eventId]))[0];
+      const beforeMixed = await auditCounts();
+      const mixed = await sync(supervisor, mixedBody);
       expectStatus(mixed, 201);
       assert.deepEqual(mixed.body.results.map((item) => item.status),
         ['DUPLICATE', 'APPLIED', 'CONFLICT', 'REJECTED']);
       assert.equal(mixed.body.results[2].winningCheckinId, first.body.results[0].checkinId);
       assert.equal(mixed.body.results[3].code, 'TICKET_NOT_FOUND');
+      const afterMixed = await auditCounts();
+      assert.deepEqual(afterMixed, { applied: beforeMixed.applied + 1, rejected: beforeMixed.rejected + 2 });
+      const mixedRetry = await sync(supervisor, mixedBody);
+      expectStatus(mixedRetry, 201);
+      assert.deepEqual(mixedRetry.body.results.map((item) => item.status),
+        ['DUPLICATE', 'DUPLICATE', 'CONFLICT', 'REJECTED']);
+      assert.deepEqual(await auditCounts(), afterMixed, 'mixed retry must not duplicate audit');
       const beforeAssignmentRevoke = await ledger();
       await auth06Revoke(f, `UPDATE event_assignments SET revoked_at = now()
         WHERE tenant_id = $1::uuid AND event_id = $2::uuid
