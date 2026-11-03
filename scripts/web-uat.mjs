@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Legacy/CI wrapper — Playwright headless Chromium.
- * Agent UAT sessions: use Orca embedded browser (`orca tab` / `orca exec`) per `.cursor/rules/uat-headless.mdc`.
+ * Agent UAT sessions: use Orca embedded browser (`orca tab` / `orca exec`) per `docs/agents/workflows/uat.md`.
  * Never opens a visible browser window and never moves the macOS mouse.
  *
  * Usage:

@@ -7,7 +7,7 @@
 - Host hiện tại: `orca --version` → `1.4.246`.
 - [Release v1.4.246](https://github.com/stablyai/orca/releases/tag/v1.4.246).
 - Guide đọc từ binary: `orca skills get orchestration`, cùng `--reference references/coordinator-loop.md` và `--reference references/recovery-and-cleanup.md`. Khi host đổi version, nạp guide tương ứng trước khi điều phối; không sao chép bundled skill thành bản riêng.
-- Task docs/rules được miễn CRG. MCP `ctx_search` với path thư mục docs/rules bị hook CRG chặn; đọc trực tiếp bằng `ctx_read` và tìm trên danh sách đường dẫn file docs/rules cụ thể hoạt động. Không tắt guard hoặc sửa source để vượt hook.
+- Task docs/rules được miễn CRG. `ctx_search` dùng path tuyệt đối và `include: "*.md"` (hoặc `*.mdc`) khi thư mục có cả source; `ctx_read` dùng file đã biết. Search/compose trên thư mục chỉ có tài liệu cũng được miễn. `docs/agents/tools` có JS/shell nên compose toàn `docs/agents` vẫn là scope trộn, cần graph hoặc thu hẹp vào policy/workflow. Không tắt guard để vượt scope.
 
 ## Lifecycle chuẩn
 

@@ -226,7 +226,7 @@ Handoff PD **không** chứng minh runtime a11y pass — coding Task đo trên e
 | Web Home / Redeem (+ auth return) | `scripts/web-uat.sh` (Playwright headless) | Screenshot `apps/web/.uat-artifacts/`; assert AC-H* / AC-R* / AC-S1–S2; `/auth` nếu còn chỉ redirect |
 | iOS Ví / Redeem / Ticket          | `scripts/sim-uat.sh` (AXe + `simctl`)      | Screenshot `apps/mobile/.uat-artifacts/`; assert AC-W* / AC-T1                                       |
 
-**Cấm:** `cliclick`, AppleScript click, `ORCA computer click` trên Chrome/Safari/Simulator của user (xem `.cursor/rules/uat-headless.mdc`).
+**Cấm:** `cliclick`, AppleScript click, `ORCA computer click` trên Chrome/Safari/Simulator của user (xem `docs/agents/workflows/uat.md`).
 
 ---
 
