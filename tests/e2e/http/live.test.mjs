@@ -3707,6 +3707,8 @@ for (const caseId of CASE_IDS) {
         { tenantId: f.tenantId },
       );
       expectStatus(session, 200);
+      const sec04Ticket = await request(ctx, 'GET', `/me/tickets/${ticketId}?tenantId=${f.tenantId}`, attendee);
+      expectStatus(sec04Ticket, 200);
       const reserve = await request(
         ctx,
         'POST',
@@ -3715,7 +3717,7 @@ for (const caseId of CASE_IDS) {
         {
           tenantId: f.tenantId,
           staffSessionId: session.body.sessionId,
-          ticketId,
+          presented: { kind: 'qr', jws: required(sec04Ticket.body.gateCredential?.jws, 'SEC-04 signed QR') },
         },
       );
       expectStatus(reserve, 200);
@@ -3754,7 +3756,7 @@ for (const caseId of CASE_IDS) {
         {
           tenantId: f.tenantId,
           staffSessionId: session.body.sessionId,
-          ticketId: randomUUID(),
+          presented: { kind: 'qr', jws: sec04Ticket.body.gateCredential.jws },
         },
       );
       assert.notEqual(
@@ -3767,7 +3769,7 @@ for (const caseId of CASE_IDS) {
         await request(ctx, 'POST', gatePath(f, 'reservations'), scanner, {
           tenantId: f.tenantId,
           staffSessionId: session.body.sessionId,
-          ticketId: randomUUID(),
+          presented: { kind: 'qr', jws: sec04Ticket.body.gateCredential.jws },
         }),
         { code: 'RATE_LIMITED', retryable: true, noRetryAfter: true },
         'gate reserve',
@@ -3861,6 +3863,17 @@ for (const caseId of CASE_IDS) {
         429,
         'POST offline-sync budget must stay isolated from receipt read bucket',
       );
+      const supervisor = await bearer(ctx, 'supervisor');
+      const supervisorSession = await request(ctx, 'POST', gatePath(f, 'sessions'), supervisor,
+        { tenantId: f.tenantId });
+      expectStatus(supervisorSession, 200);
+      assertRateLimited(await request(ctx, 'POST', gatePath(f, 'offline-sync'), supervisor, {
+        tenantId: f.tenantId, staffSessionId: supervisorSession.body.sessionId,
+        deviceId: randomUUID(), clientClockAt: new Date().toISOString(), events: [],
+      }), { code: 'RATE_LIMITED', retryable: true, noRetryAfter: true }, 'offline-sync POST');
+      const receiptProbe = await request(ctx, 'GET',
+        `${gatePath(f, 'offline-sync/receipts')}/${randomUUID()}?tenantId=${f.tenantId}`, supervisor);
+      expectStatus(receiptProbe, 404);
 
       const firstResend = await request(
         ctx,
@@ -6554,11 +6567,31 @@ for (const caseId of CASE_IDS) {
       assert.equal(mixed.body.results[3].code, 'TICKET_NOT_FOUND');
       const afterMixed = await auditCounts();
       assert.deepEqual(afterMixed, { applied: beforeMixed.applied + 1, rejected: beforeMixed.rejected + 2 });
+      const mixedAudit = async () => db03Query(f,
+        `SELECT action, resource_type, resource_id::text AS resource_id, reason, actor_user_id::text AS actor_user_id
+         FROM audit_logs WHERE tenant_id=$1::uuid AND event_id=$2::uuid
+           AND resource_id = ANY($3::uuid[]) ORDER BY resource_id`,
+        [f.tenantId, f.eventId, [mixed.body.results[1].checkinId,
+          mixedBody.events[2].clientEventId, mixedBody.events[3].clientEventId]]);
+      const detail = await mixedAudit();
+      assert.equal(detail.length, 3);
+      assert.deepEqual(detail.find((row) => row.resource_id === mixed.body.results[1].checkinId), {
+        action: 'gate.offline_sync.apply', resource_type: 'checkin',
+        resource_id: mixed.body.results[1].checkinId, reason: null, actor_user_id: f.accounts.supervisor.userId,
+      });
+      for (const index of [2, 3]) {
+        assert.deepEqual(detail.find((row) => row.resource_id === mixedBody.events[index].clientEventId), {
+          action: 'gate.reject', resource_type: 'offline_client_event',
+          resource_id: mixedBody.events[index].clientEventId, reason: mixed.body.results[index].code,
+          actor_user_id: f.accounts.supervisor.userId,
+        });
+      }
       const mixedRetry = await sync(supervisor, mixedBody);
       expectStatus(mixedRetry, 201);
       assert.deepEqual(mixedRetry.body.results.map((item) => item.status),
         ['DUPLICATE', 'DUPLICATE', 'CONFLICT', 'REJECTED']);
       assert.deepEqual(await auditCounts(), afterMixed, 'mixed retry must not duplicate audit');
+      assert.deepEqual(await mixedAudit(), detail, 'mixed retry must preserve audit reason, resource and actor');
       const beforeAssignmentRevoke = await ledger();
       await auth06Revoke(f, `UPDATE event_assignments SET revoked_at = now()
         WHERE tenant_id = $1::uuid AND event_id = $2::uuid
