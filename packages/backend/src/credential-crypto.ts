@@ -20,6 +20,69 @@ export type CredentialKeyInput = string | CredentialKeyring;
 
 const KID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
 
+/** Walk top-level JSON members before JSON.parse can overwrite duplicate IDs. */
+function assertUniqueLegacyKids(raw: string): void {
+  let at = 0;
+  const seen = new Set<string>();
+  const whitespace = () => {
+    while (/\s/.test(raw[at] ?? '')) at++;
+  };
+  whitespace();
+  if (raw[at++] !== '{') throw new Error('invalid legacy key map');
+  whitespace();
+  if (raw[at] === '}') return;
+
+  while (at < raw.length) {
+    if (raw[at] !== '"') throw new Error('invalid legacy key map');
+    const start = at++;
+    while (at < raw.length && raw[at] !== '"') {
+      at += raw[at] === '\\' ? 2 : 1;
+    }
+    if (at >= raw.length) throw new Error('invalid legacy key map');
+    const kid: string = JSON.parse(raw.slice(start, ++at));
+    if (seen.has(kid)) throw new Error('duplicate legacy key id');
+    seen.add(kid);
+    whitespace();
+    if (raw[at++] !== ':') throw new Error('invalid legacy key map');
+    whitespace();
+
+    // Value may be any JSON type. Locate its top-level separator without
+    // assuming that strings alternate between property names and values.
+    let depth = 0;
+    let quoted = false;
+    const valueStart = at;
+    while (at < raw.length) {
+      const char = raw[at]!;
+      if (quoted) {
+        if (char === '\\') at += 2;
+        else {
+          if (char === '"') quoted = false;
+          at++;
+        }
+      } else if (char === '"') {
+        quoted = true;
+        at++;
+      } else if (char === '{' || char === '[') {
+        depth++;
+        at++;
+      } else if (char === '}' || char === ']') {
+        if (depth === 0) break;
+        depth--;
+        at++;
+      } else if (char === ',' && depth === 0) {
+        break;
+      } else {
+        at++;
+      }
+    }
+    if (at === valueStart) throw new Error('invalid legacy key map');
+    if (raw[at] === '}') return;
+    if (raw[at++] !== ',') throw new Error('invalid legacy key map');
+    whitespace();
+  }
+  throw new Error('invalid legacy key map');
+}
+
 export function readCredentialKeyringEnvironment(
   env: NodeJS.ProcessEnv,
 ): CredentialKeyring {
@@ -35,14 +98,7 @@ export function readCredentialKeyringEnvironment(
   if (env['TICKET_CREDENTIAL_LEGACY_KEYS']?.trim()) {
     try {
       const raw = env['TICKET_CREDENTIAL_LEGACY_KEYS']!;
-      // Inspect flat-map property names before JSON.parse overwrites duplicates.
-      const strings = raw.match(/"(?:\\.|[^"\\])*"/g) ?? [];
-      const seen = new Set<string>();
-      for (let index = 0; index < strings.length; index += 2) {
-        const kid = JSON.parse(strings[index]!);
-        if (seen.has(kid)) throw new Error('duplicate credential key id');
-        seen.add(kid);
-      }
+      assertUniqueLegacyKids(raw);
       legacy = JSON.parse(raw);
     } catch {
       throw new Error('ticket credential keyring is invalid');
