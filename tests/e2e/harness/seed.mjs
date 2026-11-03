@@ -233,10 +233,10 @@ export async function seedRuntime(state, caseIds) {
               `E2E-${state.id}-${caseId}-E`,
             ]
           : []),
-        ...(['DB-03', 'DB-04', 'DB-07'].includes(caseId)
+        ...(['DB-03', 'DB-04', 'DB-07', 'GATE-07'].includes(caseId)
           ? [`E2E-${state.id}-${caseId}-C`]
           : []),
-        ...(caseId === 'DB-07' ? [`E2E-${state.id}-${caseId}-D`] : []),
+        ...(['DB-07', 'GATE-07'].includes(caseId) ? [`E2E-${state.id}-${caseId}-D`] : []),
       ];
       const fixture = {
         tenantId,
@@ -304,6 +304,10 @@ export async function seedRuntime(state, caseIds) {
         fixture.data.raceCode = codes[2];
       }
       if (caseId === 'DB-07') {
+        fixture.data.thirdCode = codes[2];
+        fixture.data.fourthCode = codes[3];
+      }
+      if (caseId === 'GATE-07') {
         fixture.data.thirdCode = codes[2];
         fixture.data.fourthCode = codes[3];
       }
