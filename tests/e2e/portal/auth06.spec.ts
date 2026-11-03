@@ -85,11 +85,9 @@ test('[AUTH-06] stale Portal capability rejects gate creation after assignment a
       await dialog.getByRole('button', { name: 'Thêm cổng' }).click();
       expect((await response).status()).toBe(403);
       await expect(
-        dialog.getByText(
-          'Bạn không có quyền xem danh sách cổng của sự kiện này.',
-        ),
+        page.getByText('Không có quyền', { exact: true }),
       ).toBeVisible();
-      await expect(section.locator('.ant-alert-success')).toHaveCount(0);
+      await expect(page.locator('.ant-alert-success')).toHaveCount(0);
       expect(await counts()).toEqual(before);
       if (branch === 'assignment') {
         const restored = await query(
