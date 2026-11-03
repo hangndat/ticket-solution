@@ -2803,6 +2803,37 @@ for (const caseId of CASE_IDS) {
         'HTTP password grant is not browser MFA; platform route must stay gated',
       );
 
+      const corsUrl = new URL(`/v1${reportPath(f)}`, ctx.api);
+      for (const origin of [webOrigin, portalOrigin, EVIL_ORIGIN, 'null', 'not-an-origin']) {
+        const allowed = origin === webOrigin || origin === portalOrigin;
+        const response = await fetch(corsUrl, {
+          headers: { Origin: origin, authorization: `Bearer ${staffToken}` },
+        });
+        assert.equal(response.status, 200);
+        assert.equal(response.headers.get('access-control-allow-origin'), allowed ? origin : null);
+        assert.match(response.headers.get('vary') || '', /\borigin\b/i);
+        assert.equal(response.headers.get('access-control-allow-credentials'), null);
+      }
+      for (const origin of [portalOrigin, EVIL_ORIGIN]) {
+        const response = await fetch(corsUrl, {
+          method: 'OPTIONS',
+          headers: { Origin: origin, 'Access-Control-Request-Method': 'GET', 'Access-Control-Request-Headers': 'authorization' },
+        });
+        assert.equal(response.headers.get('access-control-allow-origin'), origin === portalOrigin ? origin : null);
+        assert.match(response.headers.get('vary') || '', /\borigin\b/i);
+        if (origin === portalOrigin) {
+          assert.equal(response.status, 204);
+          assert.match(response.headers.get('access-control-allow-methods') || '', /\bGET\b/);
+          assert.match(response.headers.get('access-control-allow-headers') || '', /\bauthorization\b/i);
+        }
+      }
+      const allowedAnonymous = await fetch(corsUrl, { headers: { Origin: portalOrigin } });
+      assert.equal(allowedAnonymous.status, 401);
+      assert.equal(allowedAnonymous.headers.get('access-control-allow-origin'), portalOrigin);
+      const wrongActor = await fetch(corsUrl, { headers: { Origin: portalOrigin, authorization: `Bearer ${platformToken}` } });
+      assert.equal(wrongActor.status, 401);
+      assert.equal(wrongActor.headers.get('access-control-allow-origin'), portalOrigin);
+
       const corsNoAuth = await fetch(
         new URL(`/v1/me/tickets?tenantId=${tenantId}`, ctx.api),
         {

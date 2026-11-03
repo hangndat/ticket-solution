@@ -4,6 +4,12 @@ Bản đầu chạy trên máy đã có nginx giữ cổng 80/443. Compose Vemok
 
 Env mẫu (không secrets): [`./.env.example`](./.env.example) → copy vào `/opt/vemoki/.env` (mode 600).
 
+API nhận `API_CORS_ORIGINS` từ môi trường Compose. Khi được ủy quyền cấu hình,
+operator đặt danh sách origin HTTP(S) chính xác cần dùng, phân cách bằng dấu phẩy;
+xem [quy tắc API](../../apps/api/CORS.md). Thiếu hoặc rỗng nghĩa là không cấp
+CORS cho origin nào; giá trị không hợp lệ khiến API không khởi động. CORS không
+thay authorization. Wiring này không chứng minh production đã được cấu hình.
+
 ## Image
 
 `Dockerfile.runtime` chỉ có Node 24, OpenSSL và pnpm. `node_modules`, `dist` và `.next` thuộc release directory bất biến; mỗi service mount một đường dẫn release riêng, read-only. Quy trình mới: [`docs/ops/IMMUTABLE-RELEASE.md`](../../docs/ops/IMMUTABLE-RELEASE.md). Không build/install vào `/opt/vemoki/src` đang chạy.
