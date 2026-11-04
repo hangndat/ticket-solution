@@ -1,6 +1,13 @@
 import { randomUUID } from 'node:crypto';
-import { test, expect, loadManifest, fixtureFor } from '../harness/fixtures';
+import {
+  test,
+  expect,
+  loadManifest,
+  fixtureFor,
+  accountFor,
+} from '../harness/fixtures';
 import { bffGet, bffMutate, login, portalUrl } from './helpers';
+import { login as webLogin, webUrl } from '../web/helpers';
 
 test('[PLAT-01] Operator MFA session is separate from staff Owner', async ({
   page,
@@ -54,6 +61,181 @@ test('[PLAT-02] Operator activates a PENDING tenant with version check', async (
   const after = await bffGet(page, m, path);
   expect(after.status).toBe(200);
   expect((after.json as { status: string }).status).toBe('ACTIVE');
+  await page.goto(portalUrl(m, '/platform'));
+  await page.getByRole('tab', { name: 'Manage', exact: true }).click();
+  await page.getByTestId('platform-manage-tenant-input').fill(tenantId);
+  await page.getByTestId('platform-manage-load').click();
+  await expect(page.getByTestId('platform-tenant-detail')).toContainText(
+    'ACTIVE',
+  );
+  const maxEvents = page
+    .locator('.ant-form-item')
+    .filter({ hasText: 'maxEvents' })
+    .locator('input');
+  await maxEvents.fill('5');
+  const saveResponse = page.waitForResponse(
+    (response) =>
+      response.url().endsWith(`${path}/limits`) &&
+      response.request().method() === 'PUT',
+  );
+  await page.getByTestId('platform-manage-save-limits').click();
+  expect((await saveResponse).status()).toBe(200);
+  await expect
+    .poll(async () => {
+      const result = await bffGet(page, m, path);
+      return (result.json as { limits?: { maxEvents?: number } }).limits
+        ?.maxEvents;
+    })
+    .toBe(5);
+});
+
+test('[PLAT-02] Operator provisions a PENDING tenant through the platform UI', async ({
+  page,
+  browser,
+}) => {
+  const m = loadManifest();
+  fixtureFor(m, 'PLAT-02');
+  await login(page, m, 'PLAT-02', 'operator', 'platform');
+  await page.goto(portalUrl(m, '/platform'));
+  await page.getByRole('tab', { name: 'Provision', exact: true }).click();
+  const slug = `e2e-${randomUUID()}`;
+  await page.getByTestId('platform-provision-slug').fill(slug);
+  await page.getByTestId('platform-provision-name').fill('PLAT-02 test tenant');
+  await page
+    .getByTestId('platform-provision-owner-email')
+    .fill('owner@example.test');
+  const responsePromise = page.waitForResponse(
+    (response) =>
+      response.url().endsWith('/api/bff/platform/tenants') &&
+      response.request().method() === 'POST',
+  );
+  await page.getByTestId('platform-provision-submit').click();
+  const response = await responsePromise;
+  expect([200, 201]).toContain(response.status());
+  const created = (await response.json()) as {
+    tenantId: string;
+    status: string;
+    ownerInviteId: string;
+  };
+  expect(created.status).toBe('PENDING');
+  expect(created.tenantId).toMatch(/^[0-9a-f-]{36}$/i);
+  expect(created.ownerInviteId).toMatch(/^[0-9a-f-]{36}$/i);
+  expect(created).not.toHaveProperty('rawInviteToken');
+  await expect(page.getByTestId('platform-provision-status')).toContainText(
+    created.tenantId,
+  );
+  const path = `/api/bff/platform/tenants/${created.tenantId}`;
+  const before = await bffGet(page, m, path);
+  expect(before.status).toBe(200);
+  expect(before.json).toMatchObject({ slug, status: 'PENDING' });
+
+  const ownerContext = await browser.newContext();
+  try {
+    const ownerPage = await ownerContext.newPage();
+    await login(ownerPage, m, 'PLAT-02', 'owner');
+    const denied = await bffGet(ownerPage, m, path);
+    expect(denied.status).toBe(401);
+    expect((denied.json as { code?: string }).code).toBe('UNAUTHENTICATED');
+    expect(JSON.stringify(denied.json)).not.toContain(slug);
+    const attempt = await bffMutate(ownerPage, `${path}/status`, {
+      status: 'ACTIVE',
+      reason: 'unauthorized',
+      expectedVersion: (before.json as { version: number }).version,
+      idempotencyKey: randomUUID(),
+    });
+    expect(attempt.status).toBe(401);
+  } finally {
+    await ownerContext.close();
+  }
+  const after = await bffGet(page, m, path);
+  expect(after.status).toBe(200);
+  expect(after.json).toMatchObject({
+    tenantId: created.tenantId,
+    slug,
+    status: 'PENDING',
+    version: (before.json as { version: number }).version,
+  });
+});
+
+test('[PLAT-02] suspension preserves the issued ticket for its owner', async ({
+  page,
+  browser,
+}) => {
+  const m = loadManifest();
+  const f = fixtureFor(m, 'PLAT-02');
+  const tenantId = f.data?.suspendedTenantId;
+  const ticketId = f.data?.suspendedTicketId;
+  if (typeof tenantId !== 'string' || typeof ticketId !== 'string') {
+    throw new Error('BLOCKED: PLAT-02 issued ticket fixture missing');
+  }
+  await login(page, m, 'PLAT-02', 'operator', 'platform');
+  const path = `/api/bff/platform/tenants/${tenantId}`;
+  const initial = await bffGet(page, m, path);
+  expect(initial.status).toBe(200);
+  const detail = initial.json as { status: string; version: number };
+  expect(detail.status).toBe('SUSPENDED');
+  const activated = await bffMutate(page, `${path}/status`, {
+    status: 'ACTIVE',
+    reason: 'PLAT-02 setup',
+    expectedVersion: detail.version,
+    idempotencyKey: randomUUID(),
+  });
+  expect(activated.status).toBe(201);
+  const attendeeContext = await browser.newContext();
+  const ownerContext = await browser.newContext();
+  try {
+    const attendeePage = await attendeeContext.newPage();
+    await webLogin(attendeePage, m, accountFor(m, 'PLAT-02', 'attendee'));
+    const ticketPath = `/api/bff/tickets/${ticketId}?tenantId=${tenantId}`;
+    const ticketBefore = await attendeePage.request.get(webUrl(m, ticketPath));
+    expect(ticketBefore.status()).toBe(200);
+    const before = await ticketBefore.json();
+    await page.goto(portalUrl(m, '/platform'));
+    await page.getByRole('tab', { name: 'Manage', exact: true }).click();
+    await page.getByTestId('platform-manage-tenant-input').fill(tenantId);
+    await page.getByTestId('platform-manage-load').click();
+    await expect(page.getByTestId('platform-tenant-detail')).toContainText(
+      'ACTIVE',
+    );
+    await page.getByTestId('platform-manage-suspend').click();
+    const suspendedResponse = page.waitForResponse(
+      (response) =>
+        response.url().endsWith(`${path}/status`) &&
+        response.request().method() === 'POST',
+    );
+    await page.getByRole('dialog').getByRole('button', { name: 'OK' }).click();
+    expect((await suspendedResponse).status()).toBe(201);
+    await expect
+      .poll(async () => (await bffGet(page, m, path)).json)
+      .toMatchObject({ status: 'SUSPENDED' });
+    const ticketAfter = await attendeePage.request.get(webUrl(m, ticketPath));
+    expect(ticketAfter.status()).toBe(200);
+    const after = await ticketAfter.json();
+    expect(after).toMatchObject({ ticketId, state: 'ACTIVE' });
+    expect(before).toMatchObject({ ticketId, state: 'ACTIVE' });
+    const ownerPage = await ownerContext.newPage();
+    await login(ownerPage, m, 'PLAT-02', 'owner');
+    const eventsPath = `/api/bff/tenants/${tenantId}/events`;
+    const eventsBefore = await bffGet(ownerPage, m, eventsPath);
+    expect(eventsBefore.status).toBe(200);
+    const deniedCreate = await bffMutate(ownerPage, eventsPath, {
+      slug: `blocked-${randomUUID()}`,
+      name: 'Suspended mutation',
+      idempotencyKey: randomUUID(),
+    });
+    expect(deniedCreate.status).toBe(503);
+    expect((deniedCreate.json as { code?: string }).code).toBe(
+      'TENANT_SUSPENDED',
+    );
+    const eventsAfter = await bffGet(ownerPage, m, eventsPath);
+    expect(eventsAfter.status).toBe(200);
+    expect((eventsAfter.json as { items: unknown[] }).items).toEqual(
+      (eventsBefore.json as { items: unknown[] }).items,
+    );
+  } finally {
+    await attendeeContext.close();
+    await ownerContext.close();
+  }
 });
 
 test('[PLAT-03] support grant is bounded to cs.read and one hour', async ({
