@@ -227,6 +227,14 @@ export class PlatformTenantFlagsDto {
   @ApiProperty() exportsEnabled!: boolean;
 }
 
+export class PlatformTenantLimitsBodyDto {
+  @ApiProperty({ type: PlatformTenantLimitsDto }) limits!: PlatformTenantLimitsDto;
+  @ApiProperty({ type: PlatformTenantFlagsDto }) flags!: PlatformTenantFlagsDto;
+  @ApiProperty() reason!: string;
+  @ApiProperty({ minimum: 1, description: 'Version of limits and flags; tenant version is not accepted.' })
+  expectedLimitsVersion!: number;
+}
+
 export class PlatformTenantDetailDto implements PlatformTenantDetail {
   @ApiProperty({ format: 'uuid' }) tenantId!: string;
   @ApiProperty() slug!: string;

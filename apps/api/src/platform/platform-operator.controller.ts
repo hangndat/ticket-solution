@@ -21,6 +21,7 @@ import {
   PortalPlatformTenantHealthDto,
   PortalPlatformTenantsPageDto,
   PlatformTenantDetailDto,
+  PlatformTenantLimitsBodyDto,
   PortalReasonBodyDto,
   SupportGrantRevokeResponseDto,
 } from './platform-dtos';
@@ -127,10 +128,11 @@ export class PlatformOperatorController {
 
   @Put('platform/tenants/:tenantId/limits')
   @ApiBearerAuth()
+  @ApiBody({ type: PlatformTenantLimitsBodyDto })
   setLimits(
     @Headers('authorization') authorization: string | undefined,
     @Param('tenantId') tenantId: string,
-    @Body() body: never,
+    @Body() body: PlatformTenantLimitsBodyDto,
   ) {
     return this.platform.setLimits(
       authorization,

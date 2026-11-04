@@ -167,24 +167,28 @@ export class PlatformOperatorService {
     authorization: string | undefined,
     tenantId: string,
     body: {
-      limits: never;
-      flags: never;
+      limits: import('@ticket/contracts').TenantLimitsDto;
+      flags: import('@ticket/contracts').TenantFlagsDto;
       reason: string;
-      expectedVersion: number;
+      expectedLimitsVersion: number;
     },
   ) {
     return this.actors
       .platformActor(authorization)
-      .then((u) =>
-        updateTenantLimits(this.deps.db!, {
+      .then((u) => {
+        if (!body || !Number.isSafeInteger(body.expectedLimitsVersion) ||
+            body.expectedLimitsVersion < 1 || Object.hasOwn(body, 'expectedVersion')) {
+          throw new PlatformError(PLATFORM_ERROR_CODES.INVALID_INPUT, 'expectedLimitsVersion required');
+        }
+        return updateTenantLimits(this.deps.db!, {
           actorUserId: u.userId,
           tenantId,
           limits: body.limits,
           flags: body.flags,
           reason: body.reason,
-          expectedVersion: body.expectedVersion,
-        }),
-      )
+          expectedVersion: body.expectedLimitsVersion,
+        });
+      })
       .catch(platformRouteFail);
   }
 

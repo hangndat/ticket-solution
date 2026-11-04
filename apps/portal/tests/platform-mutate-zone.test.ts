@@ -53,7 +53,7 @@ describe('platform mutate zone', () => {
     if (view.kind === 'ok') {
       assert.equal(view.detail.version, 2);
       assert.equal(view.detail.limitsVersion, 1);
-      assert.equal(platformLimitsBody(view.detail, view.detail.limits, view.detail.flags, 'ops').expectedVersion, 1);
+      assert.equal(platformLimitsBody(view.detail, view.detail.limits, view.detail.flags, 'ops').expectedLimitsVersion, 1);
       assert.equal(view.detail.flags.exportsEnabled, false);
     }
   });
