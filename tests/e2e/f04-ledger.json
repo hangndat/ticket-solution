@@ -1,0 +1,974 @@
+{
+  "_README": "Evidence hiện tại là entry cấp cao nhất; _historical bảo toàn snapshot nghiệm thu đã review từ ACCEPTANCE.md. accepted của status là hợp ID, không phải regression trên HEAD. Merge SHA và tested SHA có trường riêng.",
+  "_schema": {
+    "<CASE-ID>": {
+      "accepted": true,
+      "sha": "<exact sha>",
+      "run": "<run id>"
+    }
+  },
+  "DB-05": {
+    "accepted": true,
+    "sha": "e9cbdb34488cc8478069390f03478239baa10fe4",
+    "run": "db05-ctx-1e71c5ca317e"
+  },
+  "_historical": {
+    "source": "tests/e2e/ACCEPTANCE.md#các-nhóm-có-nghiệm-thu-tại-mốc-tích-hợp",
+    "sourceSnapshot": "90994a2fbcfce558584a47adde0d06b569a52f4c",
+    "capturedAt": "2026-11-03",
+    "recordCount": 56,
+    "shaSemantics": "integrationSha là merge SHA của PR; testedSHA chỉ được lưu khi có ghi cụ thể trong runReference. Không đại diện cho regression trên HEAD hiện tại.",
+    "records": [
+      {
+        "id": "AUTH-01",
+        "accepted": true,
+        "layers": "B/H",
+        "integrationSha": [
+          "04fa24b83f980b8994b0ccb9a7cf4cc4223583ec"
+        ],
+        "prLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1041"
+        ],
+        "evidenceLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1041#issuecomment-6514142847"
+        ],
+        "runReference": "`mvueewq9-6443b7` · [evidence](https://github.com/hangndat/ticket-solution/pull/1041#issuecomment-6514142847)",
+        "sourceLine": 21
+      },
+      {
+        "id": "AUTH-02",
+        "accepted": true,
+        "layers": "B/H",
+        "integrationSha": [
+          "04fa24b83f980b8994b0ccb9a7cf4cc4223583ec"
+        ],
+        "prLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1041"
+        ],
+        "evidenceLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1041#issuecomment-6514142847"
+        ],
+        "runReference": "`mvueewq9-6443b7` · [evidence](https://github.com/hangndat/ticket-solution/pull/1041#issuecomment-6514142847)",
+        "sourceLine": 22
+      },
+      {
+        "id": "AUTH-03",
+        "accepted": true,
+        "layers": "B/H",
+        "integrationSha": [
+          "34c2d638fa974376dc21a05381eba132a1c41feb"
+        ],
+        "prLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1044"
+        ],
+        "evidenceLinks": [
+          "https://github.com/hangndat/ticket-solution/issues/1029#issuecomment-6515411311"
+        ],
+        "runReference": "`mvuhg384-8f05be; mvuhub6j-16fbd0` · [evidence](https://github.com/hangndat/ticket-solution/issues/1029#issuecomment-6515411311)",
+        "sourceLine": 23
+      },
+      {
+        "id": "AUTH-04",
+        "accepted": true,
+        "layers": "B/H",
+        "integrationSha": [
+          "34c2d638fa974376dc21a05381eba132a1c41feb"
+        ],
+        "prLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1044"
+        ],
+        "evidenceLinks": [
+          "https://github.com/hangndat/ticket-solution/issues/1029#issuecomment-6515411311"
+        ],
+        "runReference": "`mvuhg384-8f05be; mvuhub6j-16fbd0` · [evidence](https://github.com/hangndat/ticket-solution/issues/1029#issuecomment-6515411311)",
+        "sourceLine": 24
+      },
+      {
+        "id": "AUTH-05",
+        "accepted": true,
+        "layers": "B/H",
+        "integrationSha": [
+          "34c2d638fa974376dc21a05381eba132a1c41feb"
+        ],
+        "prLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1044"
+        ],
+        "evidenceLinks": [
+          "https://github.com/hangndat/ticket-solution/issues/1029#issuecomment-6515411311"
+        ],
+        "runReference": "`mvuhg384-8f05be; mvuhub6j-16fbd0` · [evidence](https://github.com/hangndat/ticket-solution/issues/1029#issuecomment-6515411311)",
+        "sourceLine": 25
+      },
+      {
+        "id": "WEB-01",
+        "accepted": true,
+        "layers": "B/H",
+        "integrationSha": [
+          "105ee3c29ec8a01cff8b63a8e95c21cf753bcd19"
+        ],
+        "prLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1111"
+        ],
+        "evidenceLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1111#issuecomment-6555901115"
+        ],
+        "runReference": "`mvxlnnby-e35f78` WEB-01 PASS; [review](https://github.com/hangndat/ticket-solution/pull/1111#issuecomment-6555901115)",
+        "sourceLine": 26
+      },
+      {
+        "id": "WEB-02",
+        "accepted": true,
+        "layers": "B",
+        "integrationSha": [
+          "21a0b8ab0f6978d792556bff2bb6d045947c9727"
+        ],
+        "prLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1077"
+        ],
+        "evidenceLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1077#issuecomment-6522759425"
+        ],
+        "runReference": "`mvuxsq31-d9f462` · [evidence](https://github.com/hangndat/ticket-solution/pull/1077#issuecomment-6522759425)",
+        "sourceLine": 27
+      },
+      {
+        "id": "WEB-03",
+        "accepted": true,
+        "layers": "B/H",
+        "integrationSha": [
+          "21a0b8ab0f6978d792556bff2bb6d045947c9727"
+        ],
+        "prLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1077"
+        ],
+        "evidenceLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1077#issuecomment-6522759425"
+        ],
+        "runReference": "`mvuxsq31-d9f462` · [evidence](https://github.com/hangndat/ticket-solution/pull/1077#issuecomment-6522759425)",
+        "sourceLine": 28
+      },
+      {
+        "id": "WEB-04",
+        "accepted": true,
+        "layers": "B/H",
+        "integrationSha": [
+          "a51fd895bf8b4da5f2397193ed9ef3b16a21e670"
+        ],
+        "prLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1082"
+        ],
+        "evidenceLinks": [
+          "https://github.com/hangndat/ticket-solution/issues/1037#issuecomment-6524355066"
+        ],
+        "runReference": "`mvv0kmxn-5038d2; mvv0lz1j-b30c15` · [evidence](https://github.com/hangndat/ticket-solution/issues/1037#issuecomment-6524355066)",
+        "sourceLine": 29
+      },
+      {
+        "id": "WEB-05",
+        "accepted": true,
+        "layers": "B/H",
+        "integrationSha": [
+          "64e1d270798c817aab2099142a97f03f17b1956a"
+        ],
+        "prLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1071"
+        ],
+        "evidenceLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1071#issuecomment-6521341187"
+        ],
+        "runReference": "`mvuvgow7-f39e4e; mvuvhn2t-f1e3ab` · [evidence](https://github.com/hangndat/ticket-solution/pull/1071#issuecomment-6521341187)",
+        "sourceLine": 30
+      },
+      {
+        "id": "WEB-06",
+        "accepted": true,
+        "layers": "B",
+        "integrationSha": [
+          "96c8fc6a4e7b2ff657ce4ade23d9187c1ca535e2"
+        ],
+        "prLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1079"
+        ],
+        "evidenceLinks": [
+          "https://github.com/hangndat/ticket-solution/issues/1037#issuecomment-6523932126"
+        ],
+        "runReference": "`mvuzute9-d7d0ba` · [evidence](https://github.com/hangndat/ticket-solution/issues/1037#issuecomment-6523932126)",
+        "sourceLine": 31
+      },
+      {
+        "id": "WEB-07",
+        "accepted": true,
+        "layers": "B/H",
+        "integrationSha": [
+          "08f632c0b01fdf96cd388e2c454b272f7bbcbf57"
+        ],
+        "prLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1073"
+        ],
+        "evidenceLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1073#issuecomment-6521628039"
+        ],
+        "runReference": "`mvuw3xnz-3dad02` · [evidence](https://github.com/hangndat/ticket-solution/pull/1073#issuecomment-6521628039)",
+        "sourceLine": 32
+      },
+      {
+        "id": "WEB-08",
+        "accepted": true,
+        "layers": "B/H/R",
+        "integrationSha": [
+          "579677a7b069cfad990622f2b8af39b2eab7b5bc"
+        ],
+        "prLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1078"
+        ],
+        "evidenceLinks": [
+          "https://github.com/hangndat/ticket-solution/issues/1037#issuecomment-6523548360"
+        ],
+        "runReference": "`mvuz7p3q-239284` · [evidence](https://github.com/hangndat/ticket-solution/issues/1037#issuecomment-6523548360)",
+        "sourceLine": 33
+      },
+      {
+        "id": "WEB-09",
+        "accepted": true,
+        "layers": "B/H",
+        "integrationSha": [
+          "85ddecddb8f2128bdcbed60b94c56fc416fc89af"
+        ],
+        "prLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1075"
+        ],
+        "evidenceLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1075#issuecomment-6521985612"
+        ],
+        "runReference": "`mvuwgqol-9172ce` · [evidence](https://github.com/hangndat/ticket-solution/pull/1075#issuecomment-6521985612)",
+        "sourceLine": 34
+      },
+      {
+        "id": "WEB-10",
+        "accepted": true,
+        "layers": "B/H",
+        "integrationSha": [
+          "96339b10a215febb0dac49ae017b71641f5f01a5"
+        ],
+        "prLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1076"
+        ],
+        "evidenceLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1076#issuecomment-6522564415"
+        ],
+        "runReference": "`mvuxklpu-3655e6` · [evidence](https://github.com/hangndat/ticket-solution/pull/1076#issuecomment-6522564415)",
+        "sourceLine": 35
+      },
+      {
+        "id": "WEB-11",
+        "accepted": true,
+        "layers": "B",
+        "integrationSha": [
+          "6d9e9a1955f837e6644d204484086408861cf703"
+        ],
+        "prLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1069"
+        ],
+        "evidenceLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1069#issuecomment-6520675452"
+        ],
+        "runReference": "`mvuu1bx0-e34021` · [evidence](https://github.com/hangndat/ticket-solution/pull/1069#issuecomment-6520675452)",
+        "sourceLine": 36
+      },
+      {
+        "id": "WEB-12",
+        "accepted": true,
+        "layers": "B/H",
+        "integrationSha": [
+          "daba800de6b9612da7fff3a9178a5515fd22fa0c"
+        ],
+        "prLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1087"
+        ],
+        "evidenceLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1087#issuecomment-6538223227"
+        ],
+        "runReference": "`mvvtjyqc-fcefe0` · [evidence](https://github.com/hangndat/ticket-solution/pull/1087#issuecomment-6538223227)",
+        "sourceLine": 37
+      },
+      {
+        "id": "WEB-13",
+        "accepted": true,
+        "layers": "B/H/R",
+        "integrationSha": [
+          "9385b61c6a6d6aa5e1188ed2ec8cedee1810a02e"
+        ],
+        "prLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1068"
+        ],
+        "evidenceLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1068#issuecomment-6520214329"
+        ],
+        "runReference": "`mvut08cn-720b41` · [evidence](https://github.com/hangndat/ticket-solution/pull/1068#issuecomment-6520214329)",
+        "sourceLine": 38
+      },
+      {
+        "id": "PORT-05",
+        "accepted": true,
+        "layers": "B/H",
+        "integrationSha": [
+          "50da08137c136433e45b9ee0a1a018ca00ae8176"
+        ],
+        "prLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1074"
+        ],
+        "evidenceLinks": [
+          "https://github.com/hangndat/ticket-solution/issues/1035#issuecomment-6522477304"
+        ],
+        "runReference": "`mvux6zqa-29e1e6` · [evidence](https://github.com/hangndat/ticket-solution/issues/1035#issuecomment-6522477304)",
+        "sourceLine": 39
+      },
+      {
+        "id": "PORT-06",
+        "accepted": true,
+        "layers": "B/H",
+        "integrationSha": [
+          "52120d9ca51edb7ef650c6711ebb68a91c7d9dfd"
+        ],
+        "prLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1120"
+        ],
+        "evidenceLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1120#issuecomment-6561587792"
+        ],
+        "runReference": "`mvy3j11q-c5d6cf` 5/5 trên `db8020ec` · [review](https://github.com/hangndat/ticket-solution/pull/1120#issuecomment-6561587792)",
+        "sourceLine": 40,
+        "testedSHA": [
+          "db8020ec"
+        ]
+      },
+      {
+        "id": "PORT-07",
+        "accepted": true,
+        "layers": "B/H",
+        "integrationSha": [
+          "72e2d495e5e58e07b5d4515a9527ce0bb4caf997"
+        ],
+        "prLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1064"
+        ],
+        "evidenceLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1064#issuecomment-6519921340"
+        ],
+        "runReference": "`mvusk9f6-1ab717` · [evidence](https://github.com/hangndat/ticket-solution/pull/1064#issuecomment-6519921340)",
+        "sourceLine": 41
+      },
+      {
+        "id": "PORT-08",
+        "accepted": true,
+        "layers": "B/H",
+        "integrationSha": [
+          "ace18977ab023fb9521e77eb2b3dfc437b0b3e4d"
+        ],
+        "prLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1127"
+        ],
+        "evidenceLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1127#issuecomment-6562397438"
+        ],
+        "runReference": "`mvy6cgor-c22a6e` 3/3 trên `f3cfb27d` · [review](https://github.com/hangndat/ticket-solution/pull/1127#issuecomment-6562397438)",
+        "sourceLine": 42,
+        "testedSHA": [
+          "f3cfb27d"
+        ]
+      },
+      {
+        "id": "PORT-09",
+        "accepted": true,
+        "layers": "B/H",
+        "integrationSha": [
+          "f02b4feb5913435a059e3019186a0dc46b2bca9a"
+        ],
+        "prLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1084"
+        ],
+        "evidenceLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1084#issuecomment-6537643668"
+        ],
+        "runReference": "`mvvrilmh-ca2b2e` · [evidence](https://github.com/hangndat/ticket-solution/pull/1084#issuecomment-6537643668)",
+        "sourceLine": 43
+      },
+      {
+        "id": "DB-01",
+        "accepted": true,
+        "layers": "D/H",
+        "integrationSha": [
+          "7382a4bdfb5de85cbcda96a8ef57a569e96e6b63"
+        ],
+        "prLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1040"
+        ],
+        "evidenceLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1040#issuecomment-6514309627"
+        ],
+        "runReference": "`mvuesfb3-a7f229` · [evidence](https://github.com/hangndat/ticket-solution/pull/1040#issuecomment-6514309627)",
+        "sourceLine": 44
+      },
+      {
+        "id": "DB-02",
+        "accepted": true,
+        "layers": "D/H",
+        "integrationSha": [
+          "7382a4bdfb5de85cbcda96a8ef57a569e96e6b63"
+        ],
+        "prLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1040"
+        ],
+        "evidenceLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1040#issuecomment-6514309627"
+        ],
+        "runReference": "`mvuesfb3-a7f229` · [evidence](https://github.com/hangndat/ticket-solution/pull/1040#issuecomment-6514309627)",
+        "sourceLine": 45
+      },
+      {
+        "id": "DB-03",
+        "accepted": true,
+        "layers": "D/H",
+        "integrationSha": [
+          "7382a4bdfb5de85cbcda96a8ef57a569e96e6b63"
+        ],
+        "prLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1040"
+        ],
+        "evidenceLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1040#issuecomment-6514309627"
+        ],
+        "runReference": "`mvuesfb3-a7f229` · [evidence](https://github.com/hangndat/ticket-solution/pull/1040#issuecomment-6514309627)",
+        "sourceLine": 46
+      },
+      {
+        "id": "DB-04",
+        "accepted": true,
+        "layers": "D/H",
+        "integrationSha": [
+          "4a04a5920e57b9498b0f61d4de4937d0af6e2d38"
+        ],
+        "prLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1046"
+        ],
+        "evidenceLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1046#issuecomment-6514874623"
+        ],
+        "runReference": "`mvugfv3g-6fa3d8; D 64/64` · [evidence](https://github.com/hangndat/ticket-solution/pull/1046#issuecomment-6514874623)",
+        "sourceLine": 47
+      },
+      {
+        "id": "DB-05",
+        "accepted": true,
+        "layers": "D",
+        "integrationSha": [
+          "4a04a5920e57b9498b0f61d4de4937d0af6e2d38"
+        ],
+        "prLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1046"
+        ],
+        "evidenceLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1046#issuecomment-6514874623"
+        ],
+        "runReference": "`mvugfv3g-6fa3d8; D 64/64` · [evidence](https://github.com/hangndat/ticket-solution/pull/1046#issuecomment-6514874623)",
+        "sourceLine": 48
+      },
+      {
+        "id": "DB-07",
+        "accepted": true,
+        "layers": "D/H",
+        "integrationSha": [
+          "a3868a68a3ade219b4613cc4c7b3ff11bce33c30"
+        ],
+        "prLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1056"
+        ],
+        "evidenceLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1056#issuecomment-6516130586"
+        ],
+        "runReference": "`mvuk4po6-dac039; D 5/5` · [evidence](https://github.com/hangndat/ticket-solution/pull/1056#issuecomment-6516130586)",
+        "sourceLine": 49
+      },
+      {
+        "id": "DB-08",
+        "accepted": true,
+        "layers": "D",
+        "integrationSha": [
+          "1e0f012f58370489e4dc7d4610b0583b7102524c"
+        ],
+        "prLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1051"
+        ],
+        "evidenceLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1051#issuecomment-6515418242"
+        ],
+        "runReference": "`D 3/3 trên cb851bfa` · [evidence](https://github.com/hangndat/ticket-solution/pull/1051#issuecomment-6515418242)",
+        "sourceLine": 50
+      },
+      {
+        "id": "DB-10",
+        "accepted": true,
+        "layers": "D/H",
+        "integrationSha": [
+          "002c96cbabad37963bb6c59f6c2f6bd8e56691eb"
+        ],
+        "prLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1059"
+        ],
+        "evidenceLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1059#issuecomment-6516635276"
+        ],
+        "runReference": "`mvulhgmy-f0f539` · [evidence](https://github.com/hangndat/ticket-solution/pull/1059#issuecomment-6516635276)",
+        "sourceLine": 51
+      },
+      {
+        "id": "DB-11",
+        "accepted": true,
+        "layers": "D/H",
+        "integrationSha": [
+          "3de19ac330efcff19ddbe3966f0675eedc74c5f0"
+        ],
+        "prLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1061"
+        ],
+        "evidenceLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1061#issuecomment-6517875044"
+        ],
+        "runReference": "`mvuoefz6-2b9e25; D 2/2` · [evidence](https://github.com/hangndat/ticket-solution/pull/1061#issuecomment-6517875044)",
+        "sourceLine": 52
+      },
+      {
+        "id": "DB-13",
+        "accepted": true,
+        "layers": "D/H (hai timezone)",
+        "integrationSha": [
+          "3a47c90a6a39f12d827c4add79bf68f6b1a3e99a"
+        ],
+        "prLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1162"
+        ],
+        "evidenceLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1162#issuecomment-6586538157"
+        ],
+        "runReference": "D 2 test + H `mvznin5e-27e931` trên `f76cd3ce`; [review](https://github.com/hangndat/ticket-solution/pull/1162#issuecomment-6586538157)",
+        "sourceLine": 53,
+        "testedSHA": [
+          "f76cd3ce"
+        ]
+      },
+      {
+        "id": "DB-14",
+        "accepted": true,
+        "layers": "D/H",
+        "integrationSha": [
+          "553ebdf1d0e51aa0bbf117eb207409068189f648"
+        ],
+        "prLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1063"
+        ],
+        "evidenceLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1063#issuecomment-6519478888"
+        ],
+        "runReference": "`mvurjvqz-abe8f0; D 3/3` · [evidence](https://github.com/hangndat/ticket-solution/pull/1063#issuecomment-6519478888)",
+        "sourceLine": 54
+      },
+      {
+        "id": "DB-15",
+        "accepted": true,
+        "layers": "D/H",
+        "integrationSha": [
+          "569a9aad4fd1a1116d8f61b083d429853e64d7e1"
+        ],
+        "prLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1109"
+        ],
+        "evidenceLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1109#issuecomment-6561199785"
+        ],
+        "runReference": "`mvxl0ywo-323403; D 3/3` trên `16e909c9` · [review](https://github.com/hangndat/ticket-solution/pull/1109#issuecomment-6561199785)",
+        "sourceLine": 55,
+        "testedSHA": [
+          "16e909c9"
+        ]
+      },
+      {
+        "id": "DB-16",
+        "accepted": true,
+        "layers": "D/H",
+        "integrationSha": [
+          "569a9aad4fd1a1116d8f61b083d429853e64d7e1"
+        ],
+        "prLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1109"
+        ],
+        "evidenceLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1109#issuecomment-6561199785"
+        ],
+        "runReference": "`mvxl0ywo-323403; D retry 2/2` trên `16e909c9` · [review](https://github.com/hangndat/ticket-solution/pull/1109#issuecomment-6561199785)",
+        "sourceLine": 56,
+        "testedSHA": [
+          "16e909c9"
+        ]
+      },
+      {
+        "id": "DB-17",
+        "accepted": true,
+        "layers": "D/H",
+        "integrationSha": [
+          "90994a2fbcfce558584a47adde0d06b569a52f4c"
+        ],
+        "prLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1167"
+        ],
+        "evidenceLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1167#issuecomment-6596883869",
+          "https://github.com/hangndat/ticket-solution/pull/1167#issuecomment-6596934124"
+        ],
+        "runReference": "D/CI + H `mw0a7xax-1a77fb` trên `082f5956`; [review](https://github.com/hangndat/ticket-solution/pull/1167#issuecomment-6596883869), [mutation](https://github.com/hangndat/ticket-solution/pull/1167#issuecomment-6596934124)",
+        "sourceLine": 57,
+        "testedSHA": [
+          "082f5956"
+        ]
+      },
+      {
+        "id": "DB-18",
+        "accepted": true,
+        "layers": "D/H (giảm AC)",
+        "integrationSha": [
+          "370ffa71a8cdbb93f0884e61cfe795bf859c834d"
+        ],
+        "prLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1168"
+        ],
+        "evidenceLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1168#issuecomment-6595458024"
+        ],
+        "runReference": "D/CI + H `mw06p1fi-b8d7e2` trên `c749b146`; [review](https://github.com/hangndat/ticket-solution/pull/1168#issuecomment-6595458024)",
+        "sourceLine": 58,
+        "testedSHA": [
+          "c749b146"
+        ]
+      },
+      {
+        "id": "DB-19",
+        "accepted": true,
+        "layers": "D/H (một cặp key)",
+        "integrationSha": [
+          "abab1d1ed607466858ec824ac2b3a7c4c1c74f73"
+        ],
+        "prLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1165"
+        ],
+        "evidenceLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1165#issuecomment-6594282065"
+        ],
+        "runReference": "D/CI + H `mw0382zf-80240b` trên `064addda`; [review](https://github.com/hangndat/ticket-solution/pull/1165#issuecomment-6594282065)",
+        "sourceLine": 59,
+        "testedSHA": [
+          "064addda"
+        ]
+      },
+      {
+        "id": "JOB-01",
+        "accepted": true,
+        "layers": "R/D",
+        "integrationSha": [
+          "2105c30efa32fbdfb4bc1ebab3b529c5450f7116"
+        ],
+        "prLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1080"
+        ],
+        "evidenceLinks": [
+          "https://github.com/hangndat/ticket-solution/issues/1032#issuecomment-6524280665"
+        ],
+        "runReference": "`D/R 3/3 sạch trên 50f1241d` · [evidence](https://github.com/hangndat/ticket-solution/issues/1032#issuecomment-6524280665)",
+        "sourceLine": 60
+      },
+      {
+        "id": "JOB-02",
+        "accepted": true,
+        "layers": "R/D",
+        "integrationSha": [
+          "def73ae05f2526fe5e265f51a3dac72a15a98fd0"
+        ],
+        "prLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1081"
+        ],
+        "evidenceLinks": [
+          "https://github.com/hangndat/ticket-solution/issues/1032#issuecomment-6524477477"
+        ],
+        "runReference": "`D/R 2/2 sạch trên c5ae316f` · [evidence](https://github.com/hangndat/ticket-solution/issues/1032#issuecomment-6524477477)",
+        "sourceLine": 61
+      },
+      {
+        "id": "JOB-03",
+        "accepted": true,
+        "layers": "R/D",
+        "integrationSha": [
+          "d597079f5db1c047322429ddfc9dea083987e8dd"
+        ],
+        "prLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1083"
+        ],
+        "evidenceLinks": [
+          "https://github.com/hangndat/ticket-solution/issues/1032#issuecomment-6525324272"
+        ],
+        "runReference": "`D 1/1; R 3/3 trên 7488ee6c` · [evidence](https://github.com/hangndat/ticket-solution/issues/1032#issuecomment-6525324272)",
+        "sourceLine": 62
+      },
+      {
+        "id": "POL-01",
+        "accepted": true,
+        "layers": "D",
+        "integrationSha": [
+          "f60e0bab398c91b185d4796c38013dce52235919"
+        ],
+        "prLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1125"
+        ],
+        "evidenceLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1125#issuecomment-6562525257"
+        ],
+        "runReference": "D 8 selector/10 case trên `7218acc2` · [review](https://github.com/hangndat/ticket-solution/pull/1125#issuecomment-6562525257)",
+        "sourceLine": 63,
+        "testedSHA": [
+          "7218acc2"
+        ]
+      },
+      {
+        "id": "POL-02",
+        "accepted": true,
+        "layers": "D (giảm AC)",
+        "integrationSha": [
+          "8717836e065eeb54fb913e95626a2711e002873c"
+        ],
+        "prLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1170"
+        ],
+        "evidenceLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1170#issuecomment-6595962617"
+        ],
+        "runReference": "D/CI + worker process local 50k trên `4f825f27`; [review](https://github.com/hangndat/ticket-solution/pull/1170#issuecomment-6595962617)",
+        "sourceLine": 64,
+        "testedSHA": [
+          "4f825f27"
+        ]
+      },
+      {
+        "id": "PLAT-03",
+        "accepted": true,
+        "layers": "H/D",
+        "integrationSha": [
+          "08376150f6e634fba007d1ffae000d5a0e8c04af",
+          "713580c386a2d6aad243655066be7ae27ca16925"
+        ],
+        "prLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1123",
+          "https://github.com/hangndat/ticket-solution/pull/1132"
+        ],
+        "evidenceLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1132#issuecomment-6563651529"
+        ],
+        "runReference": "D 5/5 trên `fe1ffa75`; H `mvyap7sk-aaa3fb` trên `089a916c` · [review H](https://github.com/hangndat/ticket-solution/pull/1132#issuecomment-6563651529)",
+        "sourceLine": 65,
+        "testedSHA": [
+          "fe1ffa75",
+          "089a916c"
+        ]
+      },
+      {
+        "id": "GATE-01",
+        "accepted": true,
+        "layers": "H/D",
+        "integrationSha": [
+          "ac5a871cd3b945ec5e272cb4bfb36f0b777c3984"
+        ],
+        "prLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1150"
+        ],
+        "evidenceLinks": [],
+        "runReference": "D 9/9 + H `mvzaqv4x-7c6ba4` trên `ac5a871c`, cây sạch; giảm AC: thiếu H mở lại cùng cổng và actor gán ở hai event",
+        "sourceLine": 66,
+        "testedSHA": [
+          "ac5a871c"
+        ]
+      },
+      {
+        "id": "GATE-02",
+        "accepted": true,
+        "layers": "H/D",
+        "integrationSha": [
+          "ac5a871cd3b945ec5e272cb4bfb36f0b777c3984"
+        ],
+        "prLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1150"
+        ],
+        "evidenceLinks": [],
+        "runReference": "D 9/9 + H `mvzaqv4x-7c6ba4` trên `ac5a871c`, cây sạch; huỷ hold chủ động + race cancel vs confirm/hết hạn",
+        "sourceLine": 67,
+        "testedSHA": [
+          "ac5a871c"
+        ]
+      },
+      {
+        "id": "GATE-04",
+        "accepted": true,
+        "layers": "D/H",
+        "integrationSha": [
+          "ac5a871cd3b945ec5e272cb4bfb36f0b777c3984"
+        ],
+        "prLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1150"
+        ],
+        "evidenceLinks": [],
+        "runReference": "D 9/9 + H `mvzaqv4x-7c6ba4` trên `ac5a871c`, cây sạch; giảm AC: thu quyền giữa chừng một request đang bay chưa phủ",
+        "sourceLine": 68,
+        "testedSHA": [
+          "ac5a871c"
+        ]
+      },
+      {
+        "id": "GATE-05",
+        "accepted": true,
+        "layers": "H/D",
+        "integrationSha": [
+          "ac5a871cd3b945ec5e272cb4bfb36f0b777c3984"
+        ],
+        "prLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1150"
+        ],
+        "evidenceLinks": [],
+        "runReference": "D 9/9 + H `mvzaqv4x-7c6ba4` trên `ac5a871c`, cây sạch; undo replay-safe, `REASON_REQUIRED`, race với scan/revoke",
+        "sourceLine": 69,
+        "testedSHA": [
+          "ac5a871c"
+        ]
+      },
+      {
+        "id": "GATE-06",
+        "accepted": true,
+        "layers": "D (giảm AC)",
+        "integrationSha": [
+          "ac5a871cd3b945ec5e272cb4bfb36f0b777c3984"
+        ],
+        "prLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1150"
+        ],
+        "evidenceLinks": [],
+        "runReference": "D 9/9 + H `mvzaqv4x-7c6ba4` trên `ac5a871c`, cây sạch; H bị bỏ, xem bảng giảm AC",
+        "sourceLine": 70,
+        "testedSHA": [
+          "ac5a871c"
+        ]
+      },
+      {
+        "id": "GATE-07",
+        "accepted": true,
+        "layers": "D (giảm AC)",
+        "integrationSha": [
+          "ac5a871cd3b945ec5e272cb4bfb36f0b777c3984"
+        ],
+        "prLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1150"
+        ],
+        "evidenceLinks": [],
+        "runReference": "D 9/9 + H `mvzaqv4x-7c6ba4` trên `ac5a871c`, cây sạch; authz-on-retry (#1149) + hai session replay một vé (#1151); H bị bỏ, xem bảng \"Giảm AC đã ghi\"",
+        "sourceLine": 71,
+        "testedSHA": [
+          "ac5a871c"
+        ]
+      },
+      {
+        "id": "GATE-08",
+        "accepted": true,
+        "layers": "D (giảm AC)",
+        "integrationSha": [
+          "ac5a871cd3b945ec5e272cb4bfb36f0b777c3984"
+        ],
+        "prLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1150"
+        ],
+        "evidenceLinks": [],
+        "runReference": "D 9/9 + H `mvzaqv4x-7c6ba4` trên `ac5a871c`, cây sạch; H bị bỏ, xem bảng giảm AC",
+        "sourceLine": 72,
+        "testedSHA": [
+          "ac5a871c"
+        ]
+      },
+      {
+        "id": "GATE-09",
+        "accepted": true,
+        "layers": "D (giảm AC)",
+        "integrationSha": [
+          "ac5a871cd3b945ec5e272cb4bfb36f0b777c3984"
+        ],
+        "prLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1150"
+        ],
+        "evidenceLinks": [],
+        "runReference": "D 9/9 + H `mvzaqv4x-7c6ba4` trên `ac5a871c`, cây sạch; H bị bỏ, xem bảng giảm AC",
+        "sourceLine": 73,
+        "testedSHA": [
+          "ac5a871c"
+        ]
+      },
+      {
+        "id": "SEC-03",
+        "accepted": true,
+        "layers": "H (ma trận đại diện)",
+        "integrationSha": [
+          "618b87c767d4bd533a1b8a4cf0bec40589207052"
+        ],
+        "prLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1152"
+        ],
+        "evidenceLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1152#issuecomment-6581935622"
+        ],
+        "runReference": "H `mvzg0q1e-c51989` trên `9d44f839`, cây sạch; [review](https://github.com/hangndat/ticket-solution/pull/1152#issuecomment-6581935622)",
+        "sourceLine": 74,
+        "testedSHA": [
+          "9d44f839"
+        ]
+      },
+      {
+        "id": "SEC-04",
+        "accepted": true,
+        "layers": "H/D (ma trận đại diện)",
+        "integrationSha": [
+          "618b87c767d4bd533a1b8a4cf0bec40589207052"
+        ],
+        "prLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1152"
+        ],
+        "evidenceLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1152#issuecomment-6581935622"
+        ],
+        "runReference": "H `mvzg0q1e-c51989`; D selector SEC-04 PASS trên `850f576a`; [review](https://github.com/hangndat/ticket-solution/pull/1152#issuecomment-6581935622)",
+        "sourceLine": 75,
+        "testedSHA": [
+          "850f576a"
+        ]
+      },
+      {
+        "id": "SEC-06",
+        "accepted": true,
+        "layers": "H/D (ma trận đại diện)",
+        "integrationSha": [
+          "618b87c767d4bd533a1b8a4cf0bec40589207052"
+        ],
+        "prLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1152"
+        ],
+        "evidenceLinks": [
+          "https://github.com/hangndat/ticket-solution/pull/1152#issuecomment-6581935622"
+        ],
+        "runReference": "H `mvzg0q1e-c51989`; D selector SEC-06 PASS trên `850f576a`; [review](https://github.com/hangndat/ticket-solution/pull/1152#issuecomment-6581935622)",
+        "sourceLine": 76,
+        "testedSHA": [
+          "850f576a"
+        ]
+      }
+    ]
+  }
+}

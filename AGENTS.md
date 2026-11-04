@@ -38,6 +38,7 @@ Roadmap, Project, Issue, status, progress: **Tiếng Việt** (giữ ID/API/comm
 - **Leader:** đọc [dispatch](docs/agents/workflows/dispatch.md) và [lifecycle](docs/agents/workflows/lifecycle.md) trước supervise; dùng Orca qua workflow wrapper, không dùng subagent tool để dispatch worker/reviewer. Kiểm receipt state/next/requested/effective; nhường turn để Orca wake. Không tắt hooks để mở capability; lỗi hook giữ checkpoint và báo lỗi cụ thể.
 - **Worker/reviewer** không spawn con; không Read mailbox/parallel/idle-fill/epic-orchestrator trừ khi được giao coordinator.
 - Mỗi Task Spec: `Architecture impact: Có|Không`, `Cost tier: cheap|standard|focused|advanced|high`, Role ID + `docs/agents/roles/<id>.md` khi spawn chuyên môn.
+- Task nghiệm thu E2E (F04 #1029–#1037): đọc [E2E acceptance](docs/agents/policies/e2e-acceptance.md). Một PR = một ID AC; cost tier theo rủi ro; hạ tầng E2E tách nhánh `e2e-infra-*` + issue #1220; không coding trên `main*` worktree; tiến độ đo bằng `pnpm e2e:f04-status`.
 - Task UI: ghi `Skills cần nạp`, mẫu thiết kế chuẩn và evidence; chọn role theo `docs/agents/ui-workflow.md`, chỉ nạp skill liên quan.
 - DoD: nhánh B (product rủi ro) reviewer ≠ implementer, một session/PR, gộp dod±sec±ux; nhánh A (docs/tooling) không reviewer độc lập. Exact SHA → comment Issue/PR (ưu tiên) hoặc `docs/reviews/*.md` ngắn. Revalidate diff/findings, tái dùng evidence còn hiệu lực theo `docs/agents/workflows/review.md`; không thêm vòng DoD/security riêng mặc định.
 
