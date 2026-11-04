@@ -2,5 +2,10 @@
   "_README": "Ledger nghiệm thu F04. Chỉ đặt accepted=true khi AC đã chạy đủ lớp B/H/D/R mà PLAN.md yêu cầu, trên checkout sạch ở đúng SHA, có run ID. Ghi kèm sha và run. Không tick theo source coverage.",
   "_schema": {
     "<CASE-ID>": { "accepted": true, "sha": "<exact sha>", "run": "<run id>" }
+  },
+  "DB-05": {
+    "accepted": true,
+    "sha": "e9cbdb34488cc8478069390f03478239baa10fe4",
+    "run": "db05-ctx-1e71c5ca317e"
   }
 }
