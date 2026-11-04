@@ -5,6 +5,7 @@ import http from 'node:http';
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import test from 'node:test';
 import { chromium } from 'playwright';
+import { importObjects } from '../harness/import-objects.mjs';
 import { web05ConfigV2Payload } from '../harness/web05-published-config.mjs';
 import { loadWeb05ExpectedHashes } from '../harness/web05-hashes.mjs';
 
@@ -871,7 +872,41 @@ function assertNoStoreCache(headers, label) {
 }
 
 const IMPORT_MAX_ROWS = 10_000;
+const IMPORT_MAX_BYTES = 10 * 1024 * 1024;
 const XSS_INERT_PROBE = 'SEC05-INERT-XSS-MARKER';
+
+async function importSnapshot(tenantId, eventId) {
+  assert.ok(process.env.E2E_RUN_DIR, 'isolated E2E runtime required');
+  const { Client } = createRequire(
+    new URL('../../../packages/backend/package.json', import.meta.url),
+  )('pg');
+  const client = new Client({
+    connectionString: required(process.env.DATABASE_URL, 'DATABASE_URL'),
+  });
+  await client.connect();
+  try {
+    await client.query('BEGIN READ ONLY');
+    await client.query("SELECT set_config('app.tenant_id', $1, true)", [
+      tenantId,
+    ]);
+    const { rows } = await client.query(
+      `SELECT
+      (SELECT count(*)::int FROM import_files WHERE tenant_id=$1::uuid AND event_id=$2::uuid) AS files,
+      (SELECT count(*)::int FROM import_jobs WHERE tenant_id=$1::uuid AND event_id=$2::uuid) AS jobs,
+      (SELECT count(*)::int FROM redemption_codes WHERE tenant_id=$1::uuid AND event_id=$2::uuid) AS codes,
+      (SELECT count(*)::int FROM tickets WHERE tenant_id=$1::uuid AND event_id=$2::uuid) AS tickets,
+      (SELECT count(*)::int FROM guest_invitations WHERE tenant_id=$1::uuid AND event_id=$2::uuid) AS invitations,
+      (SELECT count(*)::int FROM outbox WHERE tenant_id=$1::uuid AND event_id=$2::uuid) AS outbox,
+      (SELECT count(*)::int FROM audit_logs WHERE tenant_id=$1::uuid AND event_id=$2::uuid) AS audit,
+      (SELECT revision FROM events WHERE tenant_id=$1::uuid AND id=$2::uuid) AS revision`,
+      [tenantId, eventId],
+    );
+    await client.query('COMMIT');
+    return rows[0];
+  } finally {
+    await client.end();
+  }
+}
 
 async function multipartImportUpload(ctx, token, tenantId, eventId, file) {
   const form = new FormData();
@@ -881,6 +916,7 @@ async function multipartImportUpload(ctx, token, tenantId, eventId, file) {
     new Blob([file.body], { type: file.contentType ?? 'text/csv' }),
     file.filename,
   );
+  if (file.second) form.append('file', new Blob(['code\nB\n'], { type: 'text/csv' }), 'second.csv');
   const response = await fetch(
     new URL(`/v1/tenants/${tenantId}/events/${eventId}/imports/files`, ctx.api),
     {
@@ -4391,6 +4427,75 @@ for (const caseId of CASE_IDS) {
         owner,
       );
       expectStatus(importsBefore, 200);
+
+      // One CSV row keeps the byte boundary independent of the row cap.
+      const nearLimit = Buffer.concat([
+        Buffer.from('code\n'),
+        Buffer.alloc(IMPORT_MAX_BYTES - 6, 65),
+        Buffer.from('\n'),
+      ]);
+      assert.equal(nearLimit.length, IMPORT_MAX_BYTES);
+      const snapshotBefore = await importSnapshot(tenantId, eventId);
+      const accepted = await multipartImportUpload(
+        ctx,
+        owner,
+        tenantId,
+        eventId,
+        {
+          kind: 'CODES',
+          filename: 'near-limit.csv',
+          body: nearLimit,
+        },
+      );
+      expectStatus(accepted, 201);
+      assert.ok(accepted.body.fileId);
+      const snapshotAfterControl = await importSnapshot(tenantId, eventId);
+      const objectsAfterControl = await importObjects();
+      assert.deepEqual(snapshotAfterControl, {
+        ...snapshotBefore,
+        files: snapshotBefore.files + 1,
+      });
+      const oversized = await multipartImportUpload(
+        ctx,
+        owner,
+        tenantId,
+        eventId,
+        {
+          kind: 'CODES',
+          filename: 'oversized.csv',
+          body: Buffer.concat([nearLimit, Buffer.from('A')]),
+        },
+      );
+      assert.equal(oversized.status, 422);
+      assert.equal(oversized.body.code, 'IMPORT_FILE_INVALID');
+      assert.deepEqual(
+        await importSnapshot(tenantId, eventId),
+        snapshotAfterControl,
+      );
+      const twoFiles = await multipartImportUpload(ctx, owner, tenantId, eventId, {
+        kind: 'CODES', filename: 'first.csv', body: Buffer.from('code\nA\n'), second: true,
+      });
+      assert.equal(twoFiles.status, 422);
+      assert.equal(twoFiles.body.code, 'IMPORT_FILE_INVALID');
+      const noAuth = await multipartImportUpload(ctx, '', tenantId, eventId, {
+        kind: 'CODES', filename: 'no-auth.csv', body: Buffer.from('code\nA\n'),
+      });
+      assert.equal(noAuth.status, 401);
+      const scanner = await bearer(ctx, 'scanner');
+      const noPermission = await multipartImportUpload(ctx, scanner, tenantId, eventId, {
+        kind: 'CODES', filename: 'forbidden.csv', body: Buffer.from('code\nA\n'),
+      });
+      assert.equal(noPermission.status, 403);
+      assert.deepEqual(await importSnapshot(tenantId, eventId), snapshotAfterControl);
+      assert.deepEqual(await importObjects(), objectsAfterControl);
+      const importsAfterSize = await request(
+        ctx,
+        'GET',
+        `/tenants/${tenantId}/events/${eventId}/imports`,
+        owner,
+      );
+      expectStatus(importsAfterSize, 200);
+      assert.deepEqual(importsAfterSize.body.items, importsBefore.body.items);
 
       const emptyUpload = await multipartImportUpload(
         ctx,

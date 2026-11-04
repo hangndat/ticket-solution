@@ -67,14 +67,15 @@ import {
 
 /** Minimal multipart surface from @fastify/multipart (avoid direct fastify dep). */
 type MultipartRequest = {
-  file: () => Promise<
+  parts: () => AsyncIterable<
+    | { type: 'field'; fieldname: string; value: unknown }
     | {
+        type: 'file';
+        fieldname: string;
         filename: string;
         mimetype: string;
-        file: AsyncIterable<Buffer>;
-        fields: Record<string, { value?: string }>;
+        file: AsyncIterable<Buffer> & { truncated?: boolean };
       }
-    | undefined
   >;
 };
 
@@ -585,31 +586,59 @@ export class InventoryController {
     const tenant = requireUuid(tenantId, 'tenantId');
     const event = requireUuid(eventId, 'eventId');
     try {
-      const file = await req.file();
-      if (!file) throw scopeError('multipart file is required');
-      // kind may arrive as a multipart field sibling; also accept query-less body field.
-      const kindField =
-        file.fields?.kind?.value?.trim() ||
-        (file.fields as Record<string, { value?: string }> | undefined)?.[
-          'kind'
-        ]?.value?.trim() ||
-        '';
+      let kindField = '';
+      let kindCount = 0;
+      let file: { filename: string; mimetype: string } | undefined;
+      let body: Buffer | undefined;
+      try {
+        for await (const part of req.parts()) {
+          if (part.type === 'field') {
+            if (part.fieldname === 'kind') {
+              kindCount++;
+              kindField =
+                typeof part.value === 'string' ? part.value.trim() : '';
+            }
+            continue;
+          }
+          if (file || part.fieldname !== 'file') {
+            throw new ImportError(
+              IMPORT_ERROR_CODES.IMPORT_FILE_INVALID,
+              'Exactly one file is required',
+            );
+          }
+          file = part;
+          const chunks: Buffer[] = [];
+          let total = 0;
+          for await (const chunk of part.file) {
+            total += chunk.length;
+            if (total > 10 * 1024 * 1024) {
+              throw new ImportError(
+                IMPORT_ERROR_CODES.IMPORT_FILE_INVALID,
+                'CSV exceeds 10 MiB',
+              );
+            }
+            chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+          }
+          if (part.file.truncated) {
+            throw new ImportError(
+              IMPORT_ERROR_CODES.IMPORT_FILE_INVALID,
+              'CSV exceeds 10 MiB',
+            );
+          }
+          body = Buffer.concat(chunks);
+        }
+      } catch (error) {
+        if (error instanceof ImportError) throw error;
+        throw new ImportError(
+          IMPORT_ERROR_CODES.IMPORT_FILE_INVALID,
+          'Invalid multipart upload',
+        );
+      }
+      if (!file || !body) throw scopeError('multipart file is required');
+      if (kindCount !== 1) throw scopeError('one kind is required');
       if (kindField !== 'CODES' && kindField !== 'GUESTS') {
         throw scopeError('kind must be CODES or GUESTS');
       }
-      const chunks: Buffer[] = [];
-      let total = 0;
-      for await (const chunk of file.file) {
-        total += chunk.length;
-        if (total > 10 * 1024 * 1024) {
-          throw new ImportError(
-            IMPORT_ERROR_CODES.IMPORT_FILE_INVALID,
-            'CSV exceeds 10 MiB',
-          );
-        }
-        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
-      }
-      const body = Buffer.concat(chunks);
       return await this.inventory.uploadFile(
         authorization,
         tenant,
