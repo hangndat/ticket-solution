@@ -17,7 +17,8 @@ type Body = {
   };
   flags?: { importsEnabled?: boolean; exportsEnabled?: boolean };
   reason?: string;
-  expectedVersion?: number;
+  expectedLimitsVersion?: number;
+  expectedVersion?: unknown;
   idempotencyKey?: string;
 };
 
@@ -48,14 +49,15 @@ export async function PUT(request: Request, { params }: Props) {
     return bffApiError('INVALID_INPUT', 'reason must be 1..500 chars.', 422);
   }
   if (
-    typeof body.expectedVersion !== 'number' ||
-    !Number.isInteger(body.expectedVersion) ||
+    typeof body.expectedLimitsVersion !== 'number' ||
+    !Number.isSafeInteger(body.expectedLimitsVersion) || body.expectedLimitsVersion < 1 ||
+    Object.hasOwn(body, 'expectedVersion') ||
     !body.limits ||
     !body.flags
   ) {
     return bffApiError(
       'INVALID_INPUT',
-      'limits, flags, expectedVersion required.',
+      'limits, flags and expectedLimitsVersion required.',
       422,
     );
   }
@@ -79,7 +81,7 @@ export async function PUT(request: Request, { params }: Props) {
           exportsEnabled: Boolean(body.flags.exportsEnabled),
         },
         reason,
-        expectedVersion: body.expectedVersion,
+        expectedLimitsVersion: body.expectedLimitsVersion,
       }),
     },
   );

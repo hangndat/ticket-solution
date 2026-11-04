@@ -700,7 +700,7 @@ export interface PlatformTenantLimitsBody {
   limits: TenantLimitsDto;
   flags: TenantFlagsDto;
   reason: string;
-  expectedVersion: number;
+  expectedLimitsVersion: number;
 }
 
 export interface TenantProfilePatchBody {

@@ -13,6 +13,7 @@
     "test:export-barrier": "pnpm build && node --test test/export-barrier.test.cjs",
     "test:architecture-quota": "pnpm --filter @ticket/contracts build && pnpm --filter @ticket/backend build && pnpm build && node --test test/issuance-conflict.test.cjs",
     "test:tenant-limits": "pnpm --filter @ticket/contracts build && pnpm --filter @ticket/backend build && pnpm build && node --test test/tenant-limits.test.cjs",
+    "test:platform-limits-version": "node --test test/platform-limits-version.test.cjs test/health.test.cjs",
     "dev": "pnpm build && node --watch dist/main.js",
     "start": "node dist/main.js",
     "openapi": "pnpm build && node dist/openapi.js"

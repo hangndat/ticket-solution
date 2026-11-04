@@ -423,7 +423,7 @@ export type PlatformTenantDetailView =
 export function platformLimitsBody(
   detail: PlatformTenantDetail, limits: TenantLimitsDto, flags: TenantFlagsDto, reason: string,
 ) {
-  return { limits, flags, reason, expectedVersion: detail.limitsVersion };
+  return { limits, flags, reason, expectedLimitsVersion: detail.limitsVersion };
 }
 
 export function interpretPlatformTenantDetail(

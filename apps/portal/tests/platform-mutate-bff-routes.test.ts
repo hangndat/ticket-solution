@@ -171,6 +171,25 @@ describe('platform mutate BFF routes', () => {
     assert.equal(res.status, 422);
   });
 
+  it('PUT limits rejects legacy requests and forwards the limits-specific version', async () => {
+    const tenantId = '11111111-1111-4111-8111-111111111111';
+    const path = `/api/bff/platform/tenants/${tenantId}/limits`;
+    const payload = { limits: { maxEvents: 5, maxStaff: null, emailPerDay: null, importRowsPerJob: null },
+      flags: { importsEnabled: true, exportsEnabled: true }, reason: 'ops',
+      idempotencyKey: '22222222-2222-4222-8222-222222222222' };
+    const context = { params: Promise.resolve({ tenantId }) };
+    forwardCalls = [];
+    const legacy = await PUT_limits(mutateRequest(path, { ...payload, expectedVersion: 2 }, { csrf: true, method: 'PUT' }), context);
+    assert.equal(legacy.status, 422);
+    assert.equal(forwardCalls.length, 0);
+    const current = await PUT_limits(mutateRequest(path, { ...payload, expectedLimitsVersion: 1 }, { csrf: true, method: 'PUT' }), context);
+    assert.equal(current.status, 201);
+    assert.equal(forwardCalls.length, 1);
+    const forwarded = JSON.parse(String(forwardCalls[0].init.body));
+    assert.equal(forwarded.expectedLimitsVersion, 1);
+    assert.equal(Object.hasOwn(forwarded, 'expectedVersion'), false);
+  });
+
   it('POST support-grants proxies when valid', async () => {
     forwardCalls = [];
     const res = await POST_grants(

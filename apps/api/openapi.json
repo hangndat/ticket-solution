@@ -3690,6 +3690,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlatformTenantLimitsBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -9023,6 +9033,31 @@
           "limits",
           "flags",
           "usage"
+        ]
+      },
+      "PlatformTenantLimitsBodyDto": {
+        "type": "object",
+        "properties": {
+          "limits": {
+            "$ref": "#/components/schemas/PlatformTenantLimitsDto"
+          },
+          "flags": {
+            "$ref": "#/components/schemas/PlatformTenantFlagsDto"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "expectedLimitsVersion": {
+            "type": "number",
+            "minimum": 1,
+            "description": "Version of limits and flags; tenant version is not accepted."
+          }
+        },
+        "required": [
+          "limits",
+          "flags",
+          "reason",
+          "expectedLimitsVersion"
         ]
       }
     }

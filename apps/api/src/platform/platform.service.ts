@@ -89,10 +89,10 @@ export class PlatformService {
     authorization: string | undefined,
     tenantId: string,
     body: {
-      limits: never;
-      flags: never;
+      limits: import('@ticket/contracts').TenantLimitsDto;
+      flags: import('@ticket/contracts').TenantFlagsDto;
       reason: string;
-      expectedVersion: number;
+      expectedLimitsVersion: number;
     },
   ) {
     return this.operator.setLimits(authorization, tenantId, body);
