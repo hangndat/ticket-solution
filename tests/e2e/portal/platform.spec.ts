@@ -9,6 +9,17 @@ test('[PLAT-01] Operator MFA session is separate from staff Owner', async ({
   const m = loadManifest();
   fixtureFor(m, 'PLAT-01');
   await login(page, m, 'PLAT-01', 'operator', 'platform');
+  const access = (await page.context().cookies(m.origins.portal))
+    .find((cookie) => cookie.name === 'platform_oidc_access');
+  expect(Boolean(access?.httpOnly && access.secure)).toBe(true);
+  const claims = JSON.parse(Buffer.from(access!.value.split('.')[1], 'base64url').toString()) as {
+    acr?: string; aud?: string | string[]; auth_time?: number;
+  };
+  expect(claims.acr).toBe('2');
+  expect([claims.aud].flat()).toContain('ticket-platform-api');
+  expect(typeof claims.auth_time).toBe('number');
+  const age = Math.floor(Date.now() / 1000) - claims.auth_time!;
+  expect(age >= 0 && age <= 900).toBe(true);
   const me = await bffGet(page, m, '/api/bff/platform/me');
   expect(me.status).toBe(200);
   expect((me.json as { operator?: boolean }).operator).toBe(true);
