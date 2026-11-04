@@ -41,9 +41,26 @@ const hmac = readCodeHmacEnvironment({
   CODE_HMAC_VERSION: '1',
 });
 
-async function startMailpit() {
+async function waitForMailpit(api) {
+  let ready = false;
+  for (let i = 0; i < 40; i++) {
+    try {
+      ready = (await fetch(`${api}/api/v1/info`)).ok;
+      if (ready) break;
+    } catch {
+      /* starting */
+    }
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  assert.ok(ready, 'isolated Mailpit must become ready');
+}
+
+async function startMailpit({
+  dockerCommand = docker,
+  probe = waitForMailpit,
+} = {}) {
   const name = `ticket-job02-mailpit-${randomBytes(5).toString('hex')}`;
-  docker(
+  dockerCommand(
     'run',
     '-d',
     '--name',
@@ -57,24 +74,15 @@ async function startMailpit() {
     'axllent/mailpit:v1.27.10',
   );
   try {
-    const smtpPort = docker('port', name, '1025/tcp').split(':').at(-1);
-    const apiPort = docker('port', name, '8025/tcp').split(':').at(-1);
+    const smtpPort = dockerCommand('port', name, '1025/tcp').split(':').at(-1);
+    const apiPort = dockerCommand('port', name, '8025/tcp').split(':').at(-1);
     const api = `http://127.0.0.1:${apiPort}`;
-    let ready = false;
-    for (let i = 0; i < 40; i++) {
-      try {
-        ready = (await fetch(`${api}/api/v1/info`)).ok;
-        if (ready) break;
-      } catch {
-        /* starting */
-      }
-      await new Promise((resolve) => setTimeout(resolve, 250));
-    }
-    assert.ok(ready, 'isolated Mailpit must become ready');
+    await probe(api);
     return { name, api, smtpUrl: `smtp+plain://127.0.0.1:${smtpPort}` };
   } catch (error) {
-    docker('rm', '-f', name);
-    throw error;
+    await cleanupAll([['mailpit', () => dockerCommand('rm', '-f', name)]], {
+      error,
+    });
   }
 }
 
@@ -262,6 +270,59 @@ test('[JOB-02] R lease fence cleanup attempts every owned resource and preserves
     (error) => error === original,
   );
   await cleanupAll([]);
+  const first = new Error('cleanup first');
+  const second = new Error('cleanup second');
+  await assert.rejects(
+    cleanupAll([
+      [
+        'first',
+        () => {
+          throw first;
+        },
+      ],
+      [
+        'second',
+        () => {
+          throw second;
+        },
+      ],
+    ]),
+    (error) =>
+      error instanceof AggregateError &&
+      error.errors.length === 2 &&
+      error.errors[0].cause === first &&
+      error.errors[1].cause === second,
+  );
+});
+
+test('[JOB-02] R lease fence Mailpit readiness and removal failures both survive', async () => {
+  const readiness = new Error('injected readiness');
+  const removal = new Error('injected removal');
+  const calls = [];
+  let ownedName;
+  const dockerCommand = (...args) => {
+    calls.push(args);
+    if (args[0] === 'run') {
+      ownedName = args[args.indexOf('--name') + 1];
+      return 'fixture';
+    }
+    if (args[0] === 'port') return '127.0.0.1:12345';
+    if (args[0] === 'rm') throw removal;
+    throw new Error('unexpected command');
+  };
+  await assert.rejects(
+    startMailpit({
+      dockerCommand,
+      probe: async () => {
+        throw readiness;
+      },
+    }),
+    (error) =>
+      error instanceof AggregateError &&
+      error.errors[0] === readiness &&
+      error.errors[1].cause === removal,
+  );
+  assert.deepEqual(calls.at(-1), ['rm', '-f', ownedName]);
 });
 
 test(
