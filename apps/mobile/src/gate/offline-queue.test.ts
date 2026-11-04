@@ -457,6 +457,184 @@ test('replay order comparator matches contract', () => {
   assert.ok(compareOfflineReplayOrder(b, a) < 0);
 });
 
+test('replay POST keeps event and tenant/session batches isolated and settles receipts by ID', async () => {
+  const eventB = 'event-b';
+  const tenantB = 'tenant-b';
+  const sessionB = 'session-b';
+  const base: StoredOfflineScan = {
+    clientEventId: 'a-0',
+    type: 'CHECKIN_OFFLINE',
+    eventId,
+    ticketId,
+    tenantId,
+    staffSessionId,
+    clientOccurredAt: '2026-10-17T08:00:00.000Z',
+    clientSeq: 0,
+    payloadVersion: 1,
+    localStatus: 'pending',
+  };
+  const seed: StoredOfflineScan[] = [
+    base,
+    { ...base, clientEventId: 'event-b', eventId: eventB, clientSeq: 1 },
+    { ...base, clientEventId: 'tenant-b', tenantId: tenantB, clientSeq: 2 },
+    {
+      ...base,
+      clientEventId: 'session-b',
+      staffSessionId: sessionB,
+      clientSeq: 3,
+    },
+    ...Array.from({ length: 51 }, (_, index) => ({
+      ...base,
+      clientEventId: `a-${index + 1}`,
+      clientSeq: index + 4,
+    })),
+  ];
+  const queue = await queueFor(
+    createMemoryOfflineQueueStore(seed, userA),
+    userA,
+    {
+      createId: () => 'device-test',
+      nowIso: () => '2026-10-17T08:00:00.000Z',
+    },
+  );
+  type PostedBody = {
+    tenantId: string;
+    staffSessionId: string;
+    deviceId: string;
+    events: { clientEventId: string }[];
+  };
+  const posts: { url: string; body: PostedBody }[] = [];
+  const fetchImpl: typeof fetch = async (url, init) => {
+    const body = JSON.parse(String(init?.body)) as PostedBody;
+    posts.push({ url: String(url), body });
+    const id = body.events[0]?.clientEventId;
+    const results =
+      id === 'a-0'
+        ? [
+            {
+              clientEventId: 'a-49',
+              status: 'APPLIED',
+              checkinId: 'checkin-49',
+            },
+            {
+              clientEventId: 'a-0',
+              status: 'CONFLICT',
+              code: 'ALREADY_CHECKED_IN',
+            },
+          ]
+        : id === 'a-50'
+          ? [
+              {
+                clientEventId: 'a-51',
+                status: 'DUPLICATE',
+                checkinId: 'checkin-51',
+              },
+            ]
+          : id === 'tenant-b'
+            ? [
+                {
+                  clientEventId: 'tenant-b',
+                  status: 'APPLIED',
+                  checkinId: 'checkin-tenant',
+                },
+              ]
+            : id === 'session-b'
+              ? [
+                  {
+                    clientEventId: 'session-b',
+                    status: 'REJECTED',
+                    code: 'INVALID_TICKET',
+                  },
+                ]
+              : [
+                  {
+                    clientEventId: 'a-50',
+                    status: 'APPLIED',
+                    checkinId: 'wrong-batch',
+                  },
+                ];
+    return jsonResponse(200, {
+      serverTime: '2026-10-17T08:00:00.000Z',
+      maxClockSkewSeconds: 300,
+      results,
+    });
+  };
+
+  const replay = await queue.replay({
+    bearer: 'test-bearer',
+    apiBase: 'https://api.example/',
+    fetchImpl,
+  });
+  assert.equal(replay.flushed, 55);
+  assert.equal(posts.length, 5);
+  assert.deepEqual(
+    posts.map(({ url, body }) => [
+      url,
+      body.tenantId,
+      body.staffSessionId,
+      body.events.length,
+    ]),
+    [
+      [
+        `https://api.example/v1/gate/events/${eventId}/offline-sync`,
+        tenantId,
+        staffSessionId,
+        50,
+      ],
+      [
+        `https://api.example/v1/gate/events/${eventId}/offline-sync`,
+        tenantId,
+        staffSessionId,
+        2,
+      ],
+      [
+        `https://api.example/v1/gate/events/${eventId}/offline-sync`,
+        tenantB,
+        staffSessionId,
+        1,
+      ],
+      [
+        `https://api.example/v1/gate/events/${eventId}/offline-sync`,
+        tenantId,
+        sessionB,
+        1,
+      ],
+      [
+        `https://api.example/v1/gate/events/${eventB}/offline-sync`,
+        tenantId,
+        staffSessionId,
+        1,
+      ],
+    ],
+  );
+  assert.deepEqual(
+    posts[0]?.body.events.map((item) => item.clientEventId),
+    Array.from({ length: 50 }, (_, index) => `a-${index}`),
+  );
+  assert.deepEqual(
+    posts[1]?.body.events.map((item) => item.clientEventId),
+    ['a-50', 'a-51'],
+  );
+  assert.ok(posts.every(({ body }) => body.deviceId === 'device-test'));
+  assert.deepEqual(
+    replay.results.map((result) => result.clientEventId),
+    ['a-0', 'a-49', 'a-51', 'tenant-b', 'session-b'],
+  );
+
+  const byId = new Map(
+    queue.getSnapshot().items.map((item) => [item.clientEventId, item]),
+  );
+  assert.equal(byId.get('a-49')?.localStatus, 'applied');
+  assert.equal(byId.get('a-49')?.checkinId, 'checkin-49');
+  assert.equal(byId.get('a-0')?.localStatus, 'conflict');
+  assert.equal(byId.get('a-51')?.localStatus, 'duplicate');
+  assert.equal(byId.get('tenant-b')?.localStatus, 'applied');
+  assert.equal(byId.get('session-b')?.localStatus, 'rejected');
+  assert.equal(byId.get('a-50')?.localStatus, 'pending');
+  assert.equal(byId.get('event-b')?.localStatus, 'pending');
+  assert.equal(queue.getSnapshot().pendingCount, 50);
+});
+
 function deferred<T>(): {
   promise: Promise<T>;
   resolve: (value: T) => void;
