@@ -401,7 +401,7 @@ function realmConfig(state, caseIds) {
         client.attributes['access.token.lifespan'] = '20';
       // Isolated PLAT-01 realm: keep the actual Keycloak token valid past the
       // MFA age boundary so token expiry cannot masquerade as step-up denial.
-      if (isPlatform && caseIds.includes('PLAT-01'))
+      if (isPlatform && isIsolatedPlatformStepUp(caseIds))
         client.attributes['access.token.lifespan'] = '1800';
       if (isPlatform) {
         client.authenticationFlowBindingOverrides = { browser: mfaFlowId };
@@ -515,6 +515,10 @@ function realmConfig(state, caseIds) {
   const realmPath = resolve(state.dir, 'realm.json');
   privateJson(realmPath, realm);
   return realmPath;
+}
+
+export function isIsolatedPlatformStepUp(caseIds) {
+  return caseIds.length === 1 && caseIds[0] === 'PLAT-01';
 }
 
 // Second, fully independent realm (own signing keypair) supplies a real token

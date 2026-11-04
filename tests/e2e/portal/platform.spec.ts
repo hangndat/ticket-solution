@@ -39,10 +39,19 @@ test('[PLAT-01] Operator MFA session is separate from staff Owner', async ({
     const ownerPage = await ownerContext.newPage();
     await login(ownerPage, m, 'PLAT-01', 'owner');
     const denied = await bffGet(ownerPage, m, '/api/bff/platform/tenants');
-    expect([401, 403]).toContain(denied.status);
+    expect(denied.status).toBe(401);
+    expect((denied.json as { code?: string }).code).toBe('UNAUTHENTICATED');
     const deniedHealth = await bffGet(ownerPage, m, healthPath);
-    expect([401, 403]).toContain(deniedHealth.status);
-    expect(JSON.stringify(deniedHealth.json)).not.toContain(f.tenantId);
+    expect(deniedHealth.status).toBe(401);
+    expect((deniedHealth.json as { code?: string }).code).toBe(
+      'UNAUTHENTICATED',
+    );
+    expect(Object.keys(deniedHealth.json as object).sort()).toEqual([
+      'code',
+      'message',
+      'requestId',
+      'retryable',
+    ]);
     await ownerPage.goto(portalUrl(m, '/platform'));
     await expect(ownerPage.getByTestId('platform-tenants-table')).toHaveCount(
       0,
@@ -58,6 +67,10 @@ test('[PLAT-01] real MFA token is denied after step-up age while still valid', a
   test.setTimeout(1_050_000);
   const m = loadManifest();
   const f = fixtureFor(m, 'PLAT-01');
+  test.skip(
+    Object.keys(m.cases).length !== 1,
+    'Step-up expiry requires an isolated PLAT-01 run',
+  );
   await login(page, m, 'PLAT-01', 'operator', 'platform');
   const cookie = (await page.context().cookies(m.origins.portal)).find(
     (item) => item.name === 'platform_oidc_access',
@@ -69,10 +82,13 @@ test('[PLAT-01] real MFA token is denied after step-up age while still valid', a
   ) as {
     acr: string;
     auth_time: number;
+    iat: number;
     exp: number;
   };
   expect(claims.acr).toBe('2');
   expect(Number.isInteger(claims.auth_time)).toBe(true);
+  expect(Number.isInteger(claims.iat)).toBe(true);
+  expect(claims.iat).toBeLessThanOrEqual(Math.floor(Date.now() / 1000));
   expect(claims.exp).toBeGreaterThan(claims.auth_time + 960);
   const apiUrl = new URL(
     `/v1/platform/tenants/${f.tenantId}/health`,
@@ -85,22 +101,45 @@ test('[PLAT-01] real MFA token is denied after step-up age while still valid', a
     });
   const fresh = await getApi();
   expect(fresh.status()).toBe(200);
-  expect(JSON.stringify(await fresh.json())).toContain(f.tenantId);
+  const freshHealth = await fresh.json();
+  expect(freshHealth.tenantId).toBe(f.tenantId);
   const targetMs = (claims.auth_time + 901) * 1000;
   await new Promise((resolve) =>
     setTimeout(resolve, Math.max(0, targetMs - Date.now())),
   );
   expect(Math.floor(Date.now() / 1000)).toBeLessThan(claims.exp);
   const expired = await getApi();
-  expect([401, 403]).toContain(expired.status());
-  expect(await expired.text()).not.toContain(f.tenantId);
+  expect(expired.status()).toBe(401);
+  const expiredBody = await expired.json();
+  expect(expiredBody).toMatchObject({
+    code: 'MFA_REQUIRED',
+    message: 'MFA step-up expired',
+    retryable: false,
+  });
+  expect(Object.keys(expiredBody).sort()).toEqual([
+    'code',
+    'message',
+    'requestId',
+    'retryable',
+  ]);
+  expect(expiredBody.requestId).toEqual(expect.any(String));
   const bff = await bffGet(
     page,
     m,
     `/api/bff/platform/tenants/${f.tenantId}/health`,
   );
-  expect([401, 403]).toContain(bff.status);
-  expect(JSON.stringify(bff.json)).not.toContain(f.tenantId);
+  expect(bff.status).toBe(401);
+  expect((bff.json as { code?: string }).code).toBe('UNAUTHENTICATED');
+  expect(Object.keys(bff.json as object).sort()).toEqual([
+    'code',
+    'message',
+    'requestId',
+    'retryable',
+  ]);
+  expect(bff.json).toMatchObject({
+    requestId: expect.any(String),
+    retryable: false,
+  });
 });
 
 test('[PLAT-02] Operator activates a PENDING tenant with version check', async ({
