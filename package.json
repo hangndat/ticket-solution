@@ -55,7 +55,8 @@
     "test:integration:local": "node tests/e2e/backend/entry.mjs",
     "test:regression:local": "node tests/e2e/harness/run.mjs regression",
     "test:e2e:lane": "node tests/e2e/harness/lane-cli.mjs",
-    "test:e2e:guards": "node --test tests/e2e/validation/*.test.mjs"
+    "test:e2e:guards": "node --test tests/e2e/validation/*.test.mjs",
+    "e2e:f04-status": "node tests/e2e/f04-status.mjs"
   },
   "devDependencies": {
     "pixelmatch": "7.1.0",
