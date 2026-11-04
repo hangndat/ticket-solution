@@ -104,6 +104,7 @@ async function startFakeMinio() {
   const { port } = server.address();
   return {
     close: () => new Promise((r) => server.close(r)),
+    store,
     cfg: {
       endpoint: `http://127.0.0.1:${port}`,
       accessKey: 'minioadmin',
@@ -1281,6 +1282,44 @@ test(
         clientKey: 'o06-cancelled-null-end', ttlSeconds: 3600,
       }));
       assert.equal(noEnd.status, 'PENDING');
+
+      // A previously claimed worker resumes after a different owner reclaims
+      // the expired lease, while the retention deadline becomes ineligible.
+      const firstClaim = await db.$queryRaw`SELECT export_id FROM claim_exports_batch(20, 'race-a', 3600)`;
+      assert.ok(firstClaim.some((row) => row.export_id === noEnd.exportId));
+      await withTenant(db, tenantId, (tx) => tx.$executeRaw`
+        UPDATE exports SET lease_expires_at = clock_timestamp() - interval '1 second'
+        WHERE tenant_id = ${tenantId}::uuid AND id = ${noEnd.exportId}::uuid
+      `);
+      const secondClaim = await db.$queryRaw`SELECT export_id FROM claim_exports_batch(20, 'race-b', 3600)`;
+      assert.ok(secondClaim.some((row) => row.export_id === noEnd.exportId));
+      await withTenant(db, tenantId, (tx) => tx.$executeRaw`
+        UPDATE events SET ends_at = clock_timestamp() - interval '91 days'
+        WHERE tenant_id = ${tenantId}::uuid AND id = ${eventId}::uuid
+      `);
+      const snapshot = () => withTenant(db, tenantId, (tx) => tx.$queryRaw`
+        SELECT to_jsonb(x) AS row FROM exports x
+        WHERE tenant_id = ${tenantId}::uuid AND id = ${noEnd.exportId}::uuid
+      `);
+      const beforeStale = await snapshot();
+      assert.equal(beforeStale[0].row.status, 'PROCESSING');
+      assert.equal(beforeStale[0].row.lease_owner, 'race-b');
+      const objectsBefore = [...minio.store].map(([key, value]) => [key, value.toString('base64')]);
+      await processExportJob(db, minio.cfg, tenantId, noEnd.exportId, 3600, 'race-a');
+      assert.deepEqual(await snapshot(), beforeStale, 'stale worker cannot modify the new lease or export row');
+      assert.deepEqual([...minio.store].map(([key, value]) => [key, value.toString('base64')]), objectsBefore);
+      await assert.rejects(() => downloadExport(db, minio.cfg, {
+        tenantId, eventId, actorUserId: stranger.userId, exportId: noEnd.exportId,
+      }), (error) => error instanceof AuthzError);
+      await assert.rejects(() => downloadExport(db, minio.cfg, {
+        tenantId, eventId, actorUserId: cs.userId, exportId: noEnd.exportId,
+      }), (error) => error instanceof ExportError && error.code === 'EXPORT_NOT_READY');
+      await processExportJob(db, minio.cfg, tenantId, noEnd.exportId, 3600, 'race-b');
+      const afterOwner = await snapshot();
+      assert.equal(afterOwner[0].row.status, 'FAILED');
+      assert.equal(afterOwner[0].row.error_code, 'EXPORT_EXPIRED');
+      assert.equal(afterOwner[0].row.lease_owner, null);
+      assert.deepEqual([...minio.store].map(([key, value]) => [key, value.toString('base64')]), objectsBefore);
     } finally {
       if (db) await db.$disconnect().catch(() => {});
       if (minio) await minio.close();
