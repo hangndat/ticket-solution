@@ -121,6 +121,7 @@ export interface PlatformTenantDetail {
   defaultTimezone: string;
   contact: string | null;
   version: number;
+  limitsVersion?: number;
   limits: TenantLimitsDto;
   flags: TenantFlagsDto;
   usage: {
@@ -141,7 +142,7 @@ export interface PlatformTenantLimitsBody {
   limits: TenantLimitsDto;
   flags: TenantFlagsDto;
   reason: string;
-  expectedVersion: number;
+  expectedLimitsVersion: number;
 }
 
 export interface TenantProfilePatchBody {

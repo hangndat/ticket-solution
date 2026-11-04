@@ -121,6 +121,17 @@ test('Fastify liveness matches contract; redeem and gate routes documented', asy
       doc.components.schemas.HealthDto.properties.status.enum[0],
       'ok',
     );
+    assert.equal(
+      doc.paths['/v1/platform/tenants/{tenantId}'].get.responses['200'].content['application/json'].schema.$ref,
+      '#/components/schemas/PlatformTenantDetailDto',
+    );
+    assert.ok(doc.components.schemas.PlatformTenantDetailDto.required.includes('limitsVersion'));
+    assert.equal(doc.components.schemas.PlatformTenantDetailDto.properties.limitsVersion.type, 'number');
+    const limitsBody = doc.components.schemas.PlatformTenantLimitsBodyDto;
+    assert.ok(limitsBody.required.includes('expectedLimitsVersion'));
+    assert.equal(limitsBody.properties.expectedVersion, undefined);
+    assert.equal(doc.paths['/v1/platform/tenants/{tenantId}/limits'].put.requestBody.content['application/json'].schema.$ref,
+      '#/components/schemas/PlatformTenantLimitsBodyDto');
   } finally {
     await app.close();
   }

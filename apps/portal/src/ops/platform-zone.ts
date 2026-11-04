@@ -420,6 +420,12 @@ export type PlatformTenantDetailView =
   | { kind: 'rejected'; code: string; message: string }
   | { kind: 'unknown'; message: string };
 
+export function platformLimitsBody(
+  detail: PlatformTenantDetail, limits: TenantLimitsDto, flags: TenantFlagsDto, reason: string,
+) {
+  return { limits, flags, reason, expectedLimitsVersion: detail.limitsVersion };
+}
+
 export function interpretPlatformTenantDetail(
   status: number,
   json: unknown,
@@ -445,6 +451,7 @@ export function interpretPlatformTenantDetail(
       typeof body.defaultTimezone !== 'string' ||
       (body.contact !== null && typeof body.contact !== 'string') ||
       typeof body.version !== 'number' ||
+      !Number.isInteger(body.limitsVersion) || (body.limitsVersion as number) < 1 ||
       !limits ||
       !flags ||
       !usage ||
@@ -465,6 +472,7 @@ export function interpretPlatformTenantDetail(
         defaultTimezone: body.defaultTimezone,
         contact: body.contact as string | null,
         version: body.version,
+        limitsVersion: body.limitsVersion as number,
         limits,
         flags,
         usage: {
