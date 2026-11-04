@@ -1,6 +1,5 @@
 import {
   OFFLINE_SYNC_ERROR_CODES,
-  OFFLINE_SYNC_MAX_BATCH,
   OFFLINE_SYNC_PAYLOAD_VERSION,
   compareOfflineReplayOrder,
   offlineConflictMessageVi,
@@ -14,6 +13,7 @@ import type { OfflineQueueStore } from './offline-queue-types.ts';
 import type { StaffGateScope } from './staff-gate-events.ts';
 import { isMembershipAuthzDenial } from '../identity/staff-eligibility.ts';
 import { randomId } from '../lib/random-id.ts';
+import { planOfflineReplay } from './offline-replay-plan.ts';
 
 export type OfflineLocalStatus =
   | 'pending'
@@ -539,183 +539,164 @@ export class OfflineScanQueue {
     let flushed = 0;
 
     try {
-      const byEvent = new Map<string, QueuedOfflineScan[]>();
-      for (const item of pending) {
-        const list = byEvent.get(item.eventId) ?? [];
-        list.push(item);
-        byEvent.set(item.eventId, list);
-      }
-
-      for (const [eventId, eventItems] of byEvent) {
+      for (const [eventId, chunks] of planOfflineReplay(pending)) {
         if (
           !this.isBindCurrent(bindGeneration, ownerUserId) ||
           !this.isWriteCurrent(writeGeneration)
         ) {
           return { flushed, results: allResults };
         }
-        const bySession = new Map<string, QueuedOfflineScan[]>();
-        for (const item of eventItems) {
-          const sk = `${item.tenantId}::${item.staffSessionId}`;
-          const list = bySession.get(sk) ?? [];
-          list.push(item);
-          bySession.set(sk, list);
-        }
+        for (const chunk of chunks) {
+          if (
+            !this.isBindCurrent(bindGeneration, ownerUserId) ||
+            !this.isWriteCurrent(writeGeneration)
+          ) {
+            return { flushed, results: allResults };
+          }
+          if (input.shouldContinue && !input.shouldContinue()) return { flushed, results: allResults };
+          const ids = new Set(chunk.map((c) => c.clientEventId));
+          this.items = this.items.map((row) =>
+            ids.has(row.clientEventId)
+              ? { ...row, localStatus: 'syncing' as const }
+              : row,
+          );
+          this.emit();
 
-        for (const group of bySession.values()) {
-          const sorted = group.slice().sort(compareOfflineReplayOrder);
-          for (let i = 0; i < sorted.length; i += OFFLINE_SYNC_MAX_BATCH) {
-            if (
-              !this.isBindCurrent(bindGeneration, ownerUserId) ||
-              !this.isWriteCurrent(writeGeneration)
-            ) {
-              return { flushed, results: allResults };
-            }
-            const chunk = sorted.slice(i, i + OFFLINE_SYNC_MAX_BATCH);
-            if (input.shouldContinue && !input.shouldContinue()) return { flushed, results: allResults };
-            const ids = new Set(chunk.map((c) => c.clientEventId));
+          const head = chunk[0]!;
+          const body: OfflineSyncRequestBody = {
+            tenantId: head.tenantId,
+            staffSessionId: head.staffSessionId,
+            deviceId,
+            clientClockAt: this.nowIso(),
+            events: chunk.map(toTransportEvent),
+          };
+
+          if (input.shouldContinue && !input.shouldContinue()) {
+            this.items = this.items.map((row) => ids.has(row.clientEventId) ? { ...row, localStatus: 'pending' as const } : row);
+            return { flushed, results: allResults };
+          }
+
+          const outcome = await postOfflineSync({
+            fetchImpl,
+            url: `${base}${offlineSyncPath(eventId)}`,
+            bearer: input.bearer,
+            body,
+          });
+          const authzDenial =
+            outcome.kind === 'batch_error' &&
+            isMembershipAuthzDenial(outcome.status, { code: outcome.code })
+              ? { status: outcome.status, code: outcome.code }
+              : null;
+
+          if (input.shouldContinue && !input.shouldContinue()) {
+            this.items = this.items.map((row) => ids.has(row.clientEventId) ? { ...row, localStatus: 'pending' as const } : row);
+            return {
+              flushed,
+              results: allResults,
+              ...(authzDenial ? { authzDenial } : {}),
+            };
+          }
+
+          if (
+            !this.isBindCurrent(bindGeneration, ownerUserId) ||
+            !this.isWriteCurrent(writeGeneration)
+          ) {
+            return { flushed, results: allResults };
+          }
+
+          if (outcome.kind === 'network') {
             this.items = this.items.map((row) =>
               ids.has(row.clientEventId)
-                ? { ...row, localStatus: 'syncing' as const }
+                ? {
+                    ...row,
+                    localStatus: 'pending' as const,
+                    lastMessage:
+                      'Mất mạng khi đồng bộ. Giữ hàng đợi — sẽ thử lại.',
+                  }
                 : row,
             );
-            this.emit();
-
-            const head = chunk[0]!;
-            const body: OfflineSyncRequestBody = {
-              tenantId: head.tenantId,
-              staffSessionId: head.staffSessionId,
-              deviceId,
-              clientClockAt: this.nowIso(),
-              events: chunk.map(toTransportEvent),
-            };
-
-            if (input.shouldContinue && !input.shouldContinue()) {
-              this.items = this.items.map((row) => ids.has(row.clientEventId) ? { ...row, localStatus: 'pending' as const } : row);
-              return { flushed, results: allResults };
-            }
-
-            const outcome = await postOfflineSync({
-              fetchImpl,
-              url: `${base}${offlineSyncPath(eventId)}`,
-              bearer: input.bearer,
-              body,
-            });
-            const authzDenial =
-              outcome.kind === 'batch_error' &&
-              isMembershipAuthzDenial(outcome.status, { code: outcome.code })
-                ? { status: outcome.status, code: outcome.code }
-                : null;
-
-            if (input.shouldContinue && !input.shouldContinue()) {
-              this.items = this.items.map((row) => ids.has(row.clientEventId) ? { ...row, localStatus: 'pending' as const } : row);
-              return {
-                flushed,
-                results: allResults,
-                ...(authzDenial ? { authzDenial } : {}),
-              };
-            }
-
-            if (
-              !this.isBindCurrent(bindGeneration, ownerUserId) ||
-              !this.isWriteCurrent(writeGeneration)
-            ) {
-              return { flushed, results: allResults };
-            }
-
-            if (outcome.kind === 'network') {
-              this.items = this.items.map((row) =>
-                ids.has(row.clientEventId)
-                  ? {
-                      ...row,
-                      localStatus: 'pending' as const,
-                      lastMessage:
-                        'Mất mạng khi đồng bộ. Giữ hàng đợi — sẽ thử lại.',
-                    }
-                  : row,
-              );
-              this.lastSyncError =
-                'Không kết nối được máy chủ khi đồng bộ hàng đợi offline.';
-              await this.persistTrimmed(
-                ownerUserId,
-                bindGeneration,
-                writeGeneration,
-              );
-              return { flushed, results: allResults };
-            }
-
-            if (outcome.kind === 'batch_error') {
-              if (authzDenial) {
-                // Membership denial is not a ticket outcome. Keep every row
-                // available for a later authorized replay, and stop this batch.
-                const message = 'Quyền nhân viên đã đổi. Giữ hàng đợi — cần xác minh lại quyền trước khi đồng bộ.';
-                this.items = this.items.map((row) =>
-                  ids.has(row.clientEventId)
-                    ? { ...row, localStatus: 'pending' as const, lastMessage: message }
-                    : row,
-                );
-                this.lastSyncError = message;
-                // Durable rows were already pending before POST. Return the
-                // denial even if SecureStore cannot accept another write.
-                return {
-                  flushed,
-                  results: allResults,
-                  authzDenial,
-                };
-              }
-              const vi = offlineConflictMessageVi(
-                outcome.code,
-                outcome.message,
-              );
-              // NOT_IMPLEMENTED / retryable: keep pending so queue survives stub BE.
-              const keepPending =
-                outcome.code === OFFLINE_SYNC_ERROR_CODES.NOT_IMPLEMENTED ||
-                outcome.retryable;
-              this.items = this.items.map((row) =>
-                ids.has(row.clientEventId)
-                  ? {
-                      ...row,
-                      localStatus: keepPending
-                        ? ('pending' as const)
-                        : ('rejected' as const),
-                      lastCode: outcome.code,
-                      lastMessage: vi,
-                    }
-                  : row,
-              );
-              this.lastSyncError = vi;
-              await this.persistTrimmed(
-                ownerUserId,
-                bindGeneration,
-                writeGeneration,
-              );
-              if (!keepPending) flushed += chunk.length;
-              continue;
-            }
-
-            const byId = new Map(
-              outcome.response.results.map((r) => [r.clientEventId, r]),
-            );
-            this.items = this.items.map((row) => {
-              if (!ids.has(row.clientEventId)) return row;
-              const result = byId.get(row.clientEventId);
-              if (!result) {
-                return {
-                  ...row,
-                  localStatus: 'pending' as const,
-                  lastMessage:
-                    'Thiếu kết quả từng mục từ máy chủ. Giữ trong hàng đợi.',
-                };
-              }
-              allResults.push(result);
-              return applyItemResult(row, result);
-            });
-            flushed += chunk.length;
+            this.lastSyncError =
+              'Không kết nối được máy chủ khi đồng bộ hàng đợi offline.';
             await this.persistTrimmed(
               ownerUserId,
               bindGeneration,
               writeGeneration,
             );
+            return { flushed, results: allResults };
           }
+
+          if (outcome.kind === 'batch_error') {
+            if (authzDenial) {
+              // Membership denial is not a ticket outcome. Keep every row
+              // available for a later authorized replay, and stop this batch.
+              const message = 'Quyền nhân viên đã đổi. Giữ hàng đợi — cần xác minh lại quyền trước khi đồng bộ.';
+              this.items = this.items.map((row) =>
+                ids.has(row.clientEventId)
+                  ? { ...row, localStatus: 'pending' as const, lastMessage: message }
+                  : row,
+              );
+              this.lastSyncError = message;
+              // Durable rows were already pending before POST. Return the
+              // denial even if SecureStore cannot accept another write.
+              return {
+                flushed,
+                results: allResults,
+                authzDenial,
+              };
+            }
+            const vi = offlineConflictMessageVi(
+              outcome.code,
+              outcome.message,
+            );
+            // NOT_IMPLEMENTED / retryable: keep pending so queue survives stub BE.
+            const keepPending =
+              outcome.code === OFFLINE_SYNC_ERROR_CODES.NOT_IMPLEMENTED ||
+              outcome.retryable;
+            this.items = this.items.map((row) =>
+              ids.has(row.clientEventId)
+                ? {
+                    ...row,
+                    localStatus: keepPending
+                      ? ('pending' as const)
+                      : ('rejected' as const),
+                    lastCode: outcome.code,
+                    lastMessage: vi,
+                  }
+                : row,
+            );
+            this.lastSyncError = vi;
+            await this.persistTrimmed(
+              ownerUserId,
+              bindGeneration,
+              writeGeneration,
+            );
+            if (!keepPending) flushed += chunk.length;
+            continue;
+          }
+
+          const byId = new Map(
+            outcome.response.results.map((r) => [r.clientEventId, r]),
+          );
+          this.items = this.items.map((row) => {
+            if (!ids.has(row.clientEventId)) return row;
+            const result = byId.get(row.clientEventId);
+            if (!result) {
+              return {
+                ...row,
+                localStatus: 'pending' as const,
+                lastMessage:
+                  'Thiếu kết quả từng mục từ máy chủ. Giữ trong hàng đợi.',
+              };
+            }
+            allResults.push(result);
+            return applyItemResult(row, result);
+          });
+          flushed += chunk.length;
+          await this.persistTrimmed(
+            ownerUserId,
+            bindGeneration,
+            writeGeneration,
+          );
         }
       }
     } finally {
