@@ -20,6 +20,12 @@ const {
   processClaimedOutbox,
   collectWorkerDueJobSnapshot,
 } = require('../../../packages/backend/dist');
+const {
+  markOutboxCompleteFenced,
+} = require('../../../packages/backend/dist/outbox-fence.js');
+const {
+  emailSignerEnv,
+} = require('../../../packages/backend/test/gate-test-credentials.cjs');
 
 const root = path.resolve(__dirname, '../../..');
 const docker = (...args) =>
@@ -29,6 +35,7 @@ const docker = (...args) =>
   }).trim();
 
 const credentialKey = 'job02-lease-fence-cred-key';
+const signerEnv = emailSignerEnv(credentialKey);
 const hmac = readCodeHmacEnvironment({
   CODE_HMAC_PEPPER: 'job02-lease-fence-pepper!!',
   CODE_HMAC_VERSION: '1',
@@ -96,30 +103,38 @@ async function messages(api) {
 }
 
 function spawnWorker(pgUrl, mail, redisUrl, extraEnv = {}) {
-  return spawn(process.execPath, ['apps/worker/dist/main.js'], {
-    cwd: root,
-    stdio: 'ignore',
-    env: {
-      PATH: process.env.PATH,
-      NODE_ENV: 'test',
-      DATABASE_URL: pgUrl,
-      SMTP_URL: mail.smtpUrl,
-      SMTP_FROM: 'tickets@job02.test',
-      PUBLIC_WEB_BASE_URL: 'https://tickets.job02.test',
-      TICKET_CREDENTIAL_KEY: credentialKey,
-      OUTBOX_POLL_MS: '100',
-      REDIS_URL: redisUrl,
-      ...extraEnv,
+  return spawn(
+    process.execPath,
+    ['tests/e2e/backend/job-02-worker-child.cjs'],
+    {
+      cwd: root,
+      stdio: ['ignore', 'ignore', 'ignore', 'ipc'],
+      env: {
+        PATH: process.env.PATH,
+        NODE_ENV: 'test',
+        DATABASE_URL: pgUrl,
+        SMTP_URL: mail.smtpUrl,
+        SMTP_FROM: 'tickets@job02.test',
+        PUBLIC_WEB_BASE_URL: 'https://tickets.job02.test',
+        TICKET_CREDENTIAL_KEY: credentialKey,
+        OUTBOX_POLL_MS: '100',
+        REDIS_URL: redisUrl,
+        ...signerEnv,
+        ...extraEnv,
+      },
     },
-  });
+  );
 }
 
 async function readOutboxRow(db, tenantId, ticketId) {
-  const rows = await withTenant(db, tenantId, (tx) => tx.$queryRaw`
+  const rows = await withTenant(
+    db,
+    tenantId,
+    (tx) => tx.$queryRaw`
     SELECT o.id AS outbox_id, o.status, o.lease_owner, o.lease_token,
            o.lease_expires_at, o.attempts,
            o.lease_expires_at <= clock_timestamp() AS lease_expired,
-           n.state AS notification_state
+           n.state AS notification_state, n.last_error
     FROM outbox o
     JOIN notifications n
       ON n.tenant_id = o.tenant_id
@@ -127,7 +142,8 @@ async function readOutboxRow(db, tenantId, ticketId) {
     WHERE o.tenant_id = ${tenantId}::uuid
       AND o.aggregate_id = ${ticketId}::uuid
       AND o.type = 'TicketIssued'
-    LIMIT 1`);
+    LIMIT 1`,
+  );
   return rows[0];
 }
 
@@ -169,7 +185,9 @@ async function waitForTerminalRelay(db, tenantId, ticketId, mail) {
     }
     await new Promise((resolve) => setTimeout(resolve, 200));
   }
-  throw new Error('replacement worker did not complete relay within 20 seconds');
+  throw new Error(
+    'replacement worker did not complete relay within 20 seconds',
+  );
 }
 
 function countingTicketEmailAdapter() {
@@ -222,6 +240,8 @@ test(
         await tx.tenant.create({
           data: { id: tenantId, slug: 'job02-fence', name: 'JOB-02 Fence' },
         });
+        await tx.$executeRaw`INSERT INTO tenant_limits (tenant_id, email_per_day)
+          VALUES (${tenantId}::uuid, 100)`;
         await tx.event.create({
           data: {
             tenantId,
@@ -259,16 +279,22 @@ test(
       assert.equal((await messages(mail.api)).total, 0);
 
       workerA = spawnWorker(pg.url, stall, redis.url);
+      assert.ok(workerA.pid > 0, 'worker A is a test-owned child');
+      const workerAPid = workerA.pid;
       const claimed = await waitForClaimedOutbox(db, tenantId, issued.ticketId);
-      assert.ok(claimed.lease_owner, 'claimed row must record lease owner');
-      workerA.kill('SIGKILL');
-      await new Promise((resolve) => {
-        workerA.once('close', resolve);
-        setTimeout(resolve, 2000);
-      });
+      assert.equal(claimed.lease_owner, `job02-pid-${workerA.pid}`);
+      const workerAExit = once(workerA, 'exit');
+      assert.equal(workerA.kill('SIGKILL'), true);
+      const [exitCode, signal] = await workerAExit;
+      assert.equal(exitCode, null);
+      assert.equal(signal, 'SIGKILL');
       workerA = null;
 
-      assert.equal((await messages(mail.api)).total, 0, 'no SMTP before reclaim');
+      assert.equal(
+        (await messages(mail.api)).total,
+        0,
+        'no SMTP before reclaim',
+      );
 
       const expired = await waitForLeaseExpired(db, tenantId, issued.ticketId);
       assert.ok(
@@ -284,21 +310,23 @@ test(
         'expired lease must surface as due or reclaim',
       );
 
-      workerB = spawnWorker(pg.url, mail, redis.url);
-      await waitForTerminalRelay(db, tenantId, issued.ticketId, mail);
-      await new Promise((resolve) => {
-        workerB.kill('SIGTERM');
-        workerB.once('close', resolve);
-        setTimeout(resolve, 3000);
-      });
-      workerB = null;
-
-      const tickets = await withTenant(db, tenantId, (tx) => tx.$queryRaw`
-        SELECT COUNT(*)::int AS n FROM tickets
-        WHERE tenant_id = ${tenantId}::uuid AND id = ${issued.ticketId}::uuid`);
-      assert.equal(tickets[0].n, 1, 'exactly one logical ticket');
-
-      const mock = countingTicketEmailAdapter();
+      workerB = spawnWorker(pg.url, mail, redis.url, { JOB02_BARRIER: '1' });
+      assert.ok(workerB.pid > 0 && workerB.pid !== workerAPid);
+      const [claimMessage] = await Promise.race([
+        once(workerB, 'message'),
+        new Promise((_, reject) =>
+          setTimeout(
+            () => reject(new Error('worker B did not reach claim barrier')),
+            8000,
+          ),
+        ),
+      ]);
+      assert.equal(claimMessage.event, 'claimed');
+      const active = await readOutboxRow(db, tenantId, issued.ticketId);
+      assert.equal(active.lease_owner, `job02-pid-${workerB.pid}`);
+      assert.notEqual(active.lease_token, claimed.lease_token);
+      assert.equal(active.lease_expired, false);
+      assert.equal((await messages(mail.api)).total, 0);
       const staleRow = {
         outbox_id: claimed.outbox_id,
         tenant_id: tenantId,
@@ -309,15 +337,50 @@ test(
         lease_token: claimed.lease_token,
         attempts: claimed.attempts ?? 0,
       };
+      const staleAck = await withTenant(db, tenantId, (tx) =>
+        markOutboxCompleteFenced(tx, staleRow, claimed.lease_owner),
+      );
+      assert.equal(
+        staleAck,
+        false,
+        'stale ACK cannot complete the active lease',
+      );
+      const mock = countingTicketEmailAdapter();
       const stale = await processClaimedOutbox(db, mock.adapter, [staleRow], {
         credentialKeyMaterial: credentialKey,
         leaseOwner: claimed.lease_owner,
         publicWebBaseUrl: 'https://tickets.job02.test',
         env: { NODE_ENV: 'test' },
       });
-      assert.equal(mock.getTicketSends(), 0, 'stale worker must not call provider');
-      assert.equal(stale.completed, 0, 'stale ack must not mark COMPLETE again');
-      assert.equal((await messages(mail.api)).total, 1, 'still one logical email');
+      assert.equal(mock.getTicketSends(), 0);
+      assert.equal(stale.completed, 0);
+      assert.deepEqual(
+        await readOutboxRow(db, tenantId, issued.ticketId),
+        active,
+        'active B lease and row remain unchanged',
+      );
+      assert.equal((await messages(mail.api)).total, 0);
+      workerB.send({ event: 'release' });
+      await waitForTerminalRelay(db, tenantId, issued.ticketId, mail);
+      const workerBExit = once(workerB, 'exit');
+      assert.equal(workerB.kill('SIGTERM'), true);
+      await workerBExit;
+      workerB = null;
+
+      const tickets = await withTenant(
+        db,
+        tenantId,
+        (tx) => tx.$queryRaw`
+        SELECT COUNT(*)::int AS n FROM tickets
+        WHERE tenant_id = ${tenantId}::uuid AND id = ${issued.ticketId}::uuid`,
+      );
+      assert.equal(tickets[0].n, 1, 'exactly one logical ticket');
+
+      assert.equal(
+        (await messages(mail.api)).total,
+        1,
+        'still one logical email',
+      );
     } finally {
       if (workerA && workerA.exitCode === null) workerA.kill('SIGKILL');
       if (workerB && workerB.exitCode === null) workerB.kill('SIGKILL');
