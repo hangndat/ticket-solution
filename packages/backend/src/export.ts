@@ -557,21 +557,22 @@ export async function processExportJob(
       return null;
     }
     if (job.event_id !== identity[0].event_id) return null;
-    if (!event[0]?.allowed) {
-      await tx.$executeRaw`
-        UPDATE exports SET status = 'FAILED', error_code = 'EXPORT_EXPIRED',
-          lease_owner = NULL, lease_expires_at = NULL, updated_at = clock_timestamp()
-        WHERE tenant_id = ${tenantId}::uuid AND id = ${exportId}::uuid
-      `;
-      return null;
-    }
     if (
       leaseOwner &&
       job.status === 'PROCESSING' &&
       job.lease_owner &&
       job.lease_owner !== leaseOwner
     ) {
-      // Another worker owns the live lease.
+      // A stale worker must not mutate the current owner's row, including
+      // when retention eligibility changed after the lease was reclaimed.
+      return null;
+    }
+    if (!event[0]?.allowed) {
+      await tx.$executeRaw`
+        UPDATE exports SET status = 'FAILED', error_code = 'EXPORT_EXPIRED',
+          lease_owner = NULL, lease_expires_at = NULL, updated_at = clock_timestamp()
+        WHERE tenant_id = ${tenantId}::uuid AND id = ${exportId}::uuid
+      `;
       return null;
     }
     if (job.status === 'PENDING') {
