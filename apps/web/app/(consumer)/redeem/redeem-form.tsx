@@ -54,8 +54,7 @@ import {
   requireTermsConsent,
   validateFormAnswers,
 } from '../../../src/redeem/form-validate';
-import { fetchOwnerRedemptionStatus } from '../../../src/redeem/owner-status';
-import { ownerRefreshPlan } from '../../../src/redeem/owner-refresh';
+import { refreshOwnerRedemption } from '../../../src/redeem/owner-refresh';
 import {
   isApiError,
   pollOperation,
@@ -665,21 +664,23 @@ export function RedeemForm({
     if (!pendingRequestId || busy) return;
     const generation = generationRef.current;
     startTransition(async () => {
-      const result = await fetchOwnerRedemptionStatus(
+      const outcome = await refreshOwnerRedemption(
         pendingRequestId,
         tenantId,
+        () => !isStale(generation),
       );
-      if (isStale(generation)) return;
-      if (result.status === 'ok') {
-        setUx(messageForOwnerStatus(result.body, locale));
-        setRaw(JSON.stringify(result.body, null, 2));
-        const plan = ownerRefreshPlan(result.body);
-        if (plan.decision !== undefined) setDecision(plan.decision);
-        if (plan.ticket !== undefined) setTicket(plan.ticket);
-        if (plan.clearPendingRequest) setPendingRequestId(null);
+      if (outcome.kind === 'stale') return;
+      if (outcome.kind === 'updated') {
+        setUx(messageForOwnerStatus(outcome.status, locale));
+        setRaw(outcome.raw);
+        if (outcome.plan.decision !== undefined) {
+          setDecision(outcome.plan.decision);
+        }
+        if (outcome.plan.ticket !== undefined) setTicket(outcome.plan.ticket);
+        if (outcome.plan.clearPendingRequest) setPendingRequestId(null);
         return;
       }
-      if (result.status === 'unauthorized') {
+      if (outcome.kind === 'unauthorized') {
         setUx(
           messageForApiError('UNAUTHENTICATED', undefined, undefined, locale),
         );
@@ -688,7 +689,7 @@ export function RedeemForm({
       setUx(
         messageForApiError(
           undefined,
-          result.status === 'not-found'
+          outcome.reason === 'not-found'
             ? redeemFormCopy(locale).ownerNotFound
             : redeemFormCopy(locale).ownerUnread,
           undefined,

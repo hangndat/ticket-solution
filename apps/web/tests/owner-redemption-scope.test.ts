@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { fetchOwnerRedemptionStatus } from '../src/redeem/owner-status';
-import { ownerRefreshPlan } from '../src/redeem/owner-refresh';
+import {
+  ownerRefreshPlan,
+  refreshOwnerRedemption,
+} from '../src/redeem/owner-refresh';
 import { GET } from '../app/api/bff/redemptions/[requestId]/route';
 
 const requestId = '55555555-5555-4555-8555-555555555555';
@@ -91,10 +94,58 @@ test('BFF rejects missing or malformed tenant scope before reading the session',
 });
 
 test('owner status authorization failure is preserved as unauthorized', async () => {
-  const result = await fetchOwnerRedemptionStatus(
+  const result = await refreshOwnerRedemption(
     requestId,
     tenantId,
+    () => true,
     async () => new Response(null, { status: 401 }),
   );
-  assert.deepEqual(result, { status: 'unauthorized' });
+  assert.deepEqual(result, { kind: 'unauthorized' });
+});
+
+test('owner refresh ignores a response when its request generation is stale', async () => {
+  let current = true;
+  const result = await refreshOwnerRedemption(
+    requestId,
+    tenantId,
+    () => current,
+    async () => {
+      current = false;
+      return Response.json({
+        status: 'ISSUED',
+        requestId,
+        eventId: requestId,
+        ticketId: requestId,
+        ticketTypeId: requestId,
+        sourceId: requestId,
+        issuedAt: '2026-10-26T00:00:00Z',
+      });
+    },
+  );
+  assert.deepEqual(result, { kind: 'stale' });
+});
+
+test('owner refresh returns terminal state transition from the scoped API response', async () => {
+  let requestedUrl = '';
+  const result = await refreshOwnerRedemption(
+    requestId,
+    tenantId,
+    () => true,
+    async (input) => {
+      requestedUrl = String(input);
+      return Response.json({
+        status: 'EXPIRED',
+        requestId,
+        eventId: requestId,
+        ticketTypeId: requestId,
+        sourceId: requestId,
+        expiredAt: '2026-10-26T00:00:00Z',
+      });
+    },
+  );
+  assert.match(requestedUrl, new RegExp(`tenantId=${tenantId}`));
+  assert.equal(result.kind, 'updated');
+  if (result.kind !== 'updated') return;
+  assert.equal(result.plan.decision, null);
+  assert.equal(result.plan.clearPendingRequest, true);
 });
