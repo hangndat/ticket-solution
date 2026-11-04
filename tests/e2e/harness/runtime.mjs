@@ -1000,6 +1000,12 @@ export function processEnvironment(state, extra = {}) {
 }
 
 export function startProcess(state, name, binary, args, env) {
+  if (
+    name !== 'http-SEC-05' && name !== 'browser-tests' &&
+    ('E2E_MINIO_OBSERVER_ACCESS_KEY' in env || 'E2E_MINIO_OBSERVER_SECRET_KEY' in env)
+  ) {
+    throw new Error(`BLOCKED: import observer credentials forbidden for ${name}`);
+  }
   const file = openSync(resolve(state.dir, `${name}.log`), 'a', 0o600);
   const child = spawn(binary, args, {
     cwd: ROOT,
@@ -1013,7 +1019,7 @@ export function startProcess(state, name, binary, args, env) {
   return child;
 }
 
-function bootstrapMinio(state) {
+function bootstrapMinio(state, onProvisioned) {
   const image = MC_IMAGE;
   const buckets = {
     assets: `e2e-${state.id}-assets`,
@@ -1021,7 +1027,7 @@ function bootstrapMinio(state) {
     exports: `e2e-${state.id}-exports`,
   };
   const identities = Object.fromEntries(
-    ['shared', 'exports'].map((role) => [
+    ['shared', 'exports', 'observer'].map((role) => [
       role,
       {
         accessKey: `e2e-${role}-${randomBytes(8).toString('hex')}`,
@@ -1081,19 +1087,29 @@ function bootstrapMinio(state) {
   const exportsPolicy = policy('o06-exports-writer.json', {
     'vemoki-exports': buckets.exports,
   });
+  const observerPolicy = resolve(state.dir, 'imports-observer-policy.json');
+  privateJson(observerPolicy, { Version: '2012-10-17', Statement: [{ Effect: 'Allow', Action: ['s3:ListBucket'], Resource: [`arn:aws:s3:::${buckets.imports}`] }] });
   const names = {
     shared: `e2e-shared-${state.id}`,
     exports: `e2e-exports-${state.id}`,
+    observer: `e2e-observer-${state.id}`,
   };
+  // Record each attempt before the request, including ambiguous failures where
+  // the server may have created a resource before the response was lost.
+  state.minio = { buckets, identities, created: { buckets: [], identities: [], policies: [] } };
   let stage = 'buckets';
   try {
-    for (const bucket of Object.values(buckets))
+    for (const bucket of Object.values(buckets)) {
+      state.minio.created.buckets.push(bucket);
       mc(root, ['mb', `e2e/${bucket}`]);
+    }
     stage = 'policies';
     for (const [role, path] of [
       ['shared', sharedPolicy],
       ['exports', exportsPolicy],
+      ['observer', observerPolicy],
     ]) {
+      state.minio.created.policies.push(role);
       mc(
         root,
         ['admin', 'policy', 'create', 'e2e', names[role], '/dev/stdin'],
@@ -1101,8 +1117,9 @@ function bootstrapMinio(state) {
       );
     }
     stage = 'users';
-    for (const role of ['shared', 'exports']) {
+    for (const role of ['shared', 'exports', 'observer']) {
       const identity = identities[role];
+      state.minio.created.identities.push(identity);
       mc(root, [
         'admin',
         'user',
@@ -1120,6 +1137,7 @@ function bootstrapMinio(state) {
         '--user',
         identity.accessKey,
       ]);
+      onProvisioned?.(state, role);
     }
     stage = 'policy checks';
     const put = (role, bucket, expectAllowed) => {
@@ -1152,7 +1170,8 @@ function bootstrapMinio(state) {
       .replace(/https?:\/\/[^\s@]+@/g, 'http://[redacted]@')
       .replaceAll(root.secretKey, '[redacted]')
       .replaceAll(identities.shared.secretKey, '[redacted]')
-      .replaceAll(identities.exports.secretKey, '[redacted]');
+      .replaceAll(identities.exports.secretKey, '[redacted]')
+      .replaceAll(identities.observer.secretKey, '[redacted]');
     writeFileSync(
       resolve(state.dir, 'minio-bootstrap.log'),
       `${stage}\n${detail}`,
@@ -1164,7 +1183,6 @@ function bootstrapMinio(state) {
       `BLOCKED: MinIO ${stage} failed (${error.status ?? error.code ?? 'policy_mismatch'})`,
     );
   }
-  state.minio = { buckets, identities };
 }
 
 export async function createRuntime(caseIds, options = {}) {
@@ -1310,21 +1328,30 @@ export async function createRuntime(caseIds, options = {}) {
         (await fetch(`http://127.0.0.1:${state.ports.minio}/minio/health/live`))
           .status === 200,
     );
-    bootstrapMinio(state);
+    bootstrapMinio(state, options.onMinioProvisioned);
     if (lane) {
       await clearMailbox(state);
       await provisionRunDatabase(state);
     }
     return state;
   } catch (error) {
-    await destroyRuntime(state);
+    try {
+      await destroyRuntime(state);
+      state.cleanupError = null;
+    } catch {
+      state.cleanupError = 'runtime cleanup failed; see private cleanup logs';
+    }
+    state.cleanupAttempted = true;
+    error.runtimeState = state;
     if (error.message?.startsWith('BLOCKED: MinIO ')) throw error;
     // Lane: giữ nguyên lý do BLOCKED (database/realm/mailbox) thay vì gộp thành
     // lỗi setup chung; đường stack-riêng giữ hành vi cũ.
     if (lane && error.message?.startsWith('BLOCKED: ')) throw error;
-    throw new Error(
+    const wrapped = new Error(
       `BLOCKED: không tạo được isolated runtime (${error.code || 'setup_failed'}); log private: ${state.dir}`,
     );
+    wrapped.runtimeState = state;
+    throw wrapped;
   }
 }
 
@@ -1356,6 +1383,7 @@ async function destroyLaneRun(state) {
       failures.join('\n') + '\n',
       { mode: 0o600 },
     );
+    throw new Error(`lane cleanup failed (${failures.length} step(s)); see lane-cleanup.log`);
   }
 }
 
@@ -1371,7 +1399,7 @@ export async function destroyRuntime(state) {
   for (const child of state.children.toReversed()) {
     signalGroup(child, 'SIGTERM');
   }
-  await Promise.allSettled(
+  const childResults = await Promise.allSettled(
     state.children.map(async (child) => {
       if (child.exitCode !== null || child.signalCode) return;
       const timer = setTimeout(() => {
@@ -1390,6 +1418,9 @@ export async function destroyRuntime(state) {
   }
   if (state.lane) {
     await destroyLaneRun(state);
+    if (childResults.some((result) => result.status === 'rejected')) {
+      throw new Error('child process cleanup failed');
+    }
     return;
   }
   if (state.composeFile) {
@@ -1412,5 +1443,8 @@ export async function destroyRuntime(state) {
     } finally {
       closeSync(log);
     }
+  }
+  if (childResults.some((result) => result.status === 'rejected')) {
+    throw new Error('child process cleanup failed');
   }
 }
