@@ -5,6 +5,7 @@ import {
   interpretPlatformMutationOk,
   interpretPlatformSupportGrantCreate,
   interpretPlatformTenantDetail,
+  platformLimitsBody,
 } from '../src/ops/platform-zone';
 
 const DETAIL_SAMPLE = {
@@ -15,6 +16,7 @@ const DETAIL_SAMPLE = {
   defaultTimezone: 'Asia/Ho_Chi_Minh',
   contact: null,
   version: 2,
+  limitsVersion: 1,
   limits: {
     maxEvents: null,
     maxStaff: 5,
@@ -50,8 +52,16 @@ describe('platform mutate zone', () => {
     assert.equal(view.kind, 'ok');
     if (view.kind === 'ok') {
       assert.equal(view.detail.version, 2);
+      assert.equal(view.detail.limitsVersion, 1);
+      assert.equal(platformLimitsBody(view.detail, view.detail.limits, view.detail.flags, 'ops').expectedVersion, 1);
       assert.equal(view.detail.flags.exportsEnabled, false);
     }
+  });
+
+  it('fails closed when an older server omits the limits version', () => {
+    const { limitsVersion: _missing, ...oldDetail } = DETAIL_SAMPLE;
+    assert.equal(interpretPlatformTenantDetail(200, oldDetail, false).kind, 'unknown');
+    assert.equal(interpretPlatformTenantDetail(200, { ...DETAIL_SAMPLE, limitsVersion: 0 }, false).kind, 'unknown');
   });
 
   it('interpretPlatformMutationOk treats 200 as ok', () => {

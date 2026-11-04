@@ -3594,7 +3594,14 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformTenantDetailDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -8914,6 +8921,108 @@
           "ticketId",
           "state",
           "replayed"
+        ]
+      },
+      "PlatformTenantLimitsDto": {
+        "type": "object",
+        "properties": {
+          "maxEvents": {
+            "type": "number",
+            "nullable": true
+          },
+          "maxStaff": {
+            "type": "number",
+            "nullable": true
+          },
+          "emailPerDay": {
+            "type": "number",
+            "nullable": true
+          },
+          "importRowsPerJob": {
+            "type": "number",
+            "nullable": true
+          }
+        },
+        "required": [
+          "maxEvents",
+          "maxStaff",
+          "emailPerDay",
+          "importRowsPerJob"
+        ]
+      },
+      "PlatformTenantFlagsDto": {
+        "type": "object",
+        "properties": {
+          "importsEnabled": {
+            "type": "boolean"
+          },
+          "exportsEnabled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "importsEnabled",
+          "exportsEnabled"
+        ]
+      },
+      "PlatformTenantDetailDto": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "ACTIVE",
+              "SUSPENDED"
+            ]
+          },
+          "defaultTimezone": {
+            "type": "string"
+          },
+          "contact": {
+            "type": "string",
+            "nullable": true
+          },
+          "version": {
+            "type": "number",
+            "description": "Tenant status and profile version"
+          },
+          "limitsVersion": {
+            "type": "number",
+            "description": "Independent limits and flags version"
+          },
+          "limits": {
+            "$ref": "#/components/schemas/PlatformTenantLimitsDto"
+          },
+          "flags": {
+            "$ref": "#/components/schemas/PlatformTenantFlagsDto"
+          },
+          "usage": {
+            "$ref": "#/components/schemas/PlatformTenantUsageDto"
+          }
+        },
+        "required": [
+          "tenantId",
+          "slug",
+          "name",
+          "status",
+          "defaultTimezone",
+          "contact",
+          "version",
+          "limitsVersion",
+          "limits",
+          "flags",
+          "usage"
         ]
       }
     }

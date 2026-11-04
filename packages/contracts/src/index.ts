@@ -678,6 +678,8 @@ export interface PlatformTenantDetail {
   defaultTimezone: string;
   contact: string | null;
   version: number;
+  /** Optimistic concurrency version for limits and flags, independent of tenant version. */
+  limitsVersion: number;
   limits: TenantLimitsDto;
   flags: TenantFlagsDto;
   usage: {
