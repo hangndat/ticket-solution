@@ -209,6 +209,61 @@ function countingTicketEmailAdapter() {
   };
 }
 
+async function cleanupAll(steps, failure) {
+  const errors = [];
+  for (const [name, cleanup] of steps) {
+    try {
+      await cleanup();
+    } catch (error) {
+      errors.push(new Error(`cleanup ${name} failed`, { cause: error }));
+    }
+  }
+  if (errors.length && failure) {
+    throw new AggregateError(
+      [failure.error, ...errors],
+      'test and cleanup failed',
+    );
+  }
+  if (errors.length) throw new AggregateError(errors, 'cleanup failed');
+  if (failure) throw failure.error;
+}
+
+test('[JOB-02] R lease fence cleanup attempts every owned resource and preserves errors', async () => {
+  const names = ['workerA', 'workerB', 'stall', 'db', 'mail', 'redis', 'pg'];
+  for (const failing of names) {
+    const calls = [];
+    const original = new Error('original assertion');
+    const injected = new Error(`injected ${failing}`);
+    const steps = names.map((name) => [
+      name,
+      async () => {
+        calls.push(name);
+        if (name === failing) throw injected;
+      },
+    ]);
+    await assert.rejects(
+      cleanupAll(steps, { error: original }),
+      (error) =>
+        error instanceof AggregateError &&
+        error.errors[0] === original &&
+        error.errors[1].cause === injected &&
+        error.errors[1].message.includes(failing),
+    );
+    assert.deepEqual(calls, names);
+    await assert.rejects(
+      cleanupAll(steps),
+      (error) =>
+        error instanceof AggregateError && error.errors[0].cause === injected,
+    );
+  }
+  const original = new Error('original only');
+  await assert.rejects(
+    cleanupAll([], { error: original }),
+    (error) => error === original,
+  );
+  await cleanupAll([]);
+});
+
 test(
   '[JOB-02] R lease fence: kill worker after claim, reclaim, stale ack fenced',
   { timeout: 300000 },
@@ -220,6 +275,7 @@ test(
     let db;
     let workerA;
     let workerB;
+    let failure;
     try {
       pg = await startPostgres();
       mail = await startMailpit();
@@ -381,14 +437,63 @@ test(
         1,
         'still one logical email',
       );
+    } catch (error) {
+      failure = { error };
     } finally {
-      if (workerA && workerA.exitCode === null) workerA.kill('SIGKILL');
-      if (workerB && workerB.exitCode === null) workerB.kill('SIGKILL');
-      if (stall) stall.close();
-      if (db) await db.$disconnect();
-      if (mail) docker('rm', '-f', mail.name);
-      if (redis) redis.stop();
-      if (pg) pg.stop();
+      await cleanupAll(
+        [
+          [
+            'workerA',
+            () => {
+              if (
+                workerA &&
+                workerA.exitCode === null &&
+                workerA.signalCode === null &&
+                !workerA.kill('SIGKILL')
+              )
+                throw new Error('worker A kill failed');
+            },
+          ],
+          [
+            'workerB',
+            () => {
+              if (
+                workerB &&
+                workerB.exitCode === null &&
+                workerB.signalCode === null &&
+                !workerB.kill('SIGKILL')
+              )
+                throw new Error('worker B kill failed');
+            },
+          ],
+          [
+            'stall',
+            () => {
+              if (stall) stall.close();
+            },
+          ],
+          ['db', () => db?.$disconnect()],
+          [
+            'mail',
+            () => {
+              if (mail) docker('rm', '-f', mail.name);
+            },
+          ],
+          [
+            'redis',
+            () => {
+              if (redis) redis.stop();
+            },
+          ],
+          [
+            'pg',
+            () => {
+              if (pg) pg.stop();
+            },
+          ],
+        ],
+        failure,
+      );
     }
   },
 );
