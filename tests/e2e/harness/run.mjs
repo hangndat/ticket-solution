@@ -498,6 +498,9 @@ if (mode === 'list' || args.includes('--list')) {
       rawManifest.cases['PLAT-05'].data.unconfiguredPortalOrigin =
         state.origins.faultPortal;
     }
+    const gate06Clock = mode === 'http' && caseIds.length === 1 && caseIds[0] === 'GATE-06'
+      ? Date.now() : null;
+    if (gate06Clock !== null) rawManifest.runtime.gate06ClockMs = gate06Clock;
     privateJson(state.manifestPath, rawManifest);
     validateManifest(rawManifest, {
       requiredCaseIds: caseIds,
@@ -568,6 +571,10 @@ if (mode === 'list' || args.includes('--list')) {
       {
         ...common,
         PORT: String(state.ports.api),
+        ...(gate06Clock !== null ? {
+          NODE_OPTIONS: `${common.NODE_OPTIONS} --require ${resolve(E2E, 'harness/gate06-clock-preload.cjs')}`,
+          E2E_GATE06_CLOCK_MS: String(gate06Clock),
+        } : {}),
         ...(diagnostic
           ? {
               NODE_OPTIONS: `${common.NODE_OPTIONS} --require ${resolve(E2E, 'harness/public-read-observer.cjs')}`,
