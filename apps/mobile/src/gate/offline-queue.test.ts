@@ -8,6 +8,7 @@ import {
 } from './offline-queue.ts';
 import { createMemoryOfflineQueueStore, type StoredOfflineScan } from './offline-queue-types.ts';
 import { buildDeviceScanHistory } from './staff-gate-device-history.ts';
+import { planOfflineReplay } from './offline-replay-plan.ts';
 import {
   OFFLINE_SYNC_ERROR_CODES,
   compareOfflineReplayOrder,
@@ -455,6 +456,37 @@ test('replay order comparator matches contract', () => {
     clientEventId: 'a',
   };
   assert.ok(compareOfflineReplayOrder(b, a) < 0);
+});
+
+test('replay plan preserves event and tenant/session boundaries with 50-item batches', () => {
+  const base = {
+    clientEventId: 'base', type: 'CHECKIN_OFFLINE' as const,
+    eventId, ticketId, tenantId, staffSessionId,
+    clientOccurredAt: '2026-10-17T08:00:00.000Z', clientSeq: 0,
+    payloadVersion: 1 as const, localStatus: 'pending' as const,
+  };
+  const eventB = 'event-b';
+  const tenantB = 'tenant-b';
+  const sessionB = 'session-b';
+  const first = { ...base, clientEventId: 'first', clientSeq: 51 };
+  const pending = [
+    first,
+    { ...base, eventId: eventB, clientEventId: 'other-event' },
+    { ...base, tenantId: tenantB, clientEventId: 'other-tenant' },
+    { ...base, staffSessionId: sessionB, clientEventId: 'other-session' },
+    ...Array.from({ length: 51 }, (_, index) => ({
+      ...base, clientEventId: `item-${index}`, clientSeq: 50 - index,
+    })),
+  ];
+  const plan = planOfflineReplay(pending);
+  assert.deepEqual([...plan.keys()], [eventId, eventB]);
+  const eventChunks = plan.get(eventId)!;
+  assert.deepEqual(eventChunks.map((chunk) => chunk.length), [50, 2, 1, 1]);
+  assert.equal(eventChunks[0]?.[0]?.clientEventId, 'item-50');
+  assert.equal(eventChunks[1]?.[1]?.clientEventId, 'first');
+  assert.equal(eventChunks[2]?.[0]?.tenantId, tenantB);
+  assert.equal(eventChunks[3]?.[0]?.staffSessionId, sessionB);
+  assert.equal(plan.get(eventB)?.[0]?.[0]?.clientEventId, 'other-event');
 });
 
 function deferred<T>(): {
