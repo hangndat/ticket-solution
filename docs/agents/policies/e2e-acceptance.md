@@ -48,7 +48,7 @@ Không đặt `high` mặc định cho PR test dưới 100 dòng.
 
 Việc thuộc lane pool, CI runner, Chromium/Playwright, Docker, dung lượng đĩa, Keycloak/Mailpit
 fixture **không** tính vào issue domain. Mở/đính vào issue hạ tầng riêng.
-Nhánh đặt tên `e2e-infra-*`, không đặt `f04-*`.
+Nhánh đặt tên `e2e-infra-*`, không đặt `f04-*`. Issue hạ tầng: **#1220**.
 
 Lý do: các PR `ci-diagnosis`, `gate-dh-salvage`, `chromium-diagnostic`, `codex-luna-fallback`,
 `e2e-lane-fixes`, `e2e-lane-pool` đang làm số liệu F04 trông như đang chạy mà AC không nhúc nhích.
