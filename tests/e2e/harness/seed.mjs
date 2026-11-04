@@ -379,6 +379,44 @@ export async function seedRuntime(state, caseIds) {
             permissions: backend.eventPermissionsForRole(role),
           });
         }
+        if (caseId === 'SEC-01') {
+          const secondEventId = randomUUID();
+          await tx.event.create({ data: {
+            tenantId, id: secondEventId, slug: 'second-event',
+            name: `SEC01 second ${state.id}`, status: 'PUBLISHED',
+          } });
+          await backend.grantEventAssignment(tx, {
+            tenantId, eventId: secondEventId,
+            membershipId: memberships.manager.membershipId,
+            permissions: backend.eventPermissionsForRole('Manager'),
+          });
+          await backend.grantEventAssignment(tx, {
+            tenantId, eventId: secondEventId,
+            membershipId: memberships.scanner.membershipId,
+            permissions: backend.eventPermissionsForRole('Scanner'),
+          });
+          const secondCode = `E2E-${state.id}-SEC-01-SECOND`;
+          const secondInventory = await backend.seedEventInventory(tx, hmac, {
+            tenantId, eventId: secondEventId, eventQuota: 100, rawCodes: [secondCode],
+            ticketTypeLabel: 'E2E Second', sourceName: 'E2E Second',
+          });
+          await backend.attachCodeRoutingOnInsert(tx, {
+            peppers: [hmac], fpSecret: state.secrets.hmac, tenantId, eventId: secondEventId,
+            redemptionCodeId: secondInventory.codeIds[0], rawCode: secondCode,
+            codeStatus: 'AVAILABLE', insertPepperVersion: 1,
+            insertHmac: backend.hashRedemptionCode(hmac, secondCode),
+          });
+          const secondConfig = await backend.saveEventConfigVersion(tx, {
+            tenantId, eventId: secondEventId, actorUserId: accounts.manager.userId,
+            payload: eventPayload(`Tenant ${caseId}`, `Second ${caseId}`),
+          });
+          await backend.publishEventConfig(tx, {
+            tenantId, eventId: secondEventId, actorUserId: accounts.manager.userId,
+            expectedVersion: secondConfig.version,
+          });
+          fixture.data.secondEventId = secondEventId;
+          fixture.data.secondEventCode = secondCode;
+        }
         if (caseId === 'PORT-07') {
           // Fixture-only gate panel reader: Portal nav (report.read) + list API
           // (gate.confirm) without event.update — not a production role preset.
@@ -2677,6 +2715,36 @@ export async function seedRuntime(state, caseIds) {
               tenantId: foreignTenantId, eventId: foreignEventId, membershipId: member.membershipId,
               permissions: backend.eventPermissionsForRole('Manager'),
             });
+          }
+          if (caseId === 'SEC-01') {
+            const scanner = await backend.grantMembership(tx, {
+              tenantId: foreignTenantId, userId: accounts.scanner.userId, role: 'Scanner',
+              permissions: backend.tenantPermissionsForRole('Scanner'),
+            });
+            await backend.grantEventAssignment(tx, {
+              tenantId: foreignTenantId, eventId: foreignEventId, membershipId: scanner.membershipId,
+              permissions: backend.eventPermissionsForRole('Scanner'),
+            });
+            const foreignCode = `E2E-${state.id}-SEC-01-FOREIGN`;
+            const inventory = await backend.seedEventInventory(tx, hmac, {
+              tenantId: foreignTenantId, eventId: foreignEventId, eventQuota: 100,
+              rawCodes: [foreignCode], ticketTypeLabel: 'E2E Foreign', sourceName: 'E2E Foreign',
+            });
+            await backend.attachCodeRoutingOnInsert(tx, {
+              peppers: [hmac], fpSecret: state.secrets.hmac, tenantId: foreignTenantId,
+              eventId: foreignEventId, redemptionCodeId: inventory.codeIds[0], rawCode: foreignCode,
+              codeStatus: 'AVAILABLE', insertPepperVersion: 1,
+              insertHmac: backend.hashRedemptionCode(hmac, foreignCode),
+            });
+            const saved = await backend.saveEventConfigVersion(tx, {
+              tenantId: foreignTenantId, eventId: foreignEventId, actorUserId: accounts.manager.userId,
+              payload: eventPayload(`Foreign SEC-01`, `Foreign SEC-01`),
+            });
+            await backend.publishEventConfig(tx, {
+              tenantId: foreignTenantId, eventId: foreignEventId,
+              actorUserId: accounts.manager.userId, expectedVersion: saved.version,
+            });
+            fixture.data.foreignCode = foreignCode;
           }
         });
         fixture.data.foreignTenantId = foreignTenantId;
