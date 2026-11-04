@@ -2702,6 +2702,12 @@ for (const caseId of CASE_IDS) {
       assert.ok(secondCsv.includes('ownerEmailMasked') && secondCsv.includes(secondTicketId));
       assert.ok(!ownCsv.includes(foreignTicketId) && !ownCsv.includes(secondTicketId));
       assert.ok(!foreignCsv.includes(ticketId) && !secondCsv.includes(ticketId));
+      assert.ok(!foreignCsv.includes(secondTicketId) && !secondCsv.includes(foreignTicketId));
+      for (const [csv, expectedTicket] of [[ownCsv, ticketId], [foreignCsv, foreignTicketId], [secondCsv, secondTicketId]]) {
+        const lines = csv.trim().split(/\r?\n/);
+        assert.equal(lines[0], 'ticketId,state,ticketTypeId,sourceId,createdAt,ownerEmailMasked');
+        assert.ok(lines.slice(1).some((line) => line.split(',')[0] === expectedTicket), 'CSV must contain the scoped ticket row');
+      }
       expectStatus(await request(ctx, 'GET', `/me/tickets/${ticketId}?tenantId=${f.tenantId}`, attendee), 200);
       const operation = `/operations/${operationKey}?tenantId=${f.tenantId}&eventId=${f.eventId}`;
       expectStatus(await request(ctx, 'GET', operation, attendee), 200);
@@ -2709,7 +2715,8 @@ for (const caseId of CASE_IDS) {
         (SELECT md5(coalesce(jsonb_agg(to_jsonb(t) ORDER BY t.id), '[]')::text) FROM gates t WHERE tenant_id=$1::uuid AND event_id=$2::uuid) AS gates,
         (SELECT md5(coalesce(jsonb_agg(to_jsonb(t) ORDER BY t.id), '[]')::text) FROM exports t WHERE tenant_id=$1::uuid AND event_id=$2::uuid) AS exports,
         (SELECT md5(coalesce(jsonb_agg(to_jsonb(t) ORDER BY t.id), '[]')::text) FROM tickets t WHERE tenant_id=$1::uuid AND event_id=$2::uuid) AS tickets,
-        (SELECT md5(coalesce(jsonb_agg(to_jsonb(t) ORDER BY t.id), '[]')::text) FROM operations t WHERE tenant_id=$1::uuid AND event_id=$2::uuid) AS operations`, [tenantId, eventId]);
+        (SELECT md5(coalesce(jsonb_agg(to_jsonb(t) ORDER BY t.id), '[]')::text) FROM operations t WHERE tenant_id=$1::uuid AND event_id=$2::uuid) AS operations,
+        (SELECT md5(coalesce(jsonb_agg(to_jsonb(t) ORDER BY t.id), '[]')::text) FROM audit_logs t WHERE tenant_id=$1::uuid AND event_id=$2::uuid) AS audit_logs`, [tenantId, eventId]);
       const snapshots = () => Promise.all([snapshot(f.tenantId, f.eventId), snapshot(f.tenantId, secondEventId), snapshot(foreignTenantId, foreignEventId)]);
       const before = await snapshots();
       const denyScoped = (result) => {
@@ -2719,7 +2726,9 @@ for (const caseId of CASE_IDS) {
           assert.equal(Object.hasOwn(result.body, field), false, `denial must not contain ${field}`);
         }
         const body = JSON.stringify(result.body);
-        for (const marker of [ticketId, foreignTicketId, secondTicketId, secondGateName, gateName, f.accounts.attendee.username]) {
+        for (const marker of [ticketId, foreignTicketId, secondTicketId, secondGateName, gateName,
+          required(f.accounts.attendee.username, 'SEC-01 attendee marker'),
+          required(f.accounts.otherAttendee.username, 'SEC-01 other attendee marker')]) {
           assert.ok(!body.includes(marker), 'denial must not expose a protected marker');
         }
       };
