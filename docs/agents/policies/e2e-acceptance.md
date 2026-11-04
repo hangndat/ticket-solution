@@ -69,11 +69,20 @@ Bổ sung một quy tắc mới:
 
 ## 6. Ngân sách và tracking
 
-- `company/work-events.jsonl` append-only, không được đứt. Dispatch phải đi qua
-  `pnpm agent:workflow` để receipt tự ghi; gọi tay Orca bỏ qua wrapper là nguồn gây đứt.
-  Khi phát hiện khoảng đứt, ghi một bản ghi `type: "checkpoint"` (loại hợp lệ duy nhất cho
-  việc này theo `scripts/company-worklog.mjs`) nêu rõ khoảng thời gian và nguyên nhân;
-  **không** dựng lại sự kiện đã mất.
+- `company/work-events.jsonl` append-only, không được đứt. **Nguyên nhân đứt thật sự không phải
+  là thiếu ghi mà là thiếu commit:** `appendEvent` ghi vào working tree của worktree đang chạy,
+  nên receipt nằm lại đó cho tới khi có người commit. Rà soát 04/11/2026 tìm thấy 137 receipt
+  kẹt trong 7 worktree, khoảng 01/11 → 04/11.
+  - Coordinator **commit `company/work-events.jsonl` cuối mỗi wave**, không chờ PR của task.
+  - Worktree bị xoá trước khi commit = receipt mất vĩnh viễn. Kiểm `git status -- company/`
+    trước mọi `worktree remove`.
+  - Khi phát hiện khoảng đứt: gom từ các worktree còn sống, dedupe theo `id`, nối cuối file theo
+    `occurredAt` (giữ nguyên thứ tự lịch sử cũ — diff phải là `+N/-0`), rồi chạy `validateJournal`.
+    **Không** dựng lại sự kiện không tìm thấy trên đĩa. Nếu cần đánh dấu khoảng mất, dùng
+    `type: "checkpoint"` — loại hợp lệ duy nhất cho việc này theo `scripts/company-worklog.mjs`.
+- Evidence review (`docs/reviews/*.md`) phải được commit trong cùng PR tạo ra nó. Rà soát
+  04/11/2026 tìm thấy 11 báo cáo review ở trạng thái untracked trong worktree `*-review` của
+  các PR đã merge — review có làm, evidence không vào record.
 - Coordinator đặt trần số PR/ngày cho mỗi domain và báo cáo
   `accepted/scoped` sau mỗi wave. Hai wave liên tiếp mà `accepted` không tăng ⇒ dừng dispatch,
   đưa domain ra roadmap review thay vì chạy tiếp.
