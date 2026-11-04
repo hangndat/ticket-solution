@@ -2,6 +2,8 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { randomUUID } = require('node:crypto');
+const { readFileSync } = require('node:fs');
+const path = require('node:path');
 const { Client } = require('../../../packages/backend/node_modules/pg');
 const {
   createDatabase,
@@ -24,6 +26,290 @@ const env = {
     },
   ]),
 };
+
+test(
+  '[POL-01] previous worker runs after forward migration without data or access changes',
+  { timeout: 240000 },
+  async () => {
+    const migration = '202611040001_pol01_deadline_boundary';
+    const pg = await startPostgres({ excludeMigration: migration });
+    const db = createDatabase(pg.url, 4);
+    const admin = new Client({ connectionString: pg.adminUrl });
+    try {
+      await admin.connect();
+      const users = createPrismaIdentityUserRepository(db, { env });
+      const subject = randomUUID();
+      const user = await users.upsertFromVerifiedIdentity({
+        issuer,
+        subject,
+        email: `${subject}@example.test`,
+        emailVerified: true,
+      });
+      const ack = await createAccountDeletionRequest(db, {
+        userId: user.userId,
+        confirmation: true,
+      });
+      await admin.query(
+        `UPDATE account_deletion_requests SET requested_at = clock_timestamp() - interval '31 days',
+      idp_next_attempt_at = clock_timestamp() + interval '1 day' WHERE id = $1`,
+        [ack.requestId],
+      );
+      const snapshot = () =>
+        admin.query(
+          `SELECT to_jsonb(r) AS request, to_jsonb(u) AS account
+      FROM account_deletion_requests r JOIN users u ON u.id = r.user_id WHERE r.id = $1`,
+          [ack.requestId],
+        );
+      const before = (await snapshot()).rows;
+      assert.equal(before.length, 1);
+      const oldCount =
+        await db.$queryRaw`SELECT public.count_overdue_account_deletion_requests() AS n`;
+      assert.equal(oldCount[0].n, 1);
+      const oldDefinition = await admin.query(
+        `SELECT pg_get_functiondef('public.count_overdue_account_deletion_requests()'::regprocedure) AS definition`,
+      );
+      assert.match(
+        oldDefinition.rows[0].definition,
+        /requested_at < clock_timestamp\(\)/,
+      );
+      const missing = await admin.query(
+        `SELECT to_regprocedure('public.account_deletion_overdue_count_at(timestamptz)') IS NULL AS absent`,
+      );
+      assert.equal(missing.rows[0].absent, true);
+      const migrationSql = readFileSync(
+        path.join(
+          __dirname,
+          '../../../packages/backend/prisma/migrations',
+          migration,
+          'migration.sql',
+        ),
+        'utf8',
+      );
+      await admin.query('SET ROLE migration_owner');
+      try {
+        await admin.query(migrationSql);
+      } finally {
+        await admin.query('RESET ROLE');
+      }
+      assert.deepEqual(
+        (await snapshot()).rows,
+        before,
+        'forward migration preserves request and user',
+      );
+      const acl = await admin.query(`SELECT
+      has_function_privilege('ticket_runtime', 'public.count_overdue_account_deletion_requests()', 'EXECUTE') AS wrapper,
+      has_function_privilege('ticket_runtime', 'public.account_deletion_overdue_count_at(timestamptz)', 'EXECUTE') AS helper,
+      EXISTS (SELECT 1 FROM pg_proc p, LATERAL aclexplode(p.proacl) a
+        WHERE p.oid = 'public.account_deletion_overdue_count_at(timestamptz)'::regprocedure AND a.grantee = 0 AND a.privilege_type = 'EXECUTE') AS helper_public`);
+      assert.deepEqual(acl.rows[0], {
+        wrapper: true,
+        helper: false,
+        helper_public: false,
+      });
+      const metadata =
+        await admin.query(`SELECT p.proname, p.prosecdef, r.rolname AS owner,
+        p.proconfig, EXISTS (SELECT 1 FROM aclexplode(p.proacl) a WHERE a.grantee = 0 AND a.privilege_type = 'EXECUTE') AS public_execute
+        FROM pg_proc p JOIN pg_roles r ON r.oid = p.proowner
+        WHERE p.oid IN ('public.count_overdue_account_deletion_requests()'::regprocedure,
+          'public.account_deletion_overdue_count_at(timestamptz)'::regprocedure) ORDER BY p.proname`);
+      assert.equal(metadata.rows.length, 2);
+      for (const fn of metadata.rows) {
+        assert.equal(fn.prosecdef, true);
+        assert.equal(fn.owner, 'migration_owner');
+        assert.deepEqual(fn.proconfig, ['search_path=pg_catalog, public']);
+        assert.equal(fn.public_execute, false);
+      }
+      await assert.rejects(
+        db.$queryRaw`SELECT public.account_deletion_overdue_count_at(now())`,
+      );
+      const visible =
+        await db.$queryRaw`SELECT count(*)::int AS n FROM account_deletion_requests`;
+      assert.equal(visible[0].n, 0, 'runtime remains actorless under RLS');
+      // The previous application's worker source is unchanged by this PR; this
+      // calls its actual path and its existing no-argument metric signature.
+      const result = await processDueAccountAnonymizations(db, 10, {
+        env,
+        keyring: readTombstoneKeyring(env),
+        idp: null,
+        leaseOwner: `rollback-${randomUUID()}`,
+      });
+      assert.equal(result.scanned, 0);
+      assert.equal(result.slaOverdue, 1);
+      assert.deepEqual(
+        (await snapshot()).rows,
+        before,
+        'old worker leaves deferred request and account intact',
+      );
+    } finally {
+      await admin.end().catch(() => {});
+      await db.$disconnect().catch(() => {});
+      pg.stop();
+    }
+  },
+);
+
+test(
+  '[POL-01] overdue cutoff uses inclusive DB deadline and private clock',
+  { timeout: 240000 },
+  async () => {
+    const pg = await startPostgres();
+    const db = createDatabase(pg.url, 4);
+    const admin = new Client({ connectionString: pg.adminUrl });
+    try {
+      await admin.connect();
+      const users = createPrismaIdentityUserRepository(db, { env });
+      const subject = randomUUID();
+      const user = await users.upsertFromVerifiedIdentity({
+        issuer,
+        subject,
+        email: `${subject}@example.test`,
+        emailVerified: true,
+      });
+      const ack = await createAccountDeletionRequest(db, {
+        userId: user.userId,
+        confirmation: true,
+      });
+      await admin.query(
+        `UPDATE account_deletion_requests SET requested_at = '2026-01-01T00:00:00Z' WHERE id = $1`,
+        [ack.requestId],
+      );
+      const boundary = await admin.query(`SELECT
+      public.account_deletion_overdue_count_at('2026-01-30 23:59:59.999999+00') AS before,
+      public.account_deletion_overdue_count_at('2026-01-31 00:00:00+00') AS at,
+      public.account_deletion_overdue_count_at('2026-01-31 00:00:00.000001+00') AS after`);
+      assert.deepEqual(boundary.rows[0], { before: 0, at: 1, after: 1 });
+      const privileges = await admin.query(`SELECT
+      has_function_privilege('ticket_runtime', 'public.account_deletion_overdue_count_at(timestamptz)', 'EXECUTE') AS private_access,
+      has_function_privilege('ticket_runtime', 'public.count_overdue_account_deletion_requests()', 'EXECUTE') AS wrapper_access`);
+      assert.deepEqual(privileges.rows[0], {
+        private_access: false,
+        wrapper_access: true,
+      });
+      const runtimeCount =
+        await db.$queryRaw`SELECT public.count_overdue_account_deletion_requests() AS n`;
+      assert.equal(
+        runtimeCount[0].n,
+        1,
+        'wrapper uses real DB clock and sees overdue request under RLS',
+      );
+      await assert.rejects(
+        db.$queryRaw`SELECT public.account_deletion_overdue_count_at(now())`,
+      );
+
+      const result = await processDueAccountAnonymizations(db, 10, {
+        env,
+        keyring: readTombstoneKeyring(env),
+        idp: createFakeKeycloakErasureAdapter({
+          deleteUserBySubject: async () => ({ kind: 'DELETED' }),
+        }),
+        leaseOwner: `pol01-boundary-${randomUUID()}`,
+      });
+      assert.equal(result.completed, 1);
+      const terminal = await admin.query(
+        `SELECT state, requested_at = '2026-01-01T00:00:00Z'::timestamptz AS request_unchanged,
+      pg_applied_at > requested_at + interval '30 days' AS pg_late,
+      idp_deleted_at > requested_at + interval '30 days' AS idp_late,
+      public.account_deletion_overdue_count_at(idp_deleted_at) AS overdue
+      FROM account_deletion_requests WHERE id = $1`,
+        [ack.requestId],
+      );
+      assert.deepEqual(terminal.rows[0], {
+        state: 'COMPLETED',
+        request_unchanged: true,
+        pg_late: true,
+        idp_late: true,
+        overdue: 0,
+      });
+    } finally {
+      await admin.end().catch(() => {});
+      await db.$disconnect().catch(() => {});
+      pg.stop();
+    }
+  },
+);
+
+test(
+  '[POL-01] terminal timestamp fixtures preserve historical deadline evidence',
+  { timeout: 240000 },
+  async () => {
+    const pg = await startPostgres();
+    const db = createDatabase(pg.url, 4);
+    const admin = new Client({ connectionString: pg.adminUrl });
+    try {
+      await admin.connect();
+      const users = createPrismaIdentityUserRepository(db, { env });
+      const requests = [];
+      for (let i = 0; i < 5; i++) {
+        const subject = randomUUID();
+        const user = await users.upsertFromVerifiedIdentity({
+          issuer,
+          subject,
+          email: `${subject}@example.test`,
+          emailVerified: true,
+        });
+        const ack = await createAccountDeletionRequest(db, {
+          userId: user.userId,
+          confirmation: true,
+        });
+        requests.push(ack.requestId);
+      }
+      // Set request time while open; terminal timestamps below are synthetic DB
+      // fixtures, not a controlled production clock or execution of the finalizer.
+      await admin.query(
+        `UPDATE account_deletion_requests SET requested_at = '2026-01-01 00:00:00+00'
+      WHERE id = ANY($1::uuid[])`,
+        [requests],
+      );
+      for (const [index, pgOffset, idpOffset] of [
+        [0, -2, -1],
+        [1, -1, 0],
+        [2, -1, 1],
+        [3, 1, 2],
+      ]) {
+        await admin.query(
+          `UPDATE account_deletion_requests SET state = 'COMPLETED', idp_status = 'DELETED',
+        pg_applied_at = requested_at + interval '30 days' + $2::integer * interval '1 microsecond',
+        idp_deleted_at = requested_at + interval '30 days' + $3::integer * interval '1 microsecond',
+        original_issuer = NULL, original_subject = NULL WHERE id = $1 AND state = 'REQUESTED'`,
+          [requests[index], pgOffset, idpOffset],
+        );
+      }
+      const rows = await admin.query(
+        `SELECT id,
+      requested_at = '2026-01-01 00:00:00+00'::timestamptz AS request_unchanged,
+      pg_applied_at <= requested_at + interval '30 days' AS pg_on_time,
+      idp_deleted_at <= requested_at + interval '30 days' AS idp_on_time
+      FROM account_deletion_requests WHERE id = ANY($1::uuid[])`,
+        [requests.slice(0, 4)],
+      );
+      const byId = new Map(rows.rows.map(({ id, ...rest }) => [id, rest]));
+      assert.deepEqual(
+        requests.slice(0, 4).map((id) => byId.get(id)),
+        [
+          { request_unchanged: true, pg_on_time: true, idp_on_time: true },
+          { request_unchanged: true, pg_on_time: true, idp_on_time: true },
+          { request_unchanged: true, pg_on_time: true, idp_on_time: false },
+          { request_unchanged: true, pg_on_time: false, idp_on_time: false },
+        ],
+      );
+      const gauge = await admin.query(
+        `SELECT public.account_deletion_overdue_count_at('2026-01-31 00:00:00+00') AS n`,
+      );
+      assert.equal(
+        gauge.rows[0].n,
+        1,
+        'only the still-open positive control is counted',
+      );
+      const visible =
+        await db.$queryRaw`SELECT count(*)::int AS n FROM account_deletion_requests`;
+      assert.equal(visible[0].n, 0, 'runtime RLS still hides other actors');
+    } finally {
+      await admin.end().catch(() => {});
+      await db.$disconnect().catch(() => {});
+      pg.stop();
+    }
+  },
+);
 
 test(
   '[POL-01] account deletion crosses 30-day SLA boundary, retries IdP and retains tombstone',
@@ -71,7 +357,7 @@ test(
       const overdue =
         await admin.query(`SELECT count(*)::int AS n FROM account_deletion_requests
         WHERE state = 'REQUESTED' AND policy_version IS NOT NULL
-          AND requested_at < clock_timestamp() - interval '30 days'`);
+          AND requested_at <= clock_timestamp() - interval '30 days'`);
       assert.equal(
         overdue.rows[0].n,
         1,
@@ -80,7 +366,11 @@ test(
       const actorlessRows = await db.$queryRaw`
         SELECT count(*)::int AS n FROM account_deletion_requests
       `;
-      assert.equal(actorlessRows[0].n, 0, 'runtime still cannot read cross-actor rows');
+      assert.equal(
+        actorlessRows[0].n,
+        0,
+        'runtime still cannot read cross-actor rows',
+      );
       assert.equal(first.slaOverdue, overdue.rows[0].n);
       const pending = await admin.query(`SELECT id, state, pg_applied_at,
         subject_tombstone_digest FROM account_deletion_requests ORDER BY requested_at`);
@@ -175,7 +465,13 @@ test(
       await admin.query(
         `INSERT INTO event_attendees (tenant_id, event_id, id, user_id, canonical_email)
          VALUES ($1, $2, $3, $4, $5)`,
-        [tenantId, eventId, randomUUID(), user.userId, `${subject}@example.test`],
+        [
+          tenantId,
+          eventId,
+          randomUUID(),
+          user.userId,
+          `${subject}@example.test`,
+        ],
       );
       await admin.query(
         `INSERT INTO staff_sessions (tenant_id, event_id, id, user_id, status)
@@ -205,6 +501,22 @@ test(
         userId: user.userId,
         confirmation: true,
       });
+      const before = await admin.query(
+        `SELECT u.email, u.email_verified, u.subject,
+        (SELECT count(*)::int FROM device_tokens d WHERE d.user_id = u.id) AS devices,
+        (SELECT canonical_email FROM event_attendees a WHERE a.user_id = u.id) AS attendee_email,
+        (SELECT count(*)::int FROM audit_logs a WHERE a.id = $2) AS audits
+        FROM users u WHERE u.id = $1`,
+        [user.userId, auditId],
+      );
+      assert.deepEqual(before.rows[0], {
+        email: `${subject}@example.test`,
+        email_verified: true,
+        subject,
+        devices: 2,
+        attendee_email: `${subject}@example.test`,
+        audits: 1,
+      });
       const idp = createFakeKeycloakErasureAdapter({
         deleteUserBySubject: async () => ({ kind: 'DELETED' }),
       });
@@ -227,8 +539,14 @@ test(
       const row = req.rows[0];
       assert.equal(row.state, 'COMPLETED');
       const deadlineMs = row.requested_at.getTime() + 30 * 24 * 60 * 60 * 1000;
-      assert.ok(row.pg_applied_at.getTime() <= deadlineMs, 'pg_applied_at ≤ deadline');
-      assert.ok(row.idp_deleted_at.getTime() <= deadlineMs, 'idp_deleted_at ≤ deadline');
+      assert.ok(
+        row.pg_applied_at.getTime() <= deadlineMs,
+        'pg_applied_at ≤ deadline',
+      );
+      assert.ok(
+        row.idp_deleted_at.getTime() <= deadlineMs,
+        'idp_deleted_at ≤ deadline',
+      );
 
       // F02: field matrix — sensitive PII gone, minimal record retained.
       assert.equal(row.original_issuer, null);
