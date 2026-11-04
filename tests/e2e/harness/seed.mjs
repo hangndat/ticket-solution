@@ -292,6 +292,7 @@ export async function seedRuntime(state, caseIds) {
           'DB-17',
           'JOB-04',
           'JOB-07',
+          'SEC-01',
           'PLAT-03',
           'GATE-02',
           'GATE-05',
@@ -2667,7 +2668,7 @@ export async function seedRuntime(state, caseIds) {
               status: 'PUBLISHED',
             },
           });
-          if (caseId === 'JOB-07') {
+          if (caseId === 'JOB-07' || caseId === 'SEC-01') {
             const member = await backend.grantMembership(tx, {
               tenantId: foreignTenantId, userId: accounts.manager.userId, role: 'Manager',
               permissions: backend.tenantPermissionsForRole('Manager'),

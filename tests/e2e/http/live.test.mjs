@@ -2641,6 +2641,60 @@ for (const caseId of CASE_IDS) {
           owner,
         ),
       );
+      const foreign = { ...f, tenantId: foreignTenantId, eventId: foreignEventId };
+      const manager = await bearer(ctx, 'manager');
+      const attendee = await bearer(ctx, 'attendee');
+      const otherAttendee = await bearer(ctx, 'otherAttendee');
+      const ownGates = gatePath(f, 'gates');
+      const foreignGates = gatePath(foreign, 'gates');
+      const gateName = `SEC01 control ${randomUUID()}`;
+      expectStatus(await request(ctx, 'POST', foreignGates, manager, { tenantId: foreignTenantId, name: gateName }), 201);
+      expectStatus(await request(ctx, 'GET', `${ownGates}?tenantId=${f.tenantId}`, owner), 200);
+      const foreignList = await request(ctx, 'GET', `${foreignGates}?tenantId=${foreignTenantId}`, manager);
+      expectStatus(foreignList, 200);
+      assert.ok(JSON.stringify(foreignList.body).includes(gateName), 'foreign resource exists for the authorized actor');
+      const ownExports = `/tenants/${f.tenantId}/events/${f.eventId}/exports`;
+      const foreignExports = `/tenants/${foreignTenantId}/events/${foreignEventId}/exports`;
+      const createExport = (path, token) => request(ctx, 'POST', path, token,
+        { format: 'csv', filter: { states: ['ACTIVE'] } }, { 'idempotency-key': randomUUID() });
+      const ownExport = await createExport(ownExports, owner);
+      const foreignExport = await createExport(foreignExports, manager);
+      expectStatus(ownExport, 201);
+      expectStatus(foreignExport, 201);
+      const ownExportId = required(ownExport.body.exportId, 'SEC-01 own export');
+      const foreignExportId = required(foreignExport.body.exportId, 'SEC-01 foreign export');
+      await waitExportReady(ctx, f, owner, ownExportId);
+      await waitExportReady(ctx, foreign, manager, foreignExportId);
+      assert.ok((await downloadExportCsv(ctx, f, owner, ownExportId)).includes('ownerEmailMasked'));
+      assert.ok((await downloadExportCsv(ctx, foreign, manager, foreignExportId)).includes('ownerEmailMasked'));
+      const operationKey = randomUUID();
+      const issued = await request(ctx, 'POST', redemptionPath(f), attendee,
+        { code: f.code, formVersion: 'form-v1', termsVersion: 'terms-v1', answers: f.data.answers, termsAccepted: true },
+        { 'idempotency-key': operationKey });
+      expectStatus(issued, 201);
+      const ticketId = required(issued.body.ticketId, 'SEC-01 ticketId');
+      expectStatus(await request(ctx, 'GET', `/me/tickets/${ticketId}?tenantId=${f.tenantId}`, attendee), 200);
+      const operation = `/operations/${operationKey}?tenantId=${f.tenantId}&eventId=${f.eventId}`;
+      expectStatus(await request(ctx, 'GET', operation, attendee), 200);
+      const snapshot = async (tenantId, eventId) => web04Query(f, tenantId, `SELECT
+        (SELECT count(*)::int FROM gates WHERE tenant_id=$1::uuid AND event_id=$2::uuid) AS gates,
+        (SELECT count(*)::int FROM exports WHERE tenant_id=$1::uuid AND event_id=$2::uuid) AS exports,
+        (SELECT count(*)::int FROM tickets WHERE tenant_id=$1::uuid AND event_id=$2::uuid) AS tickets,
+        (SELECT count(*)::int FROM operations WHERE tenant_id=$1::uuid AND event_id=$2::uuid) AS operations`, [tenantId, eventId]);
+      const before = await Promise.all([snapshot(f.tenantId, f.eventId), snapshot(foreignTenantId, foreignEventId)]);
+      deny(await request(ctx, 'GET', `${foreignGates}?tenantId=${foreignTenantId}`, owner));
+      deny(await request(ctx, 'GET', `${foreignGates}?tenantId=${f.tenantId}`, owner));
+      deny(await request(ctx, 'POST', foreignGates, owner, { tenantId: foreignTenantId, name: `denied ${randomUUID()}` }));
+      deny(await createExport(foreignExports, owner));
+      deny(await request(ctx, 'GET', `${foreignExports}/${foreignExportId}`, owner));
+      deny(await request(ctx, 'GET', `${foreignExports}/${foreignExportId}/download`, owner));
+      deny(await request(ctx, 'GET', operation, otherAttendee));
+      deny(await request(ctx, 'GET', `/me/tickets/${ticketId}?tenantId=${f.tenantId}`, otherAttendee));
+      deny(await request(ctx, 'GET', `/me/tickets/${ticketId}?tenantId=${foreignTenantId}`, attendee));
+      deny(await request(ctx, 'GET', `/operations/${operationKey}?tenantId=${foreignTenantId}&eventId=${foreignEventId}`, attendee));
+      deny(await request(ctx, 'GET', `/operations/${operationKey}?tenantId=${f.tenantId}&eventId=${foreignEventId}`, attendee));
+      assert.deepEqual(await Promise.all([snapshot(f.tenantId, f.eventId), snapshot(foreignTenantId, foreignEventId)]), before,
+        'denied cross-scope requests do not change business rows');
       return;
     }
     if (caseId === 'SEC-02') {
