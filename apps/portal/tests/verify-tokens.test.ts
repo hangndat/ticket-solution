@@ -213,9 +213,10 @@ test('rejects wrong nonce, issuer, audience, signature, expired, subject mismatc
   );
 });
 
-test('platform access requires exact ACR string and fresh auth_time (default 900s)', async () => {
+test('platform access requires exact ACR string and fresh auth_time (default 900s)', async (t) => {
   const { privateKey, jwks } = await testKeys();
   const now = Math.floor(Date.now() / 1000);
+  t.mock.method(Date, 'now', () => now * 1000);
   const ok = await signAccess(privateKey, {
     sub: 'ops-1',
     aud: PLATFORM_AUD,
@@ -231,6 +232,16 @@ test('platform access requires exact ACR string and fresh auth_time (default 900
     platform: { requiredAcr: '2', maxAuthAgeSeconds: 900 },
   });
   assert.equal(verified.subject, 'ops-1');
+
+  // Pin the verifier clock so the inclusive boundary cannot race a second tick.
+  const boundary = await signAccess(privateKey, {
+    sub: 'ops-1', aud: PLATFORM_AUD, azp: PLATFORM_CLIENT,
+    acr: '2', auth_time: now - 900,
+  });
+  assert.equal((await verifyAccessToken(boundary, {
+    issuer: ISSUER, audience: PLATFORM_AUD, clientId: PLATFORM_CLIENT, jwks,
+    platform: { requiredAcr: '2', maxAuthAgeSeconds: 900 },
+  })).subject, 'ops-1');
 
   const wrongAcr = await signAccess(privateKey, {
     sub: 'ops-1',

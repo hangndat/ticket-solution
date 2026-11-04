@@ -399,6 +399,10 @@ function realmConfig(state, caseIds) {
         client.attributes['access.token.lifespan'] = '300';
       if (client.clientId === 'ticket-web-short')
         client.attributes['access.token.lifespan'] = '20';
+      // Isolated PLAT-01 realm: keep the actual Keycloak token valid past the
+      // MFA age boundary so token expiry cannot masquerade as step-up denial.
+      if (isPlatform && isIsolatedPlatformStepUp(caseIds))
+        client.attributes['access.token.lifespan'] = '1800';
       if (isPlatform) {
         client.authenticationFlowBindingOverrides = { browser: mfaFlowId };
         client.defaultClientScopes = [
@@ -511,6 +515,10 @@ function realmConfig(state, caseIds) {
   const realmPath = resolve(state.dir, 'realm.json');
   privateJson(realmPath, realm);
   return realmPath;
+}
+
+export function isIsolatedPlatformStepUp(caseIds) {
+  return caseIds.length === 1 && caseIds[0] === 'PLAT-01';
 }
 
 // Second, fully independent realm (own signing keypair) supplies a real token
@@ -729,9 +737,11 @@ function startProxy(state) {
       if (
         state.faultControlPath &&
         existsSync(state.faultControlPath) &&
-        ((route === 'api' && (state.faultPaths?.includes(reqPath) ||
-          reqPath.startsWith('/v1/operations/'))) ||
-          (route === 'auth' && req.method === 'DELETE' &&
+        ((route === 'api' &&
+          (state.faultPaths?.includes(reqPath) ||
+            reqPath.startsWith('/v1/operations/'))) ||
+          (route === 'auth' &&
+            req.method === 'DELETE' &&
             reqPath.startsWith(`/admin/realms/${state.realm}/users/`)))
       ) {
         let fault;
@@ -742,8 +752,11 @@ function startProxy(state) {
         }
         if (fault?.ownerRunId === state.id) {
           if (route === 'api') faultMode = fault.routes?.[reqPath];
-          if (route === 'auth' && fault.idpDelete?.path === reqPath &&
-              fault.idpDelete?.mode === 'unavailable') {
+          if (
+            route === 'auth' &&
+            fault.idpDelete?.path === reqPath &&
+            fault.idpDelete?.mode === 'unavailable'
+          ) {
             privateJson(state.idpFaultHitPath, { observed: true });
             faultMode = 'unavailable';
           }
@@ -1035,7 +1048,9 @@ function bootstrapMinio(state) {
       ],
       {
         env: { ...process.env, MC_HOST_e2e: host(identity) },
-        input: options.policyPath ? readFileSync(options.policyPath) : options.input,
+        input: options.policyPath
+          ? readFileSync(options.policyPath)
+          : options.input,
         stdio: ['pipe', 'pipe', 'pipe'],
       },
     );
