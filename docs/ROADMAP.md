@@ -14,7 +14,7 @@ Ngày đối chiếu tài liệu: **03/11/2026**. Đây là bản đồ scope/ga
 - **O23:** Gate scan/nhập tay/admission/offline Gate chỉ iOS Staff. Portal chỉ đọc báo cáo; attendee web/iOS chỉ hiển thị vé. Không khôi phục Web Gate từ bảng D3/D6 lịch sử.
 - **O25–O28 / #914:** sản phẩm cốt lõi/UX theo [roadmap #914](plans/VEMOKI-CORE-UX-ROADMAP-2026-10-26.md). #914 đã được ghi nhận đóng với known gap chưa pilot-ready tại checkpoint; không tự reopen để làm Pilot.
 - **Pilot/UAT #1008:** phạm vi riêng theo [catalog](plans/PROD-LAUNCH-UAT.md). Chỉ chạy launch-uat khi Task authorize; đóng #914 không cấp quyền hoặc chứng minh pilot ready.
-- **F04 #1029–#1037:** E2E local theo [acceptance matrix](../tests/e2e/ACCEPTANCE.md) và [plan](../tests/e2e/PLAN.md). Không chép số PASS/BLOCKED theo SHA cũ thành tình trạng hôm nay.
+- **F04 #1029–#1037:** E2E local theo [acceptance matrix](../tests/e2e/ACCEPTANCE.md) và [plan](../tests/e2e/PLAN.md). `pnpm e2e:f04-status` báo hợp ID có evidence lịch sử đã review và evidence hiện tại; tiến độ này trải trên nhiều SHA, không phải full regression trên HEAD. Không chép số PASS/BLOCKED theo SHA cũ thành tình trạng hôm nay.
 - **D13 #301/#310:** [kế hoạch App Store](plans/D13-APP-STORE-RELEASE-PLAN.md); submit/release theo approval riêng và mandatory gates, không EAS Cloud Build.
 - **O33:** VoiceOver, Dynamic Type và WCAG UAT được waive khỏi gate MVP/pilot, không phải known gap và không chặn các Epic đã được quyết định. Mục tiêu thiết kế accessibility không tự tạo lại gate.
 - **Non-goals MVP:** Android native; payment/refund/chuyển nhượng; seat map; Apple/Google Wallet. Không mở scope mới từ research/prototype.
