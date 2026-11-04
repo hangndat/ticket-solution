@@ -1,8 +1,9 @@
 # E2E acceptance — chống vòng lặp không hội tụ (F04)
 
 Áp dụng cho mọi đợt nghiệm thu E2E theo `tests/e2e/PLAN.md` (hiện tại: F04, issue #1029–#1037).
-Ra đời sau rà soát 04/11/2026: 128 PR `f04-*` đã merge trong 5 ngày mà tiến độ nghiệm thu
-vẫn là 0/85 AC, vì không có thước đo dừng và hạt PR quá nhỏ.
+Ra đời sau rà soát 04/11/2026: 128 PR `f04-*` đã merge trong 5 ngày mà ledger mới chưa ghi nhận
+evidence, dù ACCEPTANCE.md lưu 56 nghiệm thu tích hợp lịch sử. Không được diễn giải thiếu ledger
+lịch sử là `0/85` tiến độ thực hoặc coi các verdict lịch sử là regression mới trên HEAD.
 
 ## 1. Thước đo bắt buộc
 
@@ -10,12 +11,25 @@ Nguồn duy nhất: `pnpm e2e:f04-status`.
 
 - `tests/e2e/coverage.mjs` cho **source coverage** (`implemented` / `covered` / `blocked` / `out`).
   Coverage **không** phải PASS; một selector đã map không chứng minh AC.
-- `tests/e2e/f04-ledger.json` cho **nghiệm thu thật**. Chỉ `accepted: true` khi AC chạy đủ
-  lớp B/H/D/R mà PLAN yêu cầu, trên checkout sạch ở đúng SHA, có run ID. Ghi kèm `sha` + `run`.
+- `tests/e2e/f04-ledger.json` là registry evidence. Entry cấp cao nhất là evidence mới: chỉ ghi
+  `accepted: true` khi AC chạy đủ lớp theo PLAN hiện hành trên checkout sạch, có tested SHA và
+  run ID. `_historical` là snapshot migration từ bảng nghiệm thu trong ACCEPTANCE.md, giữ nguồn,
+  merge SHA (`integrationSha`), lớp, links và run/evidence nguyên văn. Merge SHA không phải tested
+  SHA; chỉ lưu `testedSHA` khi nguồn nêu rõ. Không sửa, xóa hoặc nâng verdict lịch sử thành kết quả
+  regression trên HEAD.
+- `accepted` trong đầu ra là hợp ID scoped có evidence lịch sử hoặc evidence mới. ID trùng tính một
+  lần; báo riêng `historicalAccepted`, `currentEvidence` và `remaining`. Đây là tiến độ tích lũy
+  trên nhiều SHA, không phải full regression hiện tại. Reject ID không biết, ID OUT được tick,
+  record lịch sử trùng hoặc thiếu provenance để số liệu không thể inflate.
+- Migration registry được phép tái sử dụng evidence đã review, có provenance và đúng scope. Khi
+  source/diff thay đổi, chỉ rerun lớp bị ảnh hưởng hoặc còn thiếu theo rủi ro; không bắt đầu lại
+  toàn bộ ma trận chỉ để lấp ledger.
 - Body issue domain phải chứa checklist sinh bởi
   `node tests/e2e/f04-status.mjs --markdown --domain=<KEY>`. Cập nhật mỗi khi ledger đổi.
 
-Không mở dispatch E2E mới khi checklist của domain đó chưa được cập nhật ở lượt trước.
+Không mở dispatch E2E mới khi checklist của domain đó chưa được cập nhật ở lượt trước. Một PR cho
+acceptance mới vẫn đóng trọn một ID AC; công việc migration tracking là hạ tầng #1220, không tính
+là AC mới và không reset findings/review budgets hay hạ gate cho AC mới.
 
 ## 2. Hạt PR = một nhóm AC
 
