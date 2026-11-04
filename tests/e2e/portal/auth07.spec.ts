@@ -217,30 +217,51 @@ test('[AUTH-07] late real Keycloak refresh cannot replace a same-sub callback to
     const first = await bffGet(page, manifest, '/api/auth/identity?surface=staff');
     expect(first.status).toBe(200);
     const actorA = first.json as { actorId: string; authEpoch: string };
-    await page.goto(portalUrl(manifest, '/auth'));
+    // A JSON document has no PortalShell background identity requests.
+    await page.goto(portalUrl(manifest, '/api/auth/identity?surface=staff'));
     const oldAccessName = `oidc_access_token__${actorA.authEpoch}`;
     await context.addCookies([{ name: oldAccessName, value: 'expired', url: manifest.origins.portal,
       httpOnly: true, secure: true, sameSite: 'Lax' }]);
 
     let held = false;
+    let identityRequests = 0;
+    let probeError: unknown;
     await context.route('**/api/auth/identity?surface=staff', async (route) => {
-      if (held) { await route.continue(); return; }
+      identityRequests += 1;
+      const requestNumber = identityRequests;
+      const probe = route.request().headers()['x-e2e-auth07-probe'] === 'refresh';
+      const cookieHeader = (await route.request().allHeaders()).cookie ?? '';
+      const accessCookie = cookieHeader.split(';').map((part) => part.trim())
+        .find((part) => part.startsWith(`${oldAccessName}=`));
+      test.info().annotations.push({ type: 'auth07-identity-request', description:
+        `request=${requestNumber} time=${Date.now()} probe=${probe} accessPresent=${Boolean(accessCookie)} accessExpiredFixture=${accessCookie === `${oldAccessName}=expired`}` });
+      if (!probe || held) { await route.continue(); return; }
       held = true;
-      const upstream = await route.fetch();
-      expect(upstream.status()).toBe(200);
-      noStore(upstream.headers()['cache-control']);
-      const setCookie = upstream.headers()['set-cookie'] ?? '';
-      expect(setCookie).toContain(`${oldAccessName}=`);
-      expect(setCookie).not.toContain('portal_staff_epoch=');
-      fetched();
-      await released;
-      await route.fulfill({ response: upstream });
+      try {
+        expect(accessCookie === `${oldAccessName}=expired`, 'probe must send expired access cookie').toBe(true);
+        const upstream = await route.fetch();
+        const setCookie = upstream.headers()['set-cookie'] ?? '';
+        test.info().annotations.push({ type: 'auth07-refresh-probe', description:
+          `request=${requestNumber} time=${Date.now()} status=${upstream.status()} accessCookie=${setCookie.includes(`${oldAccessName}=`)} epochCookie=${setCookie.includes('portal_staff_epoch=')}` });
+        expect(upstream.status()).toBe(200);
+        noStore(upstream.headers()['cache-control']);
+        expect(setCookie).toContain(`${oldAccessName}=`);
+        expect(setCookie).not.toContain('portal_staff_epoch=');
+        fetched();
+        await released;
+        await route.fulfill({ response: upstream });
+      } catch (error) {
+        probeError = error;
+        fetched();
+        await route.abort().catch(() => {});
+      }
     });
     const late = page.evaluate(async () => {
-      const response = await fetch('/api/auth/identity?surface=staff', { cache: 'no-store' });
+      const response = await fetch('/api/auth/identity?surface=staff', { cache: 'no-store', headers: { 'x-e2e-auth07-probe': 'refresh' } });
       return response.status;
     });
     await ready;
+    if (probeError) { await late.catch(() => {}); throw probeError; }
 
     const switchPage = await context.newPage();
     await switchPage.goto(portalUrl(manifest, '/api/auth/logout'));
@@ -263,26 +284,39 @@ test('[AUTH-07] late real Keycloak refresh cannot replace a same-sub callback to
     expect(afterRelease.find((cookie) => cookie.name === 'portal_staff_epoch')?.value).toBe(actorB.authEpoch);
     expect((await bffGet(switchPage, manifest, '/api/auth/identity?surface=staff')).status).toBe(200);
 
+    await switchPage.goto(portalUrl(manifest, '/api/auth/identity?surface=staff'));
     await context.addCookies([{ name: newerAccessName, value: 'expired', url: manifest.origins.portal,
       httpOnly: true, secure: true, sameSite: 'Lax' }]);
     let fetchedLogout!: () => void;
     const logoutReleased = new Promise<void>((resolve) => { releaseLogout = resolve; });
     const logoutReady = new Promise<void>((resolve) => { fetchedLogout = resolve; });
     let heldLogout = false;
+    let logoutProbeError: unknown;
     await context.route('**/api/auth/identity?surface=staff', async (route) => {
-      if (heldLogout) { await route.continue(); return; }
+      if (route.request().headers()['x-e2e-auth07-probe'] !== 'logout' || heldLogout) { await route.continue(); return; }
       heldLogout = true;
-      const upstream = await route.fetch();
-      expect(upstream.status()).toBe(200);
-      noStore(upstream.headers()['cache-control']);
-      expect(upstream.headers()['set-cookie']).toContain(`${newerAccessName}=`);
-      fetchedLogout();
-      await logoutReleased;
-      await route.fulfill({ response: upstream });
+      try {
+        const cookieHeader = (await route.request().allHeaders()).cookie ?? '';
+        const accessCookie = cookieHeader.split(';').map((part) => part.trim())
+          .find((part) => part.startsWith(`${newerAccessName}=`));
+        expect(accessCookie === `${newerAccessName}=expired`, 'logout probe must send expired access cookie').toBe(true);
+        const upstream = await route.fetch();
+        expect(upstream.status()).toBe(200);
+        noStore(upstream.headers()['cache-control']);
+        expect(upstream.headers()['set-cookie']).toContain(`${newerAccessName}=`);
+        fetchedLogout();
+        await logoutReleased;
+        await route.fulfill({ response: upstream });
+      } catch (error) {
+        logoutProbeError = error;
+        fetchedLogout();
+        await route.abort().catch(() => {});
+      }
     });
     const lateLogout = page.evaluate(async () =>
-      (await fetch('/api/auth/identity?surface=staff', { cache: 'no-store' })).status);
+      (await fetch('/api/auth/identity?surface=staff', { cache: 'no-store', headers: { 'x-e2e-auth07-probe': 'logout' } })).status);
     await logoutReady;
+    if (logoutProbeError) { await lateLogout.catch(() => {}); throw logoutProbeError; }
     await switchPage.goto(portalUrl(manifest, '/api/auth/logout'));
     await switchPage.goto(portalUrl(manifest, '/auth'));
     const loggedOut = await context.cookies(manifest.origins.portal);
@@ -373,6 +407,18 @@ test('[AUTH-07] held staff CSV download cannot commit after platform login', asy
   const context = await browser.newContext();
   const staffPage = await context.newPage();
   const exportsPath = eventBff(fixture, '/exports');
+  const navigationEvents: string[] = [];
+  staffPage.on('framenavigated', (frame) => {
+    if (frame === staffPage.mainFrame()) {
+      const url = new URL(frame.url());
+      if (url.origin === new URL(manifest.origins.portal).origin)
+        navigationEvents.push(`navigation:${url.pathname}`);
+    }
+  });
+  staffPage.on('requestfailed', (request) => {
+    if (new URL(request.url()).pathname === exportsPath)
+      navigationEvents.push(`export-request-failed:${request.failure()?.errorText ?? 'unknown'}`);
+  });
   let release!: () => void;
   let fetched!: () => void;
   let routeSettled!: () => void;
@@ -381,6 +427,11 @@ test('[AUTH-07] held staff CSV download cannot commit after platform login', asy
   const settled = new Promise<void>((resolve) => { routeSettled = resolve; });
   try {
     await login(staffPage, manifest, 'AUTH-07', 'owner');
+    // The home page redirects asynchronously after discovery; wait for the
+    // actual audit route before issuing a fetch in this document's context.
+    await staffPage.goto(portalUrl(manifest, `${eventPath(fixture, '/audit')}#jobs`));
+    const input = staffPage.getByTestId('export-id-input');
+    await expect(input).toBeVisible();
     await expect.poll(() => staffPage.evaluate(() => document.cookie.includes('portal_csrf='))).toBe(true);
     const created = await bffMutate(staffPage, exportsPath,
       { format: 'csv', filter: {}, idempotencyKey: randomUUID() });
@@ -394,9 +445,6 @@ test('[AUTH-07] held staff CSV download cannot commit after platform login', asy
       return (status.json as { status?: string }).status;
     }, { timeout: 30_000 }).toBe('READY');
 
-    await staffPage.goto(portalUrl(manifest, `${eventPath(fixture, '/audit')}#jobs`));
-    const input = staffPage.getByTestId('export-id-input');
-    await expect(input).toBeVisible();
     await input.fill(exportId!);
     const downloadPath = `${statusPath}/download`;
     let held = false;
@@ -435,6 +483,7 @@ test('[AUTH-07] held staff CSV download cannot commit after platform login', asy
     expect(downloads).toBe(0);
     await expect(platformPage.getByTestId('audit-table')).toHaveCount(0);
   } finally {
+    test.info().annotations.push({ type: 'auth07-csv-navigation', description: navigationEvents.join(' ') });
     release();
     await context.close();
   }
