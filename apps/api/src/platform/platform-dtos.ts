@@ -18,6 +18,7 @@ import {
   type PortalPlatformAuditEntry,
   type PortalPlatformAuditPage,
   type PortalPlatformTenantHealth,
+  type PlatformTenantDetail,
   type PortalPlatformTenantSummary,
   type PortalPlatformTenantsPage,
   type PortalReasonBody,
@@ -212,6 +213,32 @@ export class PlatformTenantUsageDto {
   @ApiProperty() staffActive!: number;
   @ApiProperty() staffPendingInvites!: number;
   @ApiProperty() emailToday!: number;
+}
+
+export class PlatformTenantLimitsDto {
+  @ApiProperty({ type: Number, nullable: true }) maxEvents!: number | null;
+  @ApiProperty({ type: Number, nullable: true }) maxStaff!: number | null;
+  @ApiProperty({ type: Number, nullable: true }) emailPerDay!: number | null;
+  @ApiProperty({ type: Number, nullable: true }) importRowsPerJob!: number | null;
+}
+
+export class PlatformTenantFlagsDto {
+  @ApiProperty() importsEnabled!: boolean;
+  @ApiProperty() exportsEnabled!: boolean;
+}
+
+export class PlatformTenantDetailDto implements PlatformTenantDetail {
+  @ApiProperty({ format: 'uuid' }) tenantId!: string;
+  @ApiProperty() slug!: string;
+  @ApiProperty() name!: string;
+  @ApiProperty({ enum: ['PENDING', 'ACTIVE', 'SUSPENDED'] }) status!: PlatformTenantDetail['status'];
+  @ApiProperty() defaultTimezone!: string;
+  @ApiProperty({ type: String, nullable: true }) contact!: string | null;
+  @ApiProperty({ description: 'Tenant status and profile version' }) version!: number;
+  @ApiProperty({ description: 'Independent limits and flags version' }) limitsVersion!: number;
+  @ApiProperty({ type: PlatformTenantLimitsDto }) limits!: PlatformTenantLimitsDto;
+  @ApiProperty({ type: PlatformTenantFlagsDto }) flags!: PlatformTenantFlagsDto;
+  @ApiProperty({ type: PlatformTenantUsageDto }) usage!: PlatformTenantUsageDto;
 }
 
 export class PlatformHealthNotificationsDto {

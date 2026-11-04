@@ -20,6 +20,7 @@ import {
   PortalPlatformAuditPageDto,
   PortalPlatformTenantHealthDto,
   PortalPlatformTenantsPageDto,
+  PlatformTenantDetailDto,
   PortalReasonBodyDto,
   SupportGrantRevokeResponseDto,
 } from './platform-dtos';
@@ -86,6 +87,7 @@ export class PlatformOperatorController {
 
   @Get('platform/tenants/:tenantId')
   @ApiBearerAuth()
+  @ApiOkResponse({ type: PlatformTenantDetailDto })
   tenantDetail(
     @Headers('authorization') authorization: string | undefined,
     @Param('tenantId') tenantId: string,

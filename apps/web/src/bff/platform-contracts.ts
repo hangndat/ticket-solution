@@ -121,6 +121,7 @@ export interface PlatformTenantDetail {
   defaultTimezone: string;
   contact: string | null;
   version: number;
+  limitsVersion?: number;
   limits: TenantLimitsDto;
   flags: TenantFlagsDto;
   usage: {

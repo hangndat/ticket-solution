@@ -238,6 +238,9 @@ export function interpretTenantDetail(
       defaultTimezone: body.defaultTimezone,
       contact: body.contact,
       version: body.version,
+      ...(Number.isInteger(body.limitsVersion) && (body.limitsVersion as number) > 0
+        ? { limitsVersion: body.limitsVersion as number }
+        : {}),
       limits,
       flags,
       usage: {

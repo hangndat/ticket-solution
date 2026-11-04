@@ -31,6 +31,7 @@ import {
   interpretPlatformMutationOk,
   interpretPlatformSupportGrantCreate,
   interpretPlatformTenantDetail,
+  platformLimitsBody,
   type PlatformCreateTenantView,
   type PlatformMutationOkView,
   type PlatformSupportGrantCreateView,
@@ -294,12 +295,7 @@ export function PlatformManagePanel({ initialManageTenantId = '' }: Props) {
     setMutateBusy(true);
     setMutateView(null);
     const outcome = await limitsIntent.run(
-      {
-        limits: limitsDraft,
-        flags: { importsEnabled, exportsEnabled },
-        reason: reason.trim() || 'ops',
-        expectedVersion: detail.version,
-      },
+        platformLimitsBody(detail, limitsDraft, { importsEnabled, exportsEnabled }, reason.trim() || 'ops'),
       (body) => portalMutate(bffPlatformTenantLimits(detail.tenantId), body, 'PUT'),
       (res) => interpretPlatformMutationOk(
         res.status,

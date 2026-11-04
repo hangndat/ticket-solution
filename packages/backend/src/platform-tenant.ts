@@ -401,6 +401,7 @@ export async function getPlatformTenantDetail(
       defaultTimezone: t.default_timezone,
       contact: t.contact,
       version: t.version,
+      limitsVersion: L.version,
       limits: {
         maxEvents: L.max_events,
         maxStaff: L.max_staff,

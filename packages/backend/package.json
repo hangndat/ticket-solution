@@ -30,6 +30,7 @@
     "test:pol02-capacity": "pnpm build && node --test --test-name-pattern='O06 POL-02 50k attendee' test/o06-retention-db.test.cjs",
     "test:export-barrier": "node --test test/export-offline-unit.test.cjs",
     "test:o06-operator": "node --test test/o06-offline-purge.test.cjs",
+    "test:platform-version-unit": "node --test test/platform-version-unit.test.cjs",
     "test:o06-operator-minio": "node --test test/o06-offline-minio.test.cjs",
     "test:event-update": "pnpm --filter @ticket/contracts build && pnpm build && node --test test/portal-members.test.cjs test/role-presets.test.cjs test/event-lifecycle.test.cjs test/rls.test.cjs",
     "migrate": "prisma migrate deploy",
