@@ -8,6 +8,7 @@ Bắt đầu từ [AGENTS.md](../../AGENTS.md). Đây là bản đồ đọc chu
 - Source exploration/code/review: [context và CRG](policies/context.md); docs/rules thuần được miễn CRG.
 - Git/PR/merge: [Git](policies/git.md), [chi tiết](policies/git-details.md), [GitHub API](policies/github-api.md).
 - Tracking/DoD: [Project](policies/project.md); coordinator thêm [WIP/milestone](policies/project-coordinator.md).
+- Nghiệm thu E2E (F04 #1029–#1037): [E2E acceptance](policies/e2e-acceptance.md) — thước đo `pnpm e2e:f04-status`, hạt PR, cost tier, tách hạ tầng.
 - Giao việc: [dispatch](workflows/dispatch.md), [lifecycle/recovery](workflows/lifecycle.md), [cost catalog](cost-catalog.md), [company](../../company/README.md).
 - Review/fix: [findings và revalidation](workflows/review.md). Worktree: [metadata và cleanup](workflows/worktree.md).
 - UI: [UI workflow](ui-workflow.md); UAT: [browser/emulator](workflows/uat.md).
