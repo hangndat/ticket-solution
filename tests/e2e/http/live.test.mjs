@@ -2406,7 +2406,7 @@ for (const caseId of CASE_IDS) {
         },
         flags: detail.body.flags,
         reason: 'DB17 limit probe',
-        expectedVersion: limitsVersion.version,
+        expectedLimitsVersion: limitsVersion.version,
       });
       expectStatus(limit, 200);
       const race = await Promise.all(
