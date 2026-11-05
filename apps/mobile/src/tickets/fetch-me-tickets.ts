@@ -1,6 +1,5 @@
 import type { MeTicketsResponse, TicketSummary } from '@ticket/contracts';
 import { getApiBaseUrl } from '../identity/config.ts';
-import { buildDisplayQrPayload } from './display-payload.ts';
 import {
   type MeTicketsFetchScope,
   normalizeMeTicketsFetchScope,
@@ -19,8 +18,10 @@ function isTicketSummary(value: unknown): value is TicketSummary {
     typeof row.state === 'string' &&
     typeof row.credentialVersion === 'number' &&
     typeof row.createdAt === 'string' &&
-    buildDisplayQrPayload(row as unknown as TicketSummary) !== '' &&
-    (row.manualEntryCode === null || typeof row.manualEntryCode === 'string')
+    // Credential availability is per ticket, not validity of the whole wallet.
+    // Legacy API/cache rows still provide useful metadata; the detail screen
+    // validates QR displayability and refreshes a missing signed credential.
+    (row.manualEntryCode == null || typeof row.manualEntryCode === 'string')
   );
 }
 

@@ -7,6 +7,7 @@ import React from 'react';
 // @ts-expect-error react-test-renderer does not provide declarations.
 import Renderer, { act } from 'react-test-renderer';
 import ts from 'typescript';
+import { probeMeTickets as realProbeMeTickets } from '../tickets/fetch-me-tickets.ts';
 
 // Only native/UI boundaries are replaced. Render the production screen with
 // real React effects, ownership checks, lookup and QR payload serialization.
@@ -85,6 +86,28 @@ test('detail refreshes legacy memory/cache instead of silently hiding QR', async
   assert.equal(calls, 1);
   assert.equal(tree!.root.findByType('QrCode').props.value, JSON.stringify(ticket.gateCredential));
   await act(async () => { tree!.unmount(); });
+});
+
+test('a legacy sibling does not hide a valid ticket QR through the real wallet probe', async () => {
+  memory = [legacy];
+  const savedFetch = globalThis.fetch;
+  const savedOrigin = process.env.EXPO_PUBLIC_API_BASE_URL;
+  process.env.EXPO_PUBLIC_API_BASE_URL = 'http://127.0.0.1:39999';
+  globalThis.fetch = async () => new Response(JSON.stringify({
+    tickets: [{ ...legacy, ticketId: 'other-ticket' }, ticket],
+  }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  probe = () => realProbeMeTickets('synthetic', { kind: 'owner' });
+  let tree: ReturnType<typeof Renderer.create>;
+  try {
+    await act(async () => { tree = Renderer.create(React.createElement(TicketDetailScreen)); });
+    assert.equal(tree!.root.findByType('QrCode').props.value, JSON.stringify(ticket.gateCredential));
+    assert.equal(tree!.root.findAllByType('ErrorState').length, 0);
+  } finally {
+    await act(async () => { tree!.unmount(); });
+    globalThis.fetch = savedFetch;
+    if (savedOrigin === undefined) delete process.env.EXPO_PUBLIC_API_BASE_URL;
+    else process.env.EXPO_PUBLIC_API_BASE_URL = savedOrigin;
+  }
 });
 
 test('offline legacy metadata shows a QR error; retry loads the signed credential', async () => {
