@@ -4,12 +4,53 @@ import sqlite3
 import subprocess
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 from types import SimpleNamespace
 
 spec = importlib.util.spec_from_file_location("release_artifact", Path(__file__).with_name("release-artifact.py"))
 release = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(release)
+
+
+class WorkerLineageFixture(unittest.TestCase):
+    def test_both_reviewed_lineages_accept_descendants_but_not_legacy_or_unknown(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory)
+            def git(*args):
+                return subprocess.check_output(['git', *args], cwd=repo, text=True).strip()
+            git('init', '-q')
+            git('config', 'user.name', 'Release test')
+            git('config', 'user.email', 'release-test@example.invalid')
+            source = repo / 'outbox.ts'
+            source.write_text('legacy worker\n')
+            git('add', 'outbox.ts')
+            git('commit', '-qm', 'before recovery')
+            legacy = git('rev-parse', 'HEAD')
+            source.write_text('pending push recovery\n')
+            git('commit', '-qam', 'original recovery')
+            original = git('rev-parse', 'HEAD')
+            git('checkout', '-qb', 'mirror', legacy)
+            source.write_text('pending push recovery\n')
+            git('commit', '-qam', 'mirrored recovery')
+            mirrored = git('rev-parse', 'HEAD')
+            self.assertEqual(git('rev-parse', original+'^{tree}'), git('rev-parse', mirrored+'^{tree}'))
+            self.assertNotEqual(original, mirrored)
+            (repo/'later.txt').write_text('later change\n')
+            git('add', 'later.txt')
+            git('commit', '-qm', 'descendant')
+            descendant = git('rev-parse', 'HEAD')
+            with patch.object(release, 'WORKER_PENDING_PUSH_SAFE_BASES', (original, mirrored)):
+                for safe in [original, mirrored, descendant]:
+                    self.assertTrue(release.worker_pending_push_safe(safe, repo))
+                self.assertFalse(release.worker_pending_push_safe(legacy, repo))
+                self.assertFalse(release.worker_pending_push_safe('f'*40, repo))
+                self.assertFalse(release.worker_pending_push_safe('--all', repo))
+
+    def test_missing_baselines_never_certify_a_worker(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with patch.object(release, 'WORKER_PENDING_PUSH_SAFE_BASES', ('a'*40, 'b'*40)):
+                self.assertFalse(release.worker_pending_push_safe('c'*40, Path(directory)))
 
 
 class ReleaseFixture(unittest.TestCase):

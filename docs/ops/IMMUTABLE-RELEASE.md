@@ -44,6 +44,8 @@ Build dùng `git archive` của SHA với allowlist chỉ gồm app, workspace d
 
 ## Lỗi theo bước và cleanup
 
+Worker pending-push guard nhận hai baseline đã đối chiếu của cùng PR #907: merge gốc `710b5714` và merge mirror trong lineage main hiện tại `cdb974a3`. Build phải chứng minh source SHA là descendant của ít nhất một baseline; missing commit/unknown lineage vẫn fail-closed. Mã worker/outbox và recovery tests tại hai baseline đã đối chiếu byte-identical. Không sửa tay `workerPendingPushSafe` trong manifest của release đã publish; khi guard không nhận lineage hợp lệ, sửa/test/review tool rồi build release mới.
+
 | Bước lỗi | Xử lý |
 | --- | --- |
 | Git archive/install/build/native ABI | Bỏ staging `.build-*` sau khi kiểm không còn process build; pin và last-good release không đổi. |
