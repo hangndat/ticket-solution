@@ -12,7 +12,7 @@
 | SHA-256 visual | `eca0dbc1e391c22521f97e697200877cf9c0d2844f3520c1b1e4e43b3849efcf` |
 | Nguồn chi tiết | 15 HTML trong `originals/`, hash trong `MANIFEST.sha256` |
 | Phạm vi code dự kiến | `apps/mobile` của owner iOS; không tự chạm Web, Portal, API, token/brand SoT |
-| Trạng thái Git | Gói wireframe/ADR được commit local lần đầu tại `f50eb3128d8cbeb80dd1bcae009c805f93be9f55`; chưa push/PR. Working tree vẫn có nhiều thay đổi **khác** ở mobile/web/brand/docs. Tách và bảo toàn chúng; không `reset`, không stage ngoài scope. |
+| Trạng thái Git tại bàn giao | Gói wireframe/ADR được commit lần đầu tại `f50eb3128d8cbeb80dd1bcae009c805f93be9f55`; nhánh PR có thể cherry-pick thành SHA khác. Dùng `git rev-parse HEAD` và PR để xác định tip hiện hành. Worktree gốc có nhiều thay đổi **khác** ở mobile/web/brand/docs; bảo toàn chúng, không `reset` hoặc stage ngoài scope. |
 | Orca Run/Task | Chưa tạo cho việc triển khai từ gói này; không suy ID từ phiên thiết kế. |
 
 Leader mới cần đọc [`AGENTS.md`](../../../AGENTS.md), [routing](../../agents/policies/routing.md), [dispatch](../../agents/workflows/dispatch.md), [lifecycle](../../agents/workflows/lifecycle.md), [UI workflow](../../agents/ui-workflow.md), [Project/DoD](../../agents/policies/project.md) và chính sách Git trước khi giao Task/PR. Chỉ một leader giữ quyền điều phối Run; không coi file này là receipt dispatch hay quyền merge/deploy/store.
@@ -61,4 +61,4 @@ CTA của các màn còn lại giữ theo HTML gốc, trừ khi xung đột vớ
 - HTML/ảnh dùng sự kiện và tài khoản minh họa; không làm fixture production, không dùng QR demo để xác nhận vào cổng.
 - `index.html` là board ảnh tĩnh; 15 HTML gốc là nguồn để xem bố cục chi tiết. Chưa kiểm tương tác, keyboard, auth, offline hoặc Gate trên app build sau quyết định này.
 - Gói [Electric Violet](../electric-violet/README.md) và các thay đổi brand/app đang là thay đổi **riêng, chưa nằm trong commit tài liệu wireframe này**. Checkout chỉ lấy commit này có thể chưa có gói đó hoặc token mới. Leader phải xác minh dependency brand đã tích hợp ở exact SHA trước khi triển khai UI; README Electric Violet theo snapshot cũ cũng không chứng minh runtime hiện tại.
-- Chưa giao worker/leader khác và chưa tạo Issue/PR trong lượt này. Gói đã có commit local nêu trên; leader tiếp theo tiếp nhận qua file này rồi chuẩn bị Task theo policy, không coi việc bàn giao là bắt đầu coding.
+- Ở thời điểm viết handoff chưa giao worker/leader khác hoặc tạo Issue/PR cho implementation. Việc publish gói tài liệu sau đó không tự tạo Task coding; leader tiếp theo dùng tip PR/merge SHA thực tế rồi chuẩn bị Task theo policy.
