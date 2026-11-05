@@ -1,6 +1,6 @@
 'use client';
 
-import { BrandMark } from '../brand-mark';
+import { BrandMark, PlatformLockup } from '../brand-mark';
 import { useBranding } from './theme-provider';
 
 type HeroWordmarkProps = {
@@ -25,11 +25,17 @@ export function HeroWordmark({ presentation = 'hero' }: HeroWordmarkProps) {
       data-presentation={presentation}
       aria-label={label}
     >
-      <BrandMark />
-      {branding.wordmark}
-      {branding.signalGlyph ? (
-        <span aria-hidden="true">{branding.signalGlyph}</span>
-      ) : null}
+      {branding.source === 'vemoki-default' ? (
+        <PlatformLockup className="h-9 w-auto max-w-full object-contain" />
+      ) : (
+        <>
+          <BrandMark />
+          {branding.wordmark}
+          {branding.signalGlyph ? (
+            <span aria-hidden="true">{branding.signalGlyph}</span>
+          ) : null}
+        </>
+      )}
     </p>
   );
 }

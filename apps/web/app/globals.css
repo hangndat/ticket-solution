@@ -56,117 +56,72 @@
     }
   }
 
-  /* VD-04: Neon marketing — scoped tokens (design-system/marketing/tokens.css) */
-  html[data-vemoki-marketing='neon-v1'] {
+  /* Marketing ink surfaces derive supporting colors from generated tokens. */
+  .mkt-brand-surface {
     color-scheme: dark;
-    --vm-bg: #060817;
-    --vm-bg-deep: #040611;
-    --vm-surface: #0e1229;
-    --vm-surface-raised: #151935;
-    --vm-outline: #38345f;
-    --vm-outline-soft: rgba(181, 169, 255, 0.2);
-    --vm-text: #faf9ff;
-    --vm-text-secondary: #c2c6de;
-    --vm-text-subtle: #989dbd;
-    --vm-purple: #9b4dff;
-    --vm-magenta: #f23cb3;
-    --vm-coral: #ff835f;
-    --vm-blue: #397dff;
-    --vm-cyan: #28d4ef;
-    --vm-focus: #b2cbff;
-    --vm-cta-gradient: linear-gradient(105deg, #ee35b4 0%, #9944ff 48%, #3383ff 100%);
-    --vm-text-gradient: linear-gradient(
-      100deg,
-      #ff68aa 2%,
-      #ff8f6e 31%,
-      #c870ff 63%,
-      #777cff 100%
-    );
+    --vm-bg: var(--color-ink);
+    --vm-bg-deep: var(--color-ink);
+    --vm-surface: color-mix(in srgb, var(--color-paper) 7%, var(--color-ink));
+    --vm-surface-raised: color-mix(in srgb, var(--color-paper) 11%, var(--color-ink));
+    --vm-outline: var(--color-line);
+    --vm-outline-soft: color-mix(in srgb, var(--color-line) 28%, transparent);
+    --vm-text: var(--color-paper);
+    --vm-text-secondary: color-mix(in srgb, var(--color-paper) 82%, var(--color-ink));
+    --vm-text-subtle: color-mix(in srgb, var(--color-paper) 68%, var(--color-ink));
+    --vm-purple: var(--color-primary);
+    --vm-magenta: var(--color-primary);
+    --vm-focus: var(--color-focus);
     --vm-radius-md: 16px;
-    --vm-shadow-card: 0 14px 48px rgba(0, 0, 0, 0.34);
+    --vm-shadow-card: var(--shadow-soft);
   }
 
-  html[data-vemoki-marketing='neon-v1'] .mkt-neon-surface {
-    background:
-      radial-gradient(60rem 40rem at 90% 7%, rgba(82, 27, 171, 0.19), transparent 70%),
-      radial-gradient(30rem 30rem at -20% 22%, rgba(195, 35, 165, 0.08), transparent 75%),
-      var(--vm-bg);
+  .mkt-brand-surface {
+    background: var(--color-ink);
   }
 
-  html[data-vemoki-marketing='neon-v1'] .mkt-hero-section {
+  .mkt-brand-surface .mkt-hero-section {
     background: transparent;
   }
 
-  html[data-vemoki-marketing='neon-v1'] .mkt-hero-section::before {
+  .mkt-brand-surface .mkt-hero-section::before {
     content: none;
   }
 
-  html[data-vemoki-marketing='neon-v1'] .mkt-hero-headline {
-    color: var(--vm-text);
-    background: var(--vm-text-gradient);
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }
-
-  @supports not (background-clip: text) {
-    html[data-vemoki-marketing='neon-v1'] .mkt-hero-headline {
-      -webkit-text-fill-color: unset;
-      color: var(--vm-text);
-      background: none;
-    }
-  }
-
-  @media (forced-colors: active) {
-    html[data-vemoki-marketing='neon-v1'] .mkt-hero-headline {
-      -webkit-text-fill-color: unset;
-      color: CanvasText;
-      background: none;
-    }
-  }
-
-  html[data-vemoki-marketing='neon-v1'] .mkt-hero-media::after {
-    content: '';
-    pointer-events: none;
-    position: absolute;
-    inset: -8% -12% -12% -8%;
-    background: radial-gradient(ellipse at 65% 43%, rgba(90, 37, 226, 0.35), transparent 60%);
-    z-index: 0;
-  }
-
-  html[data-vemoki-marketing='neon-v1'] .mkt-hero-media img {
+  .mkt-brand-surface .mkt-hero-media img {
     position: relative;
     z-index: 1;
   }
 
-  html[data-vemoki-marketing='neon-v1'] .mkt-lead-section {
+  .mkt-brand-surface .mkt-lead-section {
     background: var(--color-paper);
     color: var(--color-ink);
     border-color: var(--color-line);
   }
 
-  html[data-vemoki-marketing='neon-v1'] .mkt-lead-section::before {
+  .mkt-brand-surface .mkt-lead-section::before {
     content: none;
   }
 
-  /* Legal/support chrome — neon scope off; header demo still uses gradient (DS-WEB-04). */
-  html[data-surface='marketing'] [data-testid='mkt-header'] .mkt-neon-btn-primary {
-    --mkt-header-cta-gradient: linear-gradient(105deg, #ee35b4 0%, #9944ff 48%, #3383ff 100%);
+  /* Primary demo CTA uses the shared Electric Violet primary token. */
+  html[data-surface='marketing'] [data-testid='mkt-header'] .mkt-brand-btn-primary {
     min-height: 44px;
     padding: 10px 20px;
     border-radius: 12px;
     font-weight: 750;
     font-size: 14px;
-    color: #faf9ff !important;
-    background: var(--mkt-header-cta-gradient) !important;
-    box-shadow: 0 10px 30px rgba(148, 69, 250, 0.3), inset 0 1px rgba(255, 255, 255, 0.3);
+    color: var(--color-paper) !important;
+    background: var(--color-primary) !important;
     border: none;
   }
 
-  html[data-surface='marketing'] [data-testid='mkt-header'] .mkt-neon-btn-primary:hover,
-  html[data-surface='marketing'] [data-testid='mkt-header'] .mkt-neon-btn-primary:focus-visible {
-    background: var(--mkt-header-cta-gradient) !important;
-    color: #faf9ff !important;
-    filter: brightness(1.04);
+  html[data-surface='marketing'] [data-testid='mkt-header'] .mkt-brand-btn-primary:hover {
+    background: color-mix(in srgb, var(--color-primary) 88%, var(--color-ink)) !important;
+  }
+
+  html[data-surface='marketing'] [data-testid='mkt-header'] .mkt-brand-btn-primary:focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 2px;
+    box-shadow: none;
   }
 
   /* VD10-R-05 — interest modal/sheet: AA contrast on paper over neon chrome */
@@ -268,7 +223,7 @@
   }
 
   .mkt-hero-glow-a {
-    background: rgba(150, 57, 244, 0.69);
+    background: color-mix(in srgb, var(--color-primary) 24%, transparent);
     width: 190px;
     height: 190px;
     top: 12%;
@@ -277,7 +232,7 @@
   }
 
   .mkt-hero-glow-b {
-    background: rgba(233, 53, 187, 0.38);
+    background: color-mix(in srgb, var(--color-primary) 16%, transparent);
     width: 225px;
     height: 80px;
     bottom: 18%;
@@ -289,10 +244,10 @@
     position: absolute;
     pointer-events: none;
     border: 28px solid transparent;
-    border-top-color: #f75cc2;
-    border-left-color: #613fff;
+    border-top-color: color-mix(in srgb, var(--color-primary) 65%, transparent);
+    border-left-color: color-mix(in srgb, var(--color-primary) 35%, transparent);
     border-radius: 49%;
-    filter: drop-shadow(0 0 18px rgba(183, 61, 255, 0.67));
+    filter: drop-shadow(0 8px 16px color-mix(in srgb, var(--color-primary) 25%, transparent));
     opacity: 0.75;
   }
 

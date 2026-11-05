@@ -1,12 +1,12 @@
 /* Snapshot for CI — canonical :root brand colors from tokens.json */
 :root {
-  --ink: #0B1220;
-  --paper: #F4F6F8;
-  --signal: #E11D48;
-  --primary: #7C4DED;
-  --focus: #2563EB;
-  --line: #D7DFE9;
-  --muted: #5B687B;
+  --ink: #141020;
+  --paper: #FFFFFF;
+  --signal: #6C35FF;
+  --primary: #6C35FF;
+  --focus: #5B22F0;
+  --line: #D7D6E0;
+  --muted: #5C5774;
   --destructive: #8A1F1F;
   --admit: #1B7F4A;
   --unknown: #8A6D3B;

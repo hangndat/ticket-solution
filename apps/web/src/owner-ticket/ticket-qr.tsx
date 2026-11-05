@@ -38,7 +38,7 @@ export function TicketQr({
       className="ticket-qr"
     >
       <title>{label}</title>
-      <rect width={size} height={size} fill="#ffffff" />
+      <rect width={size} height={size} fill="var(--color-paper)" />
       {modules.map((row, y) =>
         row.map((on, x) =>
           on ? (
@@ -48,7 +48,7 @@ export function TicketQr({
               y={(y + quietZone) * cell}
               width={cell}
               height={cell}
-              fill="#0B1220"
+              fill="var(--color-ink)"
             />
           ) : null,
         ),

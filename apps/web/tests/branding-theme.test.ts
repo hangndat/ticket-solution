@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 // Import leaf modules (avoid load.ts → bff/upstream → @ticket/contracts in unit tests).
-import { brandingCssVarEntries } from '../src/branding/css-vars';
+import {
+  brandingCssVarEntries,
+  brandingToCssVars,
+  eventBrandingPresentation,
+} from '../src/branding/css-vars';
 import {
   brandingFromEventBrand,
   parseTenantBranding,
@@ -10,12 +14,12 @@ import {
 } from '../src/branding/parse';
 import { VEMOKI_BRANDING } from '../src/branding/vemoki';
 
-test('Vemoki defaults match Live Pulse v2 tokens', () => {
+test('Vemoki defaults match Electric Violet tokens', () => {
   assert.equal(VEMOKI_BRANDING.wordmark, 'Vemoki');
-  assert.equal(VEMOKI_BRANDING.colors.ink, '#0B1220');
-  assert.equal(VEMOKI_BRANDING.colors.paper, '#F4F6F8');
-  assert.equal(VEMOKI_BRANDING.colors.signal, '#E11D48');
-  assert.equal(VEMOKI_BRANDING.colors.focus, '#2563EB');
+  assert.equal(VEMOKI_BRANDING.colors.ink, '#141020');
+  assert.equal(VEMOKI_BRANDING.colors.paper, '#FFFFFF');
+  assert.equal(VEMOKI_BRANDING.colors.signal, '#6C35FF');
+  assert.equal(VEMOKI_BRANDING.colors.focus, '#5B22F0');
   assert.equal(VEMOKI_BRANDING.source, 'vemoki-default');
   assert.equal(VEMOKI_BRANDING.logoUrl, null);
 });
@@ -61,13 +65,13 @@ test('sanitizeLogoUrl allowlists https and root-relative only', () => {
   assert.equal(sanitizeLogoUrl('data:image/png;base64,xxx'), null);
 });
 
-test('brandingCssVarEntries expose Live Pulse token names', () => {
+test('brandingCssVarEntries expose the current platform token values', () => {
   const entries = Object.fromEntries(brandingCssVarEntries(VEMOKI_BRANDING));
-  assert.equal(entries['--ink'], '#0B1220');
-  assert.equal(entries['--paper'], '#F4F6F8');
-  assert.equal(entries['--signal'], '#E11D48');
-  assert.equal(entries['--focus'], '#2563EB');
-  assert.equal(entries['--brand'], '#7C4DED');
+  assert.equal(entries['--ink'], '#141020');
+  assert.equal(entries['--paper'], '#FFFFFF');
+  assert.equal(entries['--signal'], '#6C35FF');
+  assert.equal(entries['--focus'], '#5B22F0');
+  assert.equal(entries['--brand'], '#6C35FF');
 });
 
 test('brandingFromEventBrand scopes demo event chrome', () => {
@@ -82,9 +86,38 @@ test('brandingFromEventBrand scopes demo event chrome', () => {
   assert.match(b.wordmark, /mfest/);
 });
 
+test('published event primary reaches event primary utilities without changing platform vars', () => {
+  const { branding, style } = eventBrandingPresentation(
+    { primaryColor: '#245B47', organizationName: 'MFest' },
+    'mfest-demo',
+  );
+  const eventVars = Object.fromEntries(Object.entries(style));
+  const platformVars = Object.fromEntries(
+    Object.entries(brandingToCssVars(VEMOKI_BRANDING)),
+  );
+
+  assert.equal(branding.primaryColor, '#245B47');
+  assert.equal(eventVars['--brand'], '#245B47');
+  assert.equal(eventVars['--color-primary'], 'var(--brand)');
+  assert.equal(platformVars['--brand'], '#6C35FF');
+  assert.equal(platformVars['--color-primary'], undefined);
+});
+
+test('invalid published event primary falls back through event main style vars', () => {
+  const { branding, style } = eventBrandingPresentation(
+    { primaryColor: 'not-a-color', organizationName: 'Local test event' },
+    'local-test',
+  );
+  const eventVars = Object.fromEntries(Object.entries(style));
+
+  assert.equal(branding.primaryColor, '#6C35FF');
+  assert.equal(eventVars['--brand'], '#6C35FF');
+  assert.equal(eventVars['--color-primary'], 'var(--brand)');
+});
+
 test('toBrandingDto is JSON-safe for BFF responses', () => {
   const dto = toBrandingDto(VEMOKI_BRANDING);
   assert.equal(dto.wordmark, 'Vemoki');
-  assert.equal(dto.primaryColor, '#7C4DED');
+  assert.equal(dto.primaryColor, '#6C35FF');
   assert.equal(dto.logoUrl, null);
 });

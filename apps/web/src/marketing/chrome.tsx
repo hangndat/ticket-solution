@@ -1,6 +1,5 @@
 import { Button } from '@ticket/ui';
 import Link from 'next/link';
-import Image from 'next/image';
 import type { ReactNode } from 'react';
 import { cn } from '../../lib/utils';
 import { t } from './copy';
@@ -23,7 +22,7 @@ import {
   marketingWrap,
 } from './marketing-surface';
 import { privacyHref, salesHref, supportHref, type MarketingPageKind } from './links';
-import { MarketingNeonScope } from './marketing-neon-scope';
+import { PlatformLockup } from '../brand-mark';
 
 export function MarketingChrome({
   locale,
@@ -46,9 +45,7 @@ export function MarketingChrome({
       className={marketingSurface(onSales)}
       data-testid="marketing-surface"
       data-locale={locale}
-      data-marketing-neon={onSales ? '' : undefined}
     >
-      <MarketingNeonScope enabled={onSales} />
       <a className={marketingSkip} href="#main">
         {t(locale, 'skip')}
       </a>
@@ -66,8 +63,7 @@ export function MarketingChrome({
           aria-label={t(locale, 'nav.brand')}
           data-testid="mkt-wordmark"
         >
-          <Image src="/marketing/neon/vemoki-v-mark.webp" alt="" width={34} height={30} className="mr-2 inline-block align-middle" />
-          {t(locale, 'nav.brand')}
+          <PlatformLockup tone={onInk ? 'white' : 'color'} className="h-8 w-auto max-w-[34vw] object-contain" />
         </Link>
         <nav className={marketingNav} aria-label={locale === 'en' ? 'Primary' : 'Chính'}>
           {onSales ? (
@@ -93,7 +89,7 @@ export function MarketingChrome({
             <a href={login}>{t(locale, 'nav.login')}</a>
           </Button>
           {!onSales ? (
-            <Button asChild variant="ghost" className="mkt-neon-btn-primary" data-testid="mkt-chrome-demo">
+            <Button asChild variant="ghost" className="mkt-brand-btn-primary" data-testid="mkt-chrome-demo">
               <a href={demo}>{t(locale, 'nav.demo')}</a>
             </Button>
           ) : null}
@@ -103,7 +99,7 @@ export function MarketingChrome({
       {children}
       <footer className={marketingFooter(onSales)} data-testid="mkt-footer">
         <div className={marketingWrap}>
-          {onSales ? <Link className="mb-4 inline-flex items-center text-xl font-bold text-paper" href={sales}><Image src="/marketing/neon/vemoki-v-mark.webp" alt="" width={34} height={30} className="mr-2" />Vemoki</Link> : null}
+          {onSales ? <Link className="mb-4 inline-flex items-center" href={sales} aria-label={t(locale, 'nav.brand')}><PlatformLockup tone="white" className="h-8 w-auto max-w-[38vw] object-contain" /></Link> : null}
           <div>
             <Link href={privacyHref(locale)}>{t(locale, 'nav.privacy')}</Link>
             {' · '}
