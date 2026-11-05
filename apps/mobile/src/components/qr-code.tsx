@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { View } from 'react-native';
 import { encodeQrModules } from '@/tickets/qr-matrix';
 import { brand, colors } from '@/theme/colors';
+import { qrDarkRuns } from './qr-runs';
 
 type Props = {
   value: string;
@@ -28,6 +29,7 @@ export function QrCode({
   accessibilityLabel = 'Mã QR hiển thị vé'
 }: Props) {
   const modules = useMemo(() => encodeQrModules(value), [value]);
+  const runs = useMemo(() => qrDarkRuns(modules), [modules]);
   const dim = modules.length;
   const total = dim + quietZone * 2;
   const cell = size / total;
@@ -43,23 +45,19 @@ export function QrCode({
         alignSelf: 'center'
       }}
     >
-      {modules.map((row, y) =>
-        row.map((on, x) =>
-          on ? (
-            <View
-              key={`${y}-${x}`}
-              style={{
-                position: 'absolute',
-                left: (x + quietZone) * cell,
-                top: (y + quietZone) * cell,
-                width: cell,
-                height: cell,
-                backgroundColor: inkColor
-              }}
-            />
-          ) : null,
-        ),
-      )}
+      {runs.map((run) => (
+        <View
+          key={`${run.y}-${run.x}`}
+          style={{
+            position: 'absolute',
+            left: (run.x + quietZone) * cell,
+            top: (run.y + quietZone) * cell,
+            width: run.width * cell,
+            height: cell,
+            backgroundColor: inkColor
+          }}
+        />
+      ))}
     </View>
   );
 }
