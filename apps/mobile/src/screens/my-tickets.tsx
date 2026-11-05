@@ -57,6 +57,7 @@ import {
   decideTicketSyncApply
 } from '@/tickets/ticket-sync-guard';
 import { walletOfflineNoticeBody } from '@/tickets/wallet-sync-display';
+import { formatWalletEventStart, selectHeroTicket } from '@/tickets/wallet-hero-ticket';
 import { startWalletFocusRefresh } from '@/tickets/wallet-focus-refresh';
 import { logoutAndClearWalletArtifacts } from '@/tickets/wallet-logout';
 import { isApnsProvider, pushProviderName } from '@/push/push';
@@ -115,22 +116,6 @@ const walletEyebrowStyle = {
   textTransform: 'uppercase' as const
 };
 
-/** First usable ticket across groups (A+C hero) — never a used/inactive one. */
-function selectHeroTicket(
-  tickets: TicketSummary[],
-  offline: boolean,
-): { ticket: TicketSummary; group: EventTicketGroup } | null {
-  for (const group of groupTicketsByEvent(tickets)) {
-    for (const ticket of group.tickets) {
-      const tone = walletTicketStatus(ticket, { offline }).tone;
-      if (tone === 'usable' || tone === 'sync') {
-        return { ticket, group };
-      }
-    }
-  }
-  return null;
-}
-
 /** Hero card: most urgent usable ticket, surfaced above the compact remaining list (A+C). */
 function WalletHeroTicket({
   ticket,
@@ -142,6 +127,7 @@ function WalletHeroTicket({
   offline: boolean;
 }) {
   const status = walletTicketStatus(ticket, { offline });
+  const eventStart = formatWalletEventStart(ticket.startsAt);
   return (
     <View
       style={{
@@ -168,9 +154,9 @@ function WalletHeroTicket({
         <Text style={{ ...typography.title, color: brand.ink }}>
           {group.eventName}
         </Text>
-        {group.metaLine ? (
+        {eventStart ? (
           <Text style={{ ...typography.footnote, color: colors.secondary }}>
-            {group.metaLine}
+            {`Ngày sự kiện · ${eventStart} (giờ thiết bị)`}
           </Text>
         ) : null}
         <View style={{ height: 1, backgroundColor: colors.line }} />
@@ -783,7 +769,11 @@ function VerifiedWallet({ userId }: { userId: string }) {
 
   // A+C hero only applies to the unfiltered wallet view; an event-filtered
   // view keeps its existing flat grouped list (wireframe covers no filter).
-  const hero = filterEventId ? null : selectHeroTicket(tickets, offline);
+  const heroTicket = filterEventId ? null : selectHeroTicket(tickets, offline);
+  const heroGroup = heroTicket
+    ? groupTicketsByEvent(tickets).find((group) => group.eventId === heroTicket.eventId)
+    : null;
+  const hero = heroTicket && heroGroup ? { ticket: heroTicket, group: heroGroup } : null;
   const remainingTickets = hero
     ? tickets.filter((t) => t.ticketId !== hero.ticket.ticketId)
     : tickets;
