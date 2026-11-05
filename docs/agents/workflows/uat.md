@@ -37,6 +37,14 @@ Closing a **milestone / Epic** on Project #3 requires **UAT evidence** (web and/
 4. Liệt kê / đổi tab: `orca tab list`, `orca tab switch`, `orca reload`, `back` / `forward`.
 5. **HTTP-only** smoke (OIDC/BFF parity, không cần DOM): vẫn được `pnpm uat:p4-oidc`, curl `/api/auth/*` — không thay browser UAT khi AC yêu cầu UI.
 
+### Chặn thao tác nhầm URL (Orca 1.4.248)
+
+- Trước thao tác ghi dữ liệu hoặc xác nhận trên web/portal, dùng lệnh browser riêng (`fill`, `click`, …) với `--page <id> --expect-url <absolute-url>` theo guide `orca skills get orca-cli --reference references/browser.md`. Lấy URL từ `result.tab.url` của `orca tab current --json` hoặc `url` của `snapshot --json`/`goto`, đồng thời kiểm đúng màn hình và bản ghi/tenant theo AC.
+- Guard so khớp URL tuyệt đối sau chuẩn hóa; path, query, fragment và trailing slash đều phải khớp. Sau redirect OIDC hoặc đổi route, đọc lại URL và xác minh trang đích trước thao tác tiếp theo.
+- URL khác hoặc đang điều hướng sang URL khác trả `browser_expected_url_mismatch`. Đọc `error.data.mayHaveStarted`: `false` nghĩa chưa thao tác; `true` nghĩa một bước có thể đã chạy, phải kiểm trạng thái trang trước khi thử lại. Host không hỗ trợ trả `incompatible_runtime` hoặc `browser_expect_url_unsupported`; không bỏ guard rồi lặp lại thao tác ghi.
+- `orca exec` **không hỗ trợ** `--expect-url`; với thao tác cần guard, tách batch thành lệnh browser riêng. Guard chỉ kiểm URL cấp trang, không khóa navigation hoặc chứng minh tenant/bản ghi/nội dung iframe; vẫn cần kiểm UI theo AC.
+- Ghi evidence gồm page ID, URL mong đợi, `checkedUrl` khi thành công hoặc lỗi/`mayHaveStarted` khi bị từ chối. `checkedUrl` là URL lần kiểm cuối, thao tác có thể đã điều hướng sau đó; ghi thêm URL cuối. Chỉ lưu URL đã loại thông tin nhạy cảm, không ghi code/token OIDC vào evidence.
+
 ### Web artifacts
 
 - Copy screenshot từ output `orca exec --command "screenshot"` (path JSON) vào `apps/web/.uat-artifacts/` (gitignored) hoặc path review được giao.
