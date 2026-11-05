@@ -32,6 +32,22 @@ SOURCE_PATHS = ("package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", "tsconf
                 "packages/contracts", "packages/ui", "packages/web-session", "brand")
 SHA = re.compile(r"[0-9a-f]{40}\Z")
 RELEASE_ID = re.compile(r"[0-9a-f]{40}-[0-9a-f]{12}\Z")
+# Both commits land PR #907's pending-push recovery. The current main lineage
+# contains the mirrored merge, not the original merge object. Worker/outbox
+# implementation and its recovery tests are byte-identical at these baselines.
+WORKER_PENDING_PUSH_SAFE_BASES = (
+    "710b57140fe476661e98fbdf6c9bf6d5170dfbc1",
+    "cdb974a3068596e9beb8557cca9b32308343a4fb",
+)
+
+
+def worker_pending_push_safe(sha, repo=None):
+    if not SHA.fullmatch(sha):
+        return False
+    return any(subprocess.run(
+        ["git", "merge-base", "--is-ancestor", baseline, sha], cwd=repo,
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+    ).returncode == 0 for baseline in WORKER_PENDING_PUSH_SAFE_BASES)
 
 
 def fail(message):
@@ -686,8 +702,7 @@ def build(args):
                 "schema": ({"inputMin": args.migrate_input_min, "inputMax": args.migrate_input_max,
                             "target": args.migrate_target} if service == "migrate" else
                             app_schemas[service])}
-        source["workerPendingPushSafe"] = subprocess.run(["git", "merge-base", "--is-ancestor",
-            "710b57140fe476661e98fbdf6c9bf6d5170dfbc1", args.sha]).returncode == 0
+        source["workerPendingPushSafe"] = worker_pending_push_safe(args.sha)
         for service, paths in ARTIFACTS.items():
             for rel in paths:
                 if not (stage / rel).exists():
