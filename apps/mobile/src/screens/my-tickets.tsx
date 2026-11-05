@@ -17,6 +17,7 @@ import {
 import type { TicketSummary } from '@ticket/contracts';
 import { AttendeeCta } from '@/components/attendee-cta';
 import { Button } from '@/components/ui/button';
+import { EVENT_BANNER_HEIGHT_TICKET } from '@/components/event-banner-metrics';
 import { EventBanner } from '@/components/event-media';
 import {
   EmptyState,
@@ -31,7 +32,7 @@ import {
 import { AttendeeScreenChrome } from '@/navigation/attendee-screen-chrome';
 import { hasDemoMediaForEventId } from '@/data/demo-media';
 import { brand, colors } from '@/theme/colors';
-import { layout, space, radius } from '@/theme/tokens';
+import { elevation, layout, space, radius } from '@/theme/tokens';
 import { typography } from '@/theme/typography';
 import { fontFamilies } from '@/theme/fonts';
 import { session } from '@/identity/session';
@@ -105,6 +106,92 @@ function WalletGroupedTicketList({
         <EventTicketSection key={group.eventId} group={group} offline={offline} />
       ))}
     </>
+  );
+}
+
+const walletEyebrowStyle = {
+  ...typography.badge,
+  color: colors.secondary,
+  textTransform: 'uppercase' as const
+};
+
+/** First usable ticket across groups (A+C hero) — never a used/inactive one. */
+function selectHeroTicket(
+  tickets: TicketSummary[],
+  offline: boolean,
+): { ticket: TicketSummary; group: EventTicketGroup } | null {
+  for (const group of groupTicketsByEvent(tickets)) {
+    for (const ticket of group.tickets) {
+      const tone = walletTicketStatus(ticket, { offline }).tone;
+      if (tone === 'usable' || tone === 'sync') {
+        return { ticket, group };
+      }
+    }
+  }
+  return null;
+}
+
+/** Hero card: most urgent usable ticket, surfaced above the compact remaining list (A+C). */
+function WalletHeroTicket({
+  ticket,
+  group,
+  offline
+}: {
+  ticket: TicketSummary;
+  group: EventTicketGroup;
+  offline: boolean;
+}) {
+  const status = walletTicketStatus(ticket, { offline });
+  return (
+    <View
+      style={{
+        backgroundColor: colors.ticketCanvas,
+        borderRadius: radius.lg,
+        borderCurve: 'continuous',
+        borderWidth: 1,
+        borderColor: colors.line,
+        overflow: 'hidden',
+        ...elevation.card
+      }}
+    >
+      <EventBanner
+        eventId={group.eventId}
+        fallbackColor={group.brandColor}
+        wordmark={group.eventName}
+        height={EVENT_BANNER_HEIGHT_TICKET}
+        style={{ borderRadius: layout.none }}
+        testID="wallet-hero-banner"
+        accessibilityLabel={`Banner ${group.eventName}`}
+      />
+      <View style={{ padding: space.lg, gap: space.sm }}>
+        <StatusChip status={status} />
+        <Text style={{ ...typography.title, color: brand.ink }}>
+          {group.eventName}
+        </Text>
+        {group.metaLine ? (
+          <Text style={{ ...typography.footnote, color: colors.secondary }}>
+            {group.metaLine}
+          </Text>
+        ) : null}
+        <View style={{ height: 1, backgroundColor: colors.line }} />
+        <Text style={{ ...typography.footnoteSemibold, color: brand.ink }}>
+          {walletTicketCardTitle(ticket)}
+        </Text>
+        <Button
+          label={attendeeWalletCopy.viewTicketCta}
+          variant="primary"
+          size="lg"
+          accessibilityLabel={walletTicketA11yLabel(group.eventName, ticket, status)}
+          onPress={() =>
+            router.push({
+              pathname: '/my-tickets/[ticketId]',
+              params: { ticketId: ticket.ticketId },
+            })
+          }
+          testID="wallet-hero-cta"
+        />
+      </View>
+    </View>
   );
 }
 
@@ -694,6 +781,13 @@ function VerifiedWallet({ userId }: { userId: string }) {
     }
   }, [refresh]);
 
+  // A+C hero only applies to the unfiltered wallet view; an event-filtered
+  // view keeps its existing flat grouped list (wireframe covers no filter).
+  const hero = filterEventId ? null : selectHeroTicket(tickets, offline);
+  const remainingTickets = hero
+    ? tickets.filter((t) => t.ticketId !== hero.ticket.ticketId)
+    : tickets;
+
   return (
     <>
     <ScrollView
@@ -771,13 +865,32 @@ function VerifiedWallet({ userId }: { userId: string }) {
           {walletCopy.emptyOnline.body}
         </EmptyState>
       ) : (
-        <View style={{ gap: space.xl }}>
-          <WalletGroupedTicketList
-            tickets={tickets}
-            filterEventId={filterEventId}
-            offline={offline}
-          />
-        </View>
+        <>
+          {hero ? (
+            <View style={{ gap: space.sm }}>
+              <Text style={walletEyebrowStyle}>Vé cần dùng gần nhất</Text>
+              <WalletHeroTicket
+                ticket={hero.ticket}
+                group={hero.group}
+                offline={offline}
+              />
+            </View>
+          ) : null}
+          {remainingTickets.length > 0 ? (
+            <View style={{ gap: space.sm }}>
+              {hero ? (
+                <Text style={walletEyebrowStyle}>Các vé còn lại</Text>
+              ) : null}
+              <View style={{ gap: space.xl }}>
+                <WalletGroupedTicketList
+                  tickets={remainingTickets}
+                  filterEventId={filterEventId}
+                  offline={offline}
+                />
+              </View>
+            </View>
+          ) : null}
+        </>
       )}
 
       {tickets.length === 0 && !busy ? (
