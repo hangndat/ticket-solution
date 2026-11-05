@@ -40,11 +40,13 @@ Nguồn: `agent models` trên máy này. Effort nằm **trong** model id Cursor 
 
 | Cost tier  | `--agent` | `--model` primary | `--effort`   | Fallback cùng tier                                                 |
 | ---------- | --------- | ----------------- | ------------ | ------------------------------------------------------------------ |
-| `cheap`    | `cursor`  | `composer-2.5`    | Không truyền | `grok-4.7-low`, `gemini-3.7-flash-low`                             |
-| `standard` | `cursor`  | `composer-2.5`    | Không truyền | `grok-4.7-low`, `gemini-3.7-flash-low`                             |
+| `cheap`    | `cursor`  | `composer-2.5`    | Không truyền | `grok-4.7-low`, `gemini-3.7-flash-low`; Claude `claude-haiku-5-5` / không effort (xem ghi chú 05/11) |
+| `standard` | `cursor`  | `composer-2.5`    | Không truyền | `grok-4.7-low`, `gemini-3.7-flash-low`; Claude `claude-haiku-5-5` / không effort (xem ghi chú 05/11) |
 | `focused`  | `claude`  | `claude-sonnet-5` | `low`        | Codex `gpt-6-sol` / `low`; `gpt-6.1-sol` / `low` khi Sol 6 đầy tải |
 | `advanced` | `claude`  | `claude-sonnet-5` | `medium`     | Codex `gpt-6-sol` / `medium`                                       |
 | `high`     | `claude`  | `claude-sonnet-5` | `high`       | Codex `gpt-6-sol` / `high`                                         |
+
+**Pinned at 05/11/2026 — Claude Haiku ở `cheap`/`standard`:** user yêu cầu thêm route khi cả ba route `cheap`/`standard` khác đồng thời không dùng được trong cùng dispatch (`cursor` launcher bị tắt ở host, `codex gpt-6-luna` còn 12% dưới reserve 20%, `opencode-go/deepseek-v4.1-flash` báo hết weekly usage limit — Task `task_d7f44eb4446f`, Run `run_8394757df5b2`). Đăng ký `agent: claude, model: claude-haiku-5-5, effort: null` trong `scripts/lib/agent-cost-tiers.mjs` để preflight chấp nhận; chưa có probe/benchmark xác nhận Haiku tương đương Sonnet cho việc review design. Dùng route này khi các route khác cùng tier đều đã xác minh không khả dụng, không thay cho `claude-sonnet-5` ở các tier có reasoning cần `focused+`.
 
 Task mới khai báo tier độc lập với agent/model/effort. Mapping thực thi nằm trong `scripts/lib/agent-cost-tiers.mjs`: mỗi tier là danh sách các route được phép. Khi thêm model khác, xác minh pin/effort trên host và cập nhật route cùng bảng này; tên tier và tiêu chí công việc giữ nguyên. Preflight chấp nhận đúng tổ hợp đã đăng ký, không tự mở model mới.
 

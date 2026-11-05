@@ -56,7 +56,7 @@ test('presentGateScanStatus denies an already-used ticket', () => {
     canReconcile: false,
   });
   assert.equal(view.kind, 'already-checked-in');
-  assert.equal(view.tone, 'deny');
+  assert.equal(view.tone, 'warning');
   assert.equal(view.symbol, 'xmark.circle.fill');
   assert.match(view.hint, /không cho vào/i);
 });

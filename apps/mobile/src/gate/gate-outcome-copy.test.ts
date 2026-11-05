@@ -59,7 +59,7 @@ test('fresh admission is green while already-checked-in history is denied', () =
     message: 'Đã check-in. Kết quả đã rõ.',
   });
   assert.equal(already.kind, 'already-checked-in');
-  assert.equal(already.tone, 'deny');
+  assert.equal(already.tone, 'warning');
   assert.equal(already.assertive, true);
   assert.match(already.title, /đã được sử dụng/i);
   assert.match(already.detail, /không cho vào/i);

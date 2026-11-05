@@ -6,7 +6,7 @@
 import type { GateOp, GatePhase } from './gate-scan.ts';
 import type { OfflineLocalStatus } from './offline-queue.ts';
 
-export type OutcomeTone = 'admit' | 'deny' | 'unknown' | 'default';
+export type OutcomeTone = 'admit' | 'deny' | 'warning' | 'unknown' | 'default';
 
 export type GateOutcomeKind =
   | 'idle'
@@ -114,7 +114,7 @@ export function presentGateOutcome(op: GateOp | null): GateOutcomeView {
         kind: 'already-checked-in',
         title: 'Vé đã được sử dụng',
         detail: 'Vé đã được check-in trước đó. Không cho vào.',
-        tone: 'deny',
+        tone: 'warning',
         assertive: true,
       };
     }

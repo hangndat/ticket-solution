@@ -7,7 +7,20 @@ import {
   buildTokensModule,
   loadBrandJson,
 } from '../../scripts/sync-tokens.mjs';
+import { colors } from './colors.ts';
 import { brand, elevation, radius, space } from './tokens.ts';
+
+test('Gate D12 severity: deny red, warning amber, unknown info-blue are distinct', () => {
+  const raw = loadBrandJson(repoRoot);
+  assert.equal(raw.colors.info.toLowerCase(), '#2459ba');
+  assert.equal(brand.info.toLowerCase(), '#2459ba');
+  assert.equal(colors.deny, brand.destructive);
+  assert.equal(colors.warning, brand.unknown);
+  assert.equal(colors.unknown, brand.info);
+  assert.notEqual(colors.warning, colors.deny);
+  assert.notEqual(colors.unknown, colors.warning);
+  assert.notEqual(colors.unknownSurface, colors.warningSurface);
+});
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '../../../..');
 const generatedPath = join(
@@ -23,7 +36,7 @@ test('tokens.generated.ts matches in-memory sync from brand/vemoki/tokens.json',
 
 test('brand tokens match Electric Violet brand/vemoki/tokens.json', () => {
   const raw = loadBrandJson(repoRoot);
-  assert.equal(raw.version, '3');
+  assert.equal(raw.version, '5');
   assert.equal(raw.artDirection, 'Electric Violet');
   assert.equal(brand.ink, raw.colors.ink);
   assert.equal(brand.paper, raw.colors.paper);
@@ -34,7 +47,7 @@ test('brand tokens match Electric Violet brand/vemoki/tokens.json', () => {
   assert.equal(brand.destructive, raw.colors.destructive);
   assert.equal(brand.admit, raw.colors.admit);
   assert.equal(brand.unknown, raw.colors.unknown);
-  assert.equal(raw.typography.display, 'Sora');
+  assert.equal(raw.typography.display, 'Be Vietnam Pro');
   assert.equal(raw.typography.body, 'Be Vietnam Pro');
 });
 
@@ -76,14 +89,14 @@ test('brand uses the approved Electric Violet palette', () => {
   assert.notEqual(brand.paper.toLowerCase(), '#f7f6f1');
   assert.notEqual(brand.signal.toLowerCase(), '#9b3a18');
   assert.notEqual(brand.focus.toLowerCase(), '#235fd0');
-  assert.equal(brand.ink.toLowerCase(), '#141020');
+  assert.equal(brand.ink.toLowerCase(), '#17151f');
   assert.equal(brand.paper.toLowerCase(), '#ffffff');
-  assert.equal(brand.signal.toLowerCase(), '#6c35ff');
-  assert.equal(brand.primary.toLowerCase(), '#6c35ff');
-  assert.equal(brand.focus.toLowerCase(), '#5b22f0');
-  assert.equal(brand.line.toLowerCase(), '#d7d6e0');
-  assert.equal(brand.muted.toLowerCase(), '#5c5774');
-  assert.equal(brand.destructive.toLowerCase(), '#8a1f1f');
-  assert.equal(brand.admit.toLowerCase(), '#1b7f4a');
-  assert.equal(brand.unknown.toLowerCase(), '#8a6d3b');
+  assert.equal(brand.signal.toLowerCase(), '#7038ff');
+  assert.equal(brand.primary.toLowerCase(), '#7038ff');
+  assert.equal(brand.focus.toLowerCase(), '#7038ff');
+  assert.equal(brand.line.toLowerCase(), '#dedce6');
+  assert.equal(brand.muted.toLowerCase(), '#625e70');
+  assert.equal(brand.destructive.toLowerCase(), '#be263b');
+  assert.equal(brand.admit.toLowerCase(), '#137a4b');
+  assert.equal(brand.unknown.toLowerCase(), '#8a5700');
 });

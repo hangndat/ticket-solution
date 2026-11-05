@@ -24,7 +24,10 @@ export const colors = {
   /** Gate scan outcome accents preserve their admission meaning. */
   admit: brand.admit,
   deny: brand.destructive,
-  unknown: brand.unknown,
+  /** Gate "đã dùng / trùng vé" severity — amber, distinct from deny red (D12). */
+  warning: brand.unknown,
+  /** Gate "chưa xác minh / chờ đồng bộ" severity — info blue, not amber (D12). */
+  unknown: brand.info,
   /** Form validation / material error red → semantic destructive (TOKENS.md). */
   destructive: brand.destructive,
   /** Hairline borders on inputs/cards. */
@@ -33,8 +36,10 @@ export const colors = {
   admitSurface: '#edf5ef',
   /** Gate scan deny sticky panel, tinted from destructive red. */
   denySurface: '#f6eaea',
-  /** Gate scan unknown/queued sticky panel (amber wash on paper). */
-  unknownSurface: '#fff6e8',
+  /** Gate scan already-checked-in sticky panel (amber wash on paper). */
+  warningSurface: '#fff6e8',
+  /** Gate scan unknown/queued/recorded sticky panel (info-blue wash on paper). */
+  unknownSurface: '#e8effb',
   /** Muted chrome surfaces. */
   surfaceMuted: '#efeef4',
   surfaceSubtle: '#f7f6fa',

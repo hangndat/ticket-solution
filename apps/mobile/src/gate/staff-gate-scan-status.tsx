@@ -9,6 +9,7 @@ import { typography } from '@/theme/typography';
 function toneColor(tone: GateScanStatusView['tone']): string {
   if (tone === 'admit') return colors.admit;
   if (tone === 'deny') return colors.deny;
+  if (tone === 'warning') return colors.warning;
   if (tone === 'unknown') return colors.unknown;
   return colors.secondary;
 }
@@ -17,6 +18,7 @@ function toneSurface(tone: GateScanStatusView['tone'], emphasized: boolean): str
   if (!emphasized) return colors.card;
   if (tone === 'admit') return colors.admitSurface;
   if (tone === 'deny') return colors.denySurface;
+  if (tone === 'warning') return colors.warningSurface;
   if (tone === 'unknown') return colors.unknownSurface;
   return colors.surfaceMuted;
 }

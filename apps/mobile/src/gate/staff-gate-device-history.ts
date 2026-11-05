@@ -17,7 +17,7 @@ export type DeviceScanHistoryRow = {
   receiptIdFull?: string;
   statusLabel: string;
   hint: string;
-  tone: 'admit' | 'deny' | 'unknown' | 'default';
+  tone: 'admit' | 'deny' | 'warning' | 'unknown' | 'default';
   source: 'scan' | 'offline-queue';
 };
 

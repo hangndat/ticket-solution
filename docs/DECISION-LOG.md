@@ -372,6 +372,34 @@ Coordinator chốt mapping triển khai từ spec đã duyệt: `ink=#141020`, `
 
 Portal vẫn ngoài scope và giữ Ant Design mặc định theo bổ sung O26; tenant/event branding theo dữ liệu đã publish không bị thay bằng logo platform. Không đổi API, auth, RLS, Gate admission/offline hoặc mở thêm tính năng. Architecture impact: **Không** — thay giá trị/asset trong contract và pipeline hiện có. Các worker tuân ownership, làm local, kiểm bản chạy; phê duyệt design không thay code/acceptance evidence và không cấp quyền publish/merge/deploy/store.
 
+## Bổ sung nhận diện — Vemoki Design System v1.0 cập nhật Electric Violet (05/11/2026)
+
+User chốt: `docs/design/Vemoki-new-design/` (GUIDELINES.md, tokens.json, vemoki.css, contrast-report.json) là **bản duyệt update**, thay giá trị xung đột trong [bổ sung Electric Violet 04/11](#bổ-sung-nhận-diện--electric-violet-04112026) khi hai bên khác nhau. Căn cứ: [review đối chiếu của Liv](design/Vemoki-new-design/WIREFRAME-ALIGNMENT-REVIEW.md) (mục 10, D1–D13), 15 HTML wireframe `originals/` vẫn là visual reference đã duyệt theo ADR, không tự đổi.
+
+**Giá trị mới chốt (coordinator áp vào `brand/vemoki/tokens.json`):**
+- Màu: `primary=signal=#7038FF` (thay `#6C35FF`), hover `#6028E8`, pressed `#5120C5`; `focus=#7038FF` (thay `#5B22F0`, theo GUIDELINES §04 focus=primary); `ink=#17151F` (thay `#141020`); `line/border=#DEDCE6` (thay `#D7D6E0`); `muted/text-secondary=#625E70` (thay `#5C5774`); thêm `background=#FAFAFC` (nền app, phân biệt `paper/surface=#FFFFFF` không đổi).
+- Trạng thái nghiệp vụ: **giữ tên field hiện hành** (`destructive`, `admit`, `unknown`) để không phá contract đang dùng trong `apps/mobile`/`apps/web`, chỉ đổi giá trị theo GUIDELINES §04: `destructive=#BE263B` (thay `#8A1F1F`), `admit=#137A4B` (thay `#1B7F4A`), `unknown=#8A5700` (thay `#8A6D3B`).
+- Typography: `display=body="Be Vietnam Pro"` — **bỏ Sora** theo GUIDELINES §05 (không còn display riêng); `docs/design/electric-violet/specs/foundations.md` và `docs/architecture/source-and-migration.md` cần cập nhật theo, đang ghi thông tin cũ (được Liv nêu ở mục 8 review).
+- Logo: giữ nguyên quy tắc O23/04-11 — path `mark.svg` đã duyệt là master; **không** gõ chữ "V" bằng font UI thay logo. `remaining-mobile-wireframes-20261105.html` đang vi phạm (tile 04) — đây là lỗi cần sửa khi implement, **không** sửa ngược file wireframe gốc (giữ bytes theo `MANIFEST.sha256`).
+- Trạng thái Gate (D12): **chưa chốt** — GUIDELINES §08 dùng warning cho "đã sử dụng" và neutral/info cho "chưa xác minh", còn wireframe/O31/O32 hiện dùng đỏ/amber. Giữ nguyên hành vi O23/O31/O32 (không tự đổi màu admission); PD/coordinator quyết định riêng trước khi đổi màu trạng thái Gate.
+- **Chưa chốt — cần quyết định riêng trước khi đổi token/code:** radius (D2: scale/tên "sm/md/lg/xl/pill" hiện hành khác cấu trúc "control/card/dialog/pill" của bản mới), spacing (D8: thang 13 bước hiện hành khác thang mới không có xxs=2/5xl=72), shadow/breakpoint (D9). Không đổi giá trị các mục này trong `tokens.json` ở quyết định này.
+- Màu CTA theo sự kiện (D11), tab bar wallet A+C (D13): giữ nguyên quyết định hiện hành (branding sự kiện theo dữ liệu publish; tab theo O28), bộ mới không có quy tắc riêng nên không đổi.
+
+**Hệ quả cần làm tiếp (ngoài quyết định này):** `apps/mobile/src/theme/tokens.generated.ts` cần regenerate qua `apps/mobile/scripts/sync-tokens.mjs`; `apps/mobile/src/theme/tokens.test.ts` đang hard-code giá trị cũ (`version: '3'`, hex v3, `typography.display: 'Sora'`) phải sửa theo slice iOS. `apps/web/src/branding/vemoki.ts` và `apps/web/tests/branding-theme.test.ts` cũng hard-code `#6C35FF` riêng (không tự sync từ JSON) — cần slice Web cập nhật. Đây là shared contract change, **Architecture impact: Có** (khác bổ sung 04/11 — lần này đổi giá trị hai slice `apps/mobile` và `apps/web` cùng lúc, không chỉ asset/token pipeline hiện có). Coordinator bump `brand/vemoki/tokens.json` lên version `4`; không tự sửa `apps/mobile`/`apps/web` trong quyết định này — cần Task riêng theo đúng ownership.
+
+Portal vẫn ngoài scope (O26). Không đổi API, auth, RLS, Gate admission/offline. Phê duyệt design không thay code/acceptance evidence, không cấp quyền publish/merge/deploy/store.
+
+## Bổ sung — chốt màu trạng thái Gate theo Vemoki Design System v1.0 (05/11/2026, D12)
+
+User chốt hướng giải quyết D12 trong [review của Liv](design/Vemoki-new-design/WIREFRAME-ALIGNMENT-REVIEW.md#10-cần-coordinator-quyết-định): tách mức độ nghiêm trọng của kết quả quét Gate thành ba tầng, không còn dùng chung đỏ cho "từ chối" và "đã dùng".
+
+- **Từ chối / vé sai / revoked** (`denied`) → giữ `destructive` (đỏ, `#BE263B`) — không đổi, mức nghiêm trọng cao nhất.
+- **Đã sử dụng / trùng vé** (`already-checked-in`) → đổi từ đỏ sang **warning** (vàng cảnh báo, `#8A5700` — tái dùng giá trị đã gán cho field `unknown` trong quyết định 05/11 trước); không phải gian lận nên không nên cùng mức với `denied`.
+- **Chưa xác minh / chờ đồng bộ offline** (`queued`, `recorded`, `unknown`, `holding`, `confirming`) → đổi từ amber sang **info/neutral** (`#2459BA`, theo GUIDELINES §04 `info`) — thêm field mới `colors.info` vào `brand/vemoki/tokens.json` (chưa có field này trước đây); bump `version` lên `5`. Tránh nhân viên hiểu lầm "đang chờ" thành "có vấn đề".
+- **Admitted** → giữ `admit` (xanh), không đổi.
+
+Đây là đổi **cách trình bày mức độ nghiêm trọng** (severity/màu) của kết quả quét, **không đổi** hành vi admission: vẫn không cho vào (không hiện "Cho vào"/xanh) khi chưa có xác nhận backend, đúng O23/O31/O32. Phạm vi code: `apps/mobile` (Gate chỉ iOS Staff theo O23) — `gate-outcome-copy.ts` (thêm tone mới), `gate-scan-status-ui.ts` (đổi tone của `already-checked-in`), `src/theme/colors.ts` (thêm `warning`/đổi nguồn `unknown`), `staff-gate-scan-status.tsx` (thêm nhánh tone). Không chạm Web/Portal (Gate ngoài phạm vi theo O23/O26). Architecture impact: **Không** (thêm token value, không đổi contract/API/route) nhưng là **UI đổi hành vi hiển thị** — nhánh B theo Project/DoD, cần reviewer độc lập (`dod+ux`) trước khi đóng Task, không tự coi code complete là acceptance complete.
+
 ## Bổ sung iOS visual — wireframe đã duyệt (05/11/2026)
 
 Owner duyệt lần lượt các màn iOS người tham dự/Staff Gate và board trạng thái bổ sung, sau đó chốt chỉnh bốn nhóm CTA. [ADR baseline iOS](architecture/ADR-MOBILE-WIREFRAMES-2026-11-05.md) ghi thứ tự nguồn và ranh giới; [gói 45 khung cùng HTML gốc](design/mobile-approved-wireframes-2026-11-05/README.md) là visual reference. Board 25 màn dựng lại từ mô tả đã bị bác bỏ, không dùng để triển khai.
