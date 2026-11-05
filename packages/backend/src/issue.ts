@@ -943,6 +943,7 @@ export type ListedTicket = {
   manualEntryCodeSealed: string | null;
   createdAt: Date;
   eventName?: string;
+  startsAt?: Date | null;
 };
 
 type OwnerTicketListRow = {
@@ -955,6 +956,8 @@ type OwnerTicketListRow = {
   manual_entry_code_sealed: string | null;
   created_at: Date;
   event_name: string | null;
+  event_starts_at: Date | null;
+  event_exists: boolean;
 };
 
 function mapOwnerTicketListRow(row: OwnerTicketListRow): ListedTicket {
@@ -968,6 +971,7 @@ function mapOwnerTicketListRow(row: OwnerTicketListRow): ListedTicket {
     manualEntryCodeSealed: row.manual_entry_code_sealed,
     createdAt: row.created_at,
     ...(row.event_name != null ? { eventName: row.event_name } : {}),
+    ...(row.event_exists ? { startsAt: row.event_starts_at } : {}),
   };
 }
 
@@ -981,7 +985,9 @@ export async function listTicketsForOwner(
 ): Promise<ListedTicket[]> {
   const rows = await tx.$queryRaw<OwnerTicketListRow[]>`
     SELECT t.id, t.event_id, t.ticket_type_id, t.source_id, t.state,
-            t.credential_version, t.manual_entry_code_sealed, t.created_at, e.name AS event_name
+            t.credential_version, t.manual_entry_code_sealed, t.created_at,
+            e.name AS event_name, e.starts_at AS event_starts_at,
+            e.id IS NOT NULL AS event_exists
     FROM tickets t
     LEFT JOIN events e
       ON e.tenant_id = t.tenant_id AND e.id = t.event_id
@@ -1032,8 +1038,8 @@ export async function listAllTicketsForOwner(
   }));
 }
 
-/** Batch event names per tenant (RLS needs app.tenant_id on events). */
-async function enrichOwnerTicketsWithEventNames(
+/** Batch event metadata per tenant (RLS needs app.tenant_id on events). */
+async function enrichOwnerTicketsWithEvents(
   db: PrismaClient,
   tickets: ListedTicketWithTenant[],
 ): Promise<ListedTicketWithTenant[]> {
@@ -1044,25 +1050,25 @@ async function enrichOwnerTicketsWithEventNames(
     if (!list.includes(ticket.eventId)) list.push(ticket.eventId);
     eventIdsByTenant.set(ticket.tenantId, list);
   }
-  const nameByTenantEvent = new Map<string, string>();
+  const eventByTenantEvent = new Map<string, { name: string; startsAt: Date | null }>();
   for (const [tenantId, eventIds] of eventIdsByTenant) {
     await withTenant(db, tenantId, async (tx) => {
-      const rows = await tx.$queryRaw<{ id: string; name: string }[]>`
-        SELECT id, name
+      const rows = await tx.$queryRaw<{ id: string; name: string; starts_at: Date | null }[]>`
+        SELECT id, name, starts_at
         FROM events
         WHERE tenant_id = ${tenantId}::uuid
           AND id = ANY(${eventIds}::uuid[])
       `;
       for (const row of rows) {
-        nameByTenantEvent.set(`${tenantId}:${row.id}`, row.name);
+        eventByTenantEvent.set(`${tenantId}:${row.id}`, { name: row.name, startsAt: row.starts_at });
       }
     });
   }
   return tickets.map((ticket) => {
-    const eventName = nameByTenantEvent.get(
+    const event = eventByTenantEvent.get(
       `${ticket.tenantId}:${ticket.eventId}`,
     );
-    return eventName != null ? { ...ticket, eventName } : ticket;
+    return event ? { ...ticket, eventName: event.name, startsAt: event.startsAt } : ticket;
   });
 }
 
@@ -1074,7 +1080,7 @@ export async function listOwnerTicketsAggregated(
   const tickets = await withActor(db, ownerUserId, (tx) =>
     listAllTicketsForOwner(tx, ownerUserId),
   );
-  return enrichOwnerTicketsWithEventNames(db, tickets);
+  return enrichOwnerTicketsWithEvents(db, tickets);
 }
 
 /**
@@ -1087,24 +1093,17 @@ export async function getTicketForOwner(
   ownerUserId: string,
   ticketId: string,
 ): Promise<ListedTicket> {
-  const rows = await tx.$queryRaw<
-    {
-      id: string;
-      event_id: string;
-      ticket_type_id: string;
-      source_id: string;
-      state: string;
-      credential_version: number;
-      manual_entry_code_sealed: string | null;
-      created_at: Date;
-    }[]
-  >`
-    SELECT id, event_id, ticket_type_id, source_id, state,
-            credential_version, manual_entry_code_sealed, created_at
-    FROM tickets
-    WHERE tenant_id = ${tenantId}::uuid
-      AND owner_user_id = ${ownerUserId}::uuid
-      AND id = ${ticketId}::uuid
+  const rows = await tx.$queryRaw<OwnerTicketListRow[]>`
+    SELECT t.id, t.event_id, t.ticket_type_id, t.source_id, t.state,
+            t.credential_version, t.manual_entry_code_sealed, t.created_at,
+            e.name AS event_name, e.starts_at AS event_starts_at,
+            e.id IS NOT NULL AS event_exists
+    FROM tickets t
+    LEFT JOIN events e
+      ON e.tenant_id = t.tenant_id AND e.id = t.event_id
+    WHERE t.tenant_id = ${tenantId}::uuid
+      AND t.owner_user_id = ${ownerUserId}::uuid
+      AND t.id = ${ticketId}::uuid
   `;
   const row = rows[0];
   if (!row) {
@@ -1113,16 +1112,7 @@ export async function getTicketForOwner(
       'Ticket was not found',
     );
   }
-  return {
-    ticketId: row.id,
-    eventId: row.event_id,
-    ticketTypeId: row.ticket_type_id,
-    sourceId: row.source_id,
-    state: row.state,
-    credentialVersion: row.credential_version,
-      manualEntryCodeSealed: row.manual_entry_code_sealed,
-    createdAt: row.created_at,
-  };
+  return mapOwnerTicketListRow(row);
 }
 
 export async function getOperationForActor(

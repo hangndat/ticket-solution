@@ -119,6 +119,7 @@ class TicketSummaryDto implements TicketSummary {
   @ApiProperty({ nullable: true, type: String }) manualEntryCode!: string | null;
   @ApiProperty() createdAt!: string;
   @ApiProperty({ required: false }) eventName?: string;
+  @ApiProperty({ required: false, nullable: true, type: String, format: 'date-time' }) startsAt?: string | null;
 }
 
 class MeTicketsDto implements MeTicketsResponse {
@@ -250,6 +251,9 @@ export class TicketIssueService {
       createdAt: ticket.createdAt.toISOString(),
       ...('eventName' in ticket && ticket.eventName != null
         ? { eventName: ticket.eventName }
+        : {}),
+      ...('startsAt' in ticket
+        ? { startsAt: ticket.startsAt?.toISOString() ?? null }
         : {}),
     };
   }

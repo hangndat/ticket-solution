@@ -124,6 +124,7 @@ async function seedTenantEvent(db, tenantId, eventId, slug) {
         id: eventId,
         slug,
         name: 'Event ' + slug,
+        startsAt: slug === 'one' ? new Date('2026-12-01T00:00:00Z') : null,
         status: 'PUBLISHED',
       },
     });
@@ -220,6 +221,8 @@ test(
       assert.equal(tenants.size, 2);
       assert.ok(tenants.has(T1));
       assert.ok(tenants.has(T2));
+      assert.equal(aggregate.find((t) => t.tenantId === T1).startsAt.toISOString(), '2026-12-01T00:00:00.000Z');
+      assert.equal(aggregate.find((t) => t.tenantId === T2).startsAt, null);
 
       const bView = await listOwnerTicketsAggregated(db, userB.userId);
       assert.equal(bView.length, 1);
@@ -233,6 +236,7 @@ test(
       );
       assert.equal(t1Only.length, 1);
       assert.equal(t1Only[0].ticketId, ticketA1.ticketId);
+      assert.equal(t1Only[0].startsAt.toISOString(), '2026-12-01T00:00:00.000Z');
 
       const crossLeak = await withActor(db, userB.userId, (tx) =>
         listAllTicketsForOwner(tx, userA.userId),
