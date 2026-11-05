@@ -3,6 +3,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   useSyncExternalStore
 } from 'react';
@@ -483,6 +484,10 @@ function VerifiedWallet({ userId }: { userId: string }) {
   const sessionScope = walletSessionScope(fetchScope);
   const cacheScope = walletDisplayCacheScope(fetchScope);
   const [tickets, setTickets] = useState<TicketSummary[]>([]);
+  const ticketsRef = useRef(tickets);
+  useEffect(() => {
+    ticketsRef.current = tickets;
+  }, [tickets]);
   const [offline, setOffline] = useState(false);
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -493,6 +498,9 @@ function VerifiedWallet({ userId }: { userId: string }) {
   const hydrateFromCache = useCallback(async (isActive: () => boolean) => {
     const epoch = session.captureEpoch();
     if (!epoch || epoch.userId !== userId) return;
+    // A warm wallet remains mounted under ticket detail. Preserve its rows,
+    // offline notice and scroll geometry while the focus refresh runs.
+    if (ticketsRef.current.length > 0 && session.read<TicketSummary[]>(sessionScope, 'me-tickets')) return;
     const cache = await readTicketDisplayCache(userId, cacheScope);
     const decision = decideCacheHydrate({
       epoch,
