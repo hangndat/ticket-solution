@@ -485,7 +485,9 @@ function VerifiedWallet({ userId }: { userId: string }) {
   const cacheScope = walletDisplayCacheScope(fetchScope);
   const [tickets, setTickets] = useState<TicketSummary[]>([]);
   const ticketsRef = useRef(tickets);
-  ticketsRef.current = tickets;
+  useEffect(() => {
+    ticketsRef.current = tickets;
+  }, [tickets]);
   const [offline, setOffline] = useState(false);
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
