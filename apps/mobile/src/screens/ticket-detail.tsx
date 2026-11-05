@@ -179,7 +179,7 @@ export function TicketDetailScreen() {
       if (mode === 'verified') {
         const memory = session.read<TicketSummary[]>(sessionScope, 'me-tickets');
         const fromMemory = findOwnedTicket(memory, id);
-        if (fromMemory) {
+        if (fromMemory && buildDisplayQrPayload(fromMemory) && reloadKey === 0) {
           if (!cancelled) {
             setLoad({
               status: 'ready',
@@ -198,7 +198,7 @@ export function TicketDetailScreen() {
       const cache = await readTicketDisplayCache(ownerUserId, cacheScope);
       const found = findOwnedTicket(cache?.tickets, id);
       if (cancelled) return;
-      if (found) {
+      if (found && (mode === 'offline-display' || (buildDisplayQrPayload(found) && reloadKey === 0))) {
         setLoad({
           status: 'ready',
           ticket: found,
@@ -249,6 +249,16 @@ export function TicketDetailScreen() {
           return;
         }
         if (outcome.status === 'error') {
+          // Preserve offline metadata, but never use cache after authorization
+          // fails. Legacy cache still gets an explicit QR-unavailable notice.
+          if (outcome.reason === 'unreachable' && found) {
+            setLoad({
+              status: 'ready', ticket: found,
+              syncedAt: cache?.syncedAt ?? null, fromCache: true,
+              ownerUserId, ownerTenantId, ticketId: id, mode,
+            });
+            return;
+          }
           setLoad({
             status: 'error',
             reason: outcome.reason,
@@ -458,7 +468,15 @@ export function TicketDetailScreen() {
                 accessibilityLabel={qrA11y}
               />
             </View>
-          ) : null}
+          ) : (
+            <ErrorState
+              title="Chưa tải được mã QR của vé"
+              onRetry={mode === 'verified' ? () => setReloadKey((key) => key + 1) : undefined}
+              retryLabel="Tải lại mã QR"
+            >
+              Kết nối mạng và tải lại để nhận mã QR từ hệ thống. Thông tin vé đang hiển thị chưa đủ để quét vào cổng.
+            </ErrorState>
+          )}
           {!used ? (
             <View style={{ alignItems: 'center', gap: space.xs }}>
               <Text style={{ ...typography.caption, color: colors.secondary }}>

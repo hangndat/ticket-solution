@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { fetchMeTickets, probeMeTickets } from './fetch-me-tickets.ts';
+import { buildDisplayQrPayload } from './display-payload.ts';
 
 const sampleTicket = {
   ticketId: '11111111-1111-1111-1111-111111111111',
@@ -46,6 +47,22 @@ test('fetchMeTickets accepts MeTicketsResponse and rejects invalid bodies', asyn
     });
     body = { tickets: [{ ticketId: 'x' }] };
     assert.equal(await fetchMeTickets('tok', sampleTicket.tenantId), null);
+    for (const gateCredential of [undefined, null,
+      { v: 1, kind: 'ticket.display', jws: 'header.payload.signature' },
+      { v: 1, kind: 'ticket.gate_credential', jws: 'invalid' },
+    ]) {
+      const legacyTicket = { ...sampleTicket, ticketId: 'legacy-ticket', gateCredential, manualEntryCode: undefined };
+      body = { tickets: [sampleTicket, legacyTicket] };
+      const mixed = await probeMeTickets('tok', sampleTicket.tenantId);
+      assert.equal(mixed.status, 'ok');
+      if (mixed.status === 'ok') {
+        assert.equal(mixed.body.tickets.length, 2);
+        assert.equal(buildDisplayQrPayload(mixed.body.tickets[0]!), JSON.stringify(sampleTicket.gateCredential));
+        assert.equal(buildDisplayQrPayload(mixed.body.tickets[1]!), '');
+      }
+    }
+    body = { tickets: [{ ...sampleTicket, manualEntryCode: null }] };
+    assert.equal((await probeMeTickets('tok', sampleTicket.tenantId)).status, 'ok');
     body = { tickets: [sampleTicket] };
     status = 401;
     assert.equal(await fetchMeTickets('tok', sampleTicket.tenantId), null);

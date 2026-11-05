@@ -17,7 +17,11 @@ function isTicketSummary(value: unknown): value is TicketSummary {
     typeof row.sourceId === 'string' &&
     typeof row.state === 'string' &&
     typeof row.credentialVersion === 'number' &&
-    typeof row.createdAt === 'string'
+    typeof row.createdAt === 'string' &&
+    // Credential availability is per ticket, not validity of the whole wallet.
+    // Legacy API/cache rows still provide useful metadata; the detail screen
+    // validates QR displayability and refreshes a missing signed credential.
+    (row.manualEntryCode == null || typeof row.manualEntryCode === 'string')
   );
 }
 

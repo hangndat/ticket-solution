@@ -57,3 +57,16 @@ test('QR matrix encodes signed payload without inventing modules', () => {
   assert.equal(modules.length, modules[0]?.length);
   assert.ok(modules.some((row) => row.some(Boolean)));
 });
+
+test('legacy or malformed credentials never become a ticket-ID QR', () => {
+  for (const gateCredential of [undefined, null, {},
+    { v: 1, kind: 'ticket.display', jws: 'header.payload.signature' },
+    { v: 1, kind: 'ticket.gate_credential', jws: '' },
+    { v: 1, kind: 'ticket.gate_credential', jws: 'not-a-compact-jws' },
+  ]) {
+    const legacy = { ...ticket, gateCredential } as unknown as typeof ticket;
+    assert.equal(buildDisplayQrPayload(legacy), '');
+  }
+  assert.equal(buildDisplayQrPayload({ ...ticket, manualEntryCode: null }),
+    JSON.stringify(ticket.gateCredential));
+});
