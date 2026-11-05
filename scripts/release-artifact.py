@@ -542,14 +542,38 @@ def dedupe_against_releases(stage, bases, files):
     return linked, saved
 
 
+def app_schema_ranges(schema_min, schema_max, overrides=()):
+    if schema_min > schema_max:
+        fail("invalid schema range")
+    ranges = {service: {"min": schema_min, "max": schema_max}
+              for service in SERVICES if service != "migrate"}
+    seen = set()
+    for value in overrides:
+        parts = value.split(":")
+        if len(parts) != 3 or parts[0] not in ranges:
+            fail("service schema must be api|worker|web|portal:MIN:MAX")
+        service = parts[0]
+        if service in seen:
+            fail("duplicate service schema override")
+        try:
+            low, high = int(parts[1]), int(parts[2])
+        except ValueError:
+            fail("service schema bounds must be integers")
+        if low < 0 or low > high:
+            fail("invalid service schema range")
+        ranges[service] = {"min": low, "max": high}
+        seen.add(service)
+    return ranges
+
+
 def build(args):
     validate_root(args.root)
     root = args.root.resolve()
     validate_root(root)
     if not SHA.fullmatch(args.sha):
         fail("source must be a full commit SHA")
-    if args.schema_min > args.schema_max:
-        fail("invalid schema range")
+    app_schemas = app_schema_ranges(args.schema_min, args.schema_max,
+                                    getattr(args, "service_schema", ()))
     if (args.migrate_input_min > args.migrate_input_max
             or args.migrate_target < args.migrate_input_max):
         fail("invalid migration input/target contract")
@@ -661,7 +685,7 @@ def build(args):
                 "sha256": service_digest(all_files, paths),
                 "schema": ({"inputMin": args.migrate_input_min, "inputMax": args.migrate_input_max,
                             "target": args.migrate_target} if service == "migrate" else
-                           {"min": args.schema_min, "max": args.schema_max})}
+                            app_schemas[service])}
         source["workerPendingPushSafe"] = subprocess.run(["git", "merge-base", "--is-ancestor",
             "710b57140fe476661e98fbdf6c9bf6d5170dfbc1", args.sha]).returncode == 0
         for service, paths in ARTIFACTS.items():
@@ -767,6 +791,8 @@ def main():
     b.add_argument("--stale-min-age-minutes", type=int, default=60)
     b.add_argument("--schema-min", type=int, required=True)
     b.add_argument("--schema-max", type=int, required=True)
+    b.add_argument("--service-schema", action="append", default=[], metavar="SERVICE:MIN:MAX",
+                   help="reviewed app-specific schema range; repeat for independent service rollouts")
     b.add_argument("--migrate-input-min", type=int, required=True)
     b.add_argument("--migrate-input-max", type=int, required=True)
     b.add_argument("--migrate-target", type=int, required=True)
