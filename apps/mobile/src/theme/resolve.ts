@@ -63,7 +63,7 @@ export function themeColors(tokens: ThemeTokens) {
     ticketCanvas: tokens.paper,
     ticketInk: tokens.ink,
     admit: '#1b7f4a',
-    deny: tokens.signal,
-    unknown: '#8a6d3b',
+    deny: vemokiBrand.destructive,
+    unknown: vemokiBrand.unknown,
   };
 }

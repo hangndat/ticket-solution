@@ -3,7 +3,7 @@ import { brand } from './tokens.ts';
 export { brand };
 
 export const colors = {
-  /** Primary text — Live Pulse ink (not adaptive system label on attendee paper). */
+  /** Primary text — brand ink (not adaptive system label on attendee paper). */
   label: brand.ink,
   secondary: brand.inkMuted,
   /** Screen fill — paper; atmosphere wash layers on top via ScreenAtmosphere. */
@@ -21,25 +21,25 @@ export const colors = {
   /** Ticket QR canvas (brand paper/ink). */
   ticketCanvas: brand.paper,
   ticketInk: brand.ink,
-  /** Gate scan outcome accents — no purple/glow. */
+  /** Gate scan outcome accents preserve their admission meaning. */
   admit: brand.admit,
-  deny: brand.signal,
+  deny: brand.destructive,
   unknown: brand.unknown,
   /** Form validation / material error red → semantic destructive (TOKENS.md). */
   destructive: brand.destructive,
-  /** Hairline borders on inputs/cards (#D7DFE9). */
+  /** Hairline borders on inputs/cards. */
   line: brand.line,
   /** Success pill background (events / tickets). */
   admitSurface: '#edf5ef',
-  /** Gate scan deny sticky panel (brand denyBg tint). */
-  denySurface: '#fde8ec',
+  /** Gate scan deny sticky panel, tinted from destructive red. */
+  denySurface: '#f6eaea',
   /** Gate scan unknown/queued sticky panel (amber wash on paper). */
   unknownSurface: '#fff6e8',
   /** Muted chrome surfaces. */
-  surfaceMuted: '#e8ecf1',
-  surfaceSubtle: '#f0f4f8',
+  surfaceMuted: '#efeef4',
+  surfaceSubtle: '#f7f6fa',
   /** iOS shadowColor fallback. */
-  shadow: '#000000',
-  /** Gate camera focus ring tint (signal @ ~70%). */
-  signalTint: '#b8a4f5',
+  shadow: brand.ink,
+  /** Gate camera focus ring tint. */
+  signalTint: brand.focus,
 };

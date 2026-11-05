@@ -125,13 +125,9 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       [
         'expo-splash-screen',
         {
-          backgroundColor: '#F4F6F8',
+          backgroundColor: '#FFFFFF',
           image: './assets/splash-icon.png',
           imageWidth: 160,
-          dark: {
-            backgroundColor: '#0B1220',
-            image: './assets/splash-icon-dark.png',
-          },
         },
       ],
       [
@@ -146,7 +142,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         'expo-notifications',
         {
           icon: './assets/icon.png',
-          color: '#E11D48',
+          color: '#6C35FF',
           defaultChannel: 'default',
           enableBackgroundRemoteNotifications: true,
         },
