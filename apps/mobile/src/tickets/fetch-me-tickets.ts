@@ -1,5 +1,6 @@
 import type { MeTicketsResponse, TicketSummary } from '@ticket/contracts';
 import { getApiBaseUrl } from '../identity/config.ts';
+import { buildDisplayQrPayload } from './display-payload.ts';
 import {
   type MeTicketsFetchScope,
   normalizeMeTicketsFetchScope,
@@ -17,7 +18,9 @@ function isTicketSummary(value: unknown): value is TicketSummary {
     typeof row.sourceId === 'string' &&
     typeof row.state === 'string' &&
     typeof row.credentialVersion === 'number' &&
-    typeof row.createdAt === 'string'
+    typeof row.createdAt === 'string' &&
+    buildDisplayQrPayload(row as unknown as TicketSummary) !== '' &&
+    (row.manualEntryCode === null || typeof row.manualEntryCode === 'string')
   );
 }
 

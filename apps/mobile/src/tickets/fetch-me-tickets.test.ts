@@ -46,6 +46,15 @@ test('fetchMeTickets accepts MeTicketsResponse and rejects invalid bodies', asyn
     });
     body = { tickets: [{ ticketId: 'x' }] };
     assert.equal(await fetchMeTickets('tok', sampleTicket.tenantId), null);
+    for (const gateCredential of [undefined, null,
+      { v: 1, kind: 'ticket.display', jws: 'header.payload.signature' },
+      { v: 1, kind: 'ticket.gate_credential', jws: 'invalid' },
+    ]) {
+      body = { tickets: [{ ...sampleTicket, gateCredential }] };
+      assert.equal((await probeMeTickets('tok', sampleTicket.tenantId)).status, 'invalid');
+    }
+    body = { tickets: [{ ...sampleTicket, manualEntryCode: null }] };
+    assert.equal((await probeMeTickets('tok', sampleTicket.tenantId)).status, 'ok');
     body = { tickets: [sampleTicket] };
     status = 401;
     assert.equal(await fetchMeTickets('tok', sampleTicket.tenantId), null);
