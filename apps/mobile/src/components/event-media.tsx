@@ -92,7 +92,8 @@ function EventBrandFallback({
   const initial = eventInitial(wordmark?.trim() || '');
   const label = shortEventLabel(wordmark);
   // Large monogram — distinctly not the old 22% wash + tiny caption wordmark.
-  const fontSize = Math.max(40, Math.min(Math.round(height * 0.5), 72));
+  const compact = height <= 64;
+  const fontSize = compact ? 24 : Math.max(40, Math.min(Math.round(height * 0.5), 72));
 
   return (
     <View
@@ -128,7 +129,7 @@ function EventBrandFallback({
       >
         {initial}
       </Text>
-      {label ? (
+      {label && !compact ? (
         <Text
           numberOfLines={1}
           maxFontSizeMultiplier={1.2}

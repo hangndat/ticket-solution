@@ -52,3 +52,28 @@ export function publishedListStateFromResult(
   };
 }
 
+/** Search the loaded published page; never turn a failed fetch into an empty catalog. */
+export function selectPublishedCatalog(
+  items: PublishedEventSummary[],
+  query: string,
+  now = Date.now(),
+): {
+  matches: PublishedEventSummary[];
+  emptyKind: 'catalog' | 'search' | null;
+} {
+  const normalized = query.trim().toLocaleLowerCase('vi');
+  const matches = items.filter((item) =>
+    [item.name, item.brand.organizationName, item.location ?? '']
+      .join(' ').toLocaleLowerCase('vi').includes(normalized),
+  );
+  const rank = (item: PublishedEventSummary) => {
+    const time = item.startsAt ? Date.parse(item.startsAt) : NaN;
+    return Number.isFinite(time) && time >= now ? time : Infinity;
+  };
+  matches.sort((a, b) => rank(a) - rank(b));
+  return {
+    matches,
+    emptyKind: matches.length ? null : normalized ? 'search' : 'catalog',
+  };
+}
+

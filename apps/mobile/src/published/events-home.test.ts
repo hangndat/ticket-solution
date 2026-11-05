@@ -4,6 +4,7 @@ import {
   PUBLISHED_LIST_FAIL_CLOSED_MESSAGE,
   initialPublishedListPhase,
   publishedListStateFromResult,
+  selectPublishedCatalog,
 } from './events-home.ts';
 import type { FetchPublishedListResult } from './published-event-api.ts';
 import { PUBLISHED_SECTION_KINDS } from './types.ts';
@@ -50,6 +51,17 @@ test('empty ok list stays empty — fail-closed, no fixture fill', () => {
   const state = publishedListStateFromResult(result);
   assert.equal(state.phase, 'ready');
   assert.deepEqual(state.items, []);
+});
+
+test('catalog search has its own empty state and ranks upcoming events first', () => {
+  const later = { ...sampleSummary, id: 'later', name: 'Studio Night', startsAt: '2027-03-22T10:00:00+07:00' };
+  const sooner = { ...sampleSummary, id: 'sooner', name: 'MFest', startsAt: '2027-03-20T10:00:00+07:00' };
+  const catalog = selectPublishedCatalog([later, sooner], '', Date.parse('2027-03-01'));
+  assert.deepEqual(catalog.matches.map((item) => item.id), ['sooner', 'later']);
+  assert.equal(catalog.emptyKind, null);
+  assert.equal(selectPublishedCatalog([], '', Date.parse('2027-03-01')).emptyKind, 'catalog');
+  assert.equal(selectPublishedCatalog([sooner], 'không có', Date.parse('2027-03-01')).emptyKind, 'search');
+  assert.equal(selectPublishedCatalog([sooner], 'mfest', Date.parse('2027-03-01')).matches.length, 1);
 });
 
 test('unreachable and invalid clear items and keep fail-closed message', () => {
