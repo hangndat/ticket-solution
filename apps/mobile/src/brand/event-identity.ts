@@ -36,6 +36,23 @@ export function eventIdentityColor(
   return EVENT_IDENTITY_PALETTE[h % EVENT_IDENTITY_PALETTE.length];
 }
 
+/** WCAG contrast-safe label for a published event color, including #fff. */
+export function eventCtaForeground(background: string): '#000000' | '#ffffff' {
+  const hex = background.replace('#', '');
+  const expanded = hex.length === 3
+    ? [...hex].map((digit) => digit + digit).join('')
+    : hex;
+  if (!/^[0-9a-fA-F]{6}$/.test(expanded)) return '#ffffff';
+  const rgb = [0, 2, 4].map((offset) => {
+    const channel = parseInt(expanded.slice(offset, offset + 2), 16) / 255;
+    return channel <= 0.04045
+      ? channel / 12.92
+      : ((channel + 0.055) / 1.055) ** 2.4;
+  });
+  const luminance = 0.2126 * rgb[0]! + 0.7152 * rgb[1]! + 0.0722 * rgb[2]!;
+  return luminance > 0.179 ? '#000000' : '#ffffff';
+}
+
 /** One-letter monogram for the identity block / banner fallback. */
 export function eventInitial(eventName: string): string {
   const ch = [...eventName.trim()][0];

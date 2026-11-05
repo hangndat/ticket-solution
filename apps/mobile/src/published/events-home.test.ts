@@ -2,7 +2,9 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
   PUBLISHED_LIST_FAIL_CLOSED_MESSAGE,
+  featuredCatalogHeading,
   initialPublishedListPhase,
+  nextCatalogRefreshMs,
   publishedListStateFromResult,
   selectPublishedCatalog,
 } from './events-home.ts';
@@ -62,6 +64,21 @@ test('catalog search has its own empty state and ranks upcoming events first', (
   assert.equal(selectPublishedCatalog([], '', Date.parse('2027-03-01')).emptyKind, 'catalog');
   assert.equal(selectPublishedCatalog([sooner], 'không có', Date.parse('2027-03-01')).emptyKind, 'search');
   assert.equal(selectPublishedCatalog([sooner], 'mfest', Date.parse('2027-03-01')).matches.length, 1);
+});
+
+test('upcoming heading and rank change exactly when an event begins', () => {
+  const first = { ...sampleSummary, startsAt: '2027-03-20T10:00:00+07:00' };
+  const second = { ...sampleSummary, id: 'second', startsAt: '2027-03-21T10:00:00+07:00' };
+  const start = Date.parse(first.startsAt);
+  assert.equal(featuredCatalogHeading(first, '', start - 1), 'Sắp diễn ra gần nhất');
+  assert.equal(nextCatalogRefreshMs([first, second], start - 1), 2);
+  assert.equal(featuredCatalogHeading(first, '', start), 'Sự kiện công khai');
+  assert.equal(featuredCatalogHeading(first, 'MFest', start - 1), 'Kết quả tìm kiếm');
+  assert.deepEqual(
+    selectPublishedCatalog([first, second], '', start).matches.map((item) => item.id),
+    ['second', first.id],
+  );
+  assert.equal(nextCatalogRefreshMs([first], start), null);
 });
 
 test('unreachable and invalid clear items and keep fail-closed message', () => {

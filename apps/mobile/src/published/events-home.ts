@@ -68,12 +68,36 @@ export function selectPublishedCatalog(
   );
   const rank = (item: PublishedEventSummary) => {
     const time = item.startsAt ? Date.parse(item.startsAt) : NaN;
-    return Number.isFinite(time) && time >= now ? time : Infinity;
+    return Number.isFinite(time) && time > now ? time : Infinity;
   };
   matches.sort((a, b) => rank(a) - rank(b));
   return {
     matches,
     emptyKind: matches.length ? null : normalized ? 'search' : 'catalog',
   };
+}
+
+export function featuredCatalogHeading(
+  featured: PublishedEventSummary,
+  query: string,
+  now: number,
+): string {
+  if (query.trim()) return 'Kết quả tìm kiếm';
+  const start = featured.startsAt ? Date.parse(featured.startsAt) : NaN;
+  return Number.isFinite(start) && start > now
+    ? 'Sắp diễn ra gần nhất'
+    : 'Sự kiện công khai';
+}
+
+/** Wake at the next start (or daily for distant events); caller clears the timer. */
+export function nextCatalogRefreshMs(
+  items: PublishedEventSummary[],
+  now: number,
+): number | null {
+  const starts = items
+    .map((item) => item.startsAt ? Date.parse(item.startsAt) : NaN)
+    .filter((time) => Number.isFinite(time) && time > now);
+  if (!starts.length) return null;
+  return Math.min(Math.min(...starts) - now + 1, 24 * 60 * 60 * 1000);
 }
 

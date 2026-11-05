@@ -12,6 +12,8 @@ import { AttendeeScreenChrome } from '@/navigation/attendee-screen-chrome';
 import { fetchPlatformPublishedEventList } from '@/published/published-event-api';
 import {
   initialPublishedListPhase,
+  featuredCatalogHeading,
+  nextCatalogRefreshMs,
   publishedListStateFromResult,
   selectPublishedCatalog,
   type PublishedListPhase
@@ -162,9 +164,10 @@ export function EventsScreen() {
   const [publishedError, setPublishedError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
-  const [catalogNow] = useState(() => Date.now());
+  const [catalogNow, setCatalogNow] = useState(() => Date.now());
 
   const retryPublished = () => {
+    setCatalogNow(Date.now());
     setPublishedPhase('loading');
     setPublishedError(null);
     void (async () => {
@@ -193,6 +196,7 @@ export function EventsScreen() {
       );
       if (cancelled) return;
       const next = publishedListStateFromResult(result);
+      setCatalogNow(Date.now());
       setPublished(next.items);
       setPublishedPhase(next.phase);
       setPublishedError(next.errorMessage);
@@ -202,6 +206,14 @@ export function EventsScreen() {
       controller.abort();
     };
   }, [reloadKey]);
+
+  useEffect(() => {
+    if (publishedPhase !== 'ready') return;
+    const delay = nextCatalogRefreshMs(published, catalogNow);
+    if (delay === null) return;
+    const timer = setTimeout(() => setCatalogNow(Date.now()), delay);
+    return () => clearTimeout(timer);
+  }, [published, publishedPhase, catalogNow]);
 
   useEffect(() => {
     resetToDefault();
@@ -267,8 +279,7 @@ export function EventsScreen() {
         <>
           <Text accessibilityRole="header" style={{ ...typography.subheadSemibold,
             color: brand.ink }}>
-            {normalizedQuery ? 'Kết quả tìm kiếm' : featured.startsAt && Date.parse(featured.startsAt) >= catalogNow
-              ? 'Sắp diễn ra gần nhất' : 'Sự kiện công khai'}
+            {featuredCatalogHeading(featured, normalizedQuery, catalogNow)}
           </Text>
           <PublishedEventCard item={featured} featured />
           {otherEvents.length > 0 ? (

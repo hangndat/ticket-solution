@@ -39,7 +39,7 @@ import { fontFamilies } from '@/theme/fonts';
 import { useTheme } from '@/theme/ThemeProvider';
 import { typography } from '@/theme/typography';
 import { WalletOwnedTicketsLink } from '@/components/wallet-owned-tickets-link';
-import { eventIdentityColor } from '@/brand/event-identity';
+import { eventCtaForeground, eventIdentityColor } from '@/brand/event-identity';
 import { space } from '@/theme/tokens';
 
 export function EventDetailScreen({
@@ -264,6 +264,7 @@ function PublishedEventComposition({
   const { heroOpacity, reduceMotionOs } = useHeroFade();
   const model = buildEventDetailModel(event);
   const copy = eventsCopy.detail;
+  const ctaBackground = eventIdentityColor(event.id, event.brand.primaryColor);
 
   useEffect(() => {
     applyBranding(
@@ -283,11 +284,16 @@ function PublishedEventComposition({
       <Button
         label="Đổi mã nhận vé"
         size="lg"
-        style={{ backgroundColor: eventIdentityColor(event.id, event.brand.primaryColor) }}
+        style={{ backgroundColor: ctaBackground }}
         accessibilityLabel={`Đổi mã nhận vé cho ${event.name}`}
         onPress={() => router.push(ATTENDEE_REDEEM_PATH)}
         testID="event-detail-cta-redeem"
-      />
+      >
+        <Text style={{ ...typography.callout, fontFamily: fontFamilies.bodySemiBold,
+          color: eventCtaForeground(ctaBackground), textAlign: 'center' }}>
+          Đổi mã nhận vé
+        </Text>
+      </Button>
     </>
   );
 
