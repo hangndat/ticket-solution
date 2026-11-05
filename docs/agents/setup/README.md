@@ -5,6 +5,7 @@
 - [Provider recovery](provider-recovery.md): kiểm khả dụng tài khoản/provider.
 - [MCP setup](../MCP-SETUP.md): CRG/LeanCTX và root worktree.
 - [LeanCTX trên Cursor](leanctx-cursor.md): troubleshooting theo host.
+- [GitNexus](gitnexus.md): index và MCP bổ sung trong project, giữ nguyên CRG/LeanCTX.
 
 Cursor nạp một adapter `.cursor/rules/project.mdc` trỏ tới AGENTS.md và bản đồ đọc chung. Claude đọc CLAUDE.md → AGENTS.md; agent khác bắt đầu từ AGENTS.md. Không dựa vào trigger/globs riêng của Cursor để áp dụng policy chung.
 

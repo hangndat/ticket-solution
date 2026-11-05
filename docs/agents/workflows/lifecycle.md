@@ -1,15 +1,17 @@
 # Mailbox và lifecycle — Orchestrator V3
 
-Chỉ đọc khi supervise Orca Run; dùng guide phiên bản host và preamble thật. Baseline 1.4.246; setup/checkpoint: [orca-v3.md](../setup/orca-v3.md).
+Chỉ đọc khi supervise Orca Run; dùng guide phiên bản host và preamble thật. Baseline 1.4.248; setup/checkpoint: [orca-v3.md](../setup/orca-v3.md).
 
 1. Start mọi task ready độc lập trong scope, caps/WIP và quota qua workflow wrapper; kiểm `result.state`, `failedStage`, requested/effective và `next` trong receipt. Xử lý `next` nếu có, lưu checkpoint rồi **kết thúc turn** để Orca đánh thức khi worker báo. Nhường turn không phải kết thúc Run hay bỏ supervision.
-2. Khi Orca wake: chạy đúng lệnh `check` trong wake; scope đúng Run/Task/Dispatch. Nhiều Run dùng `--run <id>` rõ ràng; không `run-use` chỉ để xem Run khác vì có thể mất binding các Run trước.
+2. Khi Orca wake trong native chat: mỗi mail đến nguyên nội dung trong một message riêng (sender/subject/body/payload và lệnh reply), xử lý trực tiếp. Mail xếp hàng khi chat đang làm việc, không ngắt turn; chat idle được wake ngay. Chỉ chạy đúng lệnh `check` khi wake yêu cầu (terminal hoặc message quá lớn cho chat); scope đúng Run/Task/Dispatch. Mail đã được chat nhận vào turn có thể không còn trong `check`, nên kết quả rỗng không phủ nhận message đã nhận. Nhiều Run dùng `--run <id>` rõ ràng; không `run-use` chỉ để xem Run khác vì có thể mất binding các Run trước.
 3. Process toàn bộ delivery: reply `question` khi đủ chỉ dẫn; thiếu quyết định của user thì hỏi user và giữ checkpoint. Xác minh task/dispatch/outcome của `worker_done`; không đổi reported failure thành completed. `escalation` có `stopReason` là worker dừng thiếu `worker_done`, xử lý theo recovery guide. Ack theo receipt/preamble sau batch.
 4. Lưu evidence/checkpoint, kiểm ready queue và fill slot theo [idle-fill](dispatch.md). Xử lý delivery, câu hỏi có thể trả lời và cleanup có `next` trước khi nhường turn. Không còn hành động làm được thì kết thúc turn; Orca tiếp tục wake cả khi còn worker live. Chỉ báo scope hoàn tất khi mọi Task có outcome và evidence/gates tương ứng.
 5. Worker xong tự đóng trừ khi receipt/`worker-list` có `next` yêu cầu hành động hoặc đã keep-open. Thu telemetry qua wrapper sau settlement hợp lệ, trước cleanup chủ động; chỉ release tài nguyên owned khi host yêu cầu, kiểm receipt. `worker_done` không thay DoD. Không xóa branch/worktree hoặc kill process không thuộc task.
 6. Follow-up cùng scope/context và đúng model/employee: `send --to dispatch:<id> --subject "…" --body "…"`. Worker đang làm nhận mail; worker finished/closed nhận Task follow-up và gửi `worker_done` mới. Đọc receipt lấy Task/Dispatch thật, cập nhật tracking; không gán receipt assignment cũ cho follow-up. Paired-server finished worker không hỗ trợ cách này: đọc placement guide, start Task qua wrapper trên đúng host.
 7. Chỉ dùng `--keep-open` hoặc `worker-keep-open --dispatch <id>` khi user sẽ tiếp tục xem/nói chuyện trong worker chat; không giữ worker rảnh để có thể dùng sau. User-taken-over và tài nguyên chưa xác minh không được tự đóng.
 8. Timeout, silence, heartbeat hoặc inbox rỗng không chứng minh exit. Chỉ kiểm `worker-list` scoped Run khi có lỗi/escalation, user yêu cầu hoặc quá hạn task; đọc liveness và `next`. `unverifiable` không cho phép tự stop/retry/release. Start failed/interrupted: đọc `failedStage` và `references/recovery-and-cleanup.md`; không retry mù hoặc dùng Run/Task mới né circuit breaker.
+
+Nếu worker còn binding coordinator của Run cũ, 1.4.248 có thể route mail tới mailbox terminal đang đọc và trả warning `recipient_run_bound_redirect`; `run-current` bổ sung `next` cho Dispatch hiện tại. Giữ cách gửi qua `dispatch:<id>`, đọc warning/`next` trước recovery; không dùng `run-use` để tự sửa binding khi chưa xác minh ownership Run cũ. Chi tiết: [upstream routing fix](https://github.com/stablyai/orca/pull/37548).
 
 ## Tránh vòng model không có thông tin mới
 

@@ -32,7 +32,7 @@ Chuẩn bị checklist + lệnh local (Xcode / `xcodebuild` / `xcrun altool` ho�
 | ASC Issuer ID env | **Unset** (`APP_STORE_CONNECT_API_ISSUER_ID` / `ASC_ISSUER_ID`) |
 | ASC Key ID env | **Unset** (có thể set `APP_STORE_CONNECT_API_KEY_ID=MJB7GJ58YL` từ tên file) |
 | Transporter.app | Missing (dùng `xcrun altool` / Xcode Organizer thay thế) |
-| Provisioning Profiles (local) | Chỉ thấy profile **company** `com.legacy.bricksbreaker` / team `3WHS6JDYV2` — **không** có App Store profile `BLUA62D52G.com.hangndat.ticket` |
+| Provisioning Profiles (local) | Chỉ thấy profile của ứng dụng **company** không thuộc Vemoki / team `3WHS6JDYV2` — **không** có App Store profile `BLUA62D52G.com.hangndat.ticket` |
 | Local Xcode Archives | `2026-10-15` chỉ có **Paddleflare** (company) — **không** có archive Vemoki trên máy lúc kiểm tra |
 | Sibling #161 worktree | Branch `hangndat/d10-ios-archive-161` · Project Status `Đang làm` · chưa có `docs/reviews/D10-S4-T1-*` evidence lúc viết |
 | `apps/mobile` tip identity | `appleTeamId: BLUA62D52G` · `buildNumber: '9'` · README ghi TF line `0.1.0 (9)` |
