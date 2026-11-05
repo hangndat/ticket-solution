@@ -13,6 +13,30 @@ spec.loader.exec_module(release)
 
 
 class AbortIsolationTest(unittest.TestCase):
+    def test_runner_forwards_schema_overrides_as_literal_arguments(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "bin").mkdir()
+            for name, body in {
+                "git": "#!/bin/sh\nexit 0\n",
+                "python3.9": '#!/bin/sh\nprintf "%s\\n" "$@" > "$ARG_LOG"\n',
+            }.items():
+                tool = root / "bin" / name
+                tool.write_text(body)
+                tool.chmod(0o755)
+            overrides = ["web:51:51", "portal:54:54;touch BAD"]
+            runner = release.RUNNER.format(work=root, git_dir=root, sha="a" * 40,
+                platform="linux/amd64", root=root, smin=54, smax=54,
+                imin=54, imax=54, target=54,
+                service_schemas=release.schema_override_flags(overrides))
+            log = root / "args"
+            subprocess.run(["bash", "-c", runner], check=True, cwd=root,
+                           env={**os.environ, "ARG_LOG": str(log)}, stdout=subprocess.DEVNULL)
+            args = log.read_text().splitlines()
+            self.assertEqual(args[-4:], ["--service-schema", overrides[0],
+                                        "--service-schema", overrides[1]])
+            self.assertFalse((root / "BAD").exists())
+
     def test_abort_only_kills_container_with_its_build_label(self):
         token = "a" * 32
         with tempfile.TemporaryDirectory() as tmp:

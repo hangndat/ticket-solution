@@ -103,6 +103,31 @@ class ReleaseFixture(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "migration input/target"):
             release.verify(new)
 
+    def test_web_override_pins_old_schema_without_relaxing_backend_or_migrate(self):
+        new = self.make_release("f" * 40, "f", schema_min=54, schema_max=54,
+                                migrate_input_min=54, migrate_input_max=54, migrate_target=54)
+        manifest_path = new / "release-manifest.json"
+        manifest = json.loads(manifest_path.read_text())
+        ranges = release.app_schema_ranges(54, 54, ["web:51:51"])
+        for service, bounds in ranges.items():
+            manifest["services"][service]["schema"] = bounds
+        manifest_path.write_text(json.dumps(manifest))
+        self.pin(new, "web", 51)
+        for service in ("api", "worker", "portal", "migrate"):
+            with self.subTest(service=service), self.assertRaisesRegex(ValueError, "incompatible"):
+                self.pin(new, service, 51)
+        for service in release.SERVICES:
+            if service != "web":
+                self.pin(new, service, 54)
+
+    def test_service_schema_override_validation(self):
+        for overrides in (["web:52:51"], ["web:-1:51"], ["web:x:51"],
+                          ["migrate:51:54"], ["other:51:51"],
+                          ["web:51:51", "web:52:52"], ["web:51"]):
+            with self.subTest(overrides=overrides), self.assertRaises(ValueError):
+                release.app_schema_ranges(54, 54, overrides)
+        self.assertEqual(release.app_schema_ranges(51, 54)["web"], {"min": 51, "max": 54})
+
     def test_cleanup_pin_file_and_path_guards(self):
         old = self.make_release("1" * 40, "1")
         other = self.make_release("2" * 40, "2")

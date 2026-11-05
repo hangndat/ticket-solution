@@ -10,6 +10,8 @@ Sơ đồ luồng deploy (build tăng dần, rollout, dữ liệu trên VPS): [D
 
 Schema range là tuyên bố tương thích của release, **operator phải đối chiếu migration và kết quả test** trước khi nhập flags build; tool không thể tự suy ra backward compatibility từ SQL. `--schema-min/max` chỉ áp cho app, `--migrate-input-min/max` là schema hiện hành được chấp nhận trước chạy migration, `--migrate-target` là schema sau deploy. Migrate pin kiểm **input**, app pin kiểm schema hiện hành sau deploy. Số schema là số hiệu rollout do operator ghi trong release plan, không phải version tenant config. Release cũ/new đồng tồn chỉ khi cả hai hỗ trợ schema hiện hành và outbox semantics. F02 worker cũ trước commit `710b5714` bị chặn pin.
 
+Khi rollout độc lập, `--service-schema SERVICE:MIN:MAX` (lặp được cho `api|worker|web|portal`) ghi đè range **chỉ service đó**; `--schema-min/max` vẫn là mặc định cho các app còn lại. Remote builder chuyển tiếp cùng flag. Ví dụ source backend yêu cầu schema 54 nhưng Web HTTP consumer đã được review tương thích schema/API production 51: dùng default `54/54` và `--service-schema web:51:51`; pin Web với `--schema 51` không cho phép pin API/worker/Portal ở 51. Migrate giữ contract riêng, không nhận flag override app. Không tự suy compatibility hoặc chạy migration để vượt pin; rollout chỉ Web phải giữ các pin khác và không chạy migrate. Khai báo override cũng cần evidence review của operator như range mặc định.
+
 ## Build và kiểm tra trên Linux cùng architecture VPS
 
 Ví dụ dưới đây chỉ là lệnh chuẩn bị, **không phải lệnh được phép chạy production trong task này**. Dùng checkout sạch tại exact SHA đã review. Trên builder Linux Node24 cùng architecture runtime (ví dụ VPS x86_64):

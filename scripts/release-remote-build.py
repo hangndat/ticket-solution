@@ -90,6 +90,10 @@ def start_command(work):
     # `setsid -f` forks before returning; a trailing `&` would keep ssh open until the build ends.
     return f"cd {shlex.quote(work)} && setsid -f nohup nice -n 19 ionice -c3 {runner} > {log_path} 2>&1 < /dev/null"
 
+def schema_override_flags(values):
+    return shlex.join([arg for value in values for arg in ("--service-schema", value)])
+
+
 RUNNER = """#!/bin/bash
 set -u
 cd {work}
@@ -101,7 +105,7 @@ git show {sha}:scripts/release-artifact.py > {work}/release-artifact.py
 t "start: release-artifact build (native {platform})"
 python3.9 {work}/release-artifact.py --root {root} build --sha {sha} --platform {platform} \\
   --schema-min {smin} --schema-max {smax} --migrate-input-min {imin} --migrate-input-max {imax} \\
-  --migrate-target {target}
+  --migrate-target {target} {service_schemas}
 rc=$?
 t "done: release-artifact build rc=$rc"
 echo EXIT=$rc
@@ -122,6 +126,7 @@ def main():
     p.add_argument("--min-available-mb", type=int, default=1500)
     for name in ("schema-min", "schema-max", "migrate-input-min", "migrate-input-max", "migrate-target"):
         p.add_argument("--" + name, type=int, required=True)
+    p.add_argument("--service-schema", action="append", default=[], metavar="SERVICE:MIN:MAX")
     a = p.parse_args()
 
     token = uuid.uuid4().hex
@@ -143,7 +148,8 @@ def main():
         shim = SHIM.format(cpus=a.cpus, mem=a.memory_mb, token=token)
         runner = RUNNER.format(work=work, git_dir=git_dir, sha=a.sha, platform=a.platform, root=a.release_root,
                                smin=a.schema_min, smax=a.schema_max, imin=a.migrate_input_min,
-                               imax=a.migrate_input_max, target=a.migrate_target)
+                                imax=a.migrate_input_max, target=a.migrate_target,
+                                service_schemas=schema_override_flags(a.service_schema))
         ssh(a.host, f"cat > {work}/bin/docker && chmod 755 {work}/bin/docker", input=shim, text=True, check=True)
         ssh(a.host, f"cat > {work}/run.sh && chmod 755 {work}/run.sh", input=runner, text=True, check=True)
         cleanup_allowed = False
