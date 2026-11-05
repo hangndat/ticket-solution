@@ -1,12 +1,12 @@
 /* Auto-generated from brand/vemoki/tokens.json — do not edit */
 @theme {
-  --color-ink: #0B1220;
-  --color-paper: #F4F6F8;
-  --color-signal: #E11D48;
-  --color-primary: #7C4DED;
-  --color-focus: #2563EB;
-  --color-line: #D7DFE9;
-  --color-muted: #5B687B;
+  --color-ink: #141020;
+  --color-paper: #FFFFFF;
+  --color-signal: #6C35FF;
+  --color-primary: #6C35FF;
+  --color-focus: #5B22F0;
+  --color-line: #D7D6E0;
+  --color-muted: #5C5774;
   --color-destructive: #8A1F1F;
   --color-admit: #1B7F4A;
   --color-unknown: #8A6D3B;
@@ -17,8 +17,8 @@
   --radius-md: 12px;
   --radius-lg: 18px;
   --radius-xl: 24px;
-  --shadow-soft: 0 24px 64px rgba(11, 18, 32, 0.12);
-  --shadow-frame: 0 32px 80px rgba(11, 18, 32, 0.22), 0 0 0 1px rgba(255, 255, 255, 0.06) inset;
+  --shadow-soft: 0 24px 64px rgba(20, 16, 32, 0.12);
+  --shadow-frame: 0 32px 80px rgba(20, 16, 32, 0.22), 0 0 0 1px rgba(255, 255, 255, 0.06) inset;
   --shadow-none: none;
   --spacing-xxs: 2px;
   --spacing-xs: 4px;
@@ -42,13 +42,13 @@
  * This :root block keeps var(--*) stable for any remaining legacy CSS until fully removed.
  */
 :root {
-  --color-ink: #0B1220;
-  --color-paper: #F4F6F8;
-  --color-signal: #E11D48;
-  --color-primary: #7C4DED;
-  --color-focus: #2563EB;
-  --color-line: #D7DFE9;
-  --color-muted: #5B687B;
+  --color-ink: #141020;
+  --color-paper: #FFFFFF;
+  --color-signal: #6C35FF;
+  --color-primary: #6C35FF;
+  --color-focus: #5B22F0;
+  --color-line: #D7D6E0;
+  --color-muted: #5C5774;
   --color-destructive: #8A1F1F;
   --color-admit: #1B7F4A;
   --color-unknown: #8A6D3B;
@@ -59,8 +59,8 @@
   --radius-md: 12px;
   --radius-lg: 18px;
   --radius-xl: 24px;
-  --shadow-soft: 0 24px 64px rgba(11, 18, 32, 0.12);
-  --shadow-frame: 0 32px 80px rgba(11, 18, 32, 0.22), 0 0 0 1px rgba(255, 255, 255, 0.06) inset;
+  --shadow-soft: 0 24px 64px rgba(20, 16, 32, 0.12);
+  --shadow-frame: 0 32px 80px rgba(20, 16, 32, 0.22), 0 0 0 1px rgba(255, 255, 255, 0.06) inset;
   --shadow-none: none;
   --spacing-xxs: 2px;
   --spacing-xs: 4px;

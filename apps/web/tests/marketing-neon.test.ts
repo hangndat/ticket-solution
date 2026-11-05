@@ -5,14 +5,14 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { MarketingChrome } from '../src/marketing/chrome';
 import { SalesPage } from '../src/marketing/sales-page';
 
-describe('approved neon marketing integration', () => {
+describe('approved Electric Violet marketing integration', () => {
   it('renders the approved landing sections and logo in both locales', () => {
     for (const locale of ['vi', 'en'] as const) {
       const html = renderToStaticMarkup(createElement(SalesPage, { locale }));
       for (const section of ['hero', 'events', 'product', 'final-cta']) {
         assert.match(html, new RegExp(`data-testid="marketing-neon-${section}"`));
       }
-      assert.match(html, /vemoki-v-mark/);
+      assert.match(html, /\/brand\/electric-violet\/lockup-white\.svg/);
       assert.match(html, /hero-composite-v2/);
       assert.match(html, /href="#interest"/);
       assert.doesNotMatch(html, /data-testid="marketing-bento"/);
@@ -23,7 +23,7 @@ describe('approved neon marketing integration', () => {
     const html = renderToStaticMarkup(MarketingChrome({
       locale: 'vi', pageKind: 'journey', children: 'Journey',
     }));
-    assert.match(html, /vemoki-v-mark/);
+    assert.match(html, /\/brand\/electric-violet\/lockup-white\.svg/);
     assert.match(html, /href="\/en\/experience"/);
     assert.match(html, /href="\/experience"/);
     assert.doesNotMatch(html, /data-testid="marketing-neon-edge-decor"/);

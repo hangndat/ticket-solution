@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react';
+import { brandingFromEventBrand } from './parse';
 import type { TenantBranding } from './types';
 
 /**
@@ -13,6 +14,28 @@ export function brandingToCssVars(branding: TenantBranding): CSSProperties {
     ['--focus' as string]: branding.colors.focus,
     ['--brand' as string]: branding.primaryColor,
   };
+}
+
+/**
+ * Event content uses the published primary for Tailwind's color-primary
+ * utilities. Apply this only to the event main so platform chrome stays global.
+ */
+export function eventBrandingToCssVars(
+  branding: TenantBranding,
+): CSSProperties {
+  return {
+    ...brandingToCssVars(branding),
+    ['--color-primary' as string]: 'var(--brand)',
+  };
+}
+
+/** Build both the event context value and its scoped CSS from published data. */
+export function eventBrandingPresentation(
+  brand: { primaryColor: string; organizationName: string },
+  tenantSlug: string,
+): { branding: TenantBranding; style: CSSProperties } {
+  const branding = brandingFromEventBrand(brand, tenantSlug);
+  return { branding, style: eventBrandingToCssVars(branding) };
 }
 
 /** Serialize for non-React sinks (tests / inline style attribute). */

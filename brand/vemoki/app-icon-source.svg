@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" role="img" aria-label="Vemoki app icon source, full-bleed">
+  <!--
+    CLEAN VECTOR MASTER (user quality request, 2026-11-04):
+    Potrace 1.16 fits long straight segments and cubic Beziers to the two
+    approved-image masks in sources/. The same two paths in logo/master.svg
+    are reused here; no live text, font dependency, or raster embed.
+    Coordinate space is the approved 950x250 hero ROI. Existing layout
+    transforms, colors, and EV-05 viewBoxes are preserved.
+  -->
+  <rect x="0" y="0" width="320" height="320" fill="#6C35FF"/>
+  <g transform="translate(32.9,71.4) scale(0.72)">
+    <g transform="translate(0.5,0.5)"><path transform="translate(0,250) scale(0.1,-0.1)" d="M2385 2245 c-16 -9 -36 -22 -43 -29 -19 -19 -462 -816 -469 -844 -3 -14 1 -30 12 -42 16 -17 31 -20 116 -20 54 0 108 -4 121 -9 16 -6 64 -82 168 -265 l144 -257 25 3 c21 3 47 43 174 268 82 146 252 449 379 673 251 445 255 455 204 506 l-26 26 -388 3 c-336 2 -391 0 -417 -13z M336 2220 c-40 -35 -61 -89 -51 -128 3 -15 59 -121 122 -237 64 -115 155 -284 203 -375 48 -91 161 -302 252 -470 91 -168 210 -388 264 -489 82 -153 106 -188 138 -210 l40 -26 431 1 431 1 31 18 c41 24 167 245 166 291 -1 20 -46 112 -128 260 -154 275 -169 300 -194 314 -11 5 -69 10 -128 10 -72 0 -115 4 -126 13 -9 6 -46 71 -83 142 -331 645 -458 878 -488 896 l-31 19 -407 0 -407 0 -35 -30z" fill="#FFFFFF" fill-rule="evenodd"/></g>
+  </g>
+</svg>

@@ -1,14 +1,12 @@
 import { unstable_noStore as noStore } from 'next/cache';
 import type { Metadata } from 'next';
-import type { CSSProperties } from 'react';
 import { Button } from '@ticket/ui';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import {
   ThemeProvider,
-  brandingFromEventBrand,
-  brandingToCssVars,
 } from '../../../../../../src/branding';
+import { eventBrandingPresentation } from '../../../../../../src/branding/css-vars';
 import {
   attendeeDetailMain,
   attendeeEventBackLink,
@@ -131,11 +129,10 @@ export default async function EventPage({ params }: Props) {
   }
 
   const { event } = result;
-  const branding = brandingFromEventBrand(event.brand, tenantSlug);
-  const themeVars = {
-    ...brandingToCssVars(branding),
-    ['--brand' as string]: event.brand.primaryColor,
-  } as CSSProperties;
+  const { branding, style: themeVars } = eventBrandingPresentation(
+    event.brand,
+    tenantSlug,
+  );
   const sections = visiblePublishedSections(event);
   const whenLabel = formatPublishedEventDate(event.startsAt, event.timezone);
   const heroCopy = heroCopyFromSections(event.sections);

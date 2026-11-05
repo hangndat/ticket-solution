@@ -2,11 +2,11 @@ import { cn } from '../../lib/utils';
 
 /** Marketing shell + section utilities (Tailwind v4 / @theme tokens — replaces marketing-uplift.css). */
 
-export function marketingSurface(neonSales = false) {
+export function marketingSurface(inkSurface = false) {
   return cn(
     'relative flex flex-col min-h-dvh max-w-full overflow-x-clip antialiased',
-    neonSales
-      ? 'mkt-neon-surface text-[var(--vm-text)] scheme-dark'
+    inkSurface
+      ? 'mkt-brand-surface text-[var(--vm-text)] scheme-dark'
       : 'text-ink scheme-light',
     '[&>main]:flex-1 [&>main]:min-w-0 [&>main]:w-full [:where(&>main_a)]:underline [:where(&>main_a)]:decoration-1 [:where(&>main_a)]:underline-offset-[3px] hover:[:where(&>main_a)]:text-focus',
   );

@@ -24,7 +24,7 @@ import {
   attendeeTopNav,
   attendeeWordmark,
 } from './attendee-surface';
-import { BrandMark } from './brand-mark';
+import { BrandMark, PlatformLockup } from './brand-mark';
 import { useBranding } from './branding';
 import { useAttendeeLocale } from './i18n/locale-context';
 import { AttendeeLocaleSwitch } from './i18n/locale-switch';
@@ -47,11 +47,17 @@ export function Wordmark({ href = '/' }: { href?: string }) {
       data-testid="site-wordmark"
       data-branding-source={branding.source}
     >
-      <BrandMark />
-      {branding.wordmark}
-      {branding.signalGlyph ? (
-        <span aria-hidden="true">{branding.signalGlyph}</span>
-      ) : null}
+      {branding.source === 'vemoki-default' ? (
+        <PlatformLockup className="h-8 w-auto max-w-[34vw] object-contain" />
+      ) : (
+        <>
+          <BrandMark />
+          {branding.wordmark}
+          {branding.signalGlyph ? (
+            <span aria-hidden="true">{branding.signalGlyph}</span>
+          ) : null}
+        </>
+      )}
     </Link>
   );
 }
@@ -302,11 +308,17 @@ export function SiteNav({ trailing }: { trailing?: ReactNode }) {
 export function FooterBrand() {
   const branding = useBranding();
   return (
-    <span className={attendeeFooterBrand} data-testid="footer-brand">
-      {branding.wordmark}
-      {branding.signalGlyph ? (
-        <span aria-hidden="true">{branding.signalGlyph}</span>
-      ) : null}
+    <span className={attendeeFooterBrand} data-testid="footer-brand" aria-label={branding.displayName}>
+      {branding.source === 'vemoki-default' ? (
+        <PlatformLockup className="h-7 w-auto max-w-[38vw] object-contain" />
+      ) : (
+        <>
+          {branding.wordmark}
+          {branding.signalGlyph ? (
+            <span aria-hidden="true">{branding.signalGlyph}</span>
+          ) : null}
+        </>
+      )}
     </span>
   );
 }
