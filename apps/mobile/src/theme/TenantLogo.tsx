@@ -19,8 +19,8 @@ type Props = {
 };
 
 /**
- * Tenant logo with hard fallback to wordmark text.
- * Missing/invalid/failed assets never crash — show Vemoki/tenant wordmark.
+ * Platform defaults use the approved lockup asset; published tenant branding
+ * remains data-driven and falls back to its supplied wordmark on image errors.
  */
 export function TenantLogo({
   logoUrl: logoUrlProp,
@@ -59,6 +59,23 @@ export function TenantLogo({
             setImageFailed(true);
           }}
           // Never block UI on slow CDN.
+          accessible={false}
+        />
+      </View>
+    );
+  }
+
+  if (theme.source === 'default') {
+    return (
+      <View
+        style={[{ height, justifyContent: 'center' }, style]}
+        testID={testID}
+        accessibilityRole="image"
+        accessibilityLabel={wordmark}
+      >
+        <Image
+          source={require('../../assets/vemoki-lockup.png')}
+          style={{ height, width: height * 3.8, resizeMode: 'contain' }}
           accessible={false}
         />
       </View>

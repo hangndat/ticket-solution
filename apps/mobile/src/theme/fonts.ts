@@ -1,5 +1,5 @@
 /**
- * Brand font family names (Live Pulse v2) — Sora display + Be Vietnam Pro body.
+ * Brand font family names — Sora display + Be Vietnam Pro body.
  * Assets live in `apps/mobile/assets/fonts/`; load via `BrandFontsGate`.
  */
 

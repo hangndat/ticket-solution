@@ -7,7 +7,7 @@ import {
 } from './tokens.generated.ts';
 
 /**
- * Live Pulse brand + layout tokens — sourced from `brand/vemoki/tokens.json`
+ * Vemoki brand + layout tokens — sourced from `brand/vemoki/tokens.json`
  * via `apps/mobile/scripts/sync-tokens.mjs`.
  */
 export const brand = brandGenerated;

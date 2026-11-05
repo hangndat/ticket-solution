@@ -1,7 +1,7 @@
 import { fontFamilies } from './fonts.ts';
 
 /**
- * Brand type roles — display Sora, body Be Vietnam Pro (Live Pulse v2).
+ * Brand type roles — display Sora, body Be Vietnam Pro.
  * Prefer Dynamic Type sizes via RN Text defaults when possible; these are role tokens.
  */
 export const typography = {

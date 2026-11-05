@@ -21,10 +21,10 @@ test('tokens.generated.ts matches in-memory sync from brand/vemoki/tokens.json',
   assert.equal(onDisk, expected);
 });
 
-test('brand tokens match Live Pulse brand/vemoki/tokens.json', () => {
+test('brand tokens match Electric Violet brand/vemoki/tokens.json', () => {
   const raw = loadBrandJson(repoRoot);
-  assert.equal(raw.version, '2');
-  assert.equal(raw.artDirection, 'Live Pulse');
+  assert.equal(raw.version, '3');
+  assert.equal(raw.artDirection, 'Electric Violet');
   assert.equal(brand.ink, raw.colors.ink);
   assert.equal(brand.paper, raw.colors.paper);
   assert.equal(brand.signal, raw.colors.signal);
@@ -71,9 +71,19 @@ test('elevation presets map shadow.soft/frame per TOKENS.md', () => {
   assert.ok(elevation.sheet.shadowRadius);
 });
 
-test('brand supersedes v1 terracotta / warm paper palette', () => {
+test('brand uses the approved Electric Violet palette', () => {
   assert.notEqual(brand.ink.toLowerCase(), '#22241f');
   assert.notEqual(brand.paper.toLowerCase(), '#f7f6f1');
   assert.notEqual(brand.signal.toLowerCase(), '#9b3a18');
   assert.notEqual(brand.focus.toLowerCase(), '#235fd0');
+  assert.equal(brand.ink.toLowerCase(), '#141020');
+  assert.equal(brand.paper.toLowerCase(), '#ffffff');
+  assert.equal(brand.signal.toLowerCase(), '#6c35ff');
+  assert.equal(brand.primary.toLowerCase(), '#6c35ff');
+  assert.equal(brand.focus.toLowerCase(), '#5b22f0');
+  assert.equal(brand.line.toLowerCase(), '#d7d6e0');
+  assert.equal(brand.muted.toLowerCase(), '#5c5774');
+  assert.equal(brand.destructive.toLowerCase(), '#8a1f1f');
+  assert.equal(brand.admit.toLowerCase(), '#1b7f4a');
+  assert.equal(brand.unknown.toLowerCase(), '#8a6d3b');
 });
