@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Vemoki — Electric Violet · Preview (prototype, không phải app đang chạy)</title>
+<style>
+  /* Font source fix (EV-04): brand/vemoki/*.ttf does not exist in this repo.
+     Sora-Variable.ttf and BeVietnamPro-*.ttf live in apps/web/fonts/ (mirrored
+     in apps/mobile/assets/fonts/), both OFL. Corrected path below. */
+  @font-face { font-family: 'Sora'; src: url('../../../../apps/web/fonts/Sora-Variable.ttf'); font-weight: 100 900; }
+  @font-face { font-family: 'Be Vietnam Pro'; src: url('../../../../apps/web/fonts/BeVietnamPro-Regular.ttf'); font-weight: 400; }
+  @font-face { font-family: 'Be Vietnam Pro'; src: url('../../../../apps/web/fonts/BeVietnamPro-Medium.ttf'); font-weight: 500; }
+  @font-face { font-family: 'Be Vietnam Pro'; src: url('../../../../apps/web/fonts/BeVietnamPro-SemiBold.ttf'); font-weight: 600; }
+  @font-face { font-family: 'Be Vietnam Pro'; src: url('../../../../apps/web/fonts/BeVietnamPro-Bold.ttf'); font-weight: 700; }
+
+  :root{
+    --violet-50:#F2EEFF; --violet-100:#E3DAFF; --violet-300:#A98CFF; --violet-500:#6C35FF; --violet-600:#5B22F0;
+    --ink-900:#141020; --ink-700:#312C45; --ink-500:#5C5774;
+    --neutral-200:#D7D6E0; --neutral-100:#EFEEF4; --white:#FFFFFF;
+    --success:#1B7F4A; --warning:#8A6D3B; --error:#8A1F1F;
+    --radius-sm:8px; --radius-md:12px; --radius-lg:18px; --radius-xl:24px;
+    --space-sm:8px; --space-md:12px; --space-lg:16px; --space-xl:20px; --space-2xl:24px; --space-3xl:32px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--white);color:var(--ink-900);font-family:'Be Vietnam Pro',sans-serif;line-height:1.5}
+  h1,h2,h3,.display{font-family:'Sora',sans-serif}
+  .banner{background:var(--ink-900);color:var(--white);padding:var(--space-md) var(--space-2xl);font-size:13px}
+  .banner b{color:var(--violet-300)}
+  section{padding:var(--space-3xl) var(--space-2xl);max-width:1040px;margin:0 auto}
+  section + section{border-top:1px solid var(--neutral-200)}
+  h2{font-weight:800;font-size:22px;margin:0 0 4px}
+  .sub{color:var(--ink-500);font-size:14px;margin:0 0 var(--space-2xl)}
+
+  /* Logo suite */
+  .logo-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:var(--space-lg)}
+  .logo-tile{border:1px solid var(--neutral-200);border-radius:var(--radius-md);padding:var(--space-lg);display:flex;flex-direction:column;align-items:center;gap:var(--space-sm)}
+  .logo-tile img{max-height:72px;max-width:100%}
+  .logo-tile.dark{background:var(--ink-900)}
+  .logo-tile.violet{background:var(--violet-500)}
+  .logo-tile span{font-size:12px;color:var(--ink-500);letter-spacing:.04em;text-transform:uppercase}
+  .logo-tile.dark span, .logo-tile.violet span{color:var(--white);opacity:.8}
+
+  /* tokens */
+  .swatches{display:flex;gap:var(--space-md);flex-wrap:wrap;margin-bottom:var(--space-2xl)}
+  .swatch{width:96px}
+  .swatch i{display:block;height:64px;border-radius:var(--radius-md);border:1px solid var(--neutral-200)}
+  .swatch b{display:block;font-size:12px;margin-top:4px}
+  .swatch small{display:block;font-size:11px;color:var(--ink-500)}
+  table{border-collapse:collapse;width:100%;font-size:14px;margin-bottom:var(--space-2xl)}
+  td,th{text-align:left;padding:6px 10px;border-bottom:1px solid var(--neutral-200)}
+
+  /* components */
+  .row{display:flex;gap:var(--space-md);flex-wrap:wrap;align-items:center;margin-bottom:var(--space-2xl)}
+  .btn{font-family:inherit;font-weight:600;border-radius:var(--radius-md);padding:10px 20px;border:1px solid transparent;cursor:pointer;font-size:15px}
+  .btn-primary{background:var(--violet-500);color:#fff}
+  .btn-primary:hover{background:var(--violet-600)}
+  .btn-secondary{background:#fff;border-color:var(--neutral-200);color:var(--ink-900)}
+  .btn-ghost{background:transparent;color:var(--violet-500)}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+  .field{display:flex;flex-direction:column;gap:4px;max-width:360px}
+  .field label{font-size:13px;font-weight:500;color:var(--ink-500)}
+  .field input{font-family:inherit;padding:10px 14px;border-radius:var(--radius-md);border:1px solid var(--neutral-200);font-size:15px}
+  .field input:focus{outline:2px solid var(--violet-600);outline-offset:2px;border-color:var(--violet-600)}
+  .field.error input{border-color:var(--error)}
+  .field.error small{color:var(--error)}
+  .chip{display:inline-flex;padding:8px 16px;border-radius:999px;font-weight:600;font-size:14px;background:var(--neutral-100);color:var(--ink-900);cursor:pointer}
+  .chip.selected{background:var(--violet-500);color:#fff}
+  .ticket-row{display:flex;gap:var(--space-md);align-items:center;border:1px solid var(--neutral-200);border-radius:var(--radius-md);padding:var(--space-md);margin-bottom:var(--space-sm)}
+  .ticket-row .thumb{width:56px;height:56px;border-radius:var(--radius-sm);background:linear-gradient(135deg,var(--violet-300),var(--violet-500));flex:none}
+  .ticket-row .meta b{display:block;font-size:15px}
+  .ticket-row .meta span{font-size:13px;color:var(--ink-500)}
+  .badge{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;padding:4px 10px;border-radius:999px;margin-left:auto}
+  .badge.success{background:#E6F4EC;color:#146B3C} /* darker than --success for AA text contrast on this bg, see REPORT.md */
+  .badge.warning{background:#F7F0E2;color:#6E4F20} /* darker than --warning for AA text contrast on this bg, see REPORT.md */
+  .badge.error{background:#F4E6E6;color:var(--error)}
+  .qr-surface{width:220px;background:#fff;border:1px solid var(--neutral-200);border-radius:var(--radius-lg);padding:var(--space-lg);text-align:center}
+  .qr-surface .qr{width:180px;height:180px;margin:0 auto var(--space-sm);background:
+      repeating-linear-gradient(0deg,#141020 0 8px,#fff 8px 16px),
+      repeating-linear-gradient(90deg,#141020 0 8px,transparent 8px 16px);
+      background-blend-mode:multiply;border-radius:4px}
+  .demo-label{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--error);font-weight:700}
+
+  /* screens */
+  .device{border:10px solid var(--ink-900);border-radius:28px;overflow:hidden;width:360px;margin:0 auto;background:#fff}
+  .device .bar{height:14px}
+  .screen{padding:var(--space-lg)}
+  .screen h3{margin:0 0 2px;font-size:22px}
+  .search{display:flex;align-items:center;gap:8px;border:1px solid var(--neutral-200);border-radius:999px;padding:10px 16px;color:var(--ink-500);font-size:14px;margin:var(--space-md) 0}
+  .desktop-frame{border:1px solid var(--neutral-200);border-radius:var(--radius-lg);overflow:hidden}
+  .desktop-frame .topbar{background:var(--neutral-100);padding:8px 16px;font-size:12px;color:var(--ink-500);display:flex;gap:6px}
+  .desktop-frame .topbar i{width:10px;height:10px;border-radius:50%;background:var(--neutral-200);display:inline-block}
+  .screens-grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-2xl)}
+  .screens-grid .col h4{margin:0 0 var(--space-sm);font-size:13px;color:var(--ink-500);text-transform:uppercase;letter-spacing:.04em}
+  @media (max-width:720px){.screens-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<div class="banner">
+  <b>Prototype preview</b> — không phải app đang chạy. Dữ liệu sự kiện/vé bên dưới là <b>dữ liệu giả có nhãn</b>, QR là hình minh hoạ, không phải vé thật. Handoff Electric Violet, chưa production.
+</div>
+
+<section>
+  <h2>Logo suite — Electric Violet</h2>
+  <p class="sub">Vector master mượt: <code>../logo/master.svg</code>. Đối chiếu approved / trace cũ / bản sạch: <code>../proof/approved-old-clean.png</code>; proof 100% và 800% trên nền sáng/tối trong <code>../proof/</code>. Chi tiết provenance/fidelity: <code>../logo/README.md</code>.</p>
+  <div class="logo-grid">
+    <div class="logo-tile"><img src="../logo/svg/horizontal-primary.svg" alt="Vemoki horizontal primary"><span>Horizontal primary</span></div>
+    <div class="logo-tile"><img src="../logo/svg/stacked.svg" alt="Vemoki stacked"><span>Stacked</span></div>
+    <div class="logo-tile"><img src="../logo/svg/mark.svg" alt="Vemoki mark"><span>Mark</span></div>
+    <div class="logo-tile"><img src="../logo/svg/mark-mono-black.svg" alt="Vemoki mono black"><span>Mono mark / black</span></div>
+    <div class="logo-tile dark"><img src="../logo/svg/mark-mono-white.svg" alt="Vemoki mono white"><span>Mono mark / white</span></div>
+    <div class="logo-tile"><img src="../logo/svg/horizontal-mono-black.svg" alt="Vemoki horizontal mono black"><span>Mono lockup / black</span></div>
+    <div class="logo-tile dark"><img src="../logo/svg/horizontal-mono-white.svg" alt="Vemoki horizontal mono white"><span>Mono lockup / white</span></div>
+    <div class="logo-tile violet"><img src="../logo/svg/reversed-on-violet.svg" alt="Vemoki reversed on violet" style="max-height:48px"><span>Reversed / violet</span></div>
+    <div class="logo-tile"><img src="../logo/svg/app-icon.svg" alt="Vemoki app icon preview, rounded" style="max-height:96px"><span>App icon (preview, rounded)</span></div>
+    <div class="logo-tile"><img src="../logo/svg/app-icon-source.svg" alt="Vemoki app icon source, full-bleed square" style="max-height:96px"><span>App icon (source, full-bleed)</span></div>
+  </div>
+</section>
+
+<section>
+  <h2>Foundations — tokens (đề xuất)</h2>
+  <p class="sub">Chi tiết + trạng thái từng giá trị: <code>../specs/foundations.md</code>. Đây KHÔNG phải token SoT đã merge vào <code>brand/vemoki/tokens.json</code>.</p>
+  <div class="swatches">
+    <div class="swatch"><i style="background:#6C35FF"></i><b>Electric Violet</b><small>#6C35FF — đề xuất</small></div>
+    <div class="swatch"><i style="background:#141020"></i><b>Ink</b><small>#141020 — đề xuất</small></div>
+    <div class="swatch"><i style="background:#D7D6E0"></i><b>Neutral gray</b><small>#D7D6E0 — đề xuất</small></div>
+    <div class="swatch"><i style="background:#FFFFFF"></i><b>White</b><small>#FFFFFF</small></div>
+    <div class="swatch"><i style="background:#1B7F4A"></i><b>Success (giữ)</b><small>#1B7F4A — legacy</small></div>
+    <div class="swatch"><i style="background:#8A6D3B"></i><b>Warning (giữ)</b><small>#8A6D3B — legacy</small></div>
+    <div class="swatch"><i style="background:#8A1F1F"></i><b>Error (giữ)</b><small>#8A1F1F — legacy</small></div>
+  </div>
+  <p class="display" style="font-size:40px;font-weight:800;margin:0">Vemoki — Sora 800</p>
+  <p style="font-size:16px;margin:4px 0 var(--space-2xl)">Be Vietnam Pro — Tìm và đổi vé sự kiện nhanh, rõ ràng, tiếng Việt đầy đủ dấu: Đổi mã, Ví, Chi tiết vé.</p>
+  <table>
+    <tr><th>Token</th><th>Giá trị</th><th>Dùng</th></tr>
+    <tr><td>type.display</td><td>40–56px · Sora 800</td><td>Hero / wordmark</td></tr>
+    <tr><td>type.h1</td><td>28px · Sora 700</td><td>Page title</td></tr>
+    <tr><td>type.body</td><td>16px · Be Vietnam Pro 400</td><td>Nội dung chính</td></tr>
+    <tr><td>radius.md</td><td>12px</td><td>Button, field, row</td></tr>
+    <tr><td>radius.lg</td><td>18px</td><td>QR surface, card</td></tr>
+  </table>
+</section>
+
+<section>
+  <h2>Components (tối thiểu)</h2>
+  <p class="sub">Anatomy/states đầy đủ: <code>../specs/components.md</code></p>
+
+  <h3 style="font-size:15px">Button</h3>
+  <div class="row">
+    <button class="btn btn-primary">Đổi mã lấy vé</button>
+    <button class="btn btn-secondary">Xem vé</button>
+    <button class="btn btn-ghost">Thử lại</button>
+    <button class="btn btn-primary" disabled>Đang xử lý…</button>
+  </div>
+
+  <h3 style="font-size:15px">Field / Search</h3>
+  <div class="row">
+    <div class="field">
+      <label for="f1">Mã sự kiện</label>
+      <input id="f1" placeholder="Nhập mã đổi vé" />
+    </div>
+    <div class="field error">
+      <label for="f2">Mã sự kiện</label>
+      <input id="f2" value="VK-000" aria-invalid="true" aria-describedby="f2err" />
+      <small id="f2err">Mã không hợp lệ, kiểm tra lại.</small>
+    </div>
+  </div>
+  <div class="search" style="max-width:360px">🔍 Tìm sự kiện…</div>
+
+  <h3 style="font-size:15px">Chips</h3>
+  <div class="row">
+    <span class="chip selected" role="button" aria-pressed="true">Đang mở</span>
+    <span class="chip" role="button" aria-pressed="false">Sắp diễn ra</span>
+    <span class="chip" role="button" aria-pressed="false">Đã kết thúc</span>
+  </div>
+
+  <h3 style="font-size:15px">Event / ticket row + Notice/status</h3>
+  <div class="ticket-row">
+    <div class="thumb"></div>
+    <div class="meta"><b>Đêm nhạc Vemoki Live (demo)</b><span>20:00, 12/12/2026 · Nhà hát Thành phố (demo)</span></div>
+    <span class="badge success">Đã vào cổng</span>
+  </div>
+  <div class="ticket-row">
+    <div class="thumb"></div>
+    <div class="meta"><b>Triển lãm Art Walk (demo)</b><span>09:00, 20/12/2026 · Trung tâm nghệ thuật (demo)</span></div>
+    <span class="badge warning">Đang xử lý</span>
+  </div>
+  <div class="ticket-row">
+    <div class="thumb"></div>
+    <div class="meta"><b>Workshop Community (demo)</b><span>Vé đã hết hạn</span></div>
+    <span class="badge error">Hết hạn</span>
+  </div>
+  <p class="sub" style="margin-top:var(--space-sm)">Quy tắc bắt buộc: trạng thái <b>Đang xử lý</b> (queued/unknown) không bao giờ dùng badge <b>success</b> — xem <code>../specs/components.md</code> §5.</p>
+
+  <h3 style="font-size:15px">QR surface</h3>
+  <div class="qr-surface">
+    <div class="demo-label">Demo — không phải vé thật</div>
+    <div class="qr" role="img" aria-label="Mã QR vé Đêm nhạc Vemoki Live (demo)"></div>
+    <b>Đêm nhạc Vemoki Live</b><br/><span style="font-size:13px;color:var(--ink-500)">Nguyễn Văn A (demo)</span>
+  </div>
+</section>
+
+<section>
+  <h2>Mẫu đại diện trong flow hiện có</h2>
+  <p class="sub">3 màn: Catalog (Home công khai) · Đổi mã · Chi tiết vé — dữ liệu giả có nhãn, IA giữ nguyên theo <code>docs/design/visual-identity-v2/README.md</code> §1. Xem evidence desktop/mobile tại <code>evidence/</code>.</p>
+
+  <div class="screens-grid">
+    <div class="col">
+      <h4>Mobile — Catalog</h4>
+      <div class="device">
+        <div class="bar" style="background:#141020"></div>
+        <div class="screen">
+          <img src="../logo/svg/horizontal-primary.svg" style="height:28px" alt="Vemoki" />
+          <div class="search">🔍 Tìm sự kiện, nghệ sĩ…</div>
+          <div class="row" style="margin-bottom:var(--space-md)">
+            <span class="chip selected">Đang mở</span><span class="chip">Sắp diễn ra</span>
+          </div>
+          <div class="ticket-row"><div class="thumb"></div><div class="meta"><b>Đêm nhạc Vemoki Live (demo)</b><span>12/12 · Nhà hát TP (demo)</span></div></div>
+          <div class="ticket-row"><div class="thumb"></div><div class="meta"><b>Triển lãm Art Walk (demo)</b><span>20/12 · Trung tâm NT (demo)</span></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="col">
+      <h4>Mobile — Đổi mã</h4>
+      <div class="device">
+        <div class="bar" style="background:#141020"></div>
+        <div class="screen">
+          <h3>Đổi mã lấy vé</h3>
+          <p class="sub" style="margin-bottom:var(--space-md)">Nhập mã bạn nhận được qua email để lấy vé.</p>
+          <div class="field" style="max-width:none;margin-bottom:var(--space-md)">
+            <label for="fm1">Mã sự kiện</label>
+            <input id="fm1" placeholder="VK-XXXX-XXXX" />
+          </div>
+          <button class="btn btn-primary" style="width:100%">Đổi mã lấy vé</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:var(--space-2xl)">
+    <h4 style="font-size:13px;color:var(--ink-500);text-transform:uppercase;letter-spacing:.04em">Desktop — Chi tiết vé</h4>
+    <div class="desktop-frame">
+      <div class="topbar"><i></i><i></i><i></i>&nbsp;vemoki.com/t/.../tickets/demo</div>
+      <div style="padding:var(--space-2xl);display:flex;gap:var(--space-2xl);align-items:flex-start">
+        <div class="qr-surface">
+          <div class="demo-label">Demo — không phải vé thật</div>
+          <div class="qr" role="img" aria-label="Mã QR vé Đêm nhạc Vemoki Live (demo)"></div>
+          <b>Đêm nhạc Vemoki Live</b><br/><span style="font-size:13px;color:var(--ink-500)">Nguyễn Văn A (demo)</span>
+        </div>
+        <div>
+          <h3 style="margin-top:0">Đêm nhạc Vemoki Live (demo)</h3>
+          <p class="sub">20:00, 12/12/2026 · Nhà hát Thành phố (demo)</p>
+          <span class="badge success" style="margin-left:0">Đã vào cổng</span>
+          <div class="row" style="margin-top:var(--space-lg)">
+            <button class="btn btn-secondary">Về Ví</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</body>
+</html>
