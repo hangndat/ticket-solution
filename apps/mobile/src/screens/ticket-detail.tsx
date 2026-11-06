@@ -195,14 +195,6 @@ export function TicketDetailScreen() {
         const credential = await session.resolveCredential();
         if (cancelled) return;
         if (credential.status === 'unavailable') {
-          if (found) {
-            setLoad({
-              status: 'ready', ticket: found,
-              syncedAt: cache?.syncedAt ?? null, fromCache: true,
-              ownerUserId, ownerTenantId, ticketId: id, mode,
-            });
-            return;
-          }
           setLoad({
             status: 'error',
             reason: 'unauthorized',

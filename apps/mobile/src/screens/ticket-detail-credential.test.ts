@@ -27,11 +27,12 @@ let memory: unknown = [legacy];
 let cache: unknown = { tickets: [legacy], syncedAt: '2026-11-04T00:00:00Z' };
 let calls = 0;
 let probe = async (): Promise<unknown> => ({ status: 'ok', body: { tickets: [ticket] } });
+let credential: { status: 'token'; accessToken: string } | { status: 'unavailable' } = { status: 'token', accessToken: 'synthetic' };
 const session = {
   subscribe: (fn: () => void) => { listeners.add(fn); return () => listeners.delete(fn); },
   getSnapshot: () => identity,
   read: () => memory,
-  resolveCredential: async () => ({ status: 'token', accessToken: 'synthetic' }),
+  resolveCredential: async () => credential,
   load: async (_scope: string, _resource: string, loader: () => Promise<unknown>) => { memory = await loader(); },
 };
 Object.assign(globalThis, {
@@ -153,5 +154,53 @@ test('a delayed owner-A fetch cannot render its QR after switching owner', async
   });
   await act(async () => { finish({ status: 'ok', body: { tickets: [ticket] } }); });
   assert.equal(tree!.root.findAllByType('QrCode').length, 0);
+  await act(async () => { tree!.unmount(); });
+});
+
+test('verified snapshot without credential cannot display cached QR or manual code', async () => {
+  cache = { tickets: [{ ...ticket, manualEntryCode: 'SYNTHETIC-CODE' }], syncedAt: '2026-11-04T00:00:00Z' };
+  credential = { status: 'unavailable' };
+  calls = 0;
+  let tree: ReturnType<typeof Renderer.create>;
+  try {
+    await act(async () => { tree = Renderer.create(React.createElement(TicketDetailScreen)); });
+    assert.equal(calls, 0);
+    assert.equal(tree!.root.findAllByType('QrCode').length, 0);
+    assert.equal(JSON.stringify(tree!.toJSON()).includes('SYNTHETIC-CODE'), false);
+    assert.equal(tree!.root.findAllByType('ErrorState').length, 1);
+  } finally {
+    await act(async () => { tree!.unmount(); });
+    credential = { status: 'token', accessToken: 'synthetic' };
+  }
+});
+
+test('bearer with unreachable API uses cached QR and last sync notice', async () => {
+  cache = { tickets: [ticket], syncedAt: '2026-11-04T00:00:00Z' };
+  const savedFetch = globalThis.fetch;
+  const savedOrigin = process.env.EXPO_PUBLIC_API_BASE_URL;
+  process.env.EXPO_PUBLIC_API_BASE_URL = 'http://127.0.0.1:39999';
+  globalThis.fetch = async () => new Response(null, { status: 503 });
+  probe = () => realProbeMeTickets('synthetic', { kind: 'owner' });
+  let tree: ReturnType<typeof Renderer.create>;
+  try {
+    await act(async () => { tree = Renderer.create(React.createElement(TicketDetailScreen)); });
+    assert.equal(tree!.root.findByType('QrCode').props.value, JSON.stringify(ticket.gateCredential));
+    assert.ok(JSON.stringify(tree!.toJSON()).includes('Offline'));
+    assert.ok(tree!.root.findAllByType('Notice').length > 0);
+  } finally {
+    await act(async () => { tree!.unmount(); });
+    globalThis.fetch = savedFetch;
+    if (savedOrigin === undefined) delete process.env.EXPO_PUBLIC_API_BASE_URL;
+    else process.env.EXPO_PUBLIC_API_BASE_URL = savedOrigin;
+  }
+});
+
+test('unauthorized response cannot display cached QR', async () => {
+  cache = { tickets: [ticket], syncedAt: '2026-11-04T00:00:00Z' };
+  probe = async () => ({ status: 'unauthorized' });
+  let tree: ReturnType<typeof Renderer.create>;
+  await act(async () => { tree = Renderer.create(React.createElement(TicketDetailScreen)); });
+  assert.equal(tree!.root.findAllByType('QrCode').length, 0);
+  assert.equal(tree!.root.findAllByType('ErrorState').length, 1);
   await act(async () => { tree!.unmount(); });
 });
