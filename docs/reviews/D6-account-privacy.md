@@ -6,13 +6,13 @@
 
 | Gate | Verdict | Căn cứ |
 | --- | --- | --- |
-| DoD | **FAIL** | F01 mở một phần: Build52 đã chứng minh happy path xóa, Back từ status về Account, GET error→retry và guest guard sau logout; còn Back từ Account về tab nguồn, failed POST/resubmit, cleanup đầy đủ và geometry verified 390×844. |
-| Security | **PASS (code scope)** | Guard verified, xác nhận riêng, idempotency/epoch và ACK đúng nghĩa; Build52 quan sát guest guard sau logout/cold restart. Không suy đã xóa mọi khóa local hoặc xóa tài khoản production. |
-| UI/UX | **FAIL (acceptance)** | Privacy native 390×844 phù hợp mẫu; Build52 verified 402×874 cho initial/confirm/status, Back về Account và GET error/retry, chưa đủ geometry 390×844 hay failed POST/resubmit (F01). |
+| DoD | **FAIL** | F01 mở một phần: Build52 đã chứng minh Back Account→Wallet và POST 503→retry→ACK thêm vào các journey trước; còn geometry verified 390×844, kiểm scroll/CTA tại khổ đó, cleanup đầy đủ và bằng chứng reuse Idempotency-Key. |
+| Security | **PASS (code scope, giới hạn runtime)** | Guard verified, xác nhận riêng, idempotency/epoch và ACK đúng nghĩa; Build52 quan sát guest guard sau logout và hai POST 503→202. Fixture log không chứng minh hai POST dùng cùng Idempotency-Key; không suy đã xóa mọi khóa local hoặc xóa tài khoản production. |
+| UI/UX | **FAIL (acceptance)** | Privacy native 390×844 phù hợp mẫu; Build52 verified 402×874 cho initial/confirm/status, Back cả hai tầng, GET và POST retry; chưa đủ geometry/scroll 390×844 (F01). |
 
 ## Finding
 
-- **F01 · thiếu evidence · blocker, còn mở, chặn đóng #1233:** Review gốc `fc17fdd2` chỉ có guest entry với banner khôi phục phiên, không chứng minh AC1/AC2 verified. Revalidation Build52 trên iPhone 402×874 pt **đã chứng minh** initial → confirm → một POST attendee → ACK `REQUESTED/UNRESOLVED` → mở lại status; Back từ status về Account verified; GET current 503 → retry GET 200/null → idle, không POST; logout → guest account → link vé cũ bị guest guard cả sau cold restart. **Còn thiếu** Back từ Account về tab nguồn, failed POST/resubmit cùng idempotency key, scroll/CTA ở 390×844 pt và chứng cứ cleanup toàn bộ dữ liệu cục bộ theo contract. **Đóng khi** kiểm các nhánh còn thiếu trên build/SHA được pin, có ảnh/AX/journey đúng viewport; không suy production erasure hoặc storage purge từ ảnh guest.
+- **F01 · thiếu evidence · blocker, còn mở, chặn đóng #1233:** Review gốc `fc17fdd2` chỉ có guest entry với banner khôi phục phiên, không chứng minh AC1/AC2 verified. Revalidation Build52 trên iPhone 402×874 pt **đã chứng minh** initial → confirm → POST → ACK `REQUESTED/UNRESOLVED` → mở lại status; Back deletion→Account và Account→Wallet nguồn; GET current 503→retry GET 200/null→idle không POST; POST 503→retry POST 202→ACK; logout→guest guard cho link vé cũ cả sau cold restart. **Còn thiếu** chứng cứ hai POST dùng cùng Idempotency-Key, scroll/CTA verified ở 390×844 pt và cleanup toàn bộ dữ liệu cục bộ theo contract. **Đóng khi** kiểm các phần còn thiếu trên build/SHA được pin, có ảnh/AX/journey đúng viewport; không suy production erasure hoặc storage purge từ ảnh guest.
 
 ## Evidence và giới hạn
 
@@ -48,3 +48,10 @@
 - Bốn ảnh 1206×2622 px, SHA-256 khớp `usb-verified-staff-report.md` và đã mở xem: `build52-delete-back-ready.png` `546f99a7…` (status, Back native) → user tap → `build52-back-to-account.png` `d2e418d0…` (Account verified, privacy/xóa/logout). Điều này chứng minh Back của **màn deletion** về Account; chưa chứng minh Back của Account về tab nguồn.
 - Fixture khởi động lại nên trạng thái `REQUESTED` trong bộ nhớ được reset. One-shot GET current trả 503 rồi tự hết marker; `build52-delete-error.png` `d98e0fda…` hiện “Không tải được trạng thái” và CTA “Thử tải lại trạng thái”. Sau user tap, report log ghi **GET mới, không POST**; `build52-delete-retry-recovered.png` `12c061bd…` hiện idle/CTA đỏ sau GET 200/null. Đây là recovery của **GET status**, không phải failed POST/resubmit hoặc trạng thái ACK được giữ qua restart.
 - Verdict F01/DoD/UI vẫn FAIL cho các nhánh còn thiếu ở trên; Security giữ PASS trong code scope. Fix counter **0/2**; không đổi source, không tạo finding mới.
+
+### James evidence revalidation — Account Back và POST retry, Build52
+
+- Exact installed source/build `39b0170c13c6103b4e33e1e3cd7c61ff889a4d32`; HEAD docs merge `547fe23b` có diff `apps/mobile/**` rỗng so với build. Năm ảnh dưới đây đều 1206×2622 px = **402×874 pt**, hash SHA-256 khớp `usb-verified-staff-report.md` và đã mở xem.
+- `build52-account-back-wallet-settled.png` `ee0c9106…` (Wallet và vé synthetic `44444444`) → user tap icon tài khoản → `build52-account-from-wallet.png` `dc67c074…` (Account verified, Back) → user tap Back → `build52-account-back-to-wallet.png` `7caa515d…` (cùng Wallet/vé, tab nguồn). Back từ Account đã có evidence cho đường vào Wallet thực tế.
+- Fixture one-shot trả 503 cho POST đầu; `build52-post503-retry-check.png` `7f3088ae…` cho thấy “Không gửi được yêu cầu”, “Thử lại gửi yêu cầu” và “Đóng” cùng trong viewport. Sau user tap retry, report log ghi POST attendee thứ hai và 202 `REQUESTED`; `build52-post503-retry-ack.png` `8b4326a7…` cho thấy “Đang xử lý yêu cầu”, không nói tài khoản đã xóa. Đây là recovery synthetic POST 503→202; log không ghi header/key nên **chưa chứng minh reuse Idempotency-Key** hoặc chống trùng trên backend thật.
+- F01 vẫn mở cho geometry/scroll 390×844 và kiểm cleanup cục bộ theo contract; DoD/UI chưa PASS toàn #1233. Security chỉ PASS code scope với giới hạn trên, không có production erasure. Fix counter **0/2**; không sửa source hay fixture.
