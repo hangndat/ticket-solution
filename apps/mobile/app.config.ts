@@ -110,9 +110,9 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       buildNumber: '48',
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
-        UIBackgroundModes: ['remote-notification'],
+        UIBackgroundModes: separateUatBundle ? [] : ['remote-notification'],
       },
-      entitlements: {
+      entitlements: separateUatBundle ? {} : {
         'aps-environment': apsEnvironment,
       },
     },
