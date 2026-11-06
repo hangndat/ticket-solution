@@ -1,5 +1,7 @@
+import { useRef, type ElementRef } from 'react';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { ScrollView, Text, View } from 'react-native';
+import { Button } from '@/components/ui/button';
 import {
   PRIVACY_POLICY_INTRO,
   PRIVACY_POLICY_NOTE,
@@ -12,11 +14,14 @@ import { parsePrivacyOrigin } from '@/navigation/privacy-policy-navigation';
 import { TabStackTitle } from '@/navigation/tab-stack-title';
 import { brand, colors } from '@/theme/colors';
 import { fontFamilies } from '@/theme/fonts';
-import { space } from '@/theme/tokens';
+import { radius, space } from '@/theme/tokens';
 import { typography } from '@/theme/typography';
 
 /** Shared native privacy (attendee + staff). No WebView. */
 export function PrivacyScreen() {
+  const scroll = useRef<ElementRef<typeof ScrollView>>(null);
+  const sectionOffsets = useRef<Record<string, number>>({});
+  const contentsOffset = useRef(0);
   const { from } = useLocalSearchParams<{ from?: string }>();
   const origin = parsePrivacyOrigin(from);
   // Deep link with no history: no native back chevron — offer an explicit exit.
@@ -34,6 +39,7 @@ export function PrivacyScreen() {
         </Stack.Toolbar>
       ) : null}
       <ScrollView
+        ref={scroll}
         contentInsetAdjustmentBehavior="automatic"
         style={{ flex: 1, backgroundColor: brand.paper }}
         contentContainerStyle={{
@@ -61,8 +67,33 @@ export function PrivacyScreen() {
         >
           {PRIVACY_POLICY_INTRO}
         </Text>
+        <View
+          onLayout={(event) => { contentsOffset.current = event.nativeEvent.layout.y; }}
+          style={{ gap: space.md, backgroundColor: colors.card, borderColor: colors.line, borderWidth: 1, borderRadius: radius.md, borderCurve: 'continuous', padding: space.lg }}
+        >
+          <Text style={{ color: brand.ink, ...typography.bodySemibold }}>Đến nhanh một mục</Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm }}>
+            {[0, 3, 4, 6].map((index) => {
+              const section = PRIVACY_POLICY_SECTIONS[index];
+              return (
+                <Button
+                  key={section.title}
+                  variant="secondary"
+                  accessibilityLabel={`Đến mục ${section.title}`}
+                  onPress={() => scroll.current?.scrollTo({ y: sectionOffsets.current[section.title] ?? 0, animated: true })}
+                  label={section.title}
+                  style={{ borderRadius: radius.pill }}
+                />
+              );
+            })}
+          </View>
+        </View>
         {PRIVACY_POLICY_SECTIONS.map((section) => (
-          <View key={section.title} style={{ gap: space.sm }}>
+          <View
+            key={section.title}
+            onLayout={(event) => { sectionOffsets.current[section.title] = event.nativeEvent.layout.y; }}
+            style={{ gap: space.sm, borderTopColor: colors.line, borderTopWidth: 1, paddingTop: space.lg }}
+          >
             <Text
               accessibilityRole="header"
               style={{
@@ -83,6 +114,13 @@ export function PrivacyScreen() {
             >
               {section.body}
             </Text>
+            <Button
+              variant="ghost"
+              accessibilityLabel={`Về mục lục từ ${section.title}`}
+              onPress={() => scroll.current?.scrollTo({ y: contentsOffset.current, animated: true })}
+              label="↑ Về mục lục"
+              style={{ alignSelf: 'flex-start' }}
+            />
           </View>
         ))}
         <Text
