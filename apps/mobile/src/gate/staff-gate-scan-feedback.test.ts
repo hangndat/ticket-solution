@@ -9,6 +9,8 @@ import {
   selectScanFeedbackOp,
   shouldShowCameraToast,
   shouldSuppressCameraRescan,
+  needsScanContinuation,
+  machineOperationalLabel,
 } from './staff-gate-scan-feedback.ts';
 import { presentGateScanStatus } from './gate-scan-status-ui.ts';
 
@@ -53,6 +55,17 @@ test('classifyScanFeedbackLifecycle terminal only for admitted', () => {
   );
   assert.equal(classifyScanFeedbackLifecycle(null, true), 'processing');
   assert.equal(classifyScanFeedbackLifecycle(null, false), 'idle');
+});
+
+test('scan outcomes stay pending until staff chooses to continue', () => {
+  for (const phase of ['admitted', 'denied', 'queued', 'unknown', 'recorded'] as const) {
+    assert.equal(needsScanContinuation({ ...admitted, phase }), true, phase);
+  }
+  assert.equal(needsScanContinuation(null), false);
+  assert.equal(machineOperationalLabel({
+    busy: false, ready: true, gateEventsLoading: false,
+    hasGateScope: true, pendingOp: admitted, queuePendingCount: 0,
+  }), 'Chờ quét tiếp');
 });
 
 test('toast timer clears only matching attempt id', () => {

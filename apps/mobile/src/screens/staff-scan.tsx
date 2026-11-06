@@ -1,4 +1,5 @@
 import { ScrollView, Text, View } from 'react-native';
+import { Button } from '@/components/ui/button';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { gateOutcomeAnnouncement } from '@/a11y/announcements';
 import { AtmosphereWash } from '@/components/screen-atmosphere';
@@ -10,9 +11,7 @@ import { announcementPhaseFor } from '@/gate/gate-outcome-copy';
 import { StaffGateNoEventState } from '@/gate/staff-gate-empty-state';
 import { StaffGateOpsSticky } from '@/gate/staff-gate-ops-sticky';
 import { StaffGateScreenChrome } from '@/gate/staff-gate-screen-chrome';
-import { shouldShowCameraToast } from '@/gate/staff-gate-scan-feedback';
 import { StaffGateScanStatusPanel } from '@/gate/staff-gate-scan-status';
-import { StaffGateScanToast } from '@/gate/staff-gate-scan-toast';
 import { useStaffGateWorkspace } from '@/gate/staff-gate-workspace-context';
 import { STAFF_TAB_TITLES } from '@/navigation/staff-tab-titles';
 import { colors } from '@/theme/colors';
@@ -27,11 +26,8 @@ export function StaffScanScreen() {
   const outcomeView = gate.persistentScanStatus;
   const a11yTitle = gate.busy ? scanCopy.checking.title : outcomeView.label;
   const a11yDetail = gate.busy ? scanCopy.checking.body : outcomeView.hint;
-  const showCameraToast =
-    gate.toastVisible &&
-    shouldShowCameraToast(gate.toastOp, gate.busy);
-  const outcomeEmphasized =
-    gate.busy || outcomeView.kind !== 'idle' || gate.pendingOp !== null;
+  const showOutcome = gate.busy || outcomeView.kind !== 'idle' || gate.pendingOp !== null;
+  const outcomeEmphasized = showOutcome;
 
   // Live preview only with an open session (or while the gate list failed to
   // load, so the first-scan open fallback never regresses).
@@ -64,13 +60,7 @@ export function StaffScanScreen() {
             eventName={gate.gateScope?.name ?? null}
             gateScope={gate.gateScope}
             pendingOp={gate.pendingOp}
-            onContinueScan={
-              gate.pendingOp && !gate.busy ? gate.dismissPendingAction : undefined
-            }
-            onReconcile={() => void gate.reconcile()}
-            reconcileEnabled={Boolean(
-              gate.pendingOp && canReconcile(gate.pendingOp) && !gate.busy,
-            )}
+            reconcileEnabled={false}
           />
         </View>
         <ScrollView
@@ -87,41 +77,52 @@ export function StaffScanScreen() {
           <View style={{ position: 'relative' }}>
             {showLive ? (
               <GateCamera
-                disabled={gate.scanDisabled}
+                disabled={gate.scanDisabled || gate.toastVisible}
                 onScan={gate.handleCameraScan}
               />
             ) : (
               <GateCameraIdle />
             )}
-            <StaffGateScanToast
-              active={Boolean(showCameraToast && (gate.toastOp || gate.busy))}
-              visible={showCameraToast}
-              view={gate.toastStatus}
-              busy={gate.busy}
-            />
+            {showOutcome ? (
+              <View
+                testID="gate-scan-outcome-panel"
+                {...gateOutcomeAnnouncement({
+                  phase: announcementPhaseFor(
+                    gate.busy ? 'confirming' : announceOp?.phase,
+                  ),
+                  title: a11yTitle,
+                  message: a11yDetail
+                })}
+                accessibilityLiveRegion={outcomeView.assertive ? 'assertive' : 'polite'}
+                style={{ position: 'absolute', left: space.sm, right: space.sm, bottom: space.sm }}
+              >
+                <StaffGateScanStatusPanel
+                  view={outcomeView}
+                  busy={gate.busy}
+                  emphasized={outcomeEmphasized}
+                />
+              </View>
+            ) : null}
           </View>
           <StaffGateOpenSession gates={gate.gates} />
-          {outcomeEmphasized ? (
-          <View
-            testID="gate-scan-outcome-panel"
-            {...gateOutcomeAnnouncement({
-              phase: announcementPhaseFor(
-                gate.busy ? 'confirming' : announceOp?.phase,
-              ),
-              title: a11yTitle,
-              message: a11yDetail
-            })}
-            accessibilityLiveRegion={
-              outcomeView.assertive ? 'assertive' : 'polite'
-            }
-          >
-            <StaffGateScanStatusPanel
-              view={outcomeView}
-              busy={gate.busy}
-              emphasized={outcomeEmphasized}
-            />
-          </View>
-          ) : showLive ? (
+          {gate.pendingOp && !gate.busy ? (
+            <View style={{ gap: space.sm }}>
+              {canReconcile(gate.pendingOp) ? (
+                <Button
+                  variant="secondary"
+                  label="Đối soát"
+                  accessibilityLabel="Đối soát kết quả chưa rõ"
+                  onPress={() => void gate.reconcile()}
+                />
+              ) : null}
+              <Button
+                testID="gate-scan-continue"
+                label="Quét tiếp"
+                accessibilityLabel="Quét tiếp"
+                onPress={gate.dismissPendingAction}
+              />
+            </View>
+          ) : showLive && !showOutcome ? (
             <Text
               style={{ ...typography.footnote, color: colors.secondary }}
             >

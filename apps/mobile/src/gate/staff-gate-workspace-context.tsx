@@ -69,7 +69,7 @@ import {
   SCAN_TOAST_FADE_MS,
   SCAN_TOAST_VISIBLE_MS,
   cameraFeedbackLifecycle,
-  needsStickyPendingOp,
+  needsScanContinuation,
   prominentCanReconcile,
   selectScanFeedbackOp,
   shouldDismissToastAttempt,
@@ -319,9 +319,13 @@ export function StaffGateWorkspaceProvider({
   }), [clearScanFeedback]);
 
   const dismissPendingAction = useCallback(() => {
+    clearToastTimers();
+    toastAttemptRef.current = null;
+    setToastOp(null);
+    setToastVisible(false);
     setPendingOp(null);
     lastCameraPayloadRef.current = null;
-  }, []);
+  }, [clearToastTimers]);
 
   const applyScanResult = useCallback(
     (op: GateOp | null, attemptId: string) => {
@@ -331,7 +335,7 @@ export function StaffGateWorkspaceProvider({
       }
       toastAttemptRef.current = attemptId;
       clearToastTimers();
-      setPendingOp(needsStickyPendingOp(op) ? op : null);
+      setPendingOp(needsScanContinuation(op) ? op : null);
 
       if (shouldShowCameraToast(op, false)) {
         setToastOp(op);
@@ -353,7 +357,7 @@ export function StaffGateWorkspaceProvider({
         toastCleanupTimerRef.current = setTimeout(() => {
           if (toastAttemptRef.current !== attemptId) return;
           setToastOp(null);
-          if (!needsStickyPendingOp(op)) {
+          if (!needsScanContinuation(op)) {
             toastAttemptRef.current = null;
             lastCameraPayloadRef.current = null;
           }
@@ -1352,7 +1356,7 @@ export function StaffGateWorkspaceProvider({
   );
 
   const scanDisabled =
-    busy || !ready || !gateScope || gateEventsLoading;
+    busy || !ready || !gateScope || gateEventsLoading || pendingOp !== null;
 
   const queueAttention =
     queueSnap.pendingCount > 0 || queueSnap.conflictCount > 0;

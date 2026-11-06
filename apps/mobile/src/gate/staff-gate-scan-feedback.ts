@@ -40,6 +40,11 @@ export function needsStickyPendingOp(op: GateOp | null): boolean {
   return classifyScanFeedbackLifecycle(op, false) === 'sticky';
 }
 
+/** Every camera result waits for an explicit «Quét tiếp» after the toast. */
+export function needsScanContinuation(op: GateOp | null): boolean {
+  return op !== null;
+}
+
 /** Manual / sticky UI: pending op survives toast timer clear. */
 export function selectScanFeedbackOp(
   pendingOp: GateOp | null,
@@ -112,6 +117,7 @@ export function machineOperationalLabel(input: {
   if (input.pendingOp?.phase === 'queued') {
     return 'Có lượt chờ đồng bộ offline';
   }
+  if (input.pendingOp) return 'Chờ quét tiếp';
   if (input.queuePendingCount > 0) {
     return `Hàng đợi offline (${input.queuePendingCount})`;
   }

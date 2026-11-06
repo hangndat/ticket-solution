@@ -27,7 +27,13 @@ export function GateCameraIdle() {
         justifyContent: 'center'
       }}
     >
-      <SymbolView name="camera.fill" size={56} tintColor={colors.separator} />
+      <SymbolView name="camera.fill" size={52} tintColor={colors.separator} />
+      <Text style={{ ...typography.subheadSemibold, color: colors.secondary, marginTop: space.md }}>
+        Camera đang tắt
+      </Text>
+      <Text style={{ ...typography.footnote, color: colors.secondary, marginTop: space.xs }}>
+        Mở phiên để bắt đầu quét
+      </Text>
     </View>
   );
 }
