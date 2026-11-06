@@ -1,9 +1,14 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
+  isValidInvitationClaimScope,
   parseInstalledAppLink,
   routeForInstalledAppLink,
 } from './installed-app-link.ts';
+import {
+  clearGuestClaimIntent,
+  peekGuestClaimIntent,
+} from '../redeem/claim-intent.ts';
 
 const ticketId = '11111111-1111-4111-8111-111111111111';
 
@@ -73,15 +78,15 @@ test('redeem deep link preserves code query on global route', () => {
   const parsed = parseInstalledAppLink(input);
   assert.equal(parsed.kind, 'redeem-entry');
   if (parsed.kind !== 'redeem-entry') return;
-  assert.equal(
-    parsed.href,
-    `/(tabs)/redeem?code=${encodeURIComponent(code)}`,
-  );
+  assert.equal(parsed.href, `/(tabs)/redeem?code=${encodeURIComponent(code)}`);
   assert.equal(routeForInstalledAppLink(input), parsed.href);
 });
 
 test('unrelated and invalid links are left untouched', () => {
-  assert.equal(parseInstalledAppLink('https://example.com/tickets/x').kind, 'passthrough');
+  assert.equal(
+    parseInstalledAppLink('https://example.com/tickets/x').kind,
+    'passthrough',
+  );
   assert.equal(
     parseInstalledAppLink('ticketsolution://tickets/not-a-uuid').kind,
     'passthrough',
@@ -97,6 +102,7 @@ test('unrelated and invalid links are left untouched', () => {
 });
 
 test('invitation claim link routes to /claim without fixture fallback', () => {
+  clearGuestClaimIntent();
   const token = 'opaque-claim-token-16chars';
   const tenantId = '22222222-2222-4222-8222-222222222222';
   const eventId = '33333333-3333-4333-8333-333333333333';
@@ -109,14 +115,28 @@ test('invitation claim link routes to /claim without fixture fallback', () => {
   assert.equal(parsed.eventId, eventId);
   assert.match(parsed.href, /^\/claim\?/);
   assert.doesNotMatch(parsed.href, /fixture/);
-  assert.equal(routeForInstalledAppLink(input), parsed.href);
+  assert.equal(routeForInstalledAppLink(input), '/claim');
+  assert.equal(peekGuestClaimIntent()?.token, token);
 });
 
-test('invitation claim with short token is not routed', () => {
+test('invitation claim with short token opens invalid-link screen', () => {
   const parsed = parseInstalledAppLink(
     'vemoki://invitations/claim?token=short&tenantId=22222222-2222-4222-8222-222222222222&eventId=33333333-3333-4333-8333-333333333333',
   );
-  assert.equal(parsed.kind, 'passthrough');
+  assert.equal(parsed.kind, 'invitation-claim-invalid');
+  assert.equal(
+    routeForInstalledAppLink('vemoki://invitations/claim?token=short'),
+    '/claim',
+  );
+  assert.equal(peekGuestClaimIntent(), null);
+  assert.equal(
+    isValidInvitationClaimScope({
+      token: 'short',
+      tenantId: '22222222-2222-4222-8222-222222222222',
+      eventId: '33333333-3333-4333-8333-333333333333',
+    }),
+    false,
+  );
 });
 
 test('membership invite opens web bridge (not native claim)', () => {

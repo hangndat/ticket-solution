@@ -7,12 +7,27 @@ import {
   extractMembershipInviteTokenFromUrl,
   isMembershipInviteToken,
 } from './membership-invite-url.ts';
+import {
+  clearGuestClaimIntent,
+  parkGuestClaimIntent,
+} from '../redeem/claim-intent.ts';
 
-const UUID =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const EVENT_ID = /^[A-Za-z0-9][A-Za-z0-9-]{0,80}$/;
 /** Opaque claim token — length-bounded; never logged by callers. */
 const CLAIM_TOKEN = /^[A-Za-z0-9._~-]{16,512}$/;
+
+export function isValidInvitationClaimScope(input: {
+  token: string;
+  tenantId: string;
+  eventId: string;
+}): boolean {
+  return (
+    CLAIM_TOKEN.test(input.token.trim()) &&
+    UUID.test(input.tenantId.trim()) &&
+    UUID.test(input.eventId.trim())
+  );
+}
 
 export type InstalledAppLink =
   | { kind: 'ticket'; ticketId: string; href: string }
@@ -26,6 +41,7 @@ export type InstalledAppLink =
       eventSlug?: string;
       href: string;
     }
+  | { kind: 'invitation-claim-invalid'; href: '/claim' }
   | { kind: 'staff-access'; href: string }
   | {
       kind: 'membership-invite';
@@ -101,11 +117,28 @@ export function routeForInstalledAppLink(input: string): string | null {
     parsed.kind === 'ticket' ||
     parsed.kind === 'event' ||
     parsed.kind === 'invitation-claim' ||
+    parsed.kind === 'invitation-claim-invalid' ||
     parsed.kind === 'staff-access' ||
     parsed.kind === 'membership-invite' ||
     parsed.kind === 'uat-session' ||
     parsed.kind === 'redeem-entry'
   ) {
+    if (parsed.kind === 'invitation-claim') {
+      // Keep the opaque token out of Expo Router's path and navigation history.
+      parkGuestClaimIntent({
+        token: parsed.token,
+        tenantId: parsed.tenantId,
+        eventId: parsed.eventId,
+        tenantSlug: parsed.tenantSlug,
+        eventSlug: parsed.eventSlug,
+        parkedUserId: null,
+        parkedGeneration: null,
+      });
+      return '/claim';
+    }
+    if (parsed.kind === 'invitation-claim-invalid') {
+      clearGuestClaimIntent();
+    }
     return parsed.href;
   }
   return input;
@@ -244,8 +277,9 @@ function parseInvitationClaimLink(raw: string): InstalledAppLink | null {
   const tenantSlug = url.searchParams.get('tenantSlug')?.trim() || undefined;
   const eventSlug = url.searchParams.get('eventSlug')?.trim() || undefined;
 
-  if (!CLAIM_TOKEN.test(token) || !UUID.test(tenantId) || !UUID.test(eventId)) {
-    return { kind: 'passthrough' };
+  if (!isValidInvitationClaimScope({ token, tenantId, eventId })) {
+    // A recognized claim path still lands on its dedicated invalid-link state.
+    return { kind: 'invitation-claim-invalid', href: '/claim' };
   }
 
   const qs = new URLSearchParams({
