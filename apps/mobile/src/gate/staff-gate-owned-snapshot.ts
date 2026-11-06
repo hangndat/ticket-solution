@@ -43,6 +43,9 @@ export function projectStaffGateOwnedSnapshot(
         await session.restore(verifyViaMe);
       }
     },
+    retryWorkspaceLoad: () => {
+      if (current && value.workspaceLoadError) value.retryWorkspaceLoad(current);
+    },
     gates: {
       ...value.gates,
       selectGate: (gateId: string) => { if (live()) value.gates.selectGate(gateId); },

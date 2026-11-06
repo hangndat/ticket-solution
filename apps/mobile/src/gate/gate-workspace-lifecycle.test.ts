@@ -1,11 +1,14 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
+  canRetryGateWorkspaceLoad,
   invalidateGateWorkspaceLifecycle,
   isGateWorkspaceLifecycleCurrent,
   loadWorkspaceWithLifecycleGuard,
   scheduleGateWorkspaceLifecycleWork,
 } from './gate-workspace-lifecycle.ts';
+import { buildDeviceScanHistory } from './staff-gate-device-history.ts';
+import type { GateOp } from './gate-scan.ts';
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -172,4 +175,71 @@ test('mount then foreground stays ordered on one chain', async () => {
   mountGate.resolve();
   await chainRef.current;
   assert.deepEqual(log, ['mount-load', 'mount-refresh', 'foreground-sync']);
+});
+
+test('failed hydrate can retry twice and reveal only recovered device history', async () => {
+  const generationRef = { current: 0 };
+  const epoch = { userId: 'staff-a', generation: 3 };
+  const scope = { tenantId: 'tenant-a', eventId: 'event-a', name: 'Event A' };
+  const row: GateOp = {
+    id: 'operation-a', ticketId: 'ticket-a', tenantId: scope.tenantId,
+    eventId: scope.eventId, staffSessionId: 'session-a', phase: 'admitted',
+    admissionKind: 'fresh', message: 'ok', recordedAt: '2026-11-06T10:00:00.000Z',
+  };
+  let attempts = 0;
+  let ready = false;
+  let loadError = false;
+  let visible: ReturnType<typeof buildDeviceScanHistory> = [];
+  const load = async () => {
+    attempts += 1;
+    if (attempts <= 2) throw new Error('SecureStore unavailable');
+    return { scope, ops: [row] };
+  };
+  const attempt = async () => {
+    loadError = false;
+    ready = false;
+    visible = [];
+    const token = invalidateGateWorkspaceLifecycle(generationRef);
+    try {
+      const workspace = await loadWorkspaceWithLifecycleGuard(generationRef, token, load);
+      if (!workspace) return;
+      visible = buildDeviceScanHistory(workspace.scope, workspace.ops, []);
+      ready = true;
+    } catch {
+      if (isGateWorkspaceLifecycleCurrent(generationRef, token)) loadError = true;
+    }
+  };
+  await attempt();
+  assert.equal(loadError, true);
+  assert.equal(ready, false);
+  assert.deepEqual(visible, []);
+  assert.equal(canRetryGateWorkspaceLoad({
+    requested: epoch, current: epoch, verifiedUserId: epoch.userId,
+    active: true, loadError, ready, pending: false,
+    hasScope: false, hasSession: false,
+  }), true);
+  await attempt();
+  assert.equal(loadError, true, 'retry error remains recoverable');
+  assert.deepEqual(visible, []);
+  await attempt();
+  assert.equal(attempts, 3);
+  assert.equal(loadError, false);
+  assert.equal(ready, true);
+  assert.equal(visible.length, 1);
+  assert.equal((visible as ReturnType<typeof buildDeviceScanHistory>)[0]?.id, 'operation-a');
+});
+
+test('workspace retry rejects changed user, epoch, scope, or active session', () => {
+  const base = {
+    requested: { userId: 'staff-a', generation: 1 },
+    current: { userId: 'staff-a', generation: 1 },
+    verifiedUserId: 'staff-a', active: true, loadError: true,
+    ready: false, pending: false, hasScope: false, hasSession: false,
+  };
+  assert.equal(canRetryGateWorkspaceLoad(base), true);
+  assert.equal(canRetryGateWorkspaceLoad({ ...base, current: { userId: 'staff-b', generation: 2 } }), false);
+  assert.equal(canRetryGateWorkspaceLoad({ ...base, current: { userId: 'staff-a', generation: 2 } }), false);
+  assert.equal(canRetryGateWorkspaceLoad({ ...base, hasScope: true }), false);
+  assert.equal(canRetryGateWorkspaceLoad({ ...base, hasSession: true }), false);
+  assert.equal(canRetryGateWorkspaceLoad({ ...base, pending: true }), false);
 });

@@ -6,6 +6,31 @@
 export type LifecycleGenerationRef = { current: number };
 export type LifecycleChainRef = { current: Promise<void> };
 
+export type WorkspaceRetryEpoch = { userId: string; generation: number };
+
+/** Retry only the failed initial hydrate for the same verified identity. */
+export function canRetryGateWorkspaceLoad(input: {
+  requested: WorkspaceRetryEpoch | null;
+  current: WorkspaceRetryEpoch | null;
+  verifiedUserId: string | null;
+  active: boolean;
+  loadError: boolean;
+  ready: boolean;
+  pending: boolean;
+  hasScope: boolean;
+  hasSession: boolean;
+}): boolean {
+  const { requested, current } = input;
+  return Boolean(
+    requested && current &&
+    requested.userId === current.userId &&
+    requested.generation === current.generation &&
+    current.userId === input.verifiedUserId &&
+    input.active && input.loadError && !input.ready && !input.pending &&
+    !input.hasScope && !input.hasSession,
+  );
+}
+
 export function isGateWorkspaceLifecycleCurrent(
   generationRef: LifecycleGenerationRef,
   lifecycleToken: number,

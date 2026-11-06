@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { RefreshControl, ScrollView, Text, View } from 'react-native';
+import { Button } from '@/components/ui/button';
 import { StaffGateNoEventState } from '@/gate/staff-gate-empty-state';
 import { StaffGateDeviceHistoryPanel } from '@/gate/staff-gate-device-history-panel';
 import {
@@ -102,11 +103,15 @@ export function StaffHistoryScreen() {
   const onRefresh = useCallback(async () => {
     setPulling(true);
     try {
+      if (!gate.ready) {
+        if (gate.workspaceLoadError) gate.retryWorkspaceLoad();
+        return;
+      }
       await refreshGateEvents();
     } finally {
       setPulling(false);
     }
-  }, [refreshGateEvents]);
+  }, [gate, refreshGateEvents]);
 
   return (
     <>
@@ -123,11 +128,18 @@ export function StaffHistoryScreen() {
       >
         {gate.ready ? <StaffGateNoEventState /> : null}
         {!gate.ready ? (
-          <Text style={{ ...typography.subhead, color: colors.secondary }}>
-            {gate.workspaceLoadError
-              ? 'Không mở được lịch sử lưu trên thiết bị. Thử lại sau khi mở lại ứng dụng.'
-              : 'Đang mở lịch sử lưu trên thiết bị…'}
-          </Text>
+          <View style={{ gap: space.sm }}>
+            <Text accessibilityRole={gate.workspaceLoadError ? 'alert' : 'text'}
+              style={{ ...typography.subhead, color: gate.workspaceLoadError ? colors.deny : colors.secondary }}>
+              {gate.workspaceLoadError
+                ? 'Không mở được lịch sử lưu trên thiết bị.'
+                : 'Đang mở lịch sử lưu trên thiết bị…'}
+            </Text>
+            {gate.workspaceLoadError ? (
+              <Button label="Thử lại" accessibilityLabel="Thử mở lại lịch sử trên thiết bị"
+                variant="secondary" onPress={() => gate.retryWorkspaceLoad()} />
+            ) : null}
+          </View>
         ) : null}
         {gate.ready && gate.gateScope ? <View>
           <StaffHistoryDeviceList

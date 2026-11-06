@@ -109,3 +109,21 @@ test('production Gate snapshot and storage hide A at every A→unknown→B rende
   await visibleA.reconcile();
   assert.equal(actions, 0);
 });
+
+test('unowned failed hydrate exposes only epoch-scoped retry', () => {
+  const epoch: SessionEpoch = { userId: 'staff-a', generation: 8 };
+  const attempted: (SessionEpoch | null | undefined)[] = [];
+  const raw = {
+    ready: false,
+    workspaceLoadError: true,
+    retryWorkspaceLoad: (expected?: SessionEpoch | null) => attempted.push(expected),
+  } as unknown as StaffGateWorkspaceValue;
+  const failed = projectStaffGateOwnedSnapshot(raw, null, epoch, () => false);
+  assert.equal(failed.ready, false);
+  assert.deepEqual(failed.deviceHistory, []);
+  failed.retryWorkspaceLoad();
+  assert.deepEqual(attempted, [epoch]);
+  const signedOut = projectStaffGateOwnedSnapshot(raw, null, null, () => false);
+  signedOut.retryWorkspaceLoad();
+  assert.deepEqual(attempted, [epoch], 'signed-out view cannot retry hydrate');
+});

@@ -54,6 +54,7 @@ import {
   resolvePendingOpAfterOfflineReplay,
 } from '@/gate/staff-gate-replay-pending';
 import {
+  canRetryGateWorkspaceLoad,
   invalidateGateWorkspaceLifecycle,
   isGateWorkspaceLifecycleCurrent,
   loadWorkspaceWithLifecycleGuard,
@@ -185,6 +186,7 @@ export type StaffGateWorkspaceValue = {
   gateEventsLoading: boolean;
   gateEventsError: string | null;
   workspaceLoadError?: boolean;
+  retryWorkspaceLoad: (expectedEpoch?: SessionEpoch | null) => void;
   eventPickerOpen: boolean;
   setEventPickerOpen: (open: boolean | ((prev: boolean) => boolean)) => void;
   queueSnap: OfflineQueueSnapshot;
@@ -241,6 +243,8 @@ export function StaffGateWorkspaceProvider({
   const [gateEventsLoading, setGateEventsLoading] = useState(false);
   const [gateEventsError, setGateEventsError] = useState<string | null>(null);
   const [workspaceLoadError, setWorkspaceLoadError] = useState(false);
+  const [workspaceRetryNonce, setWorkspaceRetryNonce] = useState(0);
+  const workspaceRetryPendingRef = useRef(false);
   const [eventPickerOpen, setEventPickerOpen] = useState(false);
   const [gatesLoad, setGatesLoad] = useState<GatesLoadState | null>(null);
   const [selectedGate, setSelectedGate] = useState<{ key: string; id: string } | null>(null);
@@ -270,6 +274,7 @@ export function StaffGateWorkspaceProvider({
   const foregroundSyncChainRef = useRef<Promise<void>>(Promise.resolve());
   const workspaceWriteRef = useRef<Promise<void>>(Promise.resolve());
   const recoveryAttemptedSessionsRef = useRef(new Set<string>());
+
   useLayoutEffect(() => {
     viewRef.current = { gateScope, sessionId, ops };
   }, [gateScope, sessionId, ops]);
@@ -392,6 +397,22 @@ export function StaffGateWorkspaceProvider({
     session.getSnapshot,
   );
   const verifiedUserId = identitySnapshot.status === 'verified' ? identitySnapshot.userId : null;
+
+  const retryWorkspaceLoad = useCallback((expectedEpoch?: SessionEpoch | null) => {
+    if (!canRetryGateWorkspaceLoad({
+      requested: expectedEpoch ?? null,
+      current: session.captureEpoch(),
+      verifiedUserId,
+      active,
+      loadError: workspaceLoadError,
+      ready,
+      pending: workspaceRetryPendingRef.current,
+      hasScope: gateScope !== null,
+      hasSession: sessionId !== null,
+    })) return;
+    workspaceRetryPendingRef.current = true;
+    setWorkspaceRetryNonce((nonce) => nonce + 1);
+  }, [active, gateScope, ready, sessionId, verifiedUserId, workspaceLoadError]);
 
 
   const gatesKey =
@@ -578,6 +599,7 @@ export function StaffGateWorkspaceProvider({
       setGateEventChoices([]);
       setGateEventsError(null);
       setWorkspaceLoadError(false);
+      workspaceRetryPendingRef.current = false;
       setGateEventsLoading(false);
       return;
     }
@@ -752,8 +774,12 @@ export function StaffGateWorkspaceProvider({
             () => loadStaffGateWorkspace(verifiedUserId),
           );
         } catch {
-          setGateEventsError('Không thể mở dữ liệu cổng trên thiết bị. Vui lòng thử lại.');
-          setWorkspaceLoadError(true);
+          if (!cancelled && session.isEpochCurrent(activationEpoch) &&
+              isGateWorkspaceLifecycleCurrent(foregroundLifecycleRef, lifecycleToken)) {
+            setGateEventsError('Không thể mở dữ liệu cổng trên thiết bị. Vui lòng thử lại.');
+            setWorkspaceLoadError(true);
+            workspaceRetryPendingRef.current = false;
+          }
           return;
         }
         if (
@@ -812,6 +838,7 @@ export function StaffGateWorkspaceProvider({
     runForegroundSync,
     verifiedUserId,
     clearScanFeedback,
+    workspaceRetryNonce,
   ]);
 
   const selectGateScope = useCallback(
@@ -1391,6 +1418,7 @@ export function StaffGateWorkspaceProvider({
       gateEventsLoading,
       gateEventsError,
       workspaceLoadError,
+      retryWorkspaceLoad,
       eventPickerOpen,
       setEventPickerOpen,
       queueSnap,
@@ -1426,6 +1454,7 @@ export function StaffGateWorkspaceProvider({
       gateEventsLoading,
       gateEventsError,
       workspaceLoadError,
+      retryWorkspaceLoad,
       eventPickerOpen,
       queueSnap,
       machineLabel,
