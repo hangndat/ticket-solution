@@ -5,6 +5,7 @@ import {
   canSubmitManualConfirmation,
   checkManualEntryCode,
   manualResultAction,
+  manualResultHint,
 } from './staff-manual-entry-flow.ts';
 
 const ticketId = '11111111-1111-4111-8111-111111111111';
@@ -81,5 +82,18 @@ describe('staff-manual-entry-flow', () => {
     assert.equal(canSubmitManualConfirmation(manualCode, false, 'offline'), false);
     assert.equal(canSubmitManualConfirmation(manualCode, true, 'online'), false);
     assert.equal(canSubmitManualConfirmation(' ', false, 'online'), false);
+  });
+
+  it('shows a local denial reason without claiming the server rejected it', () => {
+    const hint = manualResultHint(false, {
+      kind: 'denied',
+      label: 'Không cho vào',
+      hint: 'Chưa có phiên đăng nhập — đăng xuất và đăng nhập lại trước khi quét.',
+      tone: 'deny',
+      symbol: 'xmark.circle.fill',
+      assertive: false,
+    });
+    assert.match(hint, /Chưa có phiên đăng nhập/);
+    assert.doesNotMatch(hint, /Máy chủ từ chối/);
   });
 });

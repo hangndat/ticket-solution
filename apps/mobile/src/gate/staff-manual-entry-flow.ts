@@ -1,12 +1,20 @@
 import type { StaffGateScope } from './staff-gate-events.ts';
 import { resolveGateScanFallback } from './staff-gate-scope-resolve.ts';
-import type { GateScanStatusKind } from './gate-scan-status-ui.ts';
+import type { GateScanStatusKind, GateScanStatusView } from './gate-scan-status-ui.ts';
 
 export type ManualEntryCheckResult =
   | { ok: true; code: string; previewLine: string }
   | { ok: false; message: string };
 
 export type ManualResultAction = 'next' | 'other' | 'reconcile' | null;
+
+export function manualResultHint(busy: boolean, view: GateScanStatusView): string {
+  if (busy) return 'Đang kiểm tra mã. Chưa cho vào.';
+  if (view.kind === 'unknown') return 'Chưa có xác nhận. Không cho vào; đối soát lượt này trước khi xử lý tiếp.';
+  if (view.kind === 'recorded') return 'Đã có bản ghi trên máy chủ; đây không phải lượt vào mới.';
+  if (view.kind === 'queued') return 'Chưa xác minh trên máy chủ. Không cho vào.';
+  return view.hint;
+}
 
 export function canSubmitManualConfirmation(
   code: string,
