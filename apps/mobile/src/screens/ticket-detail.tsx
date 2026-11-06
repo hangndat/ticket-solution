@@ -1,4 +1,4 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams, type Href } from 'expo-router';
 import {
   useEffect,
   useMemo,
@@ -315,7 +315,7 @@ export function TicketDetailScreen() {
               ? 'Phiên đăng nhập không còn hiệu lực. Đăng nhập lại để xem vé.'
               : 'Không xác minh được vé cho tài khoản hiện tại.'}
         </ErrorState>
-        <AttendeeCta label="Về Vé của tôi" variant="secondary" onPress={() => router.replace('/(tabs)/my-tickets')} testID="ticket-detail-home" />
+        <AttendeeCta label="Về Vé của tôi" variant="secondary" onPress={() => router.replace('/wallet-access' as Href)} testID="ticket-detail-home" />
       </TicketDetailPage>
     );
   }
@@ -326,7 +326,7 @@ export function TicketDetailScreen() {
         <Notice title={walletCopy.detailMissingTitle}>
           {walletCopy.detailMissingBody}
         </Notice>
-        <AttendeeCta label="Về Vé của tôi" onPress={() => router.replace('/(tabs)/my-tickets')} testID="ticket-detail-home" />
+        <AttendeeCta label="Về Vé của tôi" onPress={() => router.replace('/wallet-access' as Href)} testID="ticket-detail-home" />
       </TicketDetailPage>
     );
   }

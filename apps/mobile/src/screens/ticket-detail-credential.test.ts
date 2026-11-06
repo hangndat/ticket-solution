@@ -26,6 +26,7 @@ const listeners = new Set<() => void>();
 let memory: unknown = [legacy];
 let cache: unknown = { tickets: [legacy], syncedAt: '2026-11-04T00:00:00Z' };
 let calls = 0;
+let replacedRoute: string | null = null;
 let probe = async (): Promise<unknown> => ({ status: 'ok', body: { tickets: [ticket] } });
 let credential: { status: 'token'; accessToken: string } | { status: 'unavailable' } = { status: 'token', accessToken: 'synthetic' };
 const session = {
@@ -37,12 +38,12 @@ const session = {
 };
 Object.assign(globalThis, {
   IS_REACT_ACT_ENVIRONMENT: true,
-  __ticketDetailTest: { session, offline, cache: () => cache, probe: () => { calls++; return probe(); } },
+  __ticketDetailTest: { session, offline, cache: () => cache, probe: () => { calls++; return probe(); }, replace: (route: string) => { replacedRoute = route; } },
 });
 const moduleUrl = (source: string) => 'data:text/javascript,' + encodeURIComponent(source);
 const stateModule = `import React from ${JSON.stringify(import.meta.resolve('react'))}; export const ErrorState=({title,children,onRetry})=>React.createElement('ErrorState',{title,onRetry},children);`;
 const mocks: Record<string, string> = {
-  'expo-router': `export const useLocalSearchParams=()=>({ticketId:'ticket-a'}); export const router={replace:()=>{}};`,
+  'expo-router': `export const useLocalSearchParams=()=>({ticketId:'ticket-a'}); export const router={replace:route=>globalThis.__ticketDetailTest.replace(route)};`,
   'react-native': `export const ScrollView='ScrollView',Text='Text',View='View';`,
   '@/identity/session': `export const session=globalThis.__ticketDetailTest.session;`,
   '@/tickets/offline-display-session': `export const offlineDisplay={subscribe:()=>()=>{},getSnapshot:()=>globalThis.__ticketDetailTest.offline};`,
@@ -205,6 +206,8 @@ test('unauthorized response cannot display cached QR', async () => {
   assert.equal(tree!.root.findAllByType('ErrorState').length, 1);
   assert.equal(tree!.root.findByType('ErrorState').props.onRetry, undefined);
   assert.equal(tree!.root.findByProps({ testID: 'ticket-detail-home' }).props.label, 'Về Vé của tôi');
+  tree!.root.findByProps({ testID: 'ticket-detail-home' }).props.onPress();
+  assert.equal(replacedRoute, '/wallet-access');
   await act(async () => { tree!.unmount(); });
 });
 
@@ -215,5 +218,7 @@ test('ticket absent from verified owner list offers wallet return without QR', a
   await act(async () => { tree = Renderer.create(React.createElement(TicketDetailScreen)); });
   assert.equal(tree!.root.findAllByType('QrCode').length, 0);
   assert.equal(tree!.root.findByProps({ testID: 'ticket-detail-home' }).props.label, 'Về Vé của tôi');
+  tree!.root.findByProps({ testID: 'ticket-detail-home' }).props.onPress();
+  assert.equal(replacedRoute, '/wallet-access');
   await act(async () => { tree!.unmount(); });
 });
