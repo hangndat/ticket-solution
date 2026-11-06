@@ -6,7 +6,7 @@ import { WebView } from 'react-native-webview';
 import { Spinner } from '@/components/ui/spinner';
 import { AttendeeCta } from '@/components/attendee-cta';
 import { Notice } from '@/components/page';
-import { buildMembershipInviteWebUrl, classifyMembershipInviteNavigation, clearMembershipInviteToken, peekMembershipInviteToken } from '@/links/membership-invite-url';
+import { buildMembershipInviteWebUrl, classifyMembershipInviteNavigation, clearMembershipInviteToken, membershipInviteGuidance, peekMembershipInviteToken } from '@/links/membership-invite-url';
 import { getProductWebOrigin } from '@/identity/product-web-origin';
 import { getOidcIssuer } from '@/identity/config';
 import { brand, colors } from '@/theme/colors';
@@ -50,7 +50,7 @@ export default function MembershipInviteScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: brand.paper }}>
       <Text style={{ color: colors.secondary, ...typography.body, fontFamily: fontFamilies.body, paddingHorizontal: space.xl, paddingTop: space.lg, paddingBottom: space.md }}>
-        Hoàn tất trên trang Vemoki bằng đúng email đã được mời.
+        {membershipInviteGuidance(Boolean(token))}
       </Text>
       {invalid === '1' ? (
         <ScrollView contentContainerStyle={{ padding: space.xl }}>

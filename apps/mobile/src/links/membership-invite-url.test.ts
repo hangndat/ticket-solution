@@ -8,6 +8,7 @@ import {
   parkMembershipInviteToken,
   peekMembershipInviteToken,
   clearMembershipInviteToken,
+  membershipInviteGuidance,
 } from './membership-invite-url.ts';
 
 test('buildMembershipInviteWebUrl uses fragment token', () => {
@@ -28,6 +29,14 @@ test('extractMembershipInviteTokenFromUrl reads hash and query', () => {
 test('isMembershipInviteToken rejects short values', () => {
   assert.equal(isMembershipInviteToken('short'), false);
   assert.equal(isMembershipInviteToken('x'.repeat(16)), true);
+});
+
+test('no-token invite is a manual web entry with native guidance', () => {
+  assert.equal(buildMembershipInviteWebUrl(''), 'https://app.vemoki.com/invite');
+  assert.match(membershipInviteGuidance(false), /dán mã từ thư mời vào ô Mã lời mời trên trang web/);
+  assert.match(membershipInviteGuidance(false), /đúng email đã được mời/);
+  assert.doesNotMatch(membershipInviteGuidance(false), /SYNTHETICINVITETOKEN/);
+  assert.doesNotMatch(membershipInviteGuidance(true), /dán mã/);
 });
 
 test('parked invite token stays out of the route and clears on exit', () => {

@@ -170,6 +170,8 @@ test('membership invite without token still routes to bridge', () => {
   assert.equal(parsed.token, '');
   assert.equal(parsed.invalid, false);
   assert.equal(parsed.href, '/membership-invite');
+  assert.match(routeForInstalledAppLink('vemoki://invite') ?? '', /^\/membership-invite\?intent=\d+$/);
+  assert.equal(routeForInstalledAppLink('/invite?token=')?.includes('invalid=1'), true);
 });
 
 test('malformed membership token reaches invalid state without exposing token', () => {

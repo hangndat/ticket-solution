@@ -7,6 +7,13 @@ export function isMembershipInviteToken(value: string): boolean {
   return MEMBERSHIP_INVITE_TOKEN.test(value.trim());
 }
 
+/** Native bridge copy only; web owns the code field and acceptance result. */
+export function membershipInviteGuidance(hasToken: boolean): string {
+  return hasToken
+    ? 'Hoàn tất trên trang Vemoki bằng đúng email đã được mời.'
+    : 'Liên kết chưa có mã; dán mã từ thư mời vào ô Mã lời mời trên trang web, rồi đăng nhập đúng email đã được mời.';
+}
+
 /**
  * Web `/invite` URL — token in fragment (matches web InviteAcceptForm parking).
  * Distinct from native `/claim` (guest event ticket).
