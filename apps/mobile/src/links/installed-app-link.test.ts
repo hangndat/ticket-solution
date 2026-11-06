@@ -157,7 +157,9 @@ test('membership invite opens web bridge (not native claim)', () => {
     assert.equal(parsed.token, token);
     assert.match(parsed.href, /^\/membership-invite\?token=/);
     assert.doesNotMatch(parsed.href, /^\/claim/);
-    assert.equal(routeForInstalledAppLink(input), parsed.href);
+    const route = routeForInstalledAppLink(input);
+    assert.match(route ?? '', /^\/membership-invite\?intent=\d+$/);
+    assert.doesNotMatch(route ?? '', /token=/);
   }
 });
 
@@ -166,7 +168,19 @@ test('membership invite without token still routes to bridge', () => {
   assert.equal(parsed.kind, 'membership-invite');
   if (parsed.kind !== 'membership-invite') return;
   assert.equal(parsed.token, '');
+  assert.equal(parsed.invalid, false);
   assert.equal(parsed.href, '/membership-invite');
+});
+
+test('malformed membership token reaches invalid state without exposing token', () => {
+  const route = routeForInstalledAppLink('vemoki://invite?token=short');
+  assert.match(route ?? '', /^\/membership-invite\?intent=\d+&invalid=1$/);
+  assert.doesNotMatch(route ?? '', /short|token=/);
+});
+
+test('untrusted web host cannot open the invite bridge', () => {
+  assert.equal(parseInstalledAppLink('https://evil.test/invite#token=ABCDEFGH').kind, 'passthrough');
+  assert.equal(parseInstalledAppLink('https://app.vemoki.com.evil.test/invite').kind, 'passthrough');
 });
 
 test('staff deep link opens soft-access (O02 deny / tab gate)', () => {

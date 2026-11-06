@@ -4,6 +4,10 @@ import {
   buildMembershipInviteWebUrl,
   extractMembershipInviteTokenFromUrl,
   isMembershipInviteToken,
+  classifyMembershipInviteNavigation,
+  parkMembershipInviteToken,
+  peekMembershipInviteToken,
+  clearMembershipInviteToken,
 } from './membership-invite-url.ts';
 
 test('buildMembershipInviteWebUrl uses fragment token', () => {
@@ -24,4 +28,38 @@ test('extractMembershipInviteTokenFromUrl reads hash and query', () => {
 test('isMembershipInviteToken rejects short values', () => {
   assert.equal(isMembershipInviteToken('short'), false);
   assert.equal(isMembershipInviteToken('x'.repeat(16)), true);
+});
+
+test('parked invite token stays out of the route and clears on exit', () => {
+  const token = 'A'.repeat(32);
+  const href = parkMembershipInviteToken(token);
+  assert.match(href, /^\/membership-invite\?intent=\d+$/);
+  assert.doesNotMatch(href, /A{8}/);
+  assert.equal(peekMembershipInviteToken(), token);
+  clearMembershipInviteToken();
+  assert.equal(peekMembershipInviteToken(), '');
+});
+
+test('navigation allows exact product, OIDC realm, and portal origins only', () => {
+  const config = {
+    productOrigin: 'https://app.vemoki.com',
+    oidcIssuer: 'https://auth.vemoki.com/realms/ticket',
+    portalOrigin: 'https://portal.vemoki.com',
+  };
+  assert.equal(classifyMembershipInviteNavigation('https://app.vemoki.com/invite', config), 'web');
+  assert.equal(classifyMembershipInviteNavigation('https://app.vemoki.com/api/auth/login?return=/invite', config), 'web');
+  assert.equal(classifyMembershipInviteNavigation('https://auth.vemoki.com/realms/ticket/protocol/openid-connect/auth', config), 'web');
+  assert.equal(classifyMembershipInviteNavigation('https://portal.vemoki.com/t/tenant', config), 'portal');
+  for (const url of [
+    'https://app.vemoki.com.evil.test/invite',
+    'https://app.vemoki.com:444/invite',
+    'https://auth.vemoki.com/realms/other/protocol/openid-connect/auth',
+    'https://evil.test/#token=secret',
+    'https://portal.vemoki.com/?token=secret',
+    'https://auth.vemoki.com/realms/ticket/protocol/openid-connect/auth#token=secret',
+    'javascript:alert(1)',
+    'https://app.vemoki.com@evil.test/invite',
+  ]) {
+    assert.equal(classifyMembershipInviteNavigation(url, config), 'blocked');
+  }
 });

@@ -1,4 +1,5 @@
 import { isAppScheme } from '../identity/app-schemes.ts';
+import { getProductWebOrigin } from '../identity/product-web-origin.ts';
 import {
   attendeeRedeemHref,
   extractRedeemCodeFromLinkInput,
@@ -6,6 +7,7 @@ import {
 import {
   extractMembershipInviteTokenFromUrl,
   isMembershipInviteToken,
+  parkMembershipInviteToken,
 } from './membership-invite-url.ts';
 import {
   clearGuestClaimIntent,
@@ -47,6 +49,7 @@ export type InstalledAppLink =
   | {
       kind: 'membership-invite';
       token: string;
+      invalid: boolean;
       href: string;
     }
   | { kind: 'uat-session'; href: string }
@@ -141,6 +144,10 @@ export function routeForInstalledAppLink(input: string): string | null {
     if (parsed.kind === 'invitation-claim-invalid') {
       clearGuestClaimIntent();
     }
+    if (parsed.kind === 'membership-invite') {
+      const href = parkMembershipInviteToken(parsed.token);
+      return parsed.invalid ? `${href}&invalid=1` : href;
+    }
     return parsed.href;
   }
   return input;
@@ -196,12 +203,15 @@ function parseMembershipInviteLink(raw: string): InstalledAppLink | null {
   try {
     if (/^https?:\/\//i.test(raw)) {
       url = new URL(raw);
+      const product = new URL(getProductWebOrigin());
+      if (url.origin !== product.origin || url.username || url.password) return null;
       const path = url.pathname.replace(/\/+$/, '') || '/';
       if (path !== '/invite') return null;
       const token = extractMembershipInviteTokenFromUrl(url);
       return {
         kind: 'membership-invite',
         token,
+        invalid: Boolean((url.hash && url.hash !== '#') || url.searchParams.has('token')) && !token,
         href: membershipInviteRouteHref(token),
       };
     }
@@ -229,6 +239,7 @@ function parseMembershipInviteLink(raw: string): InstalledAppLink | null {
   return {
     kind: 'membership-invite',
     token,
+    invalid: Boolean((url.hash && url.hash !== '#') || url.searchParams.has('token')) && !token,
     href: membershipInviteRouteHref(token),
   };
 }
