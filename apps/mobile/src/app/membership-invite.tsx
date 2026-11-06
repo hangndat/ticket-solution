@@ -89,7 +89,8 @@ export default function MembershipInviteScreen() {
                 setError('Trang nhận lời mời chưa phản hồi. Vui lòng thử lại.');
               }
             }}
-            style={{ flex: 1, opacity: error ? 0 : 1 }}
+            renderError={() => <View style={{ flex: 1, backgroundColor: brand.paper }} />}
+            style={{ flex: 1, display: error ? 'none' : 'flex' }}
             testID="membership-invite-webview"
           />
           {loading && !error ? (
@@ -98,7 +99,7 @@ export default function MembershipInviteScreen() {
             </View>
           ) : null}
           {error ? (
-            <ScrollView contentContainerStyle={{ padding: space.lg, gap: space.md }}>
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: space.lg, gap: space.md }}>
               <Notice title="Không mở được trang" tone="deny">{error}</Notice>
               <AttendeeCta label="Thử lại" onPress={retry} />
             </ScrollView>

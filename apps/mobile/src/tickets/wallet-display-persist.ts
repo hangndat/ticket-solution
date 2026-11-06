@@ -3,12 +3,13 @@ import type { MeTicketsFetchScope } from './wallet-fetch-scope.ts';
 import {
   WALLET_OWNER_CACHE_SCOPE,
   groupTicketsByTenantId,
-  walletDisplayCacheScope,
 } from './wallet-fetch-scope.ts';
 import {
   clearTicketDisplayCache,
+  readTicketDisplayCache,
   writeTicketDisplayCache,
 } from './display-cache.ts';
+import { clearWalletLogoutCaches, type WalletLogoutCacheInput } from './wallet-logout-cache.ts';
 
 /**
  * Persist probe results: owner aggregate + per-tenant slices from row.tenantId.
@@ -59,19 +60,10 @@ export async function persistWalletTicketCaches(
 }
 
 export async function clearWalletDisplayCaches(
-  userId: string,
-  scope: MeTicketsFetchScope,
-  ticketTenantIds: Iterable<string> = [],
+  input: WalletLogoutCacheInput,
 ): Promise<void> {
-  const keys = new Set<string>([walletDisplayCacheScope(scope)]);
-  for (const tid of ticketTenantIds) {
-    const trimmed = tid.trim();
-    if (trimmed) keys.add(trimmed);
-  }
-  if (scope.kind === 'owner') {
-    keys.add(WALLET_OWNER_CACHE_SCOPE);
-  }
-  for (const key of keys) {
-    await clearTicketDisplayCache(userId, key);
-  }
+  await clearWalletLogoutCaches(input, {
+    read: readTicketDisplayCache,
+    clear: clearTicketDisplayCache,
+  });
 }

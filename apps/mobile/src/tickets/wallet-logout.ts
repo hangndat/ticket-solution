@@ -2,7 +2,7 @@ import { getTenantId, getTenantSlug } from '../identity/config.ts';
 import { staffEligibility } from '../identity/staff-eligibility.ts';
 import { session } from '../identity/session.ts';
 import { clearCachedBranding } from '../theme/branding-cache.ts';
-import { clearTicketDisplayCache, invalidateTicketDisplayWrites } from './display-cache.ts';
+import { invalidateTicketDisplayWrites } from './display-cache.ts';
 import { clearWalletDisplayCaches } from './wallet-display-persist.ts';
 import type { MeTicketsFetchScope } from './wallet-fetch-scope.ts';
 import { invalidateOfflineBindingWrites } from './offline-display.ts';
@@ -54,10 +54,13 @@ export function logoutAndClearWalletArtifacts(input: WalletLogoutInput): Promise
     const { clearNotificationTapIntent } = await import('../push/notification-intent.ts');
     clearNotificationTapIntent();
     await offlineDisplay.clear();
-    if (userId && input.walletScope) {
-      await clearWalletDisplayCaches(userId, input.walletScope, input.ticketTenantIds ?? []);
-    } else if (userId && input.tenantId) {
-      await clearTicketDisplayCache(userId, input.tenantId);
+    if (userId) {
+      await clearWalletDisplayCaches({
+        userId,
+        tenantId: input.tenantId,
+        walletScope: input.walletScope,
+        ticketTenantIds: input.ticketTenantIds,
+      });
     }
     const tenantId = (input.tenantId ?? getTenantId() ?? '').trim();
     const tenantSlug = (getTenantSlug() ?? '').trim();
