@@ -88,10 +88,14 @@ function bakePublicConfig(
 export default ({ config }: ConfigContext): ExpoConfig => {
   const apsEnvironment = resolveApsEnvironment();
   const ticketPublic = bakePublicConfig(apsEnvironment);
+  const separateUatBundle = process.env.VEMOKI_UAT_SEPARATE_BUNDLE === '1';
+  if (separateUatBundle && (apsEnvironment !== 'development' || !ticketPublic.allowUatSessionRoutes)) {
+    throw new Error('Separate UAT bundle requires development APS and local UAT session routes.');
+  }
 
   return {
     ...config,
-    name: 'Vemoki',
+    name: separateUatBundle ? 'Vemoki UAT' : 'Vemoki',
     slug: 'vemoki',
     version: '1.0.0',
     icon: './assets/icon.png',
@@ -101,7 +105,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     userInterfaceStyle: 'light',
     ios: {
       supportsTablet: true,
-      bundleIdentifier: 'com.hangndat.ticket',
+      bundleIdentifier: separateUatBundle ? 'com.hangndat.ticket.uat' : 'com.hangndat.ticket',
       appleTeamId: 'BLUA62D52G',
       buildNumber: '48',
       infoPlist: {
