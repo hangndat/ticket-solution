@@ -50,7 +50,7 @@ export default function MembershipInviteScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: brand.paper }}>
       <Text style={{ color: colors.secondary, ...typography.body, fontFamily: fontFamilies.body, paddingHorizontal: space.xl, paddingTop: space.lg, paddingBottom: space.md }}>
-        {membershipInviteGuidance(Boolean(token))}
+        {membershipInviteGuidance(invalid === '1' ? 'invalid' : token ? 'linked' : 'manual')}
       </Text>
       {invalid === '1' ? (
         <ScrollView contentContainerStyle={{ padding: space.xl }}>

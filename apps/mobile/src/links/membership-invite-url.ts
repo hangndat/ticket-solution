@@ -8,10 +8,10 @@ export function isMembershipInviteToken(value: string): boolean {
 }
 
 /** Native bridge copy only; web owns the code field and acceptance result. */
-export function membershipInviteGuidance(hasToken: boolean): string {
-  return hasToken
-    ? 'Hoàn tất trên trang Vemoki bằng đúng email đã được mời.'
-    : 'Liên kết chưa có mã; dán mã từ thư mời vào ô Mã lời mời trên trang web, rồi đăng nhập đúng email đã được mời.';
+export function membershipInviteGuidance(mode: 'linked' | 'manual' | 'invalid'): string {
+  if (mode === 'invalid') return 'Kiểm tra lại liên kết lời mời từ email.';
+  if (mode === 'linked') return 'Hoàn tất trên trang Vemoki bằng đúng email đã được mời.';
+  return 'Liên kết chưa có mã; dán mã từ thư mời vào ô Mã lời mời trên trang web, rồi đăng nhập đúng email đã được mời.';
 }
 
 /**
