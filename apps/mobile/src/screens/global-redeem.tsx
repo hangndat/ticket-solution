@@ -124,6 +124,7 @@ export function GlobalRedeemScreen() {
   const verified = identity.status === 'verified';
   const resolved = resolveContext !== null;
   const checking = resolved && verified;
+  const currentStep = checking ? (decision?.kind === 'pending' || decision?.kind === 'issued' ? 2 : 1) : 0;
 
   const applyResolveBody = useCallback((body: RedemptionResolveResponse) => {
     setResolveContext(body);
@@ -479,9 +480,9 @@ export function GlobalRedeemScreen() {
       <Text style={{ ...typography.subhead, color: colors.secondary }}>
         {checking ? 'Xem kỹ thông tin vé trước khi xác nhận nhận vào ví.' : 'Nhập mã bạn nhận từ đơn vị tổ chức để tìm vé.'}
       </Text>
-      <View accessibilityRole="text" accessibilityLabel={checking ? 'Bước kiểm tra vé, sau đó xác nhận' : 'Bước nhập mã, sau đó kiểm tra vé và xác nhận'} style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
+      <View accessibilityRole="text" accessibilityLabel={`Bước ${currentStep + 1} trong 3: ${['Nhập mã', 'Kiểm tra vé', 'Xác nhận'][currentStep]}`} style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
         {['Nhập mã', 'Kiểm tra vé', 'Xác nhận'].map((step, index) => (
-          <Text key={step} style={{ ...typography.caption, color: (checking ? index === 1 : index === 0) ? brand.primary : colors.secondary, fontFamily: (checking ? index === 1 : index === 0) ? fontFamilies.bodySemiBold : fontFamilies.body }}>
+          <Text key={step} style={{ ...typography.caption, color: index === currentStep ? brand.primary : colors.secondary, fontFamily: index === currentStep ? fontFamilies.bodySemiBold : fontFamilies.body }}>
             {index > 0 ? '  ─  ' : ''}{step}
           </Text>
         ))}

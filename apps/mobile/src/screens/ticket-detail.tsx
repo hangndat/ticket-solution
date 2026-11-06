@@ -377,13 +377,15 @@ export function TicketDetailScreen() {
             backgroundColor: used ? colors.secondary : brand.primary
           }}
         />
-        <EventBanner
-          eventId={ticket.eventId}
-          height={76}
-          style={{ borderRadius: 0 }}
-          testID="ticket-detail-banner"
-          accessibilityLabel={`Banner ${row.eventTitle}`}
-        />
+        <View style={{ opacity: used ? 0.45 : 1 }}>
+          <EventBanner
+            eventId={ticket.eventId}
+            height={76}
+            style={{ borderRadius: 0 }}
+            testID="ticket-detail-banner"
+            accessibilityLabel={`Banner ${row.eventTitle}`}
+          />
+        </View>
         <View
           style={{
             paddingHorizontal: space.xl,
@@ -401,9 +403,15 @@ export function TicketDetailScreen() {
           >
             {row.eventTitle}
           </Text>
-          {used ? null : (
+          {used ? null : credentialAvailable ? (
             <View style={{ alignItems: 'center' }}>
-              <TicketStatusPill label={credentialAvailable ? row.statusLabel : 'Đang cập nhật mã'} />
+              <TicketStatusPill label={row.statusLabel} />
+            </View>
+          ) : (
+            <View style={{ alignItems: 'center' }}>
+              <Text style={{ ...typography.caption, color: colors.secondary, backgroundColor: colors.surfaceMuted, paddingHorizontal: space.md, paddingVertical: space.xs, borderRadius: radius.pill }}>
+                Đang cập nhật mã
+              </Text>
             </View>
           )}
           {eventWhen ? (
@@ -459,7 +467,7 @@ export function TicketDetailScreen() {
               <Text
                 selectable
                 accessibilityLabel="Mã nhập tay trên vé"
-                style={{ ...typography.sectionTitleBold, color: brand.ink }}
+                style={credentialAvailable && ticket.manualEntryCode ? { ...typography.sectionTitleBold, color: brand.ink } : { ...typography.subhead, color: colors.secondary }}
               >
                 {credentialAvailable && ticket.manualEntryCode ? ticket.manualEntryCode : 'Chưa có mã nhập tay'}
               </Text>
@@ -473,7 +481,7 @@ export function TicketDetailScreen() {
               textAlign: 'center'
             }}
           >
-            Mã vé · {row.ticketId}
+            Mã vé · …{row.ticketId.slice(-4)}
           </Text>
         </View>
       </View>
