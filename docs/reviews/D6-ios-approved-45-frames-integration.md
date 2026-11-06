@@ -1,18 +1,20 @@
 # #1233 — Tích hợp UI iOS 45 khung đã duyệt
 
-- Worktree `ios-approved-ui-20261105`, branch `hangndat/ios-approved-ui-impl`, code HEAD `2ad2d3d2fab6719b0e678bbdf4c6eac85ae20699` (06/11/2026). Board 45 khung và 15 HTML gốc pin trong `docs/design/mobile-approved-wireframes-2026-11-05/MANIFEST.sha256`; bốn CTA delta trong README được áp dụng. Issue #1233 vẫn **OPEN**; không merge/deploy/store.
-- Kiểm tích hợp tại HEAD: `pnpm check` **PASS 38/38 tasks** (9 packages, lint/typecheck/test/build; 4 cache hit), `git diff --check` PASS. Mobile 592/592 tests và local Xcode Release simulator PASS theo report lượt fix cuối. Đây là code/build evidence, chưa thay UAT theo persona.
+**Cập nhật review guest trên exact HEAD `69c91d1194971466a876dbd2b1ea82134158530a`:** Explore F03 keyboard 390×844 pt PASS; remaining states F02 còn GAP verified/Staff/invalid response/deep links. Diff từ `8b7d715d` chỉ sửa hai chuỗi copy trong `events.tsx`; typecheck/lint/local Release build được worker báo PASS trên SHA mới, reviewer kiểm binary metadata và ảnh/AX, không chạy lại suite. Bảng dưới cập nhật verdict hai nhóm này; dòng kiểm tích hợp `2ad2d3d` là evidence lịch sử, không phải kết quả suite trên HEAD mới.
+
+- Worktree `ios-approved-ui-20261105`, branch `hangndat/ios-approved-ui-impl`, source SHA hiện tại `69c91d1194971466a876dbd2b1ea82134158530a` (06/11/2026). Board 45 khung và 15 HTML gốc pin trong `docs/design/mobile-approved-wireframes-2026-11-05/MANIFEST.sha256`; bốn CTA delta trong README được áp dụng. Issue #1233 vẫn **OPEN**; không merge/deploy/store.
+- Kiểm tích hợp tại baseline source `2ad2d3d2fab6719b0e678bbdf4c6eac85ae20699`: `pnpm check` **PASS 38/38 tasks** (9 packages, lint/typecheck/test/build; 4 cache hit), `git diff --check` PASS, mobile 592/592 tests. Trên SHA hiện tại, thay đổi chỉ hai chuỗi UI đã qua typecheck, lint và local Xcode Release simulator; chưa chạy lại toàn suite. Đây là code/build evidence, chưa thay UAT theo persona.
 
 | Nhóm khung | Code/review | Nghiệm thu còn mở |
 | --- | --- | --- |
 | Ví A+C (1) | [Review PASS](D6-wallet-hero-card.md) ở `94a153c5`, contract `startsAt` additive được owner cho phép | Tích hợp sau đó cần UAT lại các hành trình bị ảnh hưởng nếu phát hiện regression. |
-| Khám phá + sự kiện (3) | [Review](D6-explore-event-detail.md): F01/F02/F04/F05 đóng | F03 bàn phím phần mềm ở đúng 390×844 pt. |
+| Khám phá + sự kiện (3) | [Review](D6-explore-event-detail.md): F01–F05 đóng trên exact `69c91d11`; F03 keyboard guest 390×844 pt PASS | Không còn gap riêng Explore trong phạm vi AC đã review; DoD toàn #1233 vẫn theo các finding slice khác. |
 | Đổi mã + chi tiết vé (5) | [Review](D6-redeem-ticket-detail.md): F02/F03/F04 đóng, security code PASS | F01 cache/binding sau cold restart offline và cross-owner runtime; fix 2/2 đã dùng, diagnosis riêng. |
 | Nhận vé mời (3) | [Review](D6-claim-invitation.md): pending code F01 đã sửa, security static PASS | F01 runtime + F02 verified/pending/issued/keyboard; simulator SecureStore bị signing chặn. |
 | Tài khoản + xóa + privacy (6) | [Review](D6-account-privacy.md): privacy native runtime đạt, security code PASS | Account verified, logout, deletion initial/confirm/ACK/error. |
 | Gate quét + kết quả (8) | [Review](D6-gate-scan-status.md): guard G1233-01 đóng, security code PASS | G1233-02 Staff/camera/kết quả runtime. |
 | Gate nhập tay + lịch sử (7) | [Review](D6-gate-manual-history.md): retry F01 đóng, security code PASS | F02 Staff form/sheet/result/history runtime. |
 | Lời mời tổ chức (2) | [Review](D6-membership-invite.md): no-token F02 đóng, security code PASS | F01 accept/Portal/sai email/hết hạn/network bằng fixture hợp lệ. |
-| Trạng thái bổ sung (10) | [Review](D6-remaining-states.md): mapping 10/10, lỗi ví F01 đóng, security source PASS | F02 Staff/verified, catalog empty, invalid links/response và software keyboard. |
+| Trạng thái bổ sung (10) | [Review](D6-remaining-states.md): mapping 10/10, lỗi ví F01 đóng; catalog empty, search copy và keyboard guest PASS; security source PASS | F02 Staff/verified, invalid links/response và credential runtime còn GAP. |
 
 **Verdict tích hợp:** mã và kiểm tra local hoàn tất cho 45/45 khung; **acceptance/DoD #1233 chưa đạt** do các finding UAT trong bảng. Simulator iOS 27.0/27.1 từ chối entitlement/keychain của bản Release local; chẩn đoán tại `apps/mobile/.uat-artifacts/d6/auth-uat-diagnosis.md`. Hai iPhone USB hiện đều có Vemoki; chưa cài đè app hay dùng dữ liệu thật. Cần fixture phiên verified/Staff hoặc thiết bị được phép, sau đó reviewer revalidate evidence trên exact build. Không suy pilot ready từ local build.

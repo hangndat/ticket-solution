@@ -1,5 +1,17 @@
 # #1233 — D6 10 trạng thái iOS · review độc lập `dod+sec+ux`
 
+## Evidence guest tích hợp — exact `69c91d1194971466a876dbd2b1ea82134158530a`
+
+James đối chiếu diff `8b7d715d8200df75fab7c7f68b02be0ae5e1be5b` → HEAD (chỉ hai copy string `events.tsx:323,334`), CRG ticket đúng HEAD, 5 PNG SHA-256/kích thước 390×844 pt, AX và binary metadata tại `apps/mobile/.uat-artifacts/d6/guest-evidence-integrated.md`. **F01 giữ PASS; F02 còn Mở, blocker acceptance AC1–3; DoD GAP, UI/UX GAP; Security code PASS theo review cũ, runtime Security GAP**, không suy PASS quyền/credential từ guest. Fix counter giữ **1/2**; evidence mới không phải code fix.
+
+| Phần F02 | Verdict trên SHA mới | Evidence / điều kiện còn lại |
+| --- | --- | --- |
+| Catalog empty | **PASS** | Fixture loopback `GET /v1/public/events` HTTP 200 `items:[]`; `catalog-empty-69c91d.png`/AX có “Chưa có sự kiện”, body và “Làm mới” secondary. |
+| Search copy + keyboard guest | **PASS** | `search-no-results-69c91d.png`/AX khớp câu không nêu 20 sự kiện; ảnh focus/nhập bằng tap phím mềm/sau cuộn ở 390×844 pt, `search-scroll.ax.json` còn nội dung và tab enabled. F03 Explore đóng trong review riêng. |
+| Verified/Staff, ví owner binding, invalid redeem response, deep links | **GAP, chặn F02** | SecureStore entitlement của simulator unsigned vẫn chặn persona; guest Đổi mã chỉ dẫn sign-in trước resolve nên POST fixture `CODE_INVALID` chưa được gọi. Chưa có runtime verified/Staff, invalid invite/missing ticket/event 404 qua link. Cần fixture/signing hợp lệ và ảnh/AX/journey từng state trên binary pin SHA; không thay bằng source tests hoặc ảnh guest. |
+
+Worker báo typecheck PASS, lint exit 0 với 8 warning ngoài diff, local Xcode Release build exit 0; reviewer xác minh SHA-256 log `23197b61…`, `EXConstants.bundle/app.config` ghi exact SHA/API `127.0.0.1:43193`, `git diff --check` PASS. Không chạy lại suite/build. Ảnh/AX không tự chứa build ID nên provenance cài đặt dựa trên handoff worker.
+
 ## Revalidation fix 1/2 — exact `2ad2d3d2fab6719b0e678bbdf4c6eac85ae20699`
 
 James kiểm diff từ `da77c065140de61e74a68b6478ecdf68a6270637`: chỉ `screens/my-tickets.tsx`, `tickets/wallet-content-phase.ts` và test mới trong mobile. CRG ticket stats đúng HEAD (1.648 file, 10.432 node) + `detect_changes` đúng base; source/tests qua LeanCTX. **F01 Đã xác minh @ `2ad2d3d`**: helper ưu tiên vé có cache → lỗi → loading → offline empty → online empty sau response thành công; `my-tickets.tsx:852–913` chỉ render empty copy/CTA ở `empty-online`, và lỗi 401/credential unavailable xóa vé trình bày, không retry mà dẫn Tài khoản. Offline cache hợp lệ vẫn giữ hàng vé và cảnh báo khi mất mạng; offline trống có thông điệp riêng. Test mới kiểm precedence, prior success + error, retry → empty và cache; `ticket-sync-guard.test.ts` kiểm 401 không dùng cache khác chủ. `onRefresh` dùng RefreshControl thay loading toàn trang, nên test helper không tự chứng minh mọi khung runtime.

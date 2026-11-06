@@ -1,5 +1,13 @@
 # Review D6 — Khám phá / chi tiết sự kiện #1233
 
+## Revalidation guest tích hợp — 06/11/2026
+
+James · `dod+sec+ux`, base `8b7d715d8200df75fab7c7f68b02be0ae5e1be5b` → exact HEAD **`69c91d1194971466a876dbd2b1ea82134158530a`**; diff chỉ hai chuỗi ở `apps/mobile/src/screens/events.tsx:323,334`. CRG ticket stats/query đúng worktree/HEAD; ảnh/AX và manifest ở `apps/mobile/.uat-artifacts/d6/guest-evidence-integrated.md`. **F03 PASS, đóng theo AC4 ở 390×844 pt; DoD/UI Explore PASS trong scope đã review, Security N/A** vì diff chỉ copy, không đổi auth/tenant/credential; DoD toàn #1233 vẫn GAP theo các review khác. Fix counter giữ **1/2** theo report trước; lượt revalidation evidence này không tự tạo lượt fix mới.
+
+- **F03 · PASS/đã xác minh:** 5 PNG khớp toàn bộ SHA-256 trong manifest, mỗi ảnh 1170×2532 px = 390×844 pt. `search-focus-fresh-device-69c91d.png` có caret và bàn phím mềm; `search-typed-keyboard-69c91d.png` có query `Nmach` nhập bằng tap phím, “Không có kết quả” còn thấy trên bàn phím. Sau gesture cuộn, `search-scroll-keyboard-69c91d.png` và `search-scroll.ax.json` cho thấy keyboard đóng, query/nội dung còn đọc được, tab Sự kiện/Đổi mã vẫn hiện và enabled. Đây là ca guest catalog rỗng; không suy trạng thái verified/Staff hoặc CTA của sự kiện có dữ liệu từ ảnh này.
+- **Catalog/search copy · PASS:** fixture loopback `GET /v1/public/events` độc lập trả HTTP 200 `items:[]`; `catalog-empty.ax.json` hiện “Chưa có sự kiện” và “Làm mới”, khác error. `search-no-results.ax.json` hiện “Không có kết quả” và câu “Thử từ khóa khác hoặc xóa ô tìm kiếm.”; source trên SHA mới bỏ khẳng định sai “20 sự kiện” ở empty query và footer. Footer chỉ render khi `listData.length > 0`, nên ảnh rỗng không tự xác minh footer runtime; diff xác minh copy. Log Xcode Release SHA-256 `23197b61…` khớp manifest; `EXConstants.bundle/app.config` của binary ghi đúng SHA/API fixture. Worker báo typecheck PASS, lint exit 0 (8 warning ngoài diff), local build exit 0; reviewer không chạy lại suite/build. `git diff --check` PASS.
+- **Giới hạn provenance:** ảnh/AX không nhúng build ID; liên kết với binary pin SHA dựa vào handoff build/install của worker và metadata artifact đã kiểm. Không có evidence mới cho verified/Staff, invalid redeem response hoặc deep link; xem F02 remaining states.
+
 ## Evidence lượt 2 — kết luận hiện tại
 
 James · dod+ux, exact SHA **`9f240683460c43a29743fe116584e017faa63916`**, source không đổi; chỉ review evidence mới, miễn CRG cho lượt đọc artifact, không chạy lại suite. **DoD GAP; UI GAP; Security N/A. F01/F02/F04/F05 đóng; chỉ F03 còn mở và chặn AC4. Fix counter giữ 1/2.**
