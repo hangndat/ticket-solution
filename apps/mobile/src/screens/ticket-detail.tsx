@@ -175,29 +175,10 @@ export function TicketDetailScreen() {
     const cacheScope = lookupCacheScope;
     let cancelled = false;
     void (async () => {
-      if (mode === 'verified') {
-        const memory = session.read<TicketSummary[]>(sessionScope, 'me-tickets');
-        const fromMemory = findOwnedTicket(memory, id);
-        if (fromMemory && buildDisplayQrPayload(fromMemory) && reloadKey === 0) {
-          if (!cancelled) {
-            setLoad({
-              status: 'ready',
-              ticket: fromMemory,
-              syncedAt: new Date().toISOString(),
-              fromCache: false,
-              ownerUserId,
-              ownerTenantId,
-              ticketId: id,
-              mode
-            });
-          }
-          return;
-        }
-      }
       const cache = await readTicketDisplayCache(ownerUserId, cacheScope);
       const found = findOwnedTicket(cache?.tickets, id);
       if (cancelled) return;
-      if (found && (mode === 'offline-display' || (buildDisplayQrPayload(found) && reloadKey === 0))) {
+      if (mode === 'offline-display' && found) {
         setLoad({
           status: 'ready',
           ticket: found,
@@ -214,6 +195,14 @@ export function TicketDetailScreen() {
         const credential = await session.resolveCredential();
         if (cancelled) return;
         if (credential.status === 'unavailable') {
+          if (found) {
+            setLoad({
+              status: 'ready', ticket: found,
+              syncedAt: cache?.syncedAt ?? null, fromCache: true,
+              ownerUserId, ownerTenantId, ticketId: id, mode,
+            });
+            return;
+          }
           setLoad({
             status: 'error',
             reason: 'unauthorized',

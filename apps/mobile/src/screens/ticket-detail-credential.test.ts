@@ -126,6 +126,18 @@ test('offline legacy metadata shows a QR error; retry loads the signed credentia
   await act(async () => { tree!.unmount(); });
 });
 
+test('a valid memory ticket still probes and marks the detail offline when the API is unreachable', async () => {
+  memory = [ticket]; cache = { tickets: [ticket], syncedAt: '2026-11-04T00:00:00Z' };
+  calls = 0;
+  probe = async () => ({ status: 'unreachable' });
+  let tree: ReturnType<typeof Renderer.create>;
+  await act(async () => { tree = Renderer.create(React.createElement(TicketDetailScreen)); });
+  assert.equal(calls, 1);
+  assert.equal(tree!.root.findByType('QrCode').props.value, JSON.stringify(ticket.gateCredential));
+  assert.ok(tree!.root.findAllByType('Notice').length > 0);
+  await act(async () => { tree!.unmount(); });
+});
+
 test('a delayed owner-A fetch cannot render its QR after switching owner', async () => {
   memory = [legacy];
   let finish!: (value: unknown) => void;
