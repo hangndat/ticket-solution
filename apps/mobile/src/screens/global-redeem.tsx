@@ -7,7 +7,7 @@ import {
   startTransition,
   type PropsWithChildren
 } from 'react';
-import { Animated, ScrollView, Text, View } from 'react-native';
+import { Animated, KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
 import { Input } from '@/components/ui/input';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import type { RedemptionResolveResponse } from '@ticket/contracts';
@@ -62,7 +62,7 @@ import { ticketDetailHref } from '@/tickets/ticket-detail-href';
 import { resolveTermsForDisplay } from '@/redeem/terms-display';
 import { brand, colors } from '@/theme/colors';
 import { fontFamilies } from '@/theme/fonts';
-import { space } from '@/theme/tokens';
+import { radius, space } from '@/theme/tokens';
 import { typography } from '@/theme/typography';
 
 const AUTH_CODES = new Set(['UNAUTHENTICATED', 'EMAIL_NOT_VERIFIED']);
@@ -123,6 +123,7 @@ export function GlobalRedeemScreen() {
 
   const verified = identity.status === 'verified';
   const resolved = resolveContext !== null;
+  const checking = resolved && verified;
 
   const applyResolveBody = useCallback((body: RedemptionResolveResponse) => {
     setResolveContext(body);
@@ -475,19 +476,18 @@ export function GlobalRedeemScreen() {
 
   return (
     <RedeemTabPage>
+      <Text style={{ ...typography.subhead, color: colors.secondary }}>
+        {checking ? 'Xem kỹ thông tin vé trước khi xác nhận nhận vào ví.' : 'Nhập mã bạn nhận từ đơn vị tổ chức để tìm vé.'}
+      </Text>
+      <View accessibilityRole="text" accessibilityLabel={checking ? 'Bước kiểm tra vé, sau đó xác nhận' : 'Bước nhập mã, sau đó kiểm tra vé và xác nhận'} style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
+        {['Nhập mã', 'Kiểm tra vé', 'Xác nhận'].map((step, index) => (
+          <Text key={step} style={{ ...typography.caption, color: (checking ? index === 1 : index === 0) ? brand.primary : colors.secondary, fontFamily: (checking ? index === 1 : index === 0) ? fontFamilies.bodySemiBold : fontFamilies.body }}>
+            {index > 0 ? '  ─  ' : ''}{step}
+          </Text>
+        ))}
+      </View>
       {!verified ? (
         <>
-          <Notice title={redeemCopy.globalGuestTitle}>
-            {redeemCopy.globalGuestBody}
-          </Notice>
-          <AttendeeCta
-            label={
-              signInBusy ? 'Đang đăng nhập…' : redeemCopy.authGateCta
-            }
-            disabled={busy || signInBusy}
-            onPress={() => void onSignIn()}
-            testID="global-redeem-cta-continue"
-          />
           {signInBusy ? (
             <LoadingState title="Đang đăng nhập">
               Chờ xác minh — chưa tra cứu mã.
@@ -509,37 +509,35 @@ export function GlobalRedeemScreen() {
         <Notice title={redeemCopy.offlineTitle}>{offlineNotice}</Notice>
       ) : null}
 
-      {resolved && resolveNotice ? (
-        <Notice title="Kết quả tra cứu">{resolveNotice}</Notice>
-      ) : null}
-
       {resolveError ? (
         <Notice title="Không tra cứu được" tone="deny">
           {resolveError}
         </Notice>
       ) : null}
 
-      <Text
-        style={{ ...typography.subheadSemibold, color: colors.label,
-          fontFamily: fontFamilies.bodySemiBold, }}
-      >
-        {redeemCopy.codeFieldLabel}
-      </Text>
-      <Input
-        value={code}
-        onChangeText={(value) => {
-          setCode(value);
-          if (resolved) {
-            setResolveContext(null);
-            setResolveNotice(null);
-          }
-        }}
-        placeholder={redeemCopy.codeFieldPlaceholder}
-        autoCapitalize="characters"
-        accessibilityLabel={redeemCopy.codeFieldLabel}
-        editable={!busy}
-        testID="global-redeem-code"
-      />
+      {!checking ? (
+        <>
+          <Input
+            label={redeemCopy.codeFieldLabel}
+            value={code}
+            onChangeText={(value) => {
+              setCode(value);
+              if (resolved) {
+                setResolveContext(null);
+                setResolveNotice(null);
+              }
+            }}
+            placeholder={redeemCopy.codeFieldPlaceholder}
+            autoCapitalize="characters"
+            accessibilityLabel={redeemCopy.codeFieldLabel}
+            editable={!busy}
+            testID="global-redeem-code"
+          />
+          <Text style={{ ...typography.caption, color: colors.secondary }}>
+            Kiểm tra lại từng ký tự trước khi tiếp tục.
+          </Text>
+        </>
+      ) : null}
       {!resolved ? (
         <AttendeeCta
           label={busy ? 'Đang tra cứu…' : redeemCopy.lookupCta}
@@ -549,8 +547,43 @@ export function GlobalRedeemScreen() {
         />
       ) : null}
 
+      {!verified && !resolved ? (
+        <>
+          <Notice title="Đăng nhập khi tìm vé">
+            Mã đã nhập được giữ lại để bạn tiếp tục sau đăng nhập.
+          </Notice>
+          <View style={{ alignItems: 'center', paddingVertical: space.xl, gap: space.sm }}>
+            <Text style={{ ...typography.sectionTitleBold, color: brand.ink }}>Có mã là bắt đầu được</Text>
+            <Text style={{ ...typography.caption, color: colors.secondary, textAlign: 'center' }}>
+              Vé chỉ được thêm vào ví sau khi bạn xem thông tin và xác nhận.
+            </Text>
+          </View>
+        </>
+      ) : null}
+
       {resolved ? (
         <>
+          <View style={{ backgroundColor: colors.onAccent, borderColor: colors.line, borderWidth: 1, borderRadius: radius.lg, borderCurve: 'continuous', overflow: 'hidden' }}>
+            <View style={{ padding: space.md, backgroundColor: colors.surfaceMuted }}>
+              <Text accessibilityRole="header" style={{ ...typography.sectionTitleBold, color: brand.ink }}>
+                {resolveContext.eventTitle}
+              </Text>
+            </View>
+            <View style={{ paddingHorizontal: space.md }}>
+              <RedeemInfoRow label="Loại vé" value={resolveContext.ticketTypeLabel} />
+              <RedeemInfoRow label="Đơn vị tổ chức" value={resolveContext.tenantDisplayName} />
+              <RedeemInfoRow label="Cấp vé" value={resolveContext.approvalMode === 'MANUAL' ? 'Chờ duyệt sau xác nhận' : 'Sau xác nhận'} />
+            </View>
+          </View>
+          {resolveNotice ? <Text style={{ ...typography.caption, color: colors.secondary }}>{resolveContext.redemptionWindow.open ? 'Cửa sổ đổi mã đang mở.' : 'Cửa sổ đổi mã đã đóng — có thể không đổi được.'}</Text> : null}
+          {decision?.kind !== 'pending' && decision?.kind !== 'issued' ? (
+            <AttendeeCta label="Nhập mã khác" variant="secondary" disabled={busy} onPress={() => {
+              setResolveContext(null);
+              setResolveNotice(null);
+              setDecision(null);
+              setAttempt(null);
+            }} testID="global-redeem-change-code" />
+          ) : null}
           <RedeemFormFields
             form={form}
             termsVersion={termsVersion}
@@ -565,14 +598,17 @@ export function GlobalRedeemScreen() {
             onTermsAcceptedChange={setTermsAccepted}
           />
 
-          <View {...redeemActionAnnouncement()}>
+          {decision?.kind !== 'pending' && decision?.kind !== 'issued' ? <View {...redeemActionAnnouncement()}>
             <AttendeeCta
               label={busy ? 'Đang xử lý…' : redeemCopy.confirmCta}
               disabled={busy || code.trim().length === 0}
               onPress={() => void submit()}
               testID="global-redeem-cta-submit"
             />
-          </View>
+          </View> : null}
+          <Text style={{ ...typography.caption, color: colors.secondary }}>
+            Nếu yêu cầu cần duyệt, vé chưa xuất hiện ngay trong ví.
+          </Text>
         </>
       ) : null}
 
@@ -640,10 +676,20 @@ export function GlobalRedeemScreen() {
   );
 }
 
+function RedeemInfoRow({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: space.md, paddingVertical: space.sm, borderBottomWidth: 1, borderBottomColor: colors.line }}>
+      <Text style={{ ...typography.caption, color: colors.secondary }}>{label}</Text>
+      <Text style={{ ...typography.subheadSemibold, color: brand.ink, textAlign: 'right', flexShrink: 1 }}>{value}</Text>
+    </View>
+  );
+}
+
 /** Scroll root first, then native large-title chrome (Events / Vé của tôi). */
 function RedeemTabPage({ children }: PropsWithChildren) {
   return (
     <>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={0}>
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
         keyboardShouldPersistTaps="handled"
@@ -657,6 +703,7 @@ function RedeemTabPage({ children }: PropsWithChildren) {
       >
         {children}
       </ScrollView>
+      </KeyboardAvoidingView>
       <AttendeeScreenChrome title={redeemCopy.screenTitle} />
     </>
   );

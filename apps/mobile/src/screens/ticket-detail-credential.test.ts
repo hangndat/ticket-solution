@@ -117,7 +117,8 @@ test('offline legacy metadata shows a QR error; retry loads the signed credentia
   await act(async () => { tree = Renderer.create(React.createElement(TicketDetailScreen)); });
   assert.equal(tree!.root.findAllByType('QrCode').length, 0);
   const error = tree!.root.findByType('ErrorState');
-  assert.equal(error.props.title, 'Chưa tải được mã QR của vé');
+  assert.equal(error.props.title, 'Chưa thể dùng vé tại cổng');
+  assert.equal(tree!.root.findByProps({ testID: 'ticket-detail-credential-unavailable' }).props.testID, 'ticket-detail-credential-unavailable');
   probe = async () => ({ status: 'ok', body: { tickets: [ticket] } });
   await act(async () => { error.props.onRetry(); });
   assert.equal(calls, 2);
