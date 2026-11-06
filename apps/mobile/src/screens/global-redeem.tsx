@@ -125,6 +125,13 @@ export function GlobalRedeemScreen() {
   const resolved = resolveContext !== null;
   const checking = resolved && verified;
   const currentStep = checking ? (decision?.kind === 'pending' || decision?.kind === 'issued' ? 2 : 1) : 0;
+  const lead = decision?.kind === 'pending'
+    ? 'Yêu cầu đang chờ duyệt. Chưa có vé trong ví; bạn có thể kiểm tra lại trạng thái.'
+    : decision?.kind === 'issued'
+      ? 'Vé đã được thêm vào ví. Mở chi tiết vé để xem mã vào cổng.'
+      : checking
+        ? 'Xem kỹ thông tin vé trước khi xác nhận nhận vào ví.'
+        : 'Nhập mã bạn nhận từ đơn vị tổ chức để tìm vé.';
 
   const applyResolveBody = useCallback((body: RedemptionResolveResponse) => {
     setResolveContext(body);
@@ -478,7 +485,7 @@ export function GlobalRedeemScreen() {
   return (
     <RedeemTabPage>
       <Text style={{ ...typography.subhead, color: colors.secondary }}>
-        {checking ? 'Xem kỹ thông tin vé trước khi xác nhận nhận vào ví.' : 'Nhập mã bạn nhận từ đơn vị tổ chức để tìm vé.'}
+        {lead}
       </Text>
       <View accessibilityRole="text" accessibilityLabel={`Bước ${currentStep + 1} trong 3: ${['Nhập mã', 'Kiểm tra vé', 'Xác nhận'][currentStep]}`} style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
         {['Nhập mã', 'Kiểm tra vé', 'Xác nhận'].map((step, index) => (
