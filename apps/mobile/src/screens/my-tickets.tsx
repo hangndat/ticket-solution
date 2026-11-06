@@ -60,6 +60,7 @@ import {
 import { walletOfflineNoticeBody } from '@/tickets/wallet-sync-display';
 import { formatWalletEventStart, selectHeroTicket } from '@/tickets/wallet-hero-ticket';
 import { startWalletFocusRefresh } from '@/tickets/wallet-focus-refresh';
+import { walletContentPhase } from '@/tickets/wallet-content-phase';
 import { logoutAndClearWalletArtifacts } from '@/tickets/wallet-logout';
 import { isApnsProvider, pushProviderName } from '@/push/push';
 import { normalizeIosNotificationPermission } from '@/push/push-permission';
@@ -424,7 +425,7 @@ export function MyTicketsScreen() {
   );
 
   if (identity.status === 'verified') {
-    return <VerifiedWallet userId={identity.userId} />;
+    return <VerifiedWallet key={identity.userId} userId={identity.userId} />;
   }
 
   if (offline.status === 'bound') {
@@ -471,6 +472,7 @@ function OfflineDisplayWallet({
   const [syncedAt, setSyncedAt] = useState<string | null>(null);
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const contentPhase = walletContentPhase({ ticketCount: tickets.length, busy, error, onlineLoaded: false, offline: true });
 
   useEffect(() => {
     let cancelled = false;
@@ -526,7 +528,7 @@ function OfflineDisplayWallet({
         )}`}
       />
 
-      {busy && tickets.length === 0 ? (
+      {contentPhase === 'loading' ? (
         <LoadingState title={walletCopy.loading.title}>
           {walletCopy.loading.body}
         </LoadingState>
@@ -536,15 +538,15 @@ function OfflineDisplayWallet({
         <ErrorState title={walletCopy.errorTitle}>{error}</ErrorState>
       ) : null}
 
-      {tickets.length === 0 && !busy ? (
+      {contentPhase === 'empty-offline' ? (
         <EmptyState title={walletCopy.emptyOffline.title}>
           {walletCopy.emptyOffline.body}
         </EmptyState>
-      ) : (
+      ) : contentPhase === 'tickets' ? (
         <View style={{ gap: space.xl }}>
           <WalletGroupedTicketList tickets={tickets} offline />
         </View>
-      )}
+      ) : null}
 
     </ScrollView>
     <AttendeeScreenChrome title="Vé của tôi" />
@@ -569,6 +571,8 @@ function VerifiedWallet({ userId }: { userId: string }) {
   const [offline, setOffline] = useState(false);
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [authError, setAuthError] = useState(false);
+  const [onlineLoaded, setOnlineLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [showPushPrompt, setShowPushPrompt] = useState(false);
@@ -599,10 +603,13 @@ function VerifiedWallet({ userId }: { userId: string }) {
     if (!epoch || epoch.userId !== userId) return;
 
     setError(null);
+    setAuthError(false);
     const credential = await session.resolveCredential();
     if (!isActive() || !session.isEpochCurrent(epoch)) return;
     if (credential.status === 'unavailable') {
-      setError('Phiên đăng nhập không còn hiệu lực. Đăng nhập lại.');
+      setTickets([]);
+      setAuthError(true);
+      setError('Phiên đăng nhập không còn hiệu lực. Mở Tài khoản để đăng xuất rồi đăng nhập lại.');
       return;
     }
 
@@ -641,6 +648,8 @@ function VerifiedWallet({ userId }: { userId: string }) {
       if (decision.action === 'stale') return;
 
       if (decision.action === 'unauthorized') {
+        setTickets([]);
+        setAuthError(true);
         setError(
           'Phiên không còn được phép xem vé. Đăng nhập lại. Không dùng bộ đệm offline.',
         );
@@ -679,6 +688,7 @@ function VerifiedWallet({ userId }: { userId: string }) {
       }
 
       if (decision.action === 'apply') {
+        setOnlineLoaded(true);
         if (!isActive() || !session.isEpochCurrent(epoch)) return;
         await persistWalletTicketCaches(
           userId,
@@ -772,6 +782,10 @@ function VerifiedWallet({ userId }: { userId: string }) {
     }
   }, [refresh]);
 
+  const contentPhase = walletContentPhase({
+    ticketCount: tickets.length, busy, error, onlineLoaded, offline,
+  });
+
   // A+C hero only applies to the unfiltered wallet view; an event-filtered
   // view keeps its existing flat grouped list (wireframe covers no filter).
   const heroTicket = filterEventId ? null : selectHeroTicket(tickets, offline);
@@ -835,7 +849,7 @@ function VerifiedWallet({ userId }: { userId: string }) {
         </View>
       ) : null}
 
-      {busy && tickets.length === 0 ? (
+      {contentPhase === 'loading' ? (
         <LoadingState title={walletCopy.loading.title}>
           {walletCopy.loading.body}
         </LoadingState>
@@ -848,18 +862,21 @@ function VerifiedWallet({ userId }: { userId: string }) {
       {error ? (
         <ErrorState
           title={walletCopy.errorTitle}
-          onRetry={() => void onRefresh()}
+          onRetry={authError ? undefined : () => void onRefresh()}
           retryLabel="Làm mới vé"
         >
           {error}
         </ErrorState>
       ) : null}
+      {contentPhase === 'error' && authError ? (
+        <AttendeeCta label="Mở Tài khoản" onPress={() => router.push(ATTENDEE_ACCOUNT_HREF)} testID="wallet-error-account" />
+      ) : null}
 
-      {tickets.length === 0 && !busy ? (
+      {contentPhase === 'empty-online' ? (
         <EmptyState title={walletCopy.emptyOnline.title}>
           {walletCopy.emptyOnline.body}
         </EmptyState>
-      ) : (
+      ) : contentPhase === 'tickets' ? (
         <>
           {hero ? (
             <View style={{ gap: space.sm }}>
@@ -886,9 +903,9 @@ function VerifiedWallet({ userId }: { userId: string }) {
             </View>
           ) : null}
         </>
-      )}
+      ) : null}
 
-      {tickets.length === 0 && !busy && !error ? (
+      {contentPhase === 'empty-online' ? (
         <View style={{ gap: space.sm }}>
           <AttendeeCta label="Khám phá sự kiện" onPress={() => router.push(GUEST_HOME_HREF)} testID="wallet-empty-events" />
           <AttendeeCta label="Đổi mã nhận vé" variant="secondary" onPress={() => router.push(ATTENDEE_REDEEM_PATH)} testID="wallet-empty-redeem" />
