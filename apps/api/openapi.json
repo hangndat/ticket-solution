@@ -5928,6 +5928,11 @@
           },
           "eventName": {
             "type": "string"
+          },
+          "startsAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
           }
         },
         "required": [
