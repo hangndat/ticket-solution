@@ -1,5 +1,17 @@
 # Review #1233 — Staff Gate quét vé và kết quả
 
+## James final fix 2/2 — exact `25af88b4ba2186e302cca7b50a313d99453ef559`
+
+[Review gộp 45 AC](D6-integrated390-revalidation.md) đối chiếu diff 3 file Gate, test `runScan` reserve/confirm duplicate 409 và binary25 Release: duplicate hiện warning vàng theo D12, `phase: denied` không có checkin/admission, không fresh confirm; `Quét tiếp` về idle. Binary38 cho denied/unknown/queued/reconcile và 2 callback QR distinct→1 reserve/1 confirm/1 APPLIED vẫn hợp lệ vì delta25 chỉ thay duplicate phân loại/presentation. Native producer harness gọi Expo delegate thật rồi đi qua JS/HTTP/UI nhưng bỏ qua physical capture/AVFoundation connection; [PR #972](epic914-real-gates-20261026.md) chứng minh camera vật lý cũ, component/dependency hiện tại giữ nguyên ngoài copy. **G1233-02 đóng theo AC1–AC3 bằng evidence kết hợp; DoD/UI nhóm PASS, Security PASS code scope + runtime synthetic/historical trong phạm vi này.** Không gọi binary25 đã quét camera vật lý trực tiếp; cold queued replay fixture404 không chứng minh phục hồi queue. Fix counter **2/2**; không suy pilot ready.
+
+## James evidence delta trước fix2 (lịch sử) — exact `38f11b0bef63914c5b0428d428ab2ed1be754990`
+
+[Matrix tích hợp 45 khung](D6-integrated390-revalidation.md) đối chiếu [máy thật #914/PR #972](epic914-real-gates-20261026.md) với diff `65b5609aa8291773751806278ea21c87852a9ca6..HEAD`. `gate-camera.tsx` chỉ bỏ một dòng copy, native `CameraView`/permission/QR callback giữ nguyên nên kế thừa có giới hạn khả năng camera; USB build52 có permission/live preview. Nhưng `staff-scan.tsx` đổi mount/overlay và Gate core/queue/context đổi nhiều, nên QR admit/duplicate/queued cũ không chuyển thành runtime PASS trên HEAD. File-feed simulator chỉ preview, không callback/reservation POST. **G1233-02 còn Mở ở AC2–AC3; DoD/UI nhóm FAIL, Security PASS code scope nhưng QR runtime GAP.** AC1 event context/idle/open session có 390 runtime và test fallback; điều kiện đóng tối thiểu AC2–AC3 trong matrix, không lặp permission prompt. Fix counter 1/2 giữ nguyên.
+
+## James checkpoint trước delta cuối (lịch sử) — exact `38f11b0bef63914c5b0428d428ab2ed1be754990`
+
+[Review gộp 45 khung](D6-integrated390-revalidation.md) xác minh base d6f không bị diff38 chạm: loader quyền Staff thật ở 390 (ảnh `staff-load-t3/t5.png`), deny và Gate idle; camera permission/live preview USB build52 được tái dùng trong phạm vi đó. Manual preview/admitted/already-used ở390 **không** chứng minh QR camera scan→server admission/result. **G1233-02 còn Mở; DoD/UI FAIL, Security PASS code scope với runtime guard đã quan sát.** Owner iOS + coordinator UAT bổ sung QR admission/result đúng AC, không lặp permission prompt theo yêu cầu user; fix counter 1/2 giữ nguyên.
+
 - Reviewer: James `dod+sec+ux`, session `049c1c5b-fb99-43e8-8351-afd75c830d13`, độc lập Zico/Dispatch `ctx_4c25bf3ec18d`. Fix counter **1/2**.
 - Scope: initial mobile diff `fc17fdd24cce3104108a4a25f50ce7cd131211ce` → `bc073a8fbfb6f7625a4f9776431cf7e331629e27`; revalidate fix diff → exact SHA `f55e102bb1c7bf2271cb04ef525dc69422313674`. Architecture impact **Không**: không đổi API/contract. Decision IDs: PRD M10; O23/O31/O32/D12.
 - CRG ticket: cập nhật từ base, stats 1,645 files/10,390 nodes, `head_matches_build=true` tại SHA trên; `get_review_context` và `file_summary(staff-scan.tsx)` đã query. Source/ảnh/AX là evidence chính.

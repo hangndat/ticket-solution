@@ -1,5 +1,13 @@
 # Review #1233 — iOS Lời mời tổ chức
 
+## James final keyboard evidence — exact `38f11b0bef63914c5b0428d428ab2ed1be754990`
+
+[Matrix tích hợp 45 khung](D6-integrated390-revalidation.md) pin WebView keyboard/footer ở 390×844: AX đặt `Về Sự kiện` y .492–.553 trên keyboard q y .672–.736; ảnh trước/sau scroll thấy input, footer còn chạm được. Next dev issue badge đè một phần input trong fixture web nên không claim pixel perfect; native bridge/network retry fix38 vẫn đúng. **F01/F02 đã đóng theo AC nhóm; DoD/UI nhóm PASS, Security PASS code scope.**
+
+## James checkpoint tích hợp — exact `38f11b0bef63914c5b0428d428ab2ed1be754990`
+
+[Review gộp 45 khung](D6-integrated390-revalidation.md) đối soát B real local API/OIDC: matching invite accepted đúng role `Manager`, wrong-email/expired không accepted, success CTA mở Safari tới Portal guard cần đăng nhập. Diff38 `renderError`/hide WebView; mạng ngắt chỉ còn notice tiếng Việt, Retry sau server restart phục hồi trang. AC2 chỉ đòi lối/điều hướng Portal an toàn, nên guard đích cùng CTA đủ cho assertion này; **không** suy Portal sign-in/MFA/quyền Owner. AC1 guest keyboard/footer cũ còn hiệu lực vì diff38 không đổi phần đó. **F01 đã đóng trong scope AC1–AC3; DoD/UI nhóm PASS, Security PASS code scope.** Hai ảnh wrong/expired trùng bytes, phân biệt bằng server receipt và journey, không bởi ảnh. Không đổi fix counter F02.
+
 - Reviewer James, session `6d9b2018-9e37-40fd-9fb0-084beedbab91`, độc lập Zico/`ctx_b49b12ee6268`; lượt sửa **1/2**. Scope: `apps/mobile/**`, initial `82ac32e639b49ed73ca56bedec23df3fb0f88734` → fix1 exact HEAD `11397edd439e34876567478131584cc1b03ea06e` (base gốc `393a3992688853a2e69138bbffe64d3f8ca7ded1`); architecture impact **Không** (bridge giữ web/OIDC contract).
 - CRG đúng worktree/fix1 HEAD: stats 1,646 files, 10,424 nodes, `head_matches_build=true`; `detect_changes_tool` `82ac32e6` → `11397edd`: 5 files tổng repo, 4 symbols, 1 UI component test gap. Diff mobile: 4 files; source/tests và `git diff --check` đã đối chiếu, check PASS. Skills: `expo-overview`, `react-native-best-practices`, `expo-native-ui`, `impeccable` critique native single-context (worker không được spawn); UAT workflow đọc để đánh giá evidence.
 - Checks fix1 trên SHA theo [bàn giao](../../apps/mobile/.uat-artifacts/d6/membership-invite-report.md): typecheck PASS, 587/587 tests PASS, lint 0 errors/8 warning ngoài slice, UI budget PASS, local Xcode Release BUILD SUCCEEDED. Reviewer không lặp suite vì checks cùng SHA còn hiệu lực. Pin visual đã xác minh: original `8ea647a9…74dde`, board `eca0dbc1…fcef`.

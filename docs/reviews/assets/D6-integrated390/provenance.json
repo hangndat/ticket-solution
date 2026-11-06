@@ -1,0 +1,28 @@
+{
+  "sourceReviewed": "25af88b4ba2186e302cca7b50a313d99453ef559",
+  "reviewer": "James, independent dod+sec+ux",
+  "artifactBase": "apps/mobile/.uat-artifacts/d6/integrated390",
+  "rawArtifacts": "local only, no PNG/credentials committed",
+  "manifestEntries": 114,
+  "png": 91,
+  "ax": 23,
+  "limits": [
+    "Native metadata producer harness bypasses physical capture, AVFoundation producer and connection lifecycle",
+    "Current Expo delegate, JS guards, HTTP and UI unchanged by harness",
+    "Physical camera component evidence reused with limits from PR972",
+    "No successful offline replay or production authz/pilot readiness claimed"
+  ],
+  "files": {
+    "manifest-gate.json": "602b67e490bc9cf3ef689dbcda6e0cdac9b3e2d00d788b8af00f053eaf273cbe",
+    "build-A-25af88b4.json": "691aa56cffb55ca3d3918f67be8e8edfbbe83a2ba4a7a244f28a5e76e48f1220",
+    "build-A-38f11b0.json": "bd5d1dcb6169bcb0a0f301205d8df6d8df45fd36f755cf298c42dbfa8b5cf90d",
+    "build-B-38f11b0.json": "dceeb2ac9952e8ccb3bbd36dda08bbaf73f9ce2cff1ac70202b8ef1049aa79e8",
+    "processing-two-callbacks-receipt.json": "f4fac516ab8f4f136b8f5c6ac4c95a6dfe149794adb5a6d1f1fc6df0bf14fcd1"
+  },
+  "nativeHarnessHashes": {
+    "gate_barcode_shim.m": "d026563a06bf265affe4af72b0a46d9b0cffca1bd98d0bbbdf06591ef4a5c988",
+    "libGateBarcodeShim.dylib": "daa1e24662930aa50bf0d28678172a48db673fae12a2eec43e50078a3b8c663f",
+    "gate-barcode-probe": "e61d9879923c47a468e6707c20924296187478e8fa9fd8eb0d5c0238b434d6ed",
+    "run-runtime.py": "4b00fc1bb50e0ab2d00e04b02396ff194328e94436bebf9881d6deb63bf71491"
+  }
+}

@@ -1,5 +1,9 @@
 # #1233 · Đổi mã / chi tiết vé — review gộp ban đầu
 
+## James final keyboard evidence — exact `38f11b0bef63914c5b0428d428ab2ed1be754990`
+
+[Matrix tích hợp 45 khung](D6-integrated390-revalidation.md) pin `d6-redeem-invalid-keyboard-390.png`/AX ở strict390: `CODE_INVALID` còn thông báo VI, mã giữ trong ô sửa được và software keyboard thật. Evidence signed ticket QR/manual code thực ở390 bổ sung cho chi tiết vé; F01–F05 đã đóng theo các checkpoint bên dưới. **DoD/UI nhóm PASS trong AC Đổi mã/chi tiết, Security PASS code scope và guard đã quan sát**; không suy QR Gate admission từ signed ticket. Fix counter 2/2 giữ nguyên.
+
 - Reviewer James (`dod+sec+ux`), session `53a7f6a7-762f-445d-9b6e-1fb42f0ab14e`, độc lập Zico / `ctx_5023256db435`. Fix `0/2`.
 - Base `9f240683460c43a29743fe116584e017faa63916` → exact head/build `b8cd25e9ab703bf2ddc5aef8cc08591155168c7f` (`0a8d3f65`, `b8cd25e9`). Diff: `global-redeem.tsx`, `ticket-detail.tsx`, `ticket-detail-credential.test.ts` trong `apps/mobile/src/screens/`; không có file thứ tư trong `git diff --name-status`.
 - CRG ticket worktree: stats HEAD khớp, `detect_changes` trên base (risk 0.75), `tests_for` ticket detail; source/tests quyết định. Architecture impact: Không. Nguồn: AC1–AC3 `.orca-metrics/d6-redeem-ticket-detail-spec.md`, PRD M07–M08, Technical Design §9.1/§12.3, O28–O30/O33.
