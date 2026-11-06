@@ -1,9 +1,31 @@
 import type { StaffGateScope } from './staff-gate-events.ts';
 import { resolveGateScanFallback } from './staff-gate-scope-resolve.ts';
+import type { GateScanStatusKind } from './gate-scan-status-ui.ts';
 
 export type ManualEntryCheckResult =
   | { ok: true; code: string; previewLine: string }
   | { ok: false; message: string };
+
+export type ManualResultAction = 'next' | 'other' | 'reconcile' | null;
+
+export function canSubmitManualConfirmation(
+  code: string,
+  scanDisabled: boolean,
+  connectivity: 'online' | 'offline' | 'unknown',
+): boolean {
+  return Boolean(code.trim()) && !scanDisabled && connectivity !== 'offline';
+}
+
+/** The manual screen never grants admission for an unresolved operation. */
+export function manualResultAction(
+  kind: GateScanStatusKind,
+  hasReconcileOperation: boolean,
+): ManualResultAction {
+  if (kind === 'admitted') return 'next';
+  if (kind === 'denied' || kind === 'already-checked-in') return 'other';
+  if (kind === 'unknown' && hasReconcileOperation) return 'reconcile';
+  return null;
+}
 
 export function buildManualEntryPreviewLine(
   scopeName: string | null | undefined,

@@ -2,7 +2,9 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
   buildManualEntryPreviewLine,
+  canSubmitManualConfirmation,
   checkManualEntryCode,
+  manualResultAction,
 } from './staff-manual-entry-flow.ts';
 
 const ticketId = '11111111-1111-4111-8111-111111111111';
@@ -57,5 +59,27 @@ describe('staff-manual-entry-flow', () => {
     assert.equal(line, 'MFest · Mã sẽ được kiểm tra trực tuyến');
     assert.doesNotMatch(line, new RegExp(ticketId));
     assert.doesNotMatch(line, new RegExp(manualCode));
+  });
+
+  it('only offers reconciliation for a known unresolved operation', () => {
+    assert.equal(manualResultAction('unknown', false), null);
+    assert.equal(manualResultAction('unknown', true), 'reconcile');
+    assert.equal(manualResultAction('queued', true), null);
+    assert.equal(manualResultAction('recorded', true), null);
+  });
+
+  it('offers a fresh entry after terminal results', () => {
+    assert.equal(manualResultAction('admitted', false), 'next');
+    assert.equal(manualResultAction('denied', false), 'other');
+    assert.equal(manualResultAction('already-checked-in', false), 'other');
+    assert.equal(manualResultAction('confirming', true), null);
+  });
+
+  it('blocks confirmation while offline, disabled, or without a parsed code', () => {
+    assert.equal(canSubmitManualConfirmation(manualCode, false, 'online'), true);
+    assert.equal(canSubmitManualConfirmation(manualCode, false, 'unknown'), true);
+    assert.equal(canSubmitManualConfirmation(manualCode, false, 'offline'), false);
+    assert.equal(canSubmitManualConfirmation(manualCode, true, 'online'), false);
+    assert.equal(canSubmitManualConfirmation(' ', false, 'online'), false);
   });
 });

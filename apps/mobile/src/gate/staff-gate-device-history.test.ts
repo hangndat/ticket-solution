@@ -117,6 +117,28 @@ test('computeDeviceHistoryPageView paginates and reports hasMore', () => {
   assert.equal(full.rows.length, 15);
 });
 
+test('search only filters loaded rows and preserves loaded count', () => {
+  const rows = Array.from({ length: DEVICE_HISTORY_PAGE_SIZE + 1 }, (_, i) => ({
+    id: String(i),
+    at: '2026-10-19T10:00:00.000Z',
+    ticketLabel: i === DEVICE_HISTORY_PAGE_SIZE ? 'target' : `ticket-${i}`,
+    operationLabel: `op-${i}`,
+    receiptLabel: '—',
+    statusLabel: 'Được vào',
+    hint: '',
+    tone: 'admit' as const,
+    source: 'scan' as const,
+  }));
+  const first = computeDeviceHistoryPageView(rows, DEVICE_HISTORY_PAGE_SIZE, 'target');
+  assert.equal(first.rows.length, 0);
+  assert.equal(first.loadedCount, DEVICE_HISTORY_PAGE_SIZE);
+  assert.equal(first.totalAvailable, DEVICE_HISTORY_PAGE_SIZE + 1);
+  assert.equal(first.hasMore, true);
+  const next = computeDeviceHistoryPageView(rows, DEVICE_HISTORY_PAGE_SIZE * 2, 'target');
+  assert.equal(next.rows.length, 1);
+  assert.equal(next.loadedCount, DEVICE_HISTORY_PAGE_SIZE + 1);
+});
+
 test('filterLoadedDeviceHistoryRows matches ticket or status labels', () => {
   const rows = [
     {

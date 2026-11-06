@@ -17,12 +17,14 @@ export function StaffManualConfirmSheet({
   visible,
   previewLine,
   busy,
+  offline,
   onConfirm,
   onCancel
 }: {
   visible: boolean;
   previewLine: string;
   busy?: boolean;
+  offline?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }) {
@@ -67,12 +69,17 @@ export function StaffManualConfirmSheet({
           <Text style={{ ...typography.micro, color: colors.secondary,  lineHeight: 18 }}>
             {MANUAL_PREVIEW_DISCLAIMER}
           </Text>
+          {offline ? (
+            <Text accessibilityRole="alert" style={{ ...typography.footnote, color: colors.unknown }}>
+              Đang offline. Kiểm tra kết nối trước khi gửi; không thể cho khách qua.
+            </Text>
+          ) : null}
           <Button
             testID="gate-manual-confirm-admit"
             label={busy ? 'Đang xử lý…' : MANUAL_SUBMIT_TO_GATE_LABEL}
             loading={busy}
             accessibilityLabel={MANUAL_SUBMIT_TO_GATE_LABEL}
-            disabled={busy}
+            disabled={busy || offline}
             onPress={onConfirm}
             style={styles.confirm}
           />

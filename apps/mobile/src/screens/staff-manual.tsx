@@ -1,12 +1,12 @@
 import { useCallback, useState } from 'react';
-import { Platform, ScrollView, Text, View } from 'react-native';
+import { Keyboard, Platform, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { gateOutcomeAnnouncement } from '@/a11y/announcements';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { canReconcile, normalizeGatePasteInput } from '@/gate/gate-scan';
 import { announcementPhaseFor } from '@/gate/gate-outcome-copy';
-import { checkManualEntryCode } from '@/gate/staff-manual-entry-flow';
+import { canSubmitManualConfirmation, checkManualEntryCode, manualResultAction } from '@/gate/staff-manual-entry-flow';
 import { StaffManualConfirmSheet } from '@/gate/staff-manual-confirm-sheet';
 import { StaffGateNoEventState } from '@/gate/staff-gate-empty-state';
 import { StaffGateOpsSticky } from '@/gate/staff-gate-ops-sticky';
@@ -21,6 +21,7 @@ import { typography } from '@/theme/typography';
 function manualResultToneColor(tone: GateScanStatusView['tone']): string {
   if (tone === 'admit') return colors.admit;
   if (tone === 'deny') return colors.deny;
+  if (tone === 'warning') return colors.warning;
   if (tone === 'unknown') return colors.unknown;
   if (tone === 'default') return colors.label;
   return colors.label;
@@ -34,9 +35,6 @@ export function StaffManualEntryScreen() {
   const [confirmVisible, setConfirmVisible] = useState(false);
   const [pendingCode, setPendingCode] = useState('');
   const [previewLine, setPreviewLine] = useState('');
-  const [clearedFreshAdmitId, setClearedFreshAdmitId] = useState<string | null>(
-    null,
-  );
 
   const resultView = gate.persistentScanStatus;
 
@@ -47,20 +45,26 @@ export function StaffManualEntryScreen() {
     ? null
     : gate.pendingOp ?? gate.toastOp;
 
-  const activeOp = gate.toastOp ?? gate.pendingOp;
-  const freshAdmitKey =
-    activeOp?.phase === 'admitted' && activeOp.admissionKind === 'fresh'
-      ? activeOp.id
-      : null;
-  if (freshAdmitKey && freshAdmitKey !== clearedFreshAdmitId) {
-    setClearedFreshAdmitId(freshAdmitKey);
-    setRaw('');
-    setPendingCode('');
-    setParseError(null);
-  }
+  const activeOp = gate.pendingOp ?? gate.toastOp;
+  const displayRaw = activeOp?.phase === 'admitted' && activeOp.admissionKind === 'fresh'
+    ? '' : raw;
+  const resultAction = showScanResult && !gate.busy
+    ? manualResultAction(resultView.kind, Boolean(activeOp && canReconcile(activeOp)))
+    : null;
+  const safeResultHint = gate.busy
+    ? 'Đang gửi mã lên máy chủ. Chưa cho vào.'
+    : resultView.kind === 'denied'
+      ? 'Máy chủ từ chối lượt này. Không cho vào; kiểm tra mã hoặc liên hệ quản lý cổng.'
+      : resultView.kind === 'unknown'
+        ? 'Chưa có xác nhận. Không cho vào; đối soát lượt này trước khi xử lý tiếp.'
+        : resultView.kind === 'recorded'
+          ? 'Đã có bản ghi trên máy chủ; đây không phải lượt vào mới.'
+          : resultView.kind === 'queued'
+            ? 'Chưa xác minh trên máy chủ. Không cho vào.'
+            : resultView.hint;
 
   const onCheck = useCallback(() => {
-    const result = checkManualEntryCode(raw, gate.gateScope);
+    const result = checkManualEntryCode(displayRaw, gate.gateScope);
     if (!result.ok) {
       setParseError(result.message);
       setConfirmVisible(false);
@@ -71,17 +75,24 @@ export function StaffManualEntryScreen() {
     setPendingCode(result.code);
     setPreviewLine(result.previewLine);
     setConfirmVisible(true);
-  }, [gate.gateScope, raw]);
+  }, [displayRaw, gate.gateScope]);
 
   const onConfirmAdmit = useCallback(() => {
     const code = pendingCode.trim();
-    if (!code || gate.scanDisabled) return;
+    if (!canSubmitManualConfirmation(code, gate.scanDisabled, gate.connectivity)) return;
     setConfirmVisible(false);
+    setPendingCode('');
+    setParseError(null);
+    Keyboard.dismiss();
+    void gate.submitScan(code, 'manual');
+  }, [gate, pendingCode]);
+
+  const onNextCode = useCallback(() => {
+    gate.dismissPendingAction();
     setRaw('');
     setPendingCode('');
     setParseError(null);
-    void gate.submitScan(code, 'manual');
-  }, [gate, pendingCode]);
+  }, [gate]);
 
   const onCancelConfirm = useCallback(() => {
     if (gate.busy) return;
@@ -90,7 +101,7 @@ export function StaffManualEntryScreen() {
   }, [gate.busy]);
 
   const submitDisabled =
-    gate.scanDisabled || raw.trim().length === 0 || gate.busy;
+    gate.scanDisabled || displayRaw.trim().length === 0 || gate.busy;
 
   return (
     <>
@@ -127,12 +138,12 @@ export function StaffManualEntryScreen() {
         <Text
           style={{ ...typography.footnote, color: colors.secondary, lineHeight: 20 }}
         >
-          Dùng mã nhập tay in trên vé khi không thể đọc QR. Cần kết nối để xác minh.
+          Dùng mã nhập tay trên vé khi QR không đọc được.
         </Text>
         <Input
           testID="gate-scan-input"
-          label="Mã vé"
-          value={raw}
+          label="Mã trên vé"
+          value={displayRaw}
           onChangeText={(text) => {
             setRaw(normalizeGatePasteInput(text));
             if (parseError) setParseError(null);
@@ -152,8 +163,8 @@ export function StaffManualEntryScreen() {
         />
         <Button
           testID="gate-manual-submit"
-          label="Kiểm tra vé"
-          accessibilityLabel="Kiểm tra vé"
+          label="Tiếp tục"
+          accessibilityLabel="Kiểm tra định dạng mã"
           disabled={submitDisabled}
           onPress={onCheck}
           size="lg"
@@ -161,8 +172,10 @@ export function StaffManualEntryScreen() {
         <Text
           style={{ ...typography.micro, color: colors.secondary, lineHeight: 18 }}
         >
-          Mã chỉ được gửi khi bạn xác nhận. Máy chủ xác minh mã và trạng thái vé;
-          không thể xác minh khi mất mạng.
+          Bước này chỉ kiểm tra định dạng. Mã chưa được gửi lên máy chủ.
+        </Text>
+        <Text style={{ ...typography.micro, color: colors.unknown, lineHeight: 18 }}>
+          Cần kết nối mạng để xác minh mã. Không thể cho khách qua khi offline.
         </Text>
         {parseError ? (
           <Text style={{ ...typography.footnote, color: colors.deny }}>
@@ -184,7 +197,7 @@ export function StaffManualEntryScreen() {
               title: gate.busy ? 'Đang kiểm tra cổng' : resultView.label,
               message: gate.busy
                 ? 'Đang gửi mã lên máy chủ.'
-                : resultView.hint,
+                : safeResultHint,
             })}
             accessibilityLiveRegion={
               resultView.assertive ? 'assertive' : 'polite'
@@ -211,10 +224,24 @@ export function StaffManualEntryScreen() {
                 lineHeight: 20,
               }}
             >
-              {gate.busy
-                ? 'Đang gửi mã lên máy chủ.'
-                : resultView.hint}
+              {safeResultHint}
             </Text>
+            {resultAction === 'reconcile' ? (
+              <Button
+                label="Đối soát"
+                accessibilityLabel="Đối soát kết quả lượt này"
+                onPress={() => void gate.reconcile()}
+                variant="secondary"
+              />
+            ) : null}
+            {resultAction === 'next' || resultAction === 'other' ? (
+              <Button
+                label={resultAction === 'next' ? 'Nhập mã tiếp' : 'Kiểm tra mã khác'}
+                accessibilityLabel={resultAction === 'next' ? 'Nhập mã tiếp' : 'Kiểm tra mã khác'}
+                onPress={onNextCode}
+                variant="secondary"
+              />
+            ) : null}
           </View>
         ) : null}
       </ScrollView>
@@ -222,6 +249,7 @@ export function StaffManualEntryScreen() {
         visible={confirmVisible}
         previewLine={previewLine}
         busy={gate.busy}
+        offline={gate.connectivity === 'offline'}
         onConfirm={onConfirmAdmit}
         onCancel={onCancelConfirm}
       />
