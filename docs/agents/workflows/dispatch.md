@@ -55,8 +55,40 @@ Leader mặc định dùng pin/effort nhẹ nhất trong catalog đáp ứng quy
 
 - **Bắt buộc chủ động cảnh báo user** khi có cơ hội điều chỉnh cụ thể: leader mạnh chỉ còn việc thường lệ; context dài tiếp tục bị đọc lại; polling/review/probe không tạo delta; hoặc model/tier cao hơn phần việc còn lại. Đánh giá ở đầu phase, sau wave và khi phát hiện vòng lặp, không tạo job/model call chỉ để đánh giá chi phí.
 - Cảnh báo ngắn: `Dấu hiệu/evidence → điều chỉnh đề xuất (model/effort hoặc quy trình) → thời điểm an toàn → đánh đổi/giới hạn`. Không hứa % tiền/quota tiết kiệm khi thiếu billing/baseline. Cùng nguyên nhân chỉ cảnh báo lại khi có delta hoặc đến thời điểm có thể hành động; không nhắc theo heartbeat, không dừng công việc đã authorize để chờ một khuyến nghị tùy chọn.
-- Ưu tiên một leader nhẹ ổn định, hạn chế đổi qua lại từng task. Khi cần phiên mới: lưu checkpoint run/task/dispatch/SHA/CI/findings/budget/bước tiếp; xác minh host hỗ trợ tiếp quản cùng Run, model effective và mailbox; chỉ dừng phiên cũ sau khi phiên mới xác nhận nhận trách nhiệm. Chọn boundary không còn worker live, pending question/delivery hay cleanup. Không hai leader cùng dispatch, không tự đóng/reset phiên để thử khả năng chưa xác minh. Nếu host không hỗ trợ, nêu thao tác user cần làm và tiếp tục giữ trách nhiệm hiện tại.
-- User đã ủy quyền chủ động bàn giao sang leader nhẹ khi đủ điều kiện trên và còn đủ việc để đáng chi phí chuyển phiên; báo ngắn trước khi chuyển, không hỏi duyệt lại từng lần. Phiên cũ ngừng dispatch trong lúc bàn giao, phiên mới xác nhận bind Run và nhận checkpoint trước khi bắt đầu điều phối. Launch thành công không thay xác nhận tiếp quản; lỗi/unknown thì giữ checkpoint, không launch trùng hoặc tự đóng phiên cũ. Chỉ kết thúc lượt điều phối cũ, không xóa lịch sử chat hay worktree.
-- Khi session leader dài và host có thể khởi chạy leader mới, chủ động tạo checkpoint ngắn rồi spawn một leader Codex nhẹ tiếp quản cùng Run tại boundary an toàn. Làm việc này trước khi context dài buộc đọc lại lịch sử hoặc tiêu hao token điều phối không tạo delta; không chờ user nhắc. Chỉ một leader giữ quyền dispatch tại một thời điểm; leader cũ dừng sửa/dispatch sau launch, leader mới đọc checkpoint, bind Run và gửi xác nhận nhận trách nhiệm. Nếu chưa có xác nhận hoặc host không hỗ trợ, leader cũ tiếp tục giữ trách nhiệm và không launch trùng.
+- Ưu tiên một leader nhẹ ổn định, hạn chế đổi qua lại từng task. Xoay vòng leader theo [quản lý context coordinator](#quản-lý-context-coordinator).
+
+### Quản lý context coordinator
+
+Áp dụng cho leader/coordinator chạy dài qua Orca Orchestrator V3. Mục này thay thế ủy quyền tự bàn giao/spawn leader mới trước đây.
+
+**Sức khỏe context.** Đánh giá ở đầu phase, sau wave và khi phát hiện vòng lặp; không tạo job/model call riêng để đánh giá. Cân nhắc xoay vòng khi:
+
+- Mức dùng context cao.
+- Compaction lặp lại làm mất quyết định quan trọng.
+- Bắt đầu lặp lại task đã xong hoặc quên ràng buộc.
+- Epic/milestone tới boundary bàn giao tự nhiên.
+
+Không xoay vòng chỉ vì hội thoại dài.
+
+**Khuyến nghị xoay vòng.** Khi nên xoay, báo user ngắn gồm: lý do (dấu hiệu + evidence), việc đang active (Run/Task/Dispatch, PR, CI), mức sẵn sàng bàn giao (checkpoint đã có/còn thiếu), rủi ro và dependency chưa giải. **Không tạo coordinator thay thế khi user chưa authorize rõ ràng**; chưa có authorize thì tiếp tục giữ trách nhiệm và công việc đã được giao.
+
+**Trước khi xoay vòng** (sau khi user authorize):
+
+1. Ngừng dispatch task mới.
+2. Xác định worker active (`worker-list` scoped `--run <id>`), mail/question/delivery đang chờ, cleanup có `next` và dependency chưa giải.
+3. Đối soát trạng thái Task với [GitHub Project #3](https://github.com/users/hangndat/projects/3), Git (branch/SHA/PR) và CI; lệch thì ghi rõ trong handoff, không tự sửa thành complete.
+4. Viết handoff theo [template coordinator handoff](../templates/coordinator-handoff.md).
+5. Ghi quyết định kiến trúc (link ADR/DECISION-LOG), blocker, PR active và bước tiếp theo.
+6. Chốt thủ tục chuyển quyền bên dưới; ưu tiên boundary không còn worker live, pending question/delivery hay cleanup.
+
+**Chuyển quyền.** Coordinator mới đọc handoff, bind Run, xác minh model effective và mailbox/routing (xem `recipient_run_bound_redirect` trong [lifecycle](lifecycle.md)) rồi gửi xác nhận nhận trách nhiệm; chỉ sau đó mới dispatch. Launch thành công không thay xác nhận tiếp quản. Lỗi/unknown hoặc host không hỗ trợ tiếp quản cùng Run: coordinator cũ giữ trách nhiệm, không launch trùng, nêu thao tác user cần làm. Chỉ kết thúc lượt điều phối cũ; không xóa lịch sử chat hay worktree.
+
+**Quy tắc an toàn.**
+
+- Không giả định coordinator mới tự kế thừa worker Orca hiện có.
+- Không để hai coordinator cùng dispatch hoặc dispatch xung đột; coordinator cũ ngừng dispatch từ bước 1.
+- Không terminate worker active khi chưa xác minh trạng thái (liveness, `next`); `unverifiable` không cho phép stop/release.
+- Không báo task complete khi thiếu evidence.
+- Không bịa worker ID, trạng thái task hay kết quả PR; chỉ lấy từ receipt, `worker-list`, GitHub và CI thật.
 
 Quota coordinator cạn: ngừng dispatch Codex, lưu checkpoint/SHA/findings, phục hồi hoặc bàn giao theo lifecycle/catalog sau khi xác minh attempt cũ và authority; không reset worktree hoặc đổi tier để né rủi ro.
