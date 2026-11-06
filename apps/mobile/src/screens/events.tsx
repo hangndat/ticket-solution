@@ -320,7 +320,7 @@ export function EventsScreen() {
             <Text style={{ ...typography.body, color: colors.secondary,
               textAlign: 'center' }}>
               {normalizedQuery
-                ? 'Thử từ khóa khác hoặc xóa ô tìm kiếm trong 20 sự kiện đã tải.'
+                ? 'Thử từ khóa khác hoặc xóa ô tìm kiếm.'
                 : 'Khi có sự kiện mới, bạn sẽ thấy ở đây.'}
             </Text>
             {!normalizedQuery ? <Button label="Làm mới" variant="secondary"
@@ -331,7 +331,7 @@ export function EventsScreen() {
         ListFooterComponent={publishedPhase === 'ready' && listData.length > 0 ? (
           <Text style={{ ...typography.caption, color: colors.secondary,
             paddingTop: space.md, textAlign: 'center' }}>
-            Tìm kiếm trong 20 sự kiện đã tải.
+            Tìm kiếm trong các sự kiện đã tải.
           </Text>
         ) : undefined}
       />
