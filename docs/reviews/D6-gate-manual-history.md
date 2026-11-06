@@ -11,3 +11,5 @@
 | F02 | Thiếu acceptance evidence; **blocker / Có** | Spec AC1–AC3 yêu cầu hành trình Staff 390×844: form/bàn phím/sheet Hủy, kết quả admitted/denied/already-used/unknown, list/scroll/search/import/retry. Báo cáo UAT fix SHA vẫn chỉ có tests/build; không có ảnh/AX/runtime verified Staff. | Khôi phục fixture verified Staff không đổi auth production, ghi route/persona/build/SHA và evidence Orca cho các trạng thái AC1–AC3; O33 miễn a11y UAT. **Mở**. |
 
 Các kết luận review đầu về format/Hủy/offline, tone D12, mã/PII, scope/paging/search và receipt import tái dùng vì diff fix không đổi các đường đó. F01 đóng ở code, F02 giữ mở và vẫn chặn DoD/UI acceptance; không có finding security mới trong diff. Chưa commit/merge/deploy/store hay đăng GitHub.
+
+**Coordinator evidence mới, chờ reviewer — build 50 / `b5a9f0ee`:** USB iPhone 16 Pro với Staff verified có màn Nhập tay (ảnh `usb-staff-event.png` build 48) và Lịch sử rỗng trên build 50 (ảnh `usb-staff50-history.png`). Hash/provenance trong `apps/mobile/.uat-artifacts/d6/usb-verified-staff-report.md`. Form submit, bàn phím, sheet Hủy, kết quả, tìm kiếm/lịch sử có bản ghi và 390×844 pt chưa được chạy; F02/DoD/UI vẫn mở.

@@ -56,3 +56,9 @@ Fix count `1/2`; không có source edit, commit hay publish trong lượt này. 
 | UI/UX | **FAIL tổng AC2** | F02/F03 giữ trạng thái đã xác minh; offline detail sau cold restart chưa có runtime evidence. |
 
 Fix count **2/2** đã hết; dừng fix tự động, không đề nghị lượt thứ ba. Coordinator giữ task chờ chẩn đoán fixture/session có giới hạn và quyết định tiếp theo theo review workflow; chưa merge/deploy/store, chưa đánh acceptance/pilot ready. Báo cáo này không commit.
+
+## Coordinator evidence bổ sung — chờ James revalidate, `b5a9f0eeb8cd2b5d8c360660d6a0a2aa6033db93`
+
+- Trên iPhone 16 Pro của Dexter, bản UAT riêng ký Team cá nhân build 49/50 đã khôi phục phiên verified tổng hợp, tải vé A rồi cold restart khi API dừng. Root route Ví hiển thị vé A từ cache, thời điểm đồng bộ và cảnh báo trạng thái. Link chi tiết A mở offline, không dựng QR/mã tay vì fixture không cung cấp credential.
+- Sau chuyển online sang owner B, ví hiển thị vé B; cold restart offline ví chỉ còn B, link vé A báo không mở được và không hiện QR/mã tay. Build 50 kiểm lại header `Chi tiết vé` và guard owner trên exact SHA. Ảnh/hash, API provenance và giới hạn tại `apps/mobile/.uat-artifacts/d6/usb-verified-staff-report.md`.
+- `pnpm check` 38/38, mobile 593/593, local Xcode Release và USB install đạt. F01 được **đề nghị revalidate**, chưa tự đổi verdict reviewer. Fixture không có signed credential, kích thước máy 402×874 pt và UI camera/claim/delete không thuộc evidence này.
