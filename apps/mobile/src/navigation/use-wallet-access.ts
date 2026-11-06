@@ -7,7 +7,7 @@ import {
   showMyTicketsTab,
 } from '@/navigation/attendee-wallet-access';
 
-export function useWalletAccess(): { canAccess: boolean } {
+export function useWalletAccess(): { canAccess: boolean; offlineDisplayOnly: boolean } {
   const identity = useSyncExternalStore(
     session.subscribe,
     session.getSnapshot,
@@ -18,7 +18,10 @@ export function useWalletAccess(): { canAccess: boolean } {
     offlineDisplay.getSnapshot,
     offlineDisplay.getSnapshot,
   );
-  return { canAccess: hasWalletAccess(identity, offline) };
+  return {
+    canAccess: hasWalletAccess(identity, offline),
+    offlineDisplayOnly: identity.status !== 'verified' && offline.status === 'bound',
+  };
 }
 
 export function useMyTicketsTabChrome(): { visible: boolean } {
