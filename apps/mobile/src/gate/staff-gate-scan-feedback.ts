@@ -45,6 +45,28 @@ export function needsScanContinuation(op: GateOp | null): boolean {
   return op !== null;
 }
 
+/** Read synchronously in both native QR callbacks and submitScan. */
+export function isScanIntakeBlocked(input: {
+  locked: boolean;
+  busy: boolean;
+  pending: GateOp | null;
+}): boolean {
+  return input.locked || input.busy || input.pending !== null;
+}
+
+export function canAcceptCameraScan(input: {
+  code: string;
+  locked: boolean;
+  busy: boolean;
+  pending: GateOp | null;
+  lastPayload: string | null;
+  lifecycle: ScanFeedbackLifecycle;
+}): boolean {
+  return Boolean(input.code) &&
+    !isScanIntakeBlocked(input) &&
+    !shouldSuppressCameraRescan(input.code, input.lastPayload, input.lifecycle);
+}
+
 /** Manual / sticky UI: pending op survives toast timer clear. */
 export function selectScanFeedbackOp(
   pendingOp: GateOp | null,

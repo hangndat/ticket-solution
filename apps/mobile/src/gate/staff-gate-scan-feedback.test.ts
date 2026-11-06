@@ -10,6 +10,8 @@ import {
   shouldShowCameraToast,
   shouldSuppressCameraRescan,
   needsScanContinuation,
+  isScanIntakeBlocked,
+  canAcceptCameraScan,
   machineOperationalLabel,
 } from './staff-gate-scan-feedback.ts';
 import { presentGateScanStatus } from './gate-scan-status-ui.ts';
@@ -91,6 +93,30 @@ test('camera dedupe suppresses same QR only while feedback active', () => {
     shouldSuppressCameraRescan('other', payload, 'terminal-flash'),
     false,
   );
+});
+
+test('a different QR callback cannot pass an in-flight or pending result before rerender', () => {
+  // Model the synchronous refs observed by a callback created by an earlier render.
+  const intake = { locked: false, busy: false, pending: null as GateOp | null };
+  const callback = (code: string) => canAcceptCameraScan({
+    code, ...intake, lastPayload: 'first-qr', lifecycle: 'sticky',
+  });
+  assert.equal(callback('different-qr'), true);
+  intake.locked = true; // submitScan acquired before setBusy rerenders
+  assert.equal(callback('different-qr'), false);
+  intake.locked = false;
+  intake.busy = true; // sync/reconcile also blocks before React rerenders
+  assert.equal(callback('different-qr'), false);
+  intake.busy = false;
+  intake.pending = admitted; // applyScanResult published before setPendingOp rerenders
+  intake.locked = false;
+  assert.equal(callback('different-qr'), false);
+  assert.equal(shouldSuppressCameraRescan('different-qr', 'first-qr', 'sticky'), false);
+  // Dismiss/«Quét tiếp» alone releases the pending ref.
+  intake.pending = null;
+  assert.equal(callback('different-qr'), true);
+  assert.equal(callback('first-qr'), false);
+  assert.equal(isScanIntakeBlocked(intake), false);
 });
 
 test('selectScanFeedbackOp keeps pending when toast cleared', () => {

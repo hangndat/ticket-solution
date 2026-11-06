@@ -70,11 +70,12 @@ import {
   SCAN_TOAST_VISIBLE_MS,
   cameraFeedbackLifecycle,
   needsScanContinuation,
+  isScanIntakeBlocked,
+  canAcceptCameraScan,
   prominentCanReconcile,
   selectScanFeedbackOp,
   shouldDismissToastAttempt,
   shouldShowCameraToast,
-  shouldSuppressCameraRescan
 } from '@/gate/staff-gate-scan-feedback';
 import { randomId } from '@/lib/random-id';
 import { resolveGateScanFallback } from '@/gate/staff-gate-scope';
@@ -251,6 +252,8 @@ export function StaffGateWorkspaceProvider({
   const [sessionOpenError, setSessionOpenError] = useState<{ key: string; message: string } | null>(null);
   const lock = useRef(false);
   const lockOwnerRef = useRef<string | null>(null);
+  const busyRef = useRef(false);
+  const pendingOpRef = useRef<GateOp | null>(null);
   const workspaceRef = useRef(emptyStaffGateWorkspace());
   const ownerRef = useRef<SessionEpoch | null>(null);
   const ownerWriteGenerationRef = useRef(0);
@@ -297,6 +300,7 @@ export function StaffGateWorkspaceProvider({
     toastAttemptRef.current = null;
     setToastOp(null);
     setToastVisible(false);
+    pendingOpRef.current = null;
     setPendingOp(null);
     lastCameraPayloadRef.current = null;
   }, [clearToastTimers]);
@@ -312,6 +316,7 @@ export function StaffGateWorkspaceProvider({
     setSessionId(null);
     setGateScope(null);
     setReady(false);
+    busyRef.current = false;
     setBusy(false);
     lock.current = false;
     lockOwnerRef.current = null;
@@ -323,6 +328,7 @@ export function StaffGateWorkspaceProvider({
     toastAttemptRef.current = null;
     setToastOp(null);
     setToastVisible(false);
+    pendingOpRef.current = null;
     setPendingOp(null);
     lastCameraPayloadRef.current = null;
   }, [clearToastTimers]);
@@ -335,7 +341,8 @@ export function StaffGateWorkspaceProvider({
       }
       toastAttemptRef.current = attemptId;
       clearToastTimers();
-      setPendingOp(needsScanContinuation(op) ? op : null);
+      pendingOpRef.current = needsScanContinuation(op) ? op : null;
+      setPendingOp(pendingOpRef.current);
 
       if (shouldShowCameraToast(op, false)) {
         setToastOp(op);
@@ -506,14 +513,13 @@ export function StaffGateWorkspaceProvider({
       viewRef.current = { gateScope: scope, sessionId: activeSession, ops: mergedOps };
       workspaceRef.current = persistActiveScope(workspaceRef.current, scope, mergedOps, activeSession);
       setOps(mergedOps);
-      setPendingOp((current) =>
-        resolvePendingOpAfterOfflineReplay({
-          currentPending: current,
-          currentOps,
-          nextOps: mergedOps,
-          activeSession,
-        }),
-      );
+      pendingOpRef.current = resolvePendingOpAfterOfflineReplay({
+        currentPending: pendingOpRef.current,
+        currentOps,
+        nextOps: mergedOps,
+        activeSession,
+      });
+      setPendingOp(pendingOpRef.current);
       const replayFeedback = findTerminalReplayFeedbackOp(latestOps, mergedOps);
       if (replayFeedback) applyScanResult(replayFeedback, randomId());
       await saveWorkspace(userId);
@@ -698,6 +704,7 @@ export function StaffGateWorkspaceProvider({
       setGateEventsLoading(false);
       setEventPickerOpen(false);
       setConnectivity('unknown');
+      busyRef.current = false;
       setBusy(false);
       setReady(false);
     });
@@ -721,6 +728,7 @@ export function StaffGateWorkspaceProvider({
           workspaceRef.current = emptyStaffGateWorkspace();
           viewRef.current = { gateScope: null, sessionId: null, ops: [] };
           setOps([]);
+          busyRef.current = false;
           setBusy(false);
           lock.current = false;
           lockOwnerRef.current = null;
@@ -838,12 +846,17 @@ export function StaffGateWorkspaceProvider({
   );
 
   const submitScan = useCallback(async (payload: string, source: 'qr' | 'manual' = 'qr') => {
+    const code = payload.trim();
+    if (!code || isScanIntakeBlocked({ locked: lock.current, busy: busyRef.current, pending: pendingOpRef.current })) return;
     const replayEpoch = session.captureEpoch();
     const startedView = viewRef.current;
     const writeGeneration = gateWorkspaceWriteGeneration(replayEpoch?.userId ?? '');
-    const code = payload.trim();
-    if (!code || lock.current || !replayEpoch || replayEpoch.userId !== verifiedUserId) return;
+    if (!replayEpoch || replayEpoch.userId !== verifiedUserId) return;
+    // Acquire before any state update or await so a queued native callback
+    // cannot start another QR even before React rerenders disabled props.
     const attemptId = randomId();
+    lock.current = true;
+    lockOwnerRef.current = attemptId;
     feedbackGenerationRef.current += 1;
     const startedGeneration = feedbackGenerationRef.current;
     const isCurrent = gateWorkspaceOperationGuard({
@@ -858,9 +871,8 @@ export function StaffGateWorkspaceProvider({
     clearToastTimers();
     setToastOp(null);
     setToastVisible(false);
+    pendingOpRef.current = null;
     setPendingOp(null);
-    lock.current = true;
-    lockOwnerRef.current = attemptId;
     const auth = await resolveGateAuth();
     if (!isCurrent()) {
       if (lockOwnerRef.current === attemptId) { lock.current = false; lockOwnerRef.current = null; }
@@ -901,6 +913,7 @@ export function StaffGateWorkspaceProvider({
       lockOwnerRef.current = null;
       return;
     }
+    busyRef.current = true;
     setBusy(true);
     try {
       const snap = session.getSnapshot();
@@ -997,7 +1010,7 @@ export function StaffGateWorkspaceProvider({
       }
     } finally {
       if (lockOwnerRef.current === attemptId) { lock.current = false; lockOwnerRef.current = null; }
-      if (session.isEpochCurrent(replayEpoch)) setBusy(false);
+      if (session.isEpochCurrent(replayEpoch)) { busyRef.current = false; setBusy(false); }
     }
   }, [
     applyScanResult,
@@ -1014,17 +1027,15 @@ export function StaffGateWorkspaceProvider({
 
   const handleCameraScan = useCallback((data: string) => {
     const code = normalizeGatePasteInput(data);
-    if (!code || lock.current) return;
     const lifecycle = cameraFeedbackLifecycle(busy, toastVisible, pendingOp);
-    if (
-      shouldSuppressCameraRescan(
-        code,
-        lastCameraPayloadRef.current,
-        lifecycle,
-      )
-    ) {
-      return;
-    }
+    if (!canAcceptCameraScan({
+      code,
+      locked: lock.current,
+      busy: busyRef.current,
+      pending: pendingOpRef.current,
+      lastPayload: lastCameraPayloadRef.current,
+      lifecycle,
+    })) return;
     lastCameraPayloadRef.current = code;
     void submitScan(code);
   }, [busy, pendingOp, submitScan, toastVisible]);
@@ -1051,6 +1062,7 @@ export function StaffGateWorkspaceProvider({
     setToastVisible(false);
     const auth = await resolveGateAuth();
     if (!auth.ok || !isCurrent()) return;
+    busyRef.current = true;
     setBusy(true);
     try {
       const reconciled = await reconcileOp({
@@ -1068,7 +1080,7 @@ export function StaffGateWorkspaceProvider({
       await persist([next, ...rest], next, sessionId, isCurrent);
       if (isCurrent()) applyScanResult(next, attemptId);
     } finally {
-      if (session.isEpochCurrent(epoch)) setBusy(false);
+      if (session.isEpochCurrent(epoch)) { busyRef.current = false; setBusy(false); }
     }
   }, [applyScanResult, clearToastTimers, ops, pendingOp, persist, sessionId, verifiedUserId]);
 
@@ -1077,6 +1089,7 @@ export function StaffGateWorkspaceProvider({
     if (!epoch) return;
     const auth = await resolveGateAuth();
     if (!auth.ok || !session.isEpochCurrent(epoch)) return;
+    busyRef.current = true;
     setBusy(true);
     try {
       await offlineScanQueue.bindUser(epoch.userId);
@@ -1085,6 +1098,7 @@ export function StaffGateWorkspaceProvider({
       if (!session.isEpochCurrent(epoch)) return;
       await replayAndReconcile(auth.bearer, auth.apiBase, epoch.userId, epoch);
     } finally {
+      busyRef.current = false;
       setBusy(false);
     }
   }, [replayAndReconcile]);
