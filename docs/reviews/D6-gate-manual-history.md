@@ -1,0 +1,13 @@
+# Review #1233 — Gate Nhập tay và Lịch sử
+
+- Reviewer: James (`dod+sec+ux`), độc lập với Zico. Base `f55e102bb1c7bf2271cb04ef525dc69422313674`; review đầu `15fc526655dee8b625e4775685fe04de9a2ad3ef` → revalidate fix F01 exact SHA `393a3992688853a2e69138bbffe64d3f8ca7ded1`; chỉ diff mobile, không sửa source.
+- CRG ticket: incremental update rồi stats/query tại fix SHA (`head_matches_build: true`, 1646 files). Đã kiểm 7 file mobile đổi từ SHA review đầu và vùng provider/owned snapshot; source/docs qua LeanCTX. `git diff --check` mobile: PASS.
+- Evidence worker trên fix SHA: 582/582 tests, typecheck, lint (0 errors, 8 warnings ngoài diff), UI budget, Xcode local Release PASS theo `apps/mobile/.uat-artifacts/d6/gate-manual-history-report.md`. Không chạy lại suite vì diff chỉ F01 và worker đã chạy trên exact SHA. Chưa có ảnh/AX hoặc hành trình verified Staff vì fixture simulator bị SecureStore chặn; O33 waive a11y UAT, không ghi AX PASS.
+- Verdict fix SHA: **DoD FAIL; Security PASS trong diff; UI/acceptance FAIL**. F01 đã xác minh ở code; AC1–AC3 vẫn thiếu runtime evidence F02. Architecture impact Không theo scope hiện tại. Lượt sửa tự động **1/2**; ngoại lệ chưa dùng.
+
+| ID | Loại / mức độ / chặn merge | Căn cứ và bằng chứng tại SHA | Điều kiện đóng / trạng thái |
+| --- | --- | --- | --- |
+| F01 | Lỗi code + UX recovery; **đã xác minh ở code / Không còn chặn riêng** | AC3 empty/error/retry. Fix `staff-history.tsx:102-110,125-140` thêm nút và pull retry; `staff-gate-workspace-context.tsx:401-415,705-842` chạy lại loader với epoch/lifecycle guard, scope/session rỗng và `ready=false`; `staff-gate-owned-snapshot.ts:retryWorkspaceLoad` chỉ truyền epoch hiện tại, snapshot unowned vẫn che ops/history và chặn admission. Tests mới kiểm lỗi→retry→content, lỗi lặp và user/epoch/scope/session đổi; không thấy bypass admission. | **Đã xác minh trên `393a399`** bằng diff/source và 582 tests worker trên SHA. Hành trình Staff thật còn thuộc F02. |
+| F02 | Thiếu acceptance evidence; **blocker / Có** | Spec AC1–AC3 yêu cầu hành trình Staff 390×844: form/bàn phím/sheet Hủy, kết quả admitted/denied/already-used/unknown, list/scroll/search/import/retry. Báo cáo UAT fix SHA vẫn chỉ có tests/build; không có ảnh/AX/runtime verified Staff. | Khôi phục fixture verified Staff không đổi auth production, ghi route/persona/build/SHA và evidence Orca cho các trạng thái AC1–AC3; O33 miễn a11y UAT. **Mở**. |
+
+Các kết luận review đầu về format/Hủy/offline, tone D12, mã/PII, scope/paging/search và receipt import tái dùng vì diff fix không đổi các đường đó. F01 đóng ở code, F02 giữ mở và vẫn chặn DoD/UI acceptance; không có finding security mới trong diff. Chưa commit/merge/deploy/store hay đăng GitHub.
