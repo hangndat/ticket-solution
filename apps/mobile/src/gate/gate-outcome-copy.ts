@@ -85,6 +85,15 @@ export function presentGateOutcome(op: GateOp | null): GateOutcomeView {
   }
 
   if (op.phase === 'denied') {
+    if (op.denialKind === 'already-checked-in') {
+      return {
+        kind: 'already-checked-in',
+        title: 'Vé đã được sử dụng',
+        detail: 'Vé đã được check-in trước đó. Không cho vào.',
+        tone: 'warning',
+        assertive: true,
+      };
+    }
     return {
       kind: 'denied',
       title: 'Không cho vào',

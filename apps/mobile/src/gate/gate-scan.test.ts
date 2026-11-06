@@ -10,6 +10,8 @@ import {
   runScan,
   type GateOp,
 } from './gate-scan.ts';
+import { presentGateOutcome } from './gate-outcome-copy.ts';
+import { presentGateScanStatus } from './gate-scan-status-ui.ts';
 
 const ticketId = '11111111-1111-4111-8111-111111111111';
 const tenantId = '22222222-2222-4222-8222-222222222222';
@@ -121,8 +123,60 @@ test('expired, stale, revoked, and already-used tickets are denied', () => {
   });
   assert.equal(used.phase, 'denied');
   assert.equal(used.admissionKind, undefined);
+  assert.equal(used.denialKind, 'already-checked-in');
   assert.equal(used.checkinId, undefined);
   assert.match(used.message, /không cho vào/i);
+});
+
+test('reserve and confirm duplicate 409 remain denied but present D12 warning', async () => {
+  for (const duplicateAt of ['reserve', 'confirm'] as const) {
+    const calls: string[] = [];
+    const scanned = await runScan({
+      raw: qr, bearer: 'test', apiBase: 'http://127.0.0.1:3001',
+      ops: [], staffSessionId: 'session', createId: () => `duplicate-${duplicateAt}`,
+      fetchImpl: async (input) => {
+        const url = String(input);
+        calls.push(url);
+        if (url.endsWith('/reservations')) {
+          return duplicateAt === 'reserve'
+            ? jsonResponse(409, { code: 'ALREADY_CHECKED_IN' })
+            : jsonResponse(200, { reservationId: 'reservation', token: 'test-hold' });
+        }
+        assert.match(url, /\/confirm$/);
+        return jsonResponse(409, { code: 'ALREADY_CHECKED_IN' });
+      },
+    });
+    const op = scanned.current;
+    assert.ok(op);
+    assert.equal(op.phase, 'denied');
+    assert.equal(op.denialKind, 'already-checked-in');
+    assert.equal(op.admissionKind, undefined);
+    assert.equal(op.checkinId, undefined);
+    assert.equal(op.token, undefined);
+    assert.equal(scanned.ops[0], op);
+    assert.equal(calls.length, duplicateAt === 'reserve' ? 1 : 2);
+
+    const outcome = presentGateOutcome(op);
+    const status = presentGateScanStatus({ busy: false, op, canReconcile: false });
+    assert.equal(outcome.kind, 'already-checked-in');
+    assert.equal(outcome.tone, 'warning');
+    assert.match(outcome.detail, /không cho vào/i);
+    assert.equal(status.kind, 'already-checked-in');
+    assert.equal(status.tone, 'warning');
+    assert.match(status.hint, /không cho vào/i);
+  }
+});
+
+test('other server 409 denial stays destructive', async () => {
+  const scanned = await runScan({
+    raw: qr, bearer: 'test', apiBase: 'http://127.0.0.1:3001',
+    ops: [], staffSessionId: 'session',
+    fetchImpl: async () => jsonResponse(409, { code: 'CREDENTIAL_SIGNATURE_INVALID' }),
+  });
+  assert.equal(scanned.current?.phase, 'denied');
+  assert.equal(scanned.current?.denialKind, undefined);
+  assert.equal(presentGateOutcome(scanned.current).tone, 'deny');
+  assert.equal(presentGateScanStatus({ busy: false, op: scanned.current, canReconcile: false }).tone, 'deny');
 });
 
 test('a new presentation of an admitted ticket is checked by the server again', async () => {
