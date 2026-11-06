@@ -1,7 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   useEffect,
-  useMemo,
   useRef,
   useState,
   useSyncExternalStore,
@@ -61,6 +60,7 @@ export function ClaimScreen() {
     eventId?: string | string[];
     tenantSlug?: string | string[];
     eventSlug?: string | string[];
+    intent?: string | string[];
   }>();
   const router = useRouter();
   const {
@@ -102,16 +102,14 @@ export function ClaimScreen() {
   const verified = identity.status === 'verified';
   const needsLogin = !verified;
 
-  const activeScope = useMemo(() => {
-    const parked = peekGuestClaimIntent();
-    return {
-      token: linkToken || parked?.token || '',
-      tenantId: linkTenantId || parked?.tenantId || '',
-      eventId: linkEventId || parked?.eventId || '',
-      tenantSlug: linkTenantSlug || parked?.tenantSlug || '',
-      eventSlug: linkEventSlug || parked?.eventSlug || '',
-    };
-  }, [linkToken, linkTenantId, linkEventId, linkTenantSlug, linkEventSlug]);
+  const parked = peekGuestClaimIntent();
+  const activeScope = {
+    token: linkToken || parked?.token || '',
+    tenantId: linkTenantId || parked?.tenantId || '',
+    eventId: linkEventId || parked?.eventId || '',
+    tenantSlug: linkTenantSlug || parked?.tenantSlug || '',
+    eventSlug: linkEventSlug || parked?.eventSlug || '',
+  };
 
   const missingInvite = !isValidInvitationClaimScope(activeScope);
   const previewRequired = Boolean(

@@ -16,6 +16,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const EVENT_ID = /^[A-Za-z0-9][A-Za-z0-9-]{0,80}$/;
 /** Opaque claim token — length-bounded; never logged by callers. */
 const CLAIM_TOKEN = /^[A-Za-z0-9._~-]{16,512}$/;
+let claimLinkSequence = 0;
 
 export function isValidInvitationClaimScope(input: {
   token: string;
@@ -134,7 +135,8 @@ export function routeForInstalledAppLink(input: string): string | null {
         parkedUserId: null,
         parkedGeneration: null,
       });
-      return '/claim';
+      // A non-secret sequence refreshes an already open claim route.
+      return `/claim?intent=${++claimLinkSequence}`;
     }
     if (parsed.kind === 'invitation-claim-invalid') {
       clearGuestClaimIntent();

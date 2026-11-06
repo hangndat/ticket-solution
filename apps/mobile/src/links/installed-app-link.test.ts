@@ -115,7 +115,12 @@ test('invitation claim link routes to /claim without fixture fallback', () => {
   assert.equal(parsed.eventId, eventId);
   assert.match(parsed.href, /^\/claim\?/);
   assert.doesNotMatch(parsed.href, /fixture/);
-  assert.equal(routeForInstalledAppLink(input), '/claim');
+  const firstRoute = routeForInstalledAppLink(input);
+  const secondRoute = routeForInstalledAppLink(input);
+  assert.match(firstRoute ?? '', /^\/claim\?intent=\d+$/);
+  assert.match(secondRoute ?? '', /^\/claim\?intent=\d+$/);
+  assert.notEqual(firstRoute, secondRoute);
+  assert.doesNotMatch(firstRoute ?? '', /token=/);
   assert.equal(peekGuestClaimIntent()?.token, token);
 });
 
