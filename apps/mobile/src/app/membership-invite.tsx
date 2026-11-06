@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { KeyboardAvoidingView, Linking, ScrollView, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Keyboard, Linking, ScrollView, Text, View } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
@@ -22,6 +22,12 @@ export default function MembershipInviteScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  useEffect(() => {
+    const show = Keyboard.addListener('keyboardWillShow', (event) => setKeyboardHeight(event.endCoordinates.height));
+    const hide = Keyboard.addListener('keyboardWillHide', () => setKeyboardHeight(0));
+    return () => { show.remove(); hide.remove(); };
+  }, []);
   const config = {
     productOrigin: getProductWebOrigin(),
     oidcIssuer: getOidcIssuer(),
@@ -42,7 +48,7 @@ export default function MembershipInviteScreen() {
   }
 
   return (
-    <KeyboardAvoidingView behavior="padding" style={{ flex: 1, backgroundColor: brand.paper }}>
+    <View style={{ flex: 1, backgroundColor: brand.paper }}>
       <Text style={{ color: colors.secondary, ...typography.body, fontFamily: fontFamilies.body, paddingHorizontal: space.xl, paddingTop: space.lg, paddingBottom: space.md }}>
         Hoàn tất trên trang Vemoki bằng đúng email đã được mời.
       </Text>
@@ -99,9 +105,9 @@ export default function MembershipInviteScreen() {
           ) : null}
         </View>
       )}
-      <View style={{ paddingHorizontal: space.xl, paddingTop: space.md, paddingBottom: Math.max(insets.bottom, space.md) }}>
+      <View style={{ paddingHorizontal: space.xl, paddingTop: space.md, paddingBottom: keyboardHeight ? space.sm : Math.max(insets.bottom, space.md), marginBottom: keyboardHeight }}>
         <AttendeeCta label="Về Sự kiện" variant="secondary" onPress={leave} testID="membership-invite-cta-events" />
       </View>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
