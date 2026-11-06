@@ -11,8 +11,8 @@ import {
 
 test('wallet copy covers loading empty error without jargon', () => {
   assert.match(walletCopy.loading.title, /vé/i);
-  assert.equal(walletCopy.emptyOnline.title, 'Chưa có vé trong ví');
-  assert.match(walletCopy.emptyOnline.body, /Đổi mã|kéo để làm mới/i);
+  assert.equal(walletCopy.emptyOnline.title, 'Bạn chưa có vé');
+  assert.match(walletCopy.emptyOnline.body, /mã nhận vé/i);
   assert.doesNotMatch(walletCopy.emptyOnline.body, /POC|W0|F-WEB|Keycloak|Nest|BFF/i);
   assert.doesNotMatch(walletCopy.signInLoading.body, /Keycloak/i);
   assert.equal(walletCopy.errorTitle, 'Không tải được vé');
@@ -57,7 +57,7 @@ test('redeem and events CTAs share Đổi mã; lookup stays Tìm vé', () => {
 });
 
 test('wallet detail probe error is not silent missing', () => {
-  assert.equal(walletCopy.detailMissingTitle, 'Không tìm thấy vé');
+  assert.equal(walletCopy.detailMissingTitle, 'Không mở được vé này');
   assert.equal(walletCopy.detailProbeErrorTitle, 'Không tải được vé');
   assert.notEqual(walletCopy.detailProbeErrorTitle, walletCopy.detailMissingTitle);
 });

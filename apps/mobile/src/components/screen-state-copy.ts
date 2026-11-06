@@ -17,17 +17,17 @@ export const walletCopy = {
     body: 'Đang đồng bộ ví từ máy chủ. Chưa xác nhận danh sách trống.',
   },
   emptyOnline: {
-    title: 'Chưa có vé trong ví',
-    body: 'Đổi mã bằng cùng tài khoản đã đăng nhập, rồi kéo để làm mới. Danh sách trống nghĩa là chưa có vé — không phải ví giả.',
+    title: 'Bạn chưa có vé',
+    body: 'Khám phá sự kiện hoặc dùng mã nhận vé để thêm vé vào ví.',
   },
   emptyOffline: {
     title: 'Chưa có vé trong bộ đệm',
     body: 'Đăng nhập khi có mạng rồi kéo để làm mới nhằm lưu vé xem offline.',
   },
   errorTitle: 'Không tải được vé',
-  detailMissingTitle: 'Không tìm thấy vé',
+  detailMissingTitle: 'Không mở được vé này',
   detailMissingBody:
-    'Không có vé khớp id này cho danh tính hiện tại. Kéo để làm mới Vé của tôi khi online.',
+    'Vé không còn sẵn sàng trong tài khoản hiện tại. Chỉ vé được xác minh mới có QR hoặc mã nhập tay.',
   detailProbeErrorTitle: 'Không tải được vé',
   detailProbeErrorBody:
     'Không kiểm tra được vé trên máy chủ. Thử lại khi có mạng — đây chưa phải vé thiếu.',
@@ -36,9 +36,9 @@ export const walletCopy = {
     title: 'Đang đăng nhập',
     body: 'Chờ xác minh đăng nhập — chưa mở ví.',
   },
-  guestWalletBlockedTitle: 'Vé của tôi cần đăng nhập',
+  guestWalletBlockedTitle: 'Vé của bạn ở đây',
   guestWalletBlockedBody:
-    'Mở tab Tài khoản để đăng nhập. Sau khi xác minh, vé sẽ hiện ở đây.',
+    'Đăng nhập để xem vé đã nhận và mã vào cổng. Vé chỉ hiển thị sau khi tài khoản được xác minh.',
   firstTicketPush: walletCopyFirstTicketPush,
 } as const;
 

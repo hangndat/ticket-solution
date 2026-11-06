@@ -24,8 +24,9 @@ import {
   ErrorState,
   LoadingState
 } from '@/components/screen-state';
-import { eventsCopy, walletCopy } from '@/components/screen-state-copy';
+import { walletCopy } from '@/components/screen-state-copy';
 import { ATTENDEE_REDEEM_PATH } from '@/navigation/attendee-redeem-entry';
+import { ATTENDEE_ACCOUNT_HREF, GUEST_HOME_HREF } from '@/navigation/attendee-account-route';
 import {
   attendeeWalletCopy
 } from '@/attendee/attendee-outcome-copy';
@@ -445,6 +446,10 @@ export function MyTicketsScreen() {
           <EmptyState title={walletCopy.guestWalletBlockedTitle}>
             {walletCopy.guestWalletBlockedBody}
           </EmptyState>
+          <View style={{ gap: space.sm, marginTop: space.xl }}>
+            <AttendeeCta label="Đăng nhập" onPress={() => router.push(ATTENDEE_ACCOUNT_HREF)} testID="wallet-guest-signin" />
+            <AttendeeCta label="Khám phá sự kiện" variant="secondary" onPress={() => router.replace(GUEST_HOME_HREF)} testID="wallet-guest-events" />
+          </View>
         </ScrollView>
       <AttendeeScreenChrome title="Vé của tôi" />
     </>
@@ -883,12 +888,11 @@ function VerifiedWallet({ userId }: { userId: string }) {
         </>
       )}
 
-      {tickets.length === 0 && !busy ? (
-        <AttendeeCta
-          label={eventsCopy.redeemCta}
-          variant="secondary"
-          onPress={() => router.push(ATTENDEE_REDEEM_PATH)}
-        />
+      {tickets.length === 0 && !busy && !error ? (
+        <View style={{ gap: space.sm }}>
+          <AttendeeCta label="Khám phá sự kiện" onPress={() => router.push(GUEST_HOME_HREF)} testID="wallet-empty-events" />
+          <AttendeeCta label="Đổi mã nhận vé" variant="secondary" onPress={() => router.push(ATTENDEE_REDEEM_PATH)} testID="wallet-empty-redeem" />
+        </View>
       ) : null}
     </ScrollView>
     <AttendeeScreenChrome title="Vé của tôi" />

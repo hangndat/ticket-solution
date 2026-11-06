@@ -35,7 +35,6 @@ import {
   planPostLogoutNavigation,
   runPostLogoutNavigation
 } from '@/navigation/post-logout-navigation';
-import { returnToStaffGateScanTab } from '@/navigation/staff-scan-tab-navigation';
 import { useStaffWorkspace } from '@/navigation/use-staff-workspace';
 import { ATTENDEE_ACCOUNT_HREF } from '@/navigation/attendee-account-route';
 import { useAttendeeTabBarInset } from '@/navigation/use-attendee-tab-bar-inset';
@@ -328,16 +327,6 @@ function ConfiguredAccount({
           />
         </AccountGroupedSection>
 
-        {staffWorkspace ? (
-          <AttendeeCta
-            label={accountCopy.staffBackToGate}
-            variant="secondary"
-            onPress={() => returnToStaffGateScanTab()}
-            disabled={busy}
-            testID="account-cta-staff-back"
-          />
-        ) : null}
-
         {busy ? (
           <View style={{ padding: space.sm, alignItems: 'center' }}>
             <Spinner color={brand.primary} accessibilityLabel="Đang tải tài khoản" />
@@ -362,17 +351,6 @@ function ConfiguredAccount({
           </View>
         ) : null}
 
-        {showLogout || logoutFailed ? (
-          <AttendeeCta
-            label={logoutFailed ? 'Thử lại đăng xuất' : accountCopy.logoutCta}
-            variant="destructive"
-            onPress={() => void onLogout()}
-            disabled={busy}
-            accessibilityLabel={logoutFailed ? 'Thử lại dọn dẹp đăng xuất' : accountCopy.logoutAccessibility}
-            testID="account-cta-logout"
-          />
-        ) : null}
-
         {showDeleteRow ? (
           <View style={{ gap: space.sm, borderTopColor: colors.line, borderTopWidth: 1, paddingTop: space.lg }}>
             <AccountGroupedSection title="Xóa tài khoản">
@@ -388,6 +366,16 @@ function ConfiguredAccount({
             </AccountGroupedSection>
             <AccountSectionFooter>Mở trang giải thích và xác nhận trước khi gửi yêu cầu. Chạm dòng này không xóa ngay.</AccountSectionFooter>
           </View>
+        ) : null}
+        {showLogout || logoutFailed ? (
+          <AttendeeCta
+            label={logoutFailed ? 'Thử lại đăng xuất' : accountCopy.logoutCta}
+            variant="destructive"
+            onPress={() => void onLogout()}
+            disabled={busy}
+            accessibilityLabel={logoutFailed ? 'Thử lại dọn dẹp đăng xuất' : accountCopy.logoutAccessibility}
+            testID="account-cta-logout"
+          />
         ) : null}
       </ScrollView>
     </>

@@ -1,4 +1,4 @@
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import {
   useEffect,
   useMemo,
@@ -20,6 +20,7 @@ import { ErrorState } from '@/components/screen-state';
 import { walletCopy } from '@/components/screen-state-copy';
 import { EventBanner } from '@/components/event-media';
 import { Notice } from '@/components/page';
+import { AttendeeCta } from '@/components/attendee-cta';
 import { QrCode } from '@/components/qr-code';
 import { TicketStatusPill } from '@/components/ticket-status-pill';
 import { hasDemoMediaForEventId } from '@/data/demo-media';
@@ -305,11 +306,16 @@ export function TicketDetailScreen() {
       <TicketDetailPage>
         <ErrorState
           title={walletCopy.detailProbeErrorTitle}
-          onRetry={() => setReloadKey((key) => key + 1)}
+          onRetry={visibleLoad.reason === 'unreachable' ? () => setReloadKey((key) => key + 1) : undefined}
           retryLabel="Thử lại"
         >
-          {walletCopy.detailProbeErrorBody}
+          {visibleLoad.reason === 'unreachable'
+            ? walletCopy.detailProbeErrorBody
+            : visibleLoad.reason === 'unauthorized'
+              ? 'Phiên đăng nhập không còn hiệu lực. Đăng nhập lại để xem vé.'
+              : 'Không xác minh được vé cho tài khoản hiện tại.'}
         </ErrorState>
+        <AttendeeCta label="Về Vé của tôi" variant="secondary" onPress={() => router.replace('/(tabs)/my-tickets')} testID="ticket-detail-home" />
       </TicketDetailPage>
     );
   }
@@ -320,6 +326,7 @@ export function TicketDetailScreen() {
         <Notice title={walletCopy.detailMissingTitle}>
           {walletCopy.detailMissingBody}
         </Notice>
+        <AttendeeCta label="Về Vé của tôi" onPress={() => router.replace('/(tabs)/my-tickets')} testID="ticket-detail-home" />
       </TicketDetailPage>
     );
   }

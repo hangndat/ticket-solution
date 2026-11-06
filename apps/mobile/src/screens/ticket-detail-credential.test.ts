@@ -42,7 +42,7 @@ Object.assign(globalThis, {
 const moduleUrl = (source: string) => 'data:text/javascript,' + encodeURIComponent(source);
 const stateModule = `import React from ${JSON.stringify(import.meta.resolve('react'))}; export const ErrorState=({title,children,onRetry})=>React.createElement('ErrorState',{title,onRetry},children);`;
 const mocks: Record<string, string> = {
-  'expo-router': `export const useLocalSearchParams=()=>({ticketId:'ticket-a'});`,
+  'expo-router': `export const useLocalSearchParams=()=>({ticketId:'ticket-a'}); export const router={replace:()=>{}};`,
   'react-native': `export const ScrollView='ScrollView',Text='Text',View='View';`,
   '@/identity/session': `export const session=globalThis.__ticketDetailTest.session;`,
   '@/tickets/offline-display-session': `export const offlineDisplay={subscribe:()=>()=>{},getSnapshot:()=>globalThis.__ticketDetailTest.offline};`,
@@ -52,6 +52,7 @@ const mocks: Record<string, string> = {
   '@/components/screen-state': stateModule,
   '@/components/screen-state-copy': `export const walletCopy={loading:{},detailProbeErrorTitle:'Fetch error',detailMissingTitle:'Missing'};`,
   '@/components/page': `export const Notice='Notice';`,
+  '@/components/attendee-cta': `export const AttendeeCta='AttendeeCta';`,
   '@/components/qr-code': `export const QrCode='QrCode';`,
   '@/components/ticket-used-stamp': `export const TicketUsedStamp='Used';`,
   '@/components/ticket-status-pill': `export const TicketStatusPill='Pill';`,
@@ -202,5 +203,17 @@ test('unauthorized response cannot display cached QR', async () => {
   await act(async () => { tree = Renderer.create(React.createElement(TicketDetailScreen)); });
   assert.equal(tree!.root.findAllByType('QrCode').length, 0);
   assert.equal(tree!.root.findAllByType('ErrorState').length, 1);
+  assert.equal(tree!.root.findByType('ErrorState').props.onRetry, undefined);
+  assert.equal(tree!.root.findByProps({ testID: 'ticket-detail-home' }).props.label, 'Về Vé của tôi');
+  await act(async () => { tree!.unmount(); });
+});
+
+test('ticket absent from verified owner list offers wallet return without QR', async () => {
+  cache = { tickets: [ticket], syncedAt: '2026-11-04T00:00:00Z' };
+  probe = async () => ({ status: 'ok', body: { tickets: [] } });
+  let tree: ReturnType<typeof Renderer.create>;
+  await act(async () => { tree = Renderer.create(React.createElement(TicketDetailScreen)); });
+  assert.equal(tree!.root.findAllByType('QrCode').length, 0);
+  assert.equal(tree!.root.findByProps({ testID: 'ticket-detail-home' }).props.label, 'Về Vé của tôi');
   await act(async () => { tree!.unmount(); });
 });
