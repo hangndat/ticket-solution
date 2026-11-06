@@ -107,7 +107,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       supportsTablet: true,
       bundleIdentifier: separateUatBundle ? 'com.hangndat.ticket.uat' : 'com.hangndat.ticket',
       appleTeamId: 'BLUA62D52G',
-      buildNumber: '53',
+      buildNumber: '54',
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
         UIBackgroundModes: separateUatBundle ? [] : ['remote-notification'],

@@ -27,7 +27,7 @@ export function projectStaffGateOwnedSnapshot(
     selectGateScope: (scope: Parameters<StaffGateWorkspaceValue['selectGateScope']>[0]) => {
       if (live()) value.selectGateScope(scope);
     },
-    submitScan: (payload: string) => live() ? value.submitScan(payload) : Promise.resolve(),
+    submitScan: (payload: string, source?: 'qr' | 'manual') => live() ? value.submitScan(payload, source) : Promise.resolve(),
     handleCameraScan: (data: string) => { if (live()) value.handleCameraScan(data); },
     reconcile: () => live() ? value.reconcile() : Promise.resolve(),
     syncNow: () => live() ? value.syncNow() : Promise.resolve(),
