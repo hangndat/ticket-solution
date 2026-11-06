@@ -13,7 +13,7 @@ import {
 const ticketId = '11111111-1111-4111-8111-111111111111';
 
 test('ticket link opens the existing ticket screen', () => {
-  const href = `/my-tickets/${ticketId}`;
+  const href = `/wallet-access/${ticketId}`;
   for (const input of [
     `ticketsolution://tickets/${ticketId}`,
     `vemoki://tickets/${ticketId}`,
@@ -21,6 +21,7 @@ test('ticket link opens the existing ticket screen', () => {
     `ticketsolution:///tickets/${ticketId}`,
     `tickets/${ticketId}`,
     `/tickets/${ticketId}?from=qr`,
+    `vemoki://my-tickets/${ticketId}`,
   ]) {
     assert.deepEqual(parseInstalledAppLink(input), {
       kind: 'ticket',
@@ -28,6 +29,16 @@ test('ticket link opens the existing ticket screen', () => {
       href,
     });
     assert.equal(routeForInstalledAppLink(input), href);
+  }
+});
+
+test('wallet deep link enters root access route before the hidden tab', () => {
+  for (const input of ['vemoki://my-tickets', 'vemoki:///my-tickets', '/my-tickets']) {
+    assert.deepEqual(parseInstalledAppLink(input), {
+      kind: 'wallet-entry',
+      href: '/wallet-access',
+    });
+    assert.equal(routeForInstalledAppLink(input), '/wallet-access');
   }
 });
 

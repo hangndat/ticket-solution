@@ -34,6 +34,7 @@ export function isValidInvitationClaimScope(input: {
 
 export type InstalledAppLink =
   | { kind: 'ticket'; ticketId: string; href: string }
+  | { kind: 'wallet-entry'; href: '/wallet-access' }
   | { kind: 'event'; eventId: string; href: string }
   | {
       kind: 'invitation-claim';
@@ -95,10 +96,16 @@ export function parseInstalledAppLink(input: string): InstalledAppLink {
     return { kind: 'redeem-entry', href: attendeeRedeemHref(code) };
   }
 
+  // A hidden NativeTabs trigger cannot be navigated to. Enter the root stack
+  // first so guest links show the sign-in/explore state before any tab redirect.
+  if (head.toLowerCase() === 'my-tickets' && id === undefined) {
+    return { kind: 'wallet-entry', href: '/wallet-access' };
+  }
+
   if (!id) return { kind: 'passthrough' };
 
-  if (head.toLowerCase() === 'tickets' && UUID.test(id)) {
-    return { kind: 'ticket', ticketId: id, href: `/my-tickets/${id}` };
+  if ((head.toLowerCase() === 'tickets' || head.toLowerCase() === 'my-tickets') && UUID.test(id)) {
+    return { kind: 'ticket', ticketId: id, href: `/wallet-access/${id}` };
   }
   if (head.toLowerCase() === 'events' && EVENT_ID.test(id)) {
     return {
@@ -119,6 +126,7 @@ export function routeForInstalledAppLink(input: string): string | null {
   if (parsed.kind === 'oauth-callback') return null;
   if (
     parsed.kind === 'ticket' ||
+    parsed.kind === 'wallet-entry' ||
     parsed.kind === 'event' ||
     parsed.kind === 'invitation-claim' ||
     parsed.kind === 'invitation-claim-invalid' ||
