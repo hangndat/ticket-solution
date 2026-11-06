@@ -62,3 +62,35 @@ Fix count **2/2** đã hết; dừng fix tự động, không đề nghị lư�
 - Trên iPhone 16 Pro của Dexter, bản UAT riêng ký Team cá nhân build 49/50 đã khôi phục phiên verified tổng hợp, tải vé A rồi cold restart khi API dừng. Root route Ví hiển thị vé A từ cache, thời điểm đồng bộ và cảnh báo trạng thái. Link chi tiết A mở offline, không dựng QR/mã tay vì fixture không cung cấp credential.
 - Sau chuyển online sang owner B, ví hiển thị vé B; cold restart offline ví chỉ còn B, link vé A báo không mở được và không hiện QR/mã tay. Build 50 kiểm lại header `Chi tiết vé` và guard owner trên exact SHA. Ảnh/hash, API provenance và giới hạn tại `apps/mobile/.uat-artifacts/d6/usb-verified-staff-report.md`.
 - `pnpm check` 38/38, mobile 593/593, local Xcode Release và USB install đạt. F01 được **đề nghị revalidate**, chưa tự đổi verdict reviewer. Fixture không có signed credential, kích thước máy 402×874 pt và UI camera/claim/delete không thuộc evidence này.
+
+## James revalidation F01 — exact source/build `b5a9f0eeb8cd2b5d8c360660d6a0a2aa6033db93`
+
+- Review độc lập Zico, giữ fix count **2/2**. Base đã review `1528782715a89983c62263e584539d1a2b4b2a2d` → `b5a9f0ee`; kiểm diff tích hợp liên quan, nhất là root `/wallet-access` ở `d231b4e9` và header `Chi tiết vé` ở `b5a9f0ee`. Worktree lúc review ở `438fb559` nhưng `git diff b5a9f0ee..HEAD -- apps/mobile` rỗng; CRG stats/query được làm mới cho HEAD và source mobile trùng exact SHA cần kết luận. Architecture impact **Không**.
+- Handoff USB pin build 50 bằng preinstall `EXConstants.bundle/app.config` (SHA `b5a9f0ee`, UAT bundle riêng, local API, build 50), local Xcode Release/USB install PASS. Đây là provenance do worker ghi; binary metadata thô không nằm trong artifact để reviewer trích xuất lại. Fixture chỉ có owner A/B và Staff tổng hợp, bearer trong file ignored, không có credential Gate signed hay dữ liệu thật. Reuse `pnpm check` **38/38**, mobile **593/593**, lint/diff check trên chính SHA; không rerun.
+- Đối chiếu 8 PNG USB A/B build 49/50: SHA-256 đều khớp bảng trong `usb-verified-staff-report.md`; build 50 ảnh 1206×2622 px = **402×874 pt**. A online vé `…44444444`, sau API stop + cold relaunch A offline wallet vẫn có vé này, last-sync và cảnh báo trạng thái cũ; offline detail hiện placeholder “Chưa có mã QR để quét” và “Chưa có mã nhập tay”. B online vé `…55555555`, sau API stop + cold relaunch B offline wallet chỉ có B với last-sync/stale notice; link vé A trả “Không mở được vé này”, không có A ticket/QR/mã tay. Build 50 xác minh header “Chi tiết vé” ở detail B và guard link A còn hiệu lực.
+- Source guard: `OfflineDisplayBoundary.hydrate` chỉ lấy binding bền vững; `MyTicketsScreen:427-436` chọn offline wallet theo `userId`/`tenantId` bound. `readTicketDisplayCache` dùng key theo cả hai ID và so khớp payload; offline wallet đọc đúng cặp này. Detail dùng cặp owner và ticketId, `loadMatchesOwner` chặn stale ready state ngay khi đổi owner; QR chỉ từ signed-format envelope, mã tay chỉ khi credentialAvailable. Root route giữ offline display trong Stack thay vì redirect vào NativeTabs ẩn. Evidence runtime và source đủ **đóng F01** cho cached detail thiếu credential và cross-owner case đã giao; không suy QR signed, Gate admission hay mọi tenant/account.
+- **F05, rủi ro UX mới cần kiểm, không gán lỗi runtime đã xác nhận:** CTA “Về Vé của tôi” trên error/missing detail ở `ticket-detail.tsx:318,329` luôn `router.replace('/(tabs)/my-tickets')`, trong khi offline bound `showMyTicketsTab` ẩn NativeTabs trigger và root `/wallet-access` là route đã dùng để tránh redirect ẩn. Ảnh B old-owner link cho thấy CTA nhưng CLI không tap được, nên chưa biết nút có trở về ví offline hay không. Coordinator kiểm bằng tap trên build pin trước khi đánh PASS điều hướng AC3; không giao fix thứ ba tự động.
+
+| Gate trên `b5a9f0ee` | Verdict |
+| --- | --- |
+| F01 / AC2 offline display | **PASS, đóng F01** cho scenario A→B và cold restart đã chứng minh; last-sync/stale notice trung thực. |
+| Security | **PASS trong scope**: owner cache/binding tách A/B, old-owner link không lộ dữ liệu; fixture không kiểm chữ ký Gate. F04 giữ trạng thái đã đóng vì source nhánh credential không đổi. |
+| UI/UX | **PASS cho F01 states đã chụp**; header build 50 đúng. F05 CTA chưa tap, và geometry 390×844 pt không được ảnh USB 402×874 pt chứng minh. |
+| DoD tổng #1233 | **Chờ xác minh F05/AC3** nếu CTA là đường quay về ví bắt buộc; không tự suy toàn Task PASS từ F01. |
+
+Không sửa source, commit, merge, deploy hoặc store trong review này; chuyển F05 và giới hạn evidence cho coordinator quyết định theo workflow sau mốc 2/2.
+
+## James revalidation F05 — `b5a9f0eeb8cd2b5d8c360660d6a0a2aa6033db93` → exact source/build `70f7df23a66ee2e47d06b82739a26c58aa41aeac`
+
+- CRG ticket stats/build/query khớp HEAD `70f7df23`, rồi LeanCTX kiểm source. Toàn diff mobile chỉ `app.config.ts` (build 50→51), `ticket-detail.tsx`, `ticket-detail-credential.test.ts`. Architecture impact **Không**; auth, cache, Gate payload và owner guard không đổi. Fix count gốc **2/2** giữ nguyên; đây là revalidation F05 sau quyết định coordinator, không reset vòng sửa.
+- Hai CTA error/missing ở `ticket-detail.tsx:318,329` đều `router.replace('/wallet-access')`. Root route `wallet-access/index.tsx` hiển thị `MyTicketsScreen` khi offline bound, còn verified online redirect tới `/(tabs)/my-tickets`; do đó source loại bỏ đích NativeTabs ẩn mà F05 nêu. Test mới thực sự gọi `onPress()` ở cả nhánh unauthorized và missing rồi assert route `/wallet-access`, nhưng mock luôn verified và không mount root route, nên không chứng minh tap offline trên thiết bị.
+- Reuse bàn giao coordinator trên **chính `70f7df23`**: mobile 593/593 tests, typecheck, lint 0 error/8 warning sẵn có, diff check PASS; local Xcode Release Team `BLUA62D52G`, USB build 51 `com.hangndat.ticket.uat`, EXConstants được bàn giao pin exact SHA/local UAT flags (không có binary metadata thô để reviewer trích xuất lại). Ảnh `usb-separate/build51-wallet-root-settled.png` SHA-256 `ef2dcf69d15db046683f0a012bea51641fdc332095421c87067d69c8373d8635` khớp, cho thấy `/wallet-access` online hiển thị Ví của tôi trên iPhone 402×874 pt. Không rerun suite; không có ảnh/tap CTA offline vì CLI thiết bị không hỗ trợ thao tác này.
+
+| Gate `70f7df23` | Verdict |
+| --- | --- |
+| F05 code/test | **PASS / đã sửa trong source**: cả hai CTA trỏ root route; test onPress kiểm đúng href. |
+| F05 runtime offline tap | **GAP, chưa xác minh**: chưa quan sát bấm CTA ở màn old-owner link khi offline bound và trở về ví B. Không gọi ảnh root online là bằng chứng tap offline. |
+| Security | **PASS giữ nguyên trong diff F05**: không đổi đường credential/cache hoặc isolation đã xác minh F01/F04. |
+| UI/UX, DoD tổng #1233 | **Chờ runtime F05 nếu cần nghiệm thu CTA AC3**; F01 đã đóng, các giới hạn 402×874 pt và không có signed Gate credential giữ nguyên. |
+
+Không sửa source, commit, merge, deploy hoặc store trong lượt review này; coordinator quyết định cách thu một lần evidence tap offline hoặc phạm vi AC3, không tự mở vòng fix mới.
