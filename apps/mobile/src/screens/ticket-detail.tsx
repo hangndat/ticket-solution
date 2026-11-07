@@ -65,16 +65,16 @@ type LoadState =
       reason: 'unreachable' | 'unauthorized' | 'invalid';
     });
 
-function TicketDetailPage({ children }: PropsWithChildren) {
+function TicketDetailPage({ children, compact = false }: PropsWithChildren<{ compact?: boolean }>) {
   return (
     <ScrollView
       contentInsetAdjustmentBehavior="automatic"
       style={{ flex: 1, backgroundColor: colors.paper }}
       contentContainerStyle={{
         paddingHorizontal: space.xl,
-        paddingTop: space.md,
+        paddingTop: compact ? space.xs : space.md,
         paddingBottom: space.huge,
-        gap: space.xl,
+        gap: compact ? space.md : space.xl,
       }}
     >
       {children}
@@ -371,13 +371,14 @@ export function TicketDetailScreen() {
     Boolean(findDemoEventById(ticket.eventId));
   const used = isUsedTicketState(ticket.state);
   const credentialAvailable = Boolean(qrValue);
+  const credentialUnavailable = !credentialAvailable && !used;
   const gateHint = used ? null : ticketGateHint(ticket.state, { demo: isDemo });
   const qrA11y = used
     ? attendeeWalletCopy.usedQrA11y
     : `Mã QR vé ${row.eventTitle}`;
 
   return (
-    <TicketDetailPage>
+    <TicketDetailPage compact={credentialUnavailable}>
       <View
         accessible={used}
         accessibilityLabel={used ? attendeeWalletCopy.usedWatermarkA11y : undefined}
@@ -404,7 +405,7 @@ export function TicketDetailScreen() {
             allowDemoMedia={false}
             wordmark={row.eventTitle}
             showFallbackName={false}
-            height={76}
+            height={credentialUnavailable ? 56 : 76}
             style={{ borderRadius: 0 }}
             testID="ticket-detail-banner"
             accessibilityLabel={`Banner ${row.eventTitle}`}
@@ -413,9 +414,9 @@ export function TicketDetailScreen() {
         <View
           style={{
             paddingHorizontal: space.xl,
-            paddingTop: space.md,
-            paddingBottom: space.xl,
-            gap: space.md,
+            paddingTop: credentialUnavailable ? space.sm : space.md,
+            paddingBottom: credentialUnavailable ? space.sm : space.xl,
+            gap: credentialUnavailable ? space.sm : space.md,
             alignItems: 'stretch',
           }}
         >
@@ -482,7 +483,7 @@ export function TicketDetailScreen() {
               />
             </View>
           ) : (
-            <View testID="ticket-detail-credential-unavailable" style={{ minHeight: 184, borderWidth: 1, borderStyle: 'dashed', borderColor: colors.line, borderRadius: radius.md, backgroundColor: colors.surfaceSubtle, justifyContent: 'center', alignItems: 'center', gap: space.sm, padding: space.md }}>
+            <View testID="ticket-detail-credential-unavailable" style={{ minHeight: credentialUnavailable ? 104 : 184, borderWidth: 1, borderStyle: 'dashed', borderColor: colors.line, borderRadius: radius.md, backgroundColor: colors.surfaceSubtle, justifyContent: 'center', alignItems: 'center', gap: space.sm, padding: space.md }}>
               <Text style={{ ...typography.title, color: colors.secondary }}>▦</Text>
               <Text style={{ ...typography.subhead, color: colors.secondary, textAlign: 'center' }}>Chưa có mã QR để quét</Text>
             </View>
@@ -519,7 +520,7 @@ export function TicketDetailScreen() {
           {walletOfflineNoticeBody(attendeeWalletCopy.offlineBannerBody, syncedAt)}
         </Notice>
       ) : null}
-      {!credentialAvailable && !used ? (
+      {credentialUnavailable ? (
         <>
           <AttendeeStateCard
             symbol="qrcode"
