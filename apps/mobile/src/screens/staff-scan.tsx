@@ -74,6 +74,9 @@ export function StaffScanScreen() {
           style={{ flex: 1, backgroundColor: 'transparent' }}
         >
           <StaffGateNoEventState />
+          <Text accessibilityRole="header" style={{ ...typography.sectionTitleBold, color: colors.label }}>
+            Quét vé
+          </Text>
           <View style={{ position: 'relative' }}>
             {showLive ? (
               <GateCamera
@@ -83,30 +86,17 @@ export function StaffScanScreen() {
             ) : (
               <GateCameraIdle />
             )}
-            {showOutcome ? (
-              <View
-                testID="gate-scan-outcome-panel"
-                {...gateOutcomeAnnouncement({
-                  phase: announcementPhaseFor(
-                    gate.busy ? 'confirming' : announceOp?.phase,
-                  ),
-                  title: a11yTitle,
-                  message: a11yDetail
-                })}
-                accessibilityLiveRegion={outcomeView.assertive ? 'assertive' : 'polite'}
-                style={{ position: 'absolute', left: space.sm, right: space.sm, bottom: space.sm }}
-              >
-                <StaffGateScanStatusPanel
-                  view={outcomeView}
-                  busy={gate.busy}
-                  emphasized={outcomeEmphasized}
-                />
-              </View>
-            ) : null}
           </View>
-          <StaffGateOpenSession gates={gate.gates} />
-          {gate.pendingOp && !gate.busy ? (
-            <View style={{ gap: space.sm }}>
+          {showOutcome ? (
+            <View testID="gate-scan-outcome-panel" style={{ gap: space.sm }}
+              {...gateOutcomeAnnouncement({
+                phase: announcementPhaseFor(gate.busy ? 'confirming' : announceOp?.phase),
+                title: a11yTitle,
+                message: a11yDetail,
+              })}
+              accessibilityLiveRegion={outcomeView.assertive ? 'assertive' : 'polite'}>
+              <StaffGateScanStatusPanel view={outcomeView} busy={gate.busy} emphasized={outcomeEmphasized} />
+              {gate.pendingOp && !gate.busy ? <View style={{ gap: space.sm }}>
               {canReconcile(gate.pendingOp) ? (
                 <Button
                   variant="secondary"
@@ -121,8 +111,11 @@ export function StaffScanScreen() {
                 accessibilityLabel="Quét tiếp"
                 onPress={gate.dismissPendingAction}
               />
+              </View> : null}
             </View>
-          ) : showLive && !showOutcome ? (
+          ) : null}
+          <StaffGateOpenSession gates={gate.gates} />
+          {showLive && !showOutcome ? (
             <Text
               style={{ ...typography.footnote, color: colors.secondary }}
             >
@@ -131,7 +124,7 @@ export function StaffScanScreen() {
           ) : null}
         </ScrollView>
       </View>
-      <StaffGateScreenChrome tabTitle={STAFF_TAB_TITLES.scan} largeTitle={false} />
+      <StaffGateScreenChrome tabTitle={STAFF_TAB_TITLES.scan} />
     </>
   );
 }
