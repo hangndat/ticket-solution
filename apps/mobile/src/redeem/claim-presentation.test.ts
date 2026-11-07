@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { claimPresentation } from './claim-presentation.ts';
 import { claimInvitation } from './claim-client.ts';
+import { isValidInvitationClaimScope } from '../links/installed-app-link.ts';
 import {
   clearGuestClaimIntent,
   dropGuestClaimIntentIfStale,
@@ -10,10 +11,16 @@ import {
   resumeGuestClaimIntent,
 } from './claim-intent.ts';
 
-test('invalid link routes guest to Events and verified attendee to wallet', () => {
+test('short-token invalid link keeps guest and verified exits separate', () => {
+  const hasInvite = isValidInvitationClaimScope({
+    token: 'short',
+    tenantId: '22222222-2222-4222-8222-222222222222',
+    eventId: '33333333-3333-4333-8333-333333333333',
+  });
+  assert.equal(hasInvite, false);
   for (const verified of [false, true]) {
     const view = claimPresentation({
-      hasInvite: false,
+      hasInvite,
       verified,
       decision: null,
     });
@@ -22,6 +29,7 @@ test('invalid link routes guest to Events and verified attendee to wallet', () =
       view.homeHref,
       verified ? '/(tabs)/my-tickets' : '/(tabs)/(events)',
     );
+    assert.equal(view.homeLabel, verified ? 'Về Vé của tôi' : 'Về Sự kiện');
   }
 });
 
