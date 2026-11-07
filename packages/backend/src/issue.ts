@@ -1,16 +1,12 @@
-import {
-  createHash,
-  randomBytes,
-  randomUUID,
-} from 'node:crypto';
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import type { Prisma } from './generated/prisma/client';
 import { ApprovalError } from './approval-error';
-import { sealCredentialToken, type CredentialKeyInput } from './credential-crypto';
-import { holdCodeForReview } from './approval';
 import {
-  hashRedemptionCode,
-  type CodeHmacConfig,
-} from './code-hmac';
+  sealCredentialToken,
+  type CredentialKeyInput,
+} from './credential-crypto';
+import { holdCodeForReview } from './approval';
+import { hashRedemptionCode, type CodeHmacConfig } from './code-hmac';
 import { verifyResolveTokenForIssue } from './code-routing';
 import {
   IssueError,
@@ -29,7 +25,10 @@ import {
   dbClock,
 } from './event-policy';
 import { metricsInc } from './metrics-registry';
-import { assertTenantAllowsIssue, lockTenantPolicyForShare } from './tenant-policy';
+import {
+  assertTenantAllowsIssue,
+  lockTenantPolicyForShare,
+} from './tenant-policy';
 import { withActor, withTenant } from './tenant-context';
 import { lockIssuanceQuotas } from './quota-lock';
 import { isRetryableTransactionConflict } from './transaction-conflict';
@@ -109,7 +108,6 @@ export type RedeemOutcome =
 type IssueBusinessResult =
   | { kind: 'issued'; ticket: Omit<IssuedTicketResult, 'replayed'> }
   | { kind: 'pending'; pending: Omit<PendingApprovalResult, 'replayed'> };
-
 
 type CodeRow = {
   id: string;
@@ -218,9 +216,7 @@ export async function redeemAndIssueTicket(
   const key = input.idempotencyKey?.trim();
   if (
     !key ||
-    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-      key,
-    )
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(key)
   ) {
     throw new IssueError(
       ISSUE_ERROR_CODES.IDEMPOTENCY_KEY_REQUIRED,
@@ -343,7 +339,10 @@ export async function redeemAndIssueTicket(
     }
     // A due manual hold was expired inside the business path. Preserve that
     // code release and audit while storing the terminal retry response.
-    if (!(error instanceof IssueError && error.code === ISSUE_ERROR_CODES.PENDING_EXPIRED)) {
+    if (!(
+      error instanceof IssueError &&
+      error.code === ISSUE_ERROR_CODES.PENDING_EXPIRED
+    )) {
       await tx.$executeRaw`ROLLBACK TO SAVEPOINT issue_business`;
     }
     if (error instanceof IssueError && !error.retryable) {
@@ -660,7 +659,8 @@ async function runIssueBusiness(
     tenantId: input.tenantId,
     eventId: input.eventId,
     ticketId,
-    manualCodePepper: input.manualCodePepper ?? readGateManualCodePepper(process.env),
+    manualCodePepper:
+      input.manualCodePepper ?? readGateManualCodePepper(process.env),
     credentialKeyMaterial,
   });
 
@@ -944,6 +944,9 @@ export type ListedTicket = {
   createdAt: Date;
   eventName?: string;
   startsAt?: Date | null;
+  venueName?: string | null;
+  ticketTypeLabel?: string | null;
+  eventTimezone?: string | null;
 };
 
 type OwnerTicketListRow = {
@@ -957,6 +960,9 @@ type OwnerTicketListRow = {
   created_at: Date;
   event_name: string | null;
   event_starts_at: Date | null;
+  venue_name: string | null;
+  ticket_type_label: string | null;
+  event_timezone: string | null;
   event_exists: boolean;
 };
 
@@ -972,6 +978,9 @@ function mapOwnerTicketListRow(row: OwnerTicketListRow): ListedTicket {
     createdAt: row.created_at,
     ...(row.event_name != null ? { eventName: row.event_name } : {}),
     ...(row.event_exists ? { startsAt: row.event_starts_at } : {}),
+    venueName: row.venue_name,
+    ticketTypeLabel: row.ticket_type_label,
+    eventTimezone: row.event_timezone,
   };
 }
 
@@ -987,10 +996,13 @@ export async function listTicketsForOwner(
     SELECT t.id, t.event_id, t.ticket_type_id, t.source_id, t.state,
             t.credential_version, t.manual_entry_code_sealed, t.created_at,
             e.name AS event_name, e.starts_at AS event_starts_at,
+            e.venue_name, tt.label AS ticket_type_label, e.timezone AS event_timezone,
             e.id IS NOT NULL AS event_exists
     FROM tickets t
     LEFT JOIN events e
       ON e.tenant_id = t.tenant_id AND e.id = t.event_id
+    LEFT JOIN ticket_types tt
+      ON tt.tenant_id = t.tenant_id AND tt.event_id = t.event_id AND tt.id = t.ticket_type_id
     WHERE t.tenant_id = ${tenantId}::uuid
       AND t.owner_user_id = ${ownerUserId}::uuid
     ORDER BY t.created_at DESC
@@ -1050,25 +1062,72 @@ async function enrichOwnerTicketsWithEvents(
     if (!list.includes(ticket.eventId)) list.push(ticket.eventId);
     eventIdsByTenant.set(ticket.tenantId, list);
   }
-  const eventByTenantEvent = new Map<string, { name: string; startsAt: Date | null }>();
+  const eventByTenantEvent = new Map<
+    string,
+    {
+      name: string;
+      startsAt: Date | null;
+      venueName: string | null;
+      eventTimezone: string | null;
+    }
+  >();
+  const typeLabelByTenantEventType = new Map<string, string>();
   for (const [tenantId, eventIds] of eventIdsByTenant) {
     await withTenant(db, tenantId, async (tx) => {
-      const rows = await tx.$queryRaw<{ id: string; name: string; starts_at: Date | null }[]>`
-        SELECT id, name, starts_at
+      const rows = await tx.$queryRaw<
+        {
+          id: string;
+          name: string;
+          starts_at: Date | null;
+          venue_name: string | null;
+          timezone: string | null;
+        }[]
+      >`
+        SELECT id, name, starts_at, venue_name, timezone
         FROM events
         WHERE tenant_id = ${tenantId}::uuid
           AND id = ANY(${eventIds}::uuid[])
       `;
       for (const row of rows) {
-        eventByTenantEvent.set(`${tenantId}:${row.id}`, { name: row.name, startsAt: row.starts_at });
+        eventByTenantEvent.set(`${tenantId}:${row.id}`, {
+          name: row.name,
+          startsAt: row.starts_at,
+          venueName: row.venue_name,
+          eventTimezone: row.timezone,
+        });
       }
+      const typeRows = await tx.$queryRaw<
+        { event_id: string; id: string; label: string }[]
+      >`
+        SELECT event_id, id, label FROM ticket_types
+        WHERE tenant_id = ${tenantId}::uuid AND event_id = ANY(${eventIds}::uuid[])
+      `;
+      for (const row of typeRows)
+        typeLabelByTenantEventType.set(
+          `${tenantId}:${row.event_id}:${row.id}`,
+          row.label,
+        );
     });
   }
   return tickets.map((ticket) => {
     const event = eventByTenantEvent.get(
       `${ticket.tenantId}:${ticket.eventId}`,
     );
-    return event ? { ...ticket, eventName: event.name, startsAt: event.startsAt } : ticket;
+    return {
+      ...ticket,
+      ...(event
+        ? {
+            eventName: event.name,
+            startsAt: event.startsAt,
+            venueName: event.venueName,
+            eventTimezone: event.eventTimezone,
+          }
+        : {}),
+      ticketTypeLabel:
+        typeLabelByTenantEventType.get(
+          `${ticket.tenantId}:${ticket.eventId}:${ticket.ticketTypeId}`,
+        ) ?? null,
+    };
   });
 }
 
@@ -1097,10 +1156,13 @@ export async function getTicketForOwner(
     SELECT t.id, t.event_id, t.ticket_type_id, t.source_id, t.state,
             t.credential_version, t.manual_entry_code_sealed, t.created_at,
             e.name AS event_name, e.starts_at AS event_starts_at,
+            e.venue_name, tt.label AS ticket_type_label, e.timezone AS event_timezone,
             e.id IS NOT NULL AS event_exists
     FROM tickets t
     LEFT JOIN events e
       ON e.tenant_id = t.tenant_id AND e.id = t.event_id
+    LEFT JOIN ticket_types tt
+      ON tt.tenant_id = t.tenant_id AND tt.event_id = t.event_id AND tt.id = t.ticket_type_id
     WHERE t.tenant_id = ${tenantId}::uuid
       AND t.owner_user_id = ${ownerUserId}::uuid
       AND t.id = ${ticketId}::uuid
@@ -1165,9 +1227,7 @@ export function storedRejectionFromResponse(
       retryable?: boolean;
     };
     if (body.code === APPROVAL_PENDING) return null;
-    if (
-      !(Object.values(ISSUE_ERROR_CODES) as string[]).includes(body.code)
-    ) {
+    if (!(Object.values(ISSUE_ERROR_CODES) as string[]).includes(body.code)) {
       return null;
     }
     return {
@@ -1217,7 +1277,9 @@ function pendingFromStored(
 }
 
 /** Map RedeemOutcome to IssuedTicketResult or IssueError (call outside withTenant). */
-export function unwrapRedeemOutcome(outcome: RedeemOutcome): IssuedTicketResult {
+export function unwrapRedeemOutcome(
+  outcome: RedeemOutcome,
+): IssuedTicketResult {
   if (outcome.ok === true) return outcome.result;
   if (outcome.ok === 'pending') {
     throw new IssueError(

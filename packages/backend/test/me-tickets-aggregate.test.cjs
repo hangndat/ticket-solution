@@ -16,6 +16,7 @@ const {
   listTicketsForOwner,
   listAllTicketsForOwner,
   listOwnerTicketsAggregated,
+  getTicketForOwner,
   readCodeHmacEnvironment,
 } = require('../dist');
 
@@ -120,10 +121,12 @@ async function seedTenantEvent(db, tenantId, eventId, slug) {
     });
     await tx.event.create({
       data: {
-        tenantId,
+        tenant: { connect: { id: tenantId } },
         id: eventId,
         slug,
         name: 'Event ' + slug,
+        venueName: slug === 'one' ? 'Venue One' : null,
+        timezone: slug === 'one' ? 'Asia/Manila' : 'Asia/Ho_Chi_Minh',
         startsAt: slug === 'one' ? new Date('2026-12-01T00:00:00Z') : null,
         status: 'PUBLISHED',
       },
@@ -214,6 +217,15 @@ test(
         unwrapRedeemOutcome(outcome);
       });
 
+      await withTenant(
+        db,
+        T1,
+        (tx) => tx.$executeRaw`
+        UPDATE ticket_types SET label = 'Owner Type One'
+        WHERE tenant_id = ${T1}::uuid AND event_id = ${E1}::uuid AND id = ${ticketA1.ticketTypeId}::uuid
+      `,
+      );
+
       const aggregate = await listOwnerTicketsAggregated(db, userA.userId);
       const ids = aggregate.map((t) => t.ticketId).sort();
       assert.deepEqual(ids, [ticketA1.ticketId, ticketA2.ticketId].sort());
@@ -221,14 +233,44 @@ test(
       assert.equal(tenants.size, 2);
       assert.ok(tenants.has(T1));
       assert.ok(tenants.has(T2));
-      assert.equal(aggregate.find((t) => t.tenantId === T1).startsAt.toISOString(), '2026-12-01T00:00:00.000Z');
+      assert.equal(
+        aggregate.find((t) => t.tenantId === T1).startsAt.toISOString(),
+        '2026-12-01T00:00:00.000Z',
+      );
       assert.equal(aggregate.find((t) => t.tenantId === T2).startsAt, null);
+      assert.equal(
+        aggregate.find((t) => t.tenantId === T1).venueName,
+        'Venue One',
+      );
+      assert.equal(
+        aggregate.find((t) => t.tenantId === T1).eventTimezone,
+        'Asia/Manila',
+      );
+      assert.equal(
+        aggregate.find((t) => t.tenantId === T1).ticketTypeLabel,
+        'Owner Type One',
+      );
+      assert.equal(aggregate.find((t) => t.tenantId === T2).venueName, null);
+      assert.equal(
+        aggregate.find((t) => t.tenantId === T2).eventTimezone,
+        'Asia/Ho_Chi_Minh',
+      );
+
+      const detail = await withTenant(db, T1, (tx) =>
+        getTicketForOwner(tx, T1, userA.userId, ticketA1.ticketId),
+      );
+      assert.equal(detail.ticketTypeLabel, 'Owner Type One');
+      assert.equal(detail.venueName, 'Venue One');
 
       const bView = await listOwnerTicketsAggregated(db, userB.userId);
       assert.equal(bView.length, 1);
       assert.equal(bView[0].tenantId, T1);
       assert.ok(
-        !bView.some((t) => t.ticketId === ticketA1.ticketId || t.ticketId === ticketA2.ticketId),
+        !bView.some(
+          (t) =>
+            t.ticketId === ticketA1.ticketId ||
+            t.ticketId === ticketA2.ticketId,
+        ),
       );
 
       const t1Only = await withTenant(db, T1, (tx) =>
@@ -236,7 +278,11 @@ test(
       );
       assert.equal(t1Only.length, 1);
       assert.equal(t1Only[0].ticketId, ticketA1.ticketId);
-      assert.equal(t1Only[0].startsAt.toISOString(), '2026-12-01T00:00:00.000Z');
+      assert.equal(
+        t1Only[0].startsAt.toISOString(),
+        '2026-12-01T00:00:00.000Z',
+      );
+      assert.equal(t1Only[0].ticketTypeLabel, 'Owner Type One');
 
       const crossLeak = await withActor(db, userB.userId, (tx) =>
         listAllTicketsForOwner(tx, userA.userId),
