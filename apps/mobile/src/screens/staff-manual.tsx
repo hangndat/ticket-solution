@@ -108,13 +108,7 @@ export function StaffManualEntryScreen() {
           eventName={gate.gateScope?.name ?? null}
           gateScope={gate.gateScope}
           pendingOp={gate.pendingOp}
-          onContinueScan={
-            gate.pendingOp && !gate.busy ? gate.dismissPendingAction : undefined
-          }
-          onReconcile={() => void gate.reconcile()}
-          reconcileEnabled={Boolean(
-            gate.pendingOp && canReconcile(gate.pendingOp) && !gate.busy,
-          )}
+          reconcileEnabled={false}
         />
         <StaffGateNoEventState />
         <Text accessibilityRole="header" style={{ ...typography.sectionTitleBold, color: colors.label }}>
@@ -133,7 +127,7 @@ export function StaffManualEntryScreen() {
               <Button label="Đối soát" accessibilityLabel="Đối soát kết quả lượt này"
                 onPress={() => void gate.reconcile()} variant="secondary" />
             ) : null}
-            {resultAction === 'next' || resultAction === 'other' ? (
+            {!gate.busy && resultAction !== 'reconcile' ? (
               <Button label={resultAction === 'next' ? 'Nhập mã tiếp' : 'Kiểm tra mã khác'}
                 accessibilityLabel={resultAction === 'next' ? 'Nhập mã tiếp' : 'Kiểm tra mã khác'}
                 onPress={onNextCode} variant="secondary" />
