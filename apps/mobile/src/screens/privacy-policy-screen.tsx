@@ -32,7 +32,7 @@ export function PrivacyScreen() {
         <Stack.Toolbar placement="left">
           <Stack.Toolbar.Button
             accessibilityLabel="Đóng chính sách quyền riêng tư"
-            onPress={() => closePrivacyPolicy(origin)}
+            onPress={() => closePrivacyPolicy(origin, false)}
           >
             Xong
           </Stack.Toolbar.Button>
@@ -41,7 +41,7 @@ export function PrivacyScreen() {
       <ScrollView
         ref={scroll}
         contentInsetAdjustmentBehavior="automatic"
-        style={{ flex: 1, backgroundColor: brand.paper }}
+        style={{ flex: 1, backgroundColor: colors.surfaceSubtle }}
         contentContainerStyle={{
           padding: space.xl,
           paddingBottom: space.huge,
@@ -69,7 +69,7 @@ export function PrivacyScreen() {
         </Text>
         <View
           onLayout={(event) => { contentsOffset.current = event.nativeEvent.layout.y; }}
-          style={{ gap: space.md, backgroundColor: colors.card, borderColor: colors.line, borderWidth: 1, borderRadius: radius.md, borderCurve: 'continuous', padding: space.lg }}
+          style={{ gap: space.md, backgroundColor: colors.paper, borderColor: colors.line, borderWidth: 1, borderRadius: radius.md, borderCurve: 'continuous', padding: space.lg }}
         >
           <Text style={{ color: brand.ink, ...typography.bodySemibold }}>Đến nhanh một mục</Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm }}>

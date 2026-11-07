@@ -264,7 +264,7 @@ function ConfiguredAccount({
     return (
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
-        style={{ flex: 1, backgroundColor: brand.paper }}
+        style={{ flex: 1, backgroundColor: colors.surfaceSubtle }}
         contentContainerStyle={{ padding: space.xl, paddingBottom: tabBarInset, gap: space.xl }}
       >
         <AttendeeCta
@@ -286,12 +286,12 @@ function ConfiguredAccount({
     <>
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
-        style={{ flex: 1, backgroundColor: brand.paper }}
+        style={{ flex: 1, backgroundColor: colors.surfaceSubtle }}
         contentContainerStyle={{ padding: space.xl, paddingBottom: tabBarInset, gap: space.xl }}
       >
         <View
           style={{
-            backgroundColor: colors.card,
+            backgroundColor: colors.paper,
             borderColor: colors.line,
             borderWidth: 1,
             borderRadius: radius.lg,
@@ -302,7 +302,7 @@ function ConfiguredAccount({
             gap: space.md,
           }}
         >
-          <View style={{ width: 44, height: 44, borderRadius: radius.pill, backgroundColor: colors.card, alignItems: 'center', justifyContent: 'center' }}>
+          <View style={{ width: 44, height: 44, borderRadius: radius.pill, backgroundColor: colors.surfaceSubtle, alignItems: 'center', justifyContent: 'center' }}>
             <Text style={{ color: brand.primary, ...typography.title }} accessibilityElementsHidden>◯</Text>
           </View>
           <View style={{ flex: 1, gap: space.xxs }}>

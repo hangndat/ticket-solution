@@ -4,8 +4,8 @@ import {
   type PrivacyPolicyOrigin,
 } from './privacy-policy-navigation';
 
-export function closePrivacyPolicy(origin: PrivacyPolicyOrigin = 'attendee'): void {
-  const action = resolvePrivacyDismissAction(router.canGoBack(), origin);
+export function closePrivacyPolicy(origin: PrivacyPolicyOrigin = 'attendee', canGoBack = router.canGoBack()): void {
+  const action = resolvePrivacyDismissAction(canGoBack, origin);
   if (action.kind === 'back') {
     router.back();
     return;
