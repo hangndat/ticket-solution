@@ -742,12 +742,18 @@ export async function reserveCheckin(
     });
   }
   if (ticket.state !== 'ACTIVE') {
+    const alreadyCheckedIn = ticket.state === 'USED' &&
+      !!(await currentCheckinId(tx, input.tenantId, ticketId));
     return denyGate(tx, {
       tenantId: input.tenantId,
       eventId: input.eventId,
       actorUserId: input.actorUserId,
-      code: GATE_ERROR_CODES.TICKET_NOT_ACTIVE,
-      message: 'Ticket is not active',
+      code: alreadyCheckedIn
+        ? GATE_ERROR_CODES.ALREADY_CHECKED_IN
+        : GATE_ERROR_CODES.TICKET_NOT_ACTIVE,
+      message: alreadyCheckedIn
+        ? 'Ticket already has a current check-in'
+        : 'Ticket is not active',
       resourceType: 'ticket',
       resourceId: ticketId,
     });

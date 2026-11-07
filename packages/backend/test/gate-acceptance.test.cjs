@@ -31,7 +31,7 @@ const {
   cancelReservation,
   unwrapCancelOutcome,
 } = require('../dist');
-const { reserveCheckin } = require('./gate-test-credentials.cjs');
+const { reserveCheckin, signedQr, verifyKeys } = require('./gate-test-credentials.cjs');
 
 const docker = (...args) =>
   execFileSync('docker', args, {
@@ -193,6 +193,32 @@ test(
       const sessA = await open(staffA);
       const sessB = await open(staffB);
       const sessScanner = await open(scanner);
+      const otherTenantId = randomUUID();
+      const otherEventId = randomUUID();
+      await withTenant(db, otherTenantId, async (tx) => {
+        await tx.tenant.create({
+          data: { id: otherTenantId, slug: 'gate-acc-other', name: 'Other tenant' },
+        });
+        await tx.event.create({
+          data: {
+            tenantId: otherTenantId, id: otherEventId,
+            slug: 'gate-acc-other-event', name: 'Other event', status: 'PUBLISHED',
+          },
+        });
+        const membership = await grantMembership(tx, {
+          tenantId: otherTenantId, userId: staffB.userId,
+          role: 'Scanner', permissions: ['gate.confirm'],
+        });
+        await grantEventAssignment(tx, {
+          tenantId: otherTenantId, eventId: otherEventId,
+          membershipId: membership.membershipId, permissions: ['gate.confirm'],
+        });
+      });
+      const otherSession = await withTenant(db, otherTenantId, (tx) =>
+        openStaffSession(tx, {
+          tenantId: otherTenantId, eventId: otherEventId, userId: staffB.userId,
+        }),
+      );
 
       const reserve = (ticket, session, user) =>
         withTenant(db, tenantId, (tx) =>
@@ -338,9 +364,25 @@ test(
         const retried = await confirm(hold, hold.token, sessA, staffA);
         assert.equal(retried.ok, false);
         assert.equal(retried.code, GATE_ERROR_CODES.ALREADY_CHECKED_IN);
+        const usedScan = await reserve(t, sessB, staffB);
+        assert.equal(usedScan.ok, false);
+        assert.equal(usedScan.code, GATE_ERROR_CODES.ALREADY_CHECKED_IN);
+        const foreignQr = await signedQr({
+          tenantId: otherTenantId, eventId: otherEventId, ticketId: t.ticketId,
+        });
+        const foreignScan = await withTenant(db, otherTenantId, (tx) =>
+          reserveCheckin(tx, {
+            tenantId: otherTenantId, eventId: otherEventId,
+            staffSessionId: otherSession.sessionId, actorUserId: staffB.userId,
+            presented: { kind: 'qr', jws: foreignQr }, verifyKeys,
+          }),
+        );
+        assert.equal(foreignScan.ok, false);
+        assert.equal(foreignScan.code, GATE_ERROR_CODES.TICKET_NOT_FOUND);
         r = await rows(t);
         assert.equal(r.checkins.length, 1, 'retry must not add a check-in');
         assert.equal(r.current, 1);
+        assert.deepEqual(r.reservations.map((x) => x.status), ['CONFIRMED']);
       }
 
       // ── GATE-04: confirm after the staff session is revoked ──────────────────
@@ -364,6 +406,16 @@ test(
         const r = await rows(t);
         assert.equal(r.checkins.length, 0, 'revoked session must not check in');
         assert.equal(r.state, 'ACTIVE');
+        await withTenant(db, tenantId, (tx) => tx.$executeRaw`
+          UPDATE tickets SET state = 'USED'
+          WHERE tenant_id = ${tenantId}::uuid AND id = ${t.ticketId}::uuid
+        `);
+        const orphanedUsed = await reserve(t, sessB, staffB);
+        assert.equal(orphanedUsed.ok, false);
+        assert.equal(orphanedUsed.code, GATE_ERROR_CODES.TICKET_NOT_ACTIVE);
+        const afterDeny = await rows(t);
+        assert.equal(afterDeny.current, 0);
+        assert.equal(afterDeny.reservations.length, 1);
       }
 
       // ── GATE-05: undo needs permission and a reason, and keeps history ───────
@@ -518,6 +570,9 @@ test(
             reason: 'revoked before undo',
           }),
         );
+        const revokedScan = await reserve(t, sessB, staffB);
+        assert.equal(revokedScan.ok, false);
+        assert.equal(revokedScan.code, GATE_ERROR_CODES.TICKET_NOT_ACTIVE);
         const undone = await undo(done.checkinId, staffB, 'undo after revoke');
         assert.equal(undone.state, 'REVOKED', 'must report the real ticket state');
         assert.equal(undone.replayed, false);
