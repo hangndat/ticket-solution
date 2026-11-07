@@ -1,4 +1,4 @@
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams, type Href } from 'expo-router';
 import {
   useEffect,
   useMemo,
@@ -18,9 +18,9 @@ import {
 import { TicketUsedStamp } from '@/components/ticket-used-stamp';
 import { ErrorState } from '@/components/screen-state';
 import { walletCopy } from '@/components/screen-state-copy';
-import { EVENT_BANNER_HEIGHT_TICKET } from '@/components/event-banner-metrics';
-import { EventBanner, EventLogo } from '@/components/event-media';
+import { EventBanner } from '@/components/event-media';
 import { Notice } from '@/components/page';
+import { AttendeeCta } from '@/components/attendee-cta';
 import { QrCode } from '@/components/qr-code';
 import { TicketStatusPill } from '@/components/ticket-status-pill';
 import { hasDemoMediaForEventId } from '@/data/demo-media';
@@ -176,29 +176,10 @@ export function TicketDetailScreen() {
     const cacheScope = lookupCacheScope;
     let cancelled = false;
     void (async () => {
-      if (mode === 'verified') {
-        const memory = session.read<TicketSummary[]>(sessionScope, 'me-tickets');
-        const fromMemory = findOwnedTicket(memory, id);
-        if (fromMemory && buildDisplayQrPayload(fromMemory) && reloadKey === 0) {
-          if (!cancelled) {
-            setLoad({
-              status: 'ready',
-              ticket: fromMemory,
-              syncedAt: new Date().toISOString(),
-              fromCache: false,
-              ownerUserId,
-              ownerTenantId,
-              ticketId: id,
-              mode
-            });
-          }
-          return;
-        }
-      }
       const cache = await readTicketDisplayCache(ownerUserId, cacheScope);
       const found = findOwnedTicket(cache?.tickets, id);
       if (cancelled) return;
-      if (found && (mode === 'offline-display' || (buildDisplayQrPayload(found) && reloadKey === 0))) {
+      if (mode === 'offline-display' && found) {
         setLoad({
           status: 'ready',
           ticket: found,
@@ -325,11 +306,16 @@ export function TicketDetailScreen() {
       <TicketDetailPage>
         <ErrorState
           title={walletCopy.detailProbeErrorTitle}
-          onRetry={() => setReloadKey((key) => key + 1)}
+          onRetry={visibleLoad.reason === 'unreachable' ? () => setReloadKey((key) => key + 1) : undefined}
           retryLabel="Thử lại"
         >
-          {walletCopy.detailProbeErrorBody}
+          {visibleLoad.reason === 'unreachable'
+            ? walletCopy.detailProbeErrorBody
+            : visibleLoad.reason === 'unauthorized'
+              ? 'Phiên đăng nhập không còn hiệu lực. Đăng nhập lại để xem vé.'
+              : 'Không xác minh được vé cho tài khoản hiện tại.'}
         </ErrorState>
+        <AttendeeCta label="Về Vé của tôi" variant="secondary" onPress={() => router.replace('/wallet-access' as Href)} testID="ticket-detail-home" />
       </TicketDetailPage>
     );
   }
@@ -340,6 +326,7 @@ export function TicketDetailScreen() {
         <Notice title={walletCopy.detailMissingTitle}>
           {walletCopy.detailMissingBody}
         </Notice>
+        <AttendeeCta label="Về Vé của tôi" onPress={() => router.replace('/wallet-access' as Href)} testID="ticket-detail-home" />
       </TicketDetailPage>
     );
   }
@@ -351,6 +338,7 @@ export function TicketDetailScreen() {
     hasDemoMediaForEventId(ticket.eventId) ||
     Boolean(findDemoEventById(ticket.eventId));
   const used = isUsedTicketState(ticket.state);
+  const credentialAvailable = Boolean(qrValue);
   const gateHint = used ? null : ticketGateHint(ticket.state, { demo: isDemo });
   const qrA11y = used
     ? attendeeWalletCopy.usedQrA11y
@@ -358,21 +346,6 @@ export function TicketDetailScreen() {
 
   return (
     <TicketDetailPage>
-      {mode === 'offline-display' || fromCache ? (
-        <Notice title={attendeeWalletCopy.offlineBannerTitle}>
-          {walletOfflineNoticeBody(
-            attendeeWalletCopy.offlineBannerBody,
-            syncedAt,
-          )}
-        </Notice>
-      ) : null}
-      {gateHint ? (
-        <Notice title={gateHint} tone="deny">
-          {isDemo
-            ? 'Vé demo / fixture — không dùng để vào cổng.'
-            : 'Trạng thái vé không cho phép quét cổng.'}
-        </Notice>
-      ) : null}
       <View
         accessible={used}
         accessibilityLabel={used ? attendeeWalletCopy.usedWatermarkA11y : undefined}
@@ -382,23 +355,25 @@ export function TicketDetailScreen() {
           borderCurve: 'continuous',
           overflow: 'hidden',
           borderWidth: 1,
-          borderColor: used ? colors.line : brand.primary
+            borderColor: used ? colors.line : brand.primary
         }}
       >
         {used ? <TicketUsedStamp /> : null}
         <View
           style={{
             height: 6,
-            backgroundColor: brand.primary
+            backgroundColor: used ? colors.secondary : brand.primary
           }}
         />
-        <EventBanner
-          eventId={ticket.eventId}
-          height={EVENT_BANNER_HEIGHT_TICKET}
-          style={{ borderRadius: 0 }}
-          testID="ticket-detail-banner"
-          accessibilityLabel={`Banner ${row.eventTitle}`}
-        />
+        <View style={{ opacity: used ? 0.45 : 1 }}>
+          <EventBanner
+            eventId={ticket.eventId}
+            height={76}
+            style={{ borderRadius: 0 }}
+            testID="ticket-detail-banner"
+            accessibilityLabel={`Banner ${row.eventTitle}`}
+          />
+        </View>
         <View
           style={{
             paddingHorizontal: space.xl,
@@ -408,16 +383,6 @@ export function TicketDetailScreen() {
             alignItems: 'stretch',
           }}
         >
-          {hasDemoMediaForEventId(ticket.eventId) ? (
-            <View style={{ alignItems: 'center' }}>
-              <EventLogo
-                eventId={ticket.eventId}
-                height={32}
-                testID="ticket-detail-logo"
-                accessibilityLabel="Logo sự kiện demo trên vé"
-              />
-            </View>
-          ) : null}
           <Text
             maxFontSizeMultiplier={2}
             accessibilityRole="header"
@@ -426,9 +391,15 @@ export function TicketDetailScreen() {
           >
             {row.eventTitle}
           </Text>
-          {used ? null : (
+          {used ? null : credentialAvailable ? (
             <View style={{ alignItems: 'center' }}>
               <TicketStatusPill label={row.statusLabel} />
+            </View>
+          ) : (
+            <View style={{ alignItems: 'center' }}>
+              <Text style={{ ...typography.caption, color: colors.secondary, backgroundColor: colors.surfaceMuted, paddingHorizontal: space.md, paddingVertical: space.xs, borderRadius: radius.pill }}>
+                Đang cập nhật mã
+              </Text>
             </View>
           )}
           {eventWhen ? (
@@ -453,13 +424,14 @@ export function TicketDetailScreen() {
             accessibilityElementsHidden
             importantForAccessibility="no-hide-descendants"
             style={{
-              height: 1,
-              backgroundColor: colors.line,
+              borderTopWidth: 1,
+              borderStyle: 'dashed',
+              borderColor: colors.line,
               marginVertical: space.xs,
               alignSelf: 'stretch'
             }}
           />
-          {qrValue ? (
+          {credentialAvailable ? (
             <View style={{ opacity: used ? 0.28 : 1 }}>
               <QrCode
                 value={qrValue}
@@ -469,14 +441,12 @@ export function TicketDetailScreen() {
               />
             </View>
           ) : (
-            <ErrorState
-              title="Chưa tải được mã QR của vé"
-              onRetry={mode === 'verified' ? () => setReloadKey((key) => key + 1) : undefined}
-              retryLabel="Tải lại mã QR"
-            >
-              Kết nối mạng và tải lại để nhận mã QR từ hệ thống. Thông tin vé đang hiển thị chưa đủ để quét vào cổng.
-            </ErrorState>
+            <View testID="ticket-detail-credential-unavailable" style={{ minHeight: 184, borderWidth: 1, borderStyle: 'dashed', borderColor: colors.line, borderRadius: radius.md, backgroundColor: colors.surfaceSubtle, justifyContent: 'center', alignItems: 'center', gap: space.sm, padding: space.md }}>
+              <Text style={{ ...typography.title, color: colors.secondary }}>▦</Text>
+              <Text style={{ ...typography.subhead, color: colors.secondary, textAlign: 'center' }}>Chưa có mã QR để quét</Text>
+            </View>
           )}
+          {credentialAvailable ? <Text style={{ ...typography.caption, color: colors.secondary, textAlign: 'center' }}>{used ? 'Vé này không còn hiệu lực vào cổng' : 'Đưa mã này cho nhân viên tại cổng'}</Text> : null}
           {!used ? (
             <View style={{ alignItems: 'center', gap: space.xs }}>
               <Text style={{ ...typography.caption, color: colors.secondary }}>
@@ -485,9 +455,9 @@ export function TicketDetailScreen() {
               <Text
                 selectable
                 accessibilityLabel="Mã nhập tay trên vé"
-                style={{ ...typography.sectionTitleBold, color: brand.ink }}
+                style={credentialAvailable && ticket.manualEntryCode ? { ...typography.sectionTitleBold, color: brand.ink } : { ...typography.subhead, color: colors.secondary }}
               >
-                {ticket.manualEntryCode ?? 'Chưa có mã nhập tay'}
+                {credentialAvailable && ticket.manualEntryCode ? ticket.manualEntryCode : 'Chưa có mã nhập tay'}
               </Text>
             </View>
           ) : null}
@@ -499,24 +469,28 @@ export function TicketDetailScreen() {
               textAlign: 'center'
             }}
           >
-            {row.ticketId}
-          </Text>
-          <Text
-            selectable
-            style={{ ...typography.micro, color: colors.secondary,
-              textAlign: 'center' }}
-          >
-            {row.credentialLine}
-          </Text>
-          <Text
-            style={{ ...typography.subhead, color: colors.secondary,
-              lineHeight: 22,
-              textAlign: 'center' }}
-          >
-            {attendeeWalletCopy.detailOnlyDisplay}
+            Mã vé · …{row.ticketId.slice(-4)}
           </Text>
         </View>
       </View>
+      {mode === 'offline-display' || fromCache ? (
+        <Notice title={attendeeWalletCopy.offlineBannerTitle}>
+          {walletOfflineNoticeBody(attendeeWalletCopy.offlineBannerBody, syncedAt)}
+        </Notice>
+      ) : null}
+      {!credentialAvailable && !used ? (
+        <ErrorState title="Chưa thể dùng vé tại cổng" onRetry={mode === 'verified' ? () => setReloadKey((key) => key + 1) : undefined} retryLabel="Cập nhật mã vào cổng">
+          Kết nối mạng và cập nhật lại mã. Thông tin sự kiện và vé vẫn được giữ.
+        </ErrorState>
+      ) : gateHint ? (
+        <Notice title={gateHint} tone="deny">
+          {isDemo ? 'Vé demo / fixture — không dùng để vào cổng.' : 'Trạng thái vé không cho phép quét cổng.'}
+        </Notice>
+      ) : (
+        <Text style={{ ...typography.caption, color: colors.secondary, textAlign: 'center' }}>
+          Máy chủ quyết định vé còn hiệu lực tại thời điểm quét.
+        </Text>
+      )}
     </TicketDetailPage>
   );
 }

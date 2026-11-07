@@ -11,6 +11,7 @@ import { typography } from '@/theme/typography';
 function toneColor(tone: GateScanStatusView['tone']): string {
   if (tone === 'admit') return colors.admit;
   if (tone === 'deny') return colors.deny;
+  if (tone === 'warning') return colors.warning;
   if (tone === 'unknown') return colors.unknown;
   return colors.label;
 }

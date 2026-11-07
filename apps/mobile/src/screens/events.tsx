@@ -1,21 +1,21 @@
 import { useEffect, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, Text, View } from 'react-native';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { Link } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EVENT_BANNER_HEIGHT_LIST } from '@/components/event-banner-metrics';
 import { EventBanner } from '@/components/event-media';
-import {
-  EmptyState,
-  ErrorState,
-  LoadingState
-} from '@/components/screen-state';
+import { ErrorState, LoadingState } from '@/components/screen-state';
 import { eventsCopy } from '@/components/screen-state-copy';
 import { AttendeeScreenChrome } from '@/navigation/attendee-screen-chrome';
 import { fetchPlatformPublishedEventList } from '@/published/published-event-api';
 import {
   initialPublishedListPhase,
+  featuredCatalogHeading,
+  nextCatalogRefreshMs,
   publishedListStateFromResult,
+  selectPublishedCatalog,
   type PublishedListPhase
 } from '@/published/events-home';
 import type { PublishedEventSummary } from '@/published/types';
@@ -27,8 +27,7 @@ import { brand, colors } from '@/theme/colors';
 import { fontFamilies } from '@/theme/fonts';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useAttendeeTabBarInset } from '@/navigation/use-attendee-tab-bar-inset';
-import { WalletOwnedTicketsLink } from '@/components/wallet-owned-tickets-link';
-import { layout, space, radius } from '@/theme/tokens';
+import { space, radius } from '@/theme/tokens';
 import { typography } from '@/theme/typography';
 
 function formatListDate(startsAt: string, timezone: string): string {
@@ -43,10 +42,22 @@ function formatListDate(startsAt: string, timezone: string): string {
   }
 }
 
-function PublishedEventCard({ item }: { item: PublishedEventSummary }) {
+function PublishedEventCard({ item, featured }: { item: PublishedEventSummary; featured: boolean }) {
   const dateLine = item.startsAt
     ? formatListDate(item.startsAt, item.timezone)
     : 'Chưa có giờ bắt đầu';
+
+  const dateBadge = (() => {
+    if (!item.startsAt) return null;
+    const date = new Date(item.startsAt);
+    if (Number.isNaN(date.getTime())) return null;
+    try {
+      return {
+        day: new Intl.DateTimeFormat('vi', { day: '2-digit', timeZone: item.timezone }).format(date),
+        month: new Intl.DateTimeFormat('vi', { month: 'short', timeZone: item.timezone }).format(date).toUpperCase()
+      };
+    } catch { return null; }
+  })();
 
   return (
     <View
@@ -55,7 +66,9 @@ function PublishedEventCard({ item }: { item: PublishedEventSummary }) {
         borderRadius: radius.lg,
         borderCurve: 'continuous',
         overflow: 'hidden',
-        marginBottom: space.lg
+        marginBottom: featured ? space.lg : 0,
+        borderWidth: 1,
+        borderColor: colors.line
       }}
     >
       <Link
@@ -67,63 +80,68 @@ function PublishedEventCard({ item }: { item: PublishedEventSummary }) {
       >
         <Pressable
           accessibilityRole="link"
-          style={({ pressed }) => ({
-            opacity: pressed ? 0.92 : 1
-          })}
+          accessibilityLabel={`Xem sự kiện ${item.name}`}
+          testID={featured ? `pub-feature-${item.id}` : `pub-row-${item.id}`}
+          style={({ pressed }) => ({ opacity: pressed ? 0.92 : 1 })}
         >
-          <EventBanner
-            eventId={item.id}
-            tenantSlug={item.tenantSlug}
-            bannerUrl={item.brand.bannerUrl}
-            fallbackColor={item.brand.primaryColor}
-            wordmark={item.name}
-            height={EVENT_BANNER_HEIGHT_LIST}
-            style={{ borderRadius: layout.none }}
-            testID={`pub-media-${item.id}-banner`}
-            accessibilityLabel={`Banner ${item.name}`}
-          />
-          <View style={{ padding: space.lg, gap: space.sm }}>
-            <Text
+          <View style={{
+            flexDirection: featured ? 'column' : 'row',
+            alignItems: featured ? 'stretch' : 'center',
+            gap: featured ? 0 : space.md,
+            padding: featured ? 0 : space.sm
+          }}>
+          <View style={{ width: featured ? '100%' : 52 }}>
+            <EventBanner
+              eventId={item.id}
+              tenantSlug={item.tenantSlug}
+              bannerUrl={item.brand.bannerUrl}
+              fallbackColor={item.brand.primaryColor}
+              wordmark={item.name}
+              height={featured ? EVENT_BANNER_HEIGHT_LIST : 52}
+              style={{ borderRadius: featured ? 0 : radius.sm }}
+              testID={`pub-media-${item.id}-banner`}
+              accessibilityLabel={`Banner ${item.name}`}
+            />
+            {featured && dateBadge ? (
+              <View style={{ position: 'absolute', top: space.sm, left: space.sm,
+                padding: space.xs, borderRadius: radius.sm,
+                backgroundColor: colors.onAccent, alignItems: 'center' }}>
+                <Text style={{ ...typography.title, color: brand.ink }}>{dateBadge.day}</Text>
+                <Text style={{ ...typography.caption, color: colors.secondary }}>{dateBadge.month}</Text>
+              </View>
+            ) : null}
+          </View>
+          <View style={{ flex: 1, padding: featured ? space.lg : 0, gap: space.xs }}>
+            {featured ? <Text
               style={{ ...typography.caption, color: colors.secondary,
                 fontFamily: fontFamilies.body }}
             >
               {item.brand.organizationName}
-            </Text>
+            </Text> : null}
             <Text
               accessibilityRole="header"
-              style={{ ...typography.title, color: brand.ink,
+              numberOfLines={featured ? undefined : 1}
+              style={{ ...(featured ? typography.title : typography.subheadSemibold), color: brand.ink,
                 fontFamily: fontFamilies.display }}
             >
               {item.name}
             </Text>
             <Text
+              numberOfLines={featured ? undefined : 1}
               style={{ ...typography.subhead, color: colors.secondary,
                 fontFamily: fontFamilies.body }}
             >
               {dateLine}
               {item.location ? ` · ${item.location}` : ''}
             </Text>
-            <View
-              style={{
-                alignSelf: 'flex-start',
-                backgroundColor: colors.admitSurface,
-                borderRadius: radius.sm,
-                paddingHorizontal: space.sm,
-                paddingVertical: space.xs
-              }}
-            >
-              <Text
-                style={{ ...typography.badge, color: colors.admit,
-                  fontFamily: fontFamilies.body }}
-              >
-                {eventsCopy.publishedStatusPill}
-              </Text>
-            </View>
-            <WalletOwnedTicketsLink
-              eventId={item.id}
-              variant="card-row"
-              testID={`pub-owned-tickets-${item.id}`}
-            />
+            {featured ? <View style={{ borderTopWidth: 1, borderTopColor: colors.line,
+              paddingTop: space.md, marginTop: space.sm, flexDirection: 'row',
+              justifyContent: 'space-between' }}>
+              <Text style={{ ...typography.subheadSemibold, color: brand.primary }}>Xem sự kiện</Text>
+              <Text style={{ ...typography.subheadSemibold, color: brand.primary }}>→</Text>
+            </View> : null}
+          </View>
+          {!featured ? <Text style={{ ...typography.title, color: colors.secondary }}>›</Text> : null}
           </View>
         </Pressable>
       </Link>
@@ -146,8 +164,10 @@ export function EventsScreen() {
   const [publishedError, setPublishedError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
+  const [catalogNow, setCatalogNow] = useState(() => Date.now());
 
   const retryPublished = () => {
+    setCatalogNow(Date.now());
     setPublishedPhase('loading');
     setPublishedError(null);
     void (async () => {
@@ -176,6 +196,7 @@ export function EventsScreen() {
       );
       if (cancelled) return;
       const next = publishedListStateFromResult(result);
+      setCatalogNow(Date.now());
       setPublished(next.items);
       setPublishedPhase(next.phase);
       setPublishedError(next.errorMessage);
@@ -187,28 +208,27 @@ export function EventsScreen() {
   }, [reloadKey]);
 
   useEffect(() => {
+    if (publishedPhase !== 'ready') return;
+    const delay = nextCatalogRefreshMs(published, catalogNow);
+    if (delay === null) return;
+    const timer = setTimeout(() => setCatalogNow(Date.now()), delay);
+    return () => clearTimeout(timer);
+  }, [published, publishedPhase, catalogNow]);
+
+  useEffect(() => {
     resetToDefault();
   }, [resetToDefault]);
 
   const normalizedQuery = searchQuery.trim().toLocaleLowerCase('vi');
-  const listData =
-    publishedPhase === 'ready'
-      ? published.filter((item) => {
-          if (!normalizedQuery) return true;
-          const haystack = [
-            item.name,
-            item.brand.organizationName,
-            item.location ?? '',
-          ]
-            .join(' ')
-            .toLocaleLowerCase('vi');
-          return haystack.includes(normalizedQuery);
-        })
-      : ([] as PublishedEventSummary[]);
+  const listData = publishedPhase === 'ready'
+    ? selectPublishedCatalog(published, searchQuery, catalogNow).matches
+    : ([] as PublishedEventSummary[]);
 
   const showCatalogChrome =
     publishedPhase === 'ready' || publishedPhase === 'loading';
 
+  const featured = listData[0];
+  const otherEvents = listData.slice(1);
   const listHeader = (
     <View style={{ gap: space.md, paddingBottom: space.xs }}>
       {showCatalogChrome ? (
@@ -218,19 +238,20 @@ export function EventsScreen() {
             fontFamily: fontFamilies.body,
             lineHeight: 22 }}
         >
-          {eventsCopy.heroSupport}
+          Tìm trải nghiệm tiếp theo của bạn
         </Text>
       ) : null}
       {showCatalogChrome ? (
         <Input
           value={searchQuery}
           onChangeText={setSearchQuery}
-          placeholder={eventsCopy.searchPlaceholder}
-          accessibilityLabel={eventsCopy.searchAccessibilityLabel}
+          placeholder="Tìm sự kiện, địa điểm..."
+          accessibilityLabel="Tìm sự kiện, địa điểm"
           autoCorrect={false}
           clearButtonMode="while-editing"
           editable={publishedPhase === 'ready'}
-          style={styles.searchField}
+          style={{ backgroundColor: colors.onAccent, borderRadius: radius.md,
+            borderWidth: 1, borderColor: colors.line }}
           testID="events-search"
         />
       ) : null}
@@ -254,6 +275,19 @@ export function EventsScreen() {
           {publishedError}
         </ErrorState>
       ) : null}
+      {featured ? (
+        <>
+          <Text accessibilityRole="header" style={{ ...typography.subheadSemibold,
+            color: brand.ink }}>
+            {featuredCatalogHeading(featured, normalizedQuery, catalogNow)}
+          </Text>
+          <PublishedEventCard item={featured} featured />
+          {otherEvents.length > 0 ? (
+            <Text accessibilityRole="header" style={{ ...typography.subheadSemibold,
+              color: brand.ink }}>Các sự kiện khác</Text>
+          ) : null}
+        </>
+      ) : null}
     </View>
   );
 
@@ -272,40 +306,36 @@ export function EventsScreen() {
           paddingBottom: bottomInset,
           flexGrow: 1
         }}
-        data={listData}
+        data={otherEvents}
         keyExtractor={(item) => `pub:${item.tenantSlug}:${item.id}`}
         ListHeaderComponent={listHeader}
-        ListEmptyComponent={
-          publishedPhase === 'ready' ? (
-            normalizedQuery ? (
-              <EmptyState title="Không có kết quả">
-                Thử từ khóa khác hoặc xóa ô tìm kiếm.
-              </EmptyState>
-            ) : (
-              <EmptyState title={eventsCopy.emptyPublished.title}>
-                {eventsCopy.emptyPublished.body}
-              </EmptyState>
-            )
-          ) : publishedPhase === 'loading' ||
-            publishedPhase === 'error' ||
-            publishedPhase === 'misconfigured' ? (
-            <View />
-          ) : (
-            <EmptyState title={eventsCopy.emptyPublished.title}>
-              {eventsCopy.emptyPublished.body}
-            </EmptyState>
-          )
-        }
-        renderItem={({ item }) => <PublishedEventCard item={item} />}
+        ListEmptyComponent={publishedPhase === 'ready' && !featured ? (
+          <View style={{ alignItems: 'center', justifyContent: 'center',
+            paddingVertical: space.huge, gap: space.md }}>
+            <Text style={{ ...typography.display, color: brand.primary }}>✧</Text>
+            <Text accessibilityRole="header" style={{ ...typography.title,
+              color: brand.ink, textAlign: 'center' }}>
+              {normalizedQuery ? 'Không có kết quả' : 'Chưa có sự kiện'}
+            </Text>
+            <Text style={{ ...typography.body, color: colors.secondary,
+              textAlign: 'center' }}>
+              {normalizedQuery
+                ? 'Thử từ khóa khác hoặc xóa ô tìm kiếm.'
+                : 'Khi có sự kiện mới, bạn sẽ thấy ở đây.'}
+            </Text>
+            {!normalizedQuery ? <Button label="Làm mới" variant="secondary"
+              onPress={retryPublished} testID="events-empty-refresh" /> : null}
+          </View>
+        ) : undefined}
+        renderItem={({ item }) => <PublishedEventCard item={item} featured={false} />}
+        ListFooterComponent={publishedPhase === 'ready' && listData.length > 0 ? (
+          <Text style={{ ...typography.caption, color: colors.secondary,
+            paddingTop: space.md, textAlign: 'center' }}>
+            Tìm kiếm trong các sự kiện đã tải.
+          </Text>
+        ) : undefined}
       />
     <AttendeeScreenChrome title={eventsCopy.listHeadline} />
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  searchField: {
-    backgroundColor: colors.surfaceMuted,
-    borderRadius: radius.md
-  }
-});

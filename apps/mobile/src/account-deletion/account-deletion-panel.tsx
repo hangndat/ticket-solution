@@ -3,14 +3,15 @@ import { Text, View } from 'react-native';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { Notice } from '@/components/page';
-import { colors } from '@/theme/colors';
+import { brand, colors } from '@/theme/colors';
 import { session } from '@/identity/session';
 import {
   accountDeletionConfirmCopy,
   accountDeletionExplainer,
   describeAccountDeletionRequest
 } from './account-deletion-copy';
-import { space } from '@/theme/tokens';
+import { radius, space } from '@/theme/tokens';
+import { typography } from '@/theme/typography';
 import {
   clearAllPendingIdempotencyKeys,
   loadCurrentAccountDeletionRequest,
@@ -66,13 +67,13 @@ function PrimaryButton({
  * Account deletion request UX (plan §7 / acceptance §8.9).
  * Recording a request is not instant erase; session-scoped cancel on account switch.
  */
-export function AccountDeletionPanel() {
+export function AccountDeletionPanel({ attendee = false }: { attendee?: boolean }) {
   const identity = useSyncExternalStore(
     session.subscribe,
     session.getSnapshot,
     session.getSnapshot,
   );
-  const [phase, setPhase] = useState<AccountDeletionUiPhase>({ kind: 'idle' });
+  const [phase, setPhase] = useState<AccountDeletionUiPhase>({ kind: 'loading' });
   const [busy, setBusy] = useState(false);
 
   const verifiedUserId =
@@ -179,7 +180,34 @@ export function AccountDeletionPanel() {
       accessibilityRole="summary"
       accessibilityLabel="Yêu cầu xóa tài khoản"
     >
-      <Notice title={explainer.title}>{explainer.body}</Notice>
+      {attendee ? (
+        <View style={{ gap: space.md }}>
+          <View style={{ width: 48, height: 48, borderRadius: radius.md, backgroundColor: colors.denySurface, alignItems: 'center', justifyContent: 'center' }}>
+            <Text style={{ color: colors.destructive, ...typography.avatarInitial }} accessibilityElementsHidden>⊖</Text>
+          </View>
+          <Text accessibilityRole="header" style={{ color: brand.ink, ...typography.title }}>{explainer.title}</Text>
+          <Text selectable style={{ color: colors.secondary, ...typography.subhead }}>{explainer.body}</Text>
+          <View style={{ backgroundColor: colors.card, borderColor: colors.line, borderWidth: 1, borderRadius: radius.md, overflow: 'hidden' }}>
+            {[
+              ['1', 'Gửi yêu cầu', 'Hệ thống ghi nhận yêu cầu của bạn. Tài khoản không bị xóa ngay.'],
+              ['2', 'Xử lý trong tối đa 30 ngày', 'Dữ liệu cá nhân được xử lý theo chính sách hiện hành.'],
+              ['3', 'Một số dữ liệu được giữ lại', 'Bản ghi kiểm toán có thể được giữ theo quy định pháp lý.'],
+            ].map(([number, title, detail], index) => (
+              <View key={number} style={{ flexDirection: 'row', gap: space.md, padding: space.md, borderTopWidth: index ? 1 : 0, borderTopColor: colors.line }}>
+                <View style={{ width: 22, height: 22, borderRadius: radius.pill, backgroundColor: colors.paper, alignItems: 'center', justifyContent: 'center' }}>
+                  <Text style={{ color: brand.primary, ...typography.badge }}>{number}</Text>
+                </View>
+                <View style={{ flex: 1, gap: space.xs }}>
+                  <Text style={{ color: brand.ink, ...typography.subheadSemibold }}>{title}</Text>
+                  <Text style={{ color: colors.secondary, ...typography.footnote }}>{detail}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        </View>
+      ) : (
+        <Notice title={explainer.title}>{explainer.body}</Notice>
+      )}
 
       {phase.kind === 'idle' ? (
         <SecondaryButton
@@ -269,7 +297,7 @@ export function AccountDeletionPanel() {
 }
 
 /** Remount on user change so prior-account deletion status cannot leak. */
-export function SessionScopedAccountDeletionPanel() {
+export function SessionScopedAccountDeletionPanel({ attendee = false }: { attendee?: boolean }) {
   const identity = useSyncExternalStore(
     session.subscribe,
     session.getSnapshot,
@@ -279,5 +307,5 @@ export function SessionScopedAccountDeletionPanel() {
     identity.status === 'verified'
       ? `deletion:${identity.userId}`
       : `deletion:${identity.status}`;
-  return <AccountDeletionPanel key={key} />;
+  return <AccountDeletionPanel key={key} attendee={attendee} />;
 }

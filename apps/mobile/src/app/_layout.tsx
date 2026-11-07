@@ -103,6 +103,14 @@ function AppStack() {
         options={{ ...stackBackFromTabs, title: 'Nhận vé mời' }}
       />
       <Stack.Screen
+        name="wallet-access"
+        options={{ ...stackBackFromTabs, headerShown: false, title: 'Vé của tôi' }}
+      />
+      <Stack.Screen
+        name="wallet-access/[ticketId]"
+        options={{ ...stackBackFromTabs, title: 'Chi tiết vé' }}
+      />
+      <Stack.Screen
         name="membership-invite"
         options={{ ...stackBackFromTabs, title: 'Lời mời thành viên' }}
       />

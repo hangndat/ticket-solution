@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Keep gitignored ios/Vemoki/Info.plist CFBundleVersion in sync with app.config.ts.
+ * Keep the generated iOS Info.plist CFBundleVersion in sync with app.config.ts.
  * Run before local Release install (Dexter / TF).
  */
 import fs from 'node:fs';
@@ -9,7 +9,9 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const configPath = path.join(root, 'app.config.ts');
-const plistPath = path.join(root, 'ios/Vemoki/Info.plist');
+const plistCandidates = ['Vemoki', 'VemokiUAT']
+  .map((name) => path.join(root, 'ios', name, 'Info.plist'))
+  .filter((candidate) => fs.existsSync(candidate));
 
 const config = fs.readFileSync(configPath, 'utf8');
 const match = config.match(/buildNumber:\s*'(\d+)'/);
@@ -19,12 +21,13 @@ if (!match) {
 }
 const buildNumber = match[1];
 
-if (!fs.existsSync(plistPath)) {
+if (plistCandidates.length !== 1) {
   console.error(
-    'sync-ios-build-number: missing ios/Vemoki/Info.plist — run expo prebuild first',
+    'sync-ios-build-number: expected one generated Vemoki or VemokiUAT Info.plist — run expo prebuild first',
   );
   process.exit(1);
 }
+const plistPath = plistCandidates[0];
 
 let plist = fs.readFileSync(plistPath, 'utf8');
 const versionRe =

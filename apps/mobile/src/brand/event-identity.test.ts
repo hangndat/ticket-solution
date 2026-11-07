@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
   EVENT_IDENTITY_PALETTE,
+  eventCtaForeground,
   eventIdentityColor,
   eventInitial,
   isEventBrandHexColor,
@@ -46,4 +47,12 @@ test('eventInitial uses first grapheme, Vietnamese uppercased', () => {
   assert.equal(eventInitial('  đêm nhạc'), 'Đ');
   assert.equal(eventInitial('MFest · Demo'), 'M');
   assert.equal(eventInitial(''), 'S');
+});
+
+test('event CTA foreground remains legible for bright and dark published colors', () => {
+  assert.equal(eventCtaForeground('#fff'), '#000000');
+  assert.equal(eventCtaForeground('#ffffff'), '#000000');
+  assert.equal(eventCtaForeground('#777777'), '#000000');
+  assert.equal(eventCtaForeground('#000000'), '#ffffff');
+  assert.equal(eventCtaForeground('#245B47'), '#ffffff');
 });

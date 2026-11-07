@@ -1,0 +1,28 @@
+# Review #1233 — iOS Lời mời tổ chức
+
+## James final keyboard evidence — exact `38f11b0bef63914c5b0428d428ab2ed1be754990`
+
+[Matrix tích hợp 45 khung](D6-integrated390-revalidation.md) pin WebView keyboard/footer ở 390×844: AX đặt `Về Sự kiện` y .492–.553 trên keyboard q y .672–.736; ảnh trước/sau scroll thấy input, footer còn chạm được. Next dev issue badge đè một phần input trong fixture web nên không claim pixel perfect; native bridge/network retry fix38 vẫn đúng. **F01/F02 đã đóng theo AC nhóm; DoD/UI nhóm PASS, Security PASS code scope.**
+
+## James checkpoint tích hợp — exact `38f11b0bef63914c5b0428d428ab2ed1be754990`
+
+[Review gộp 45 khung](D6-integrated390-revalidation.md) đối soát B real local API/OIDC: matching invite accepted đúng role `Manager`, wrong-email/expired không accepted, success CTA mở Safari tới Portal guard cần đăng nhập. Diff38 `renderError`/hide WebView; mạng ngắt chỉ còn notice tiếng Việt, Retry sau server restart phục hồi trang. AC2 chỉ đòi lối/điều hướng Portal an toàn, nên guard đích cùng CTA đủ cho assertion này; **không** suy Portal sign-in/MFA/quyền Owner. AC1 guest keyboard/footer cũ còn hiệu lực vì diff38 không đổi phần đó. **F01 đã đóng trong scope AC1–AC3; DoD/UI nhóm PASS, Security PASS code scope.** Hai ảnh wrong/expired trùng bytes, phân biệt bằng server receipt và journey, không bởi ảnh. Không đổi fix counter F02.
+
+- Reviewer James, session `6d9b2018-9e37-40fd-9fb0-084beedbab91`, độc lập Zico/`ctx_b49b12ee6268`; lượt sửa **1/2**. Scope: `apps/mobile/**`, initial `82ac32e639b49ed73ca56bedec23df3fb0f88734` → fix1 exact HEAD `11397edd439e34876567478131584cc1b03ea06e` (base gốc `393a3992688853a2e69138bbffe64d3f8ca7ded1`); architecture impact **Không** (bridge giữ web/OIDC contract).
+- CRG đúng worktree/fix1 HEAD: stats 1,646 files, 10,424 nodes, `head_matches_build=true`; `detect_changes_tool` `82ac32e6` → `11397edd`: 5 files tổng repo, 4 symbols, 1 UI component test gap. Diff mobile: 4 files; source/tests và `git diff --check` đã đối chiếu, check PASS. Skills: `expo-overview`, `react-native-best-practices`, `expo-native-ui`, `impeccable` critique native single-context (worker không được spawn); UAT workflow đọc để đánh giá evidence.
+- Checks fix1 trên SHA theo [bàn giao](../../apps/mobile/.uat-artifacts/d6/membership-invite-report.md): typecheck PASS, 587/587 tests PASS, lint 0 errors/8 warning ngoài slice, UI budget PASS, local Xcode Release BUILD SUCCEEDED. Reviewer không lặp suite vì checks cùng SHA còn hiệu lực. Pin visual đã xác minh: original `8ea647a9…74dde`, board `eca0dbc1…fcef`.
+- Evidence đã mở và kiểm hash/nhãn: [invalid](../../apps/mobile/.uat-artifacts/d6/membership-invalid-final.png) `91764684…ab6efdf`, [guest form](../../apps/mobile/.uat-artifacts/d6/membership-final-form.png) `139cae23…5fadb5`, [keyboard](../../apps/mobile/.uat-artifacts/d6/membership-keyboard-final.png) `8b1d2046…d6844dac`, [Keycloak](../../apps/mobile/.uat-artifacts/d6/membership-login.png) `44f1bfba…4da`; AX invalid/guest/login trong cùng thư mục. 1170×2532 px = 390×844 pt @3x; guest VI, Keycloak EN; `ui-evidence-check.sh` trên assets D6: OK, 100 file không trùng.
+- Fix1 evidence đã mở và xác minh SHA-256: [no-token bridge](../../apps/mobile/.uat-artifacts/d6/membership-no-token-fix1-final.png) `e798e0db…667c61e`, [manual form](../../apps/mobile/.uat-artifacts/d6/membership-no-token-form-fix1-final.png) `4fa1a77f…b46869b`, [invalid](../../apps/mobile/.uat-artifacts/d6/membership-invalid-fix1-final.png) `41289212…74b6e3`; AX tương ứng khớp hash trong bàn giao. Guest VI, 390×844 pt; `ui-evidence-check.sh`: OK, 113 file không trùng. Banner root restore vẫn chiếm một phần viewport.
+
+## Findings
+
+| ID / loại | Mức / chặn | Căn cứ và bằng chứng | Điều kiện đóng / trạng thái |
+| --- | --- | --- | --- |
+| F01 · thiếu evidence nghiệm thu | blocker / **Có** | AC2 và AC3 đòi server accept rồi mới thấy kết quả/Portal, cùng sai email, hết hạn, network error/retry. Bàn giao chỉ có synthetic nonissued token; unit allowlist không chứng minh membership hay Portal runtime. Không có fixture/phiên hợp lệ để thực hiện; AC1 cũng thiếu login bằng đúng email. | UAT trên exact build với issued invite + tài khoản khớp email: accept/success/Portal; sai email, expired, transport failure rồi retry. Ghi server state và ảnh/AX đã khử token. **Mở**, owner coordinator/fixture. |
+| F02 · lệch AC cần xác nhận | should-fix / **Đã đóng** | Coordinator chốt no-token là manual entry hợp lệ theo wireframe và cập nhật AC3. Fix1 `membership-invite-url.ts:10-14`, `membership-invite.tsx:53` thêm hướng dẫn riêng; `installed-app-link.test.ts:166-175` và test guidance xác nhận route/invalid tách nhau. Ảnh/AX fix1 thấy mã trống, “Chưa có mã lời mời”, lời hướng dẫn dán mã; invalid vẫn hiện lỗi riêng, không lộ token. | **Đã xác minh** trên `11397edd439e34876567478131584cc1b03ea06e`; không cần sửa thêm cho F02. |
+
+## Verdict
+
+- **DoD: FAIL** — F02 đóng, AC1 partial, AC2 GAP, AC3 partial vì F01 còn chặn nghiệm thu. Build/tests xanh không thay runtime.
+- **Security: PASS trong phạm vi code đã kiểm** — fragment token, token parked ngoài Router URL, exact product/OIDC/Portal origins, chặn token query/fragment khi rời product, không có log token hay tự cấp quyền trong diff. Đây không chứng nhận auth/accept server chưa chạy; F01 vẫn chặn DoD. Không thấy security finding xác nhận.
+- **UI/UX: FAIL cho nghiệm thu đầy đủ** — F02 manual-entry/invalid PASS ở 390×844 pt theo ảnh/AX fix1; guest/form, Keycloak và footer trên bàn phím dùng evidence initial còn hiệu lực vì diff không đổi các phần đó. Root restore banner `Chưa thể khôi phục phiên...` giới hạn so khớp visual; success/Portal/wrong-email/expired/retry chưa có runtime. Không suy các trạng thái này PASS từ wireframe hoặc unit.

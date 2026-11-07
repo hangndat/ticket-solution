@@ -129,7 +129,7 @@ function mapOutcomeKind(
         kind: 'already-checked-in',
         label: 'Vé đã được sử dụng',
         hint: 'Vé đã được check-in trước đó. Không cho vào.',
-        tone: 'deny',
+        tone: 'warning',
         symbol: 'xmark.circle.fill',
       };
     case 'denied':

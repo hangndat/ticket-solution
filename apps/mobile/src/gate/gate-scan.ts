@@ -45,6 +45,8 @@ export type GateOp = {
    * supervisor admissions and never authorize a new presentation.
    */
   admissionKind?: 'fresh' | 'already';
+  /** Server-confirmed duplicate denial; never grants admission. */
+  denialKind?: 'already-checked-in';
   /** Device-local history ordering; stamped via stampGateOpsRecordedAt. */
   recordedAt?: string;
   /** Present when phase === 'recorded' (GET historical receipt). */
@@ -177,6 +179,7 @@ export function applyConfirm(op: GateOp, result: FetchResult): GateOp {
       ...op,
       phase: 'unknown',
       admissionKind: undefined,
+      denialKind: undefined,
       message: GATE_UNKNOWN_MESSAGE,
     };
   }
@@ -190,6 +193,7 @@ export function applyConfirm(op: GateOp, result: FetchResult): GateOp {
       ...op,
       phase: 'admitted',
       admissionKind: 'fresh',
+      denialKind: undefined,
       checkinId: body.checkinId,
       token: undefined,
       message: 'Cho vào. Đã ghi nhận check-in.',
@@ -200,6 +204,7 @@ export function applyConfirm(op: GateOp, result: FetchResult): GateOp {
       ...op,
       phase: 'denied',
       admissionKind: undefined,
+      denialKind: 'already-checked-in',
       checkinId: undefined,
       token: undefined,
       message: 'Vé đã được check-in trước đó. Không cho vào.',
@@ -209,6 +214,7 @@ export function applyConfirm(op: GateOp, result: FetchResult): GateOp {
     ...op,
     phase: 'denied',
     admissionKind: undefined,
+    denialKind: undefined,
     token: undefined,
     message: gateFailureMessage(body, 'Từ chối. Không cho vào.'),
   };

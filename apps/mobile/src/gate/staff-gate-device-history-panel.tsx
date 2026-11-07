@@ -14,6 +14,7 @@ import { typography } from '@/theme/typography';
 function rowTint(tone: DeviceScanHistoryRow['tone']): string {
   if (tone === 'admit') return colors.admit;
   if (tone === 'deny') return colors.deny;
+  if (tone === 'warning') return colors.warning;
   if (tone === 'unknown') return colors.unknown;
   return colors.secondary;
 }
@@ -23,6 +24,7 @@ export type StaffGateDeviceHistoryPanelProps = {
   scopeEventName?: string | null;
   hideTitle?: boolean;
   totalAvailable?: number;
+  loadedCount?: number;
   hasMore?: boolean;
   onLoadMore?: () => void;
   filterQuery?: string;
@@ -35,6 +37,8 @@ export type StaffGateDeviceHistoryPanelProps = {
   importKnownBusy?: boolean;
   importKnownError?: string | null;
   importKnownInfo?: string | null;
+  knownOpExpanded?: boolean;
+  onToggleKnownOp?: () => void;
 };
 
 export function StaffGateDeviceHistoryPanel({
@@ -42,6 +46,7 @@ export function StaffGateDeviceHistoryPanel({
   scopeEventName = null,
   hideTitle = false,
   totalAvailable = 0,
+  loadedCount = rows.length,
   hasMore = false,
   onLoadMore,
   filterQuery = '',
@@ -53,11 +58,12 @@ export function StaffGateDeviceHistoryPanel({
   onImportKnownOp,
   importKnownBusy = false,
   importKnownError = null,
-  importKnownInfo = null
+  importKnownInfo = null,
+  knownOpExpanded = false,
+  onToggleKnownOp
 }: StaffGateDeviceHistoryPanelProps) {
   const paginationEnabled =
     onFilterQueryChange !== undefined || onLoadMore !== undefined;
-  const renderedCount = rows.length;
   const showSearch = onFilterQueryChange !== undefined;
   const showFooter = paginationEnabled && totalAvailable > 0;
   const showKnownOpImport =
@@ -82,12 +88,19 @@ export function StaffGateDeviceHistoryPanel({
       )}
       {showKnownOpImport ? (
         <View style={{ gap: space.sm }}>
-          <Text style={{ ...typography.subheadSemibold, color: colors.label }}>
-            Đối soát mã lượt đã biết
-          </Text>
+          <Button
+            label={knownOpExpanded ? 'Ẩn đối soát mã lượt đã biết' : 'Đối soát mã lượt đã biết'}
+            variant="secondary"
+            accessibilityLabel={knownOpExpanded ? 'Ẩn đối soát mã lượt đã biết' : 'Mở đối soát mã lượt đã biết'}
+            onPress={onToggleKnownOp}
+          />
+          {knownOpExpanded ? <>
           <Text style={{ ...typography.caption, color: colors.secondary }}>
             Nhập mã lượt (UUID) từ biên nhận đồng bộ — chỉ trong sự kiện đang
             chọn, không tìm vé.
+          </Text>
+          <Text style={{ ...typography.caption, color: colors.unknown }}>
+            Kết quả chỉ được thêm vào lịch sử khi máy chủ xác nhận.
           </Text>
           <Input
             value={knownOpInput}
@@ -119,9 +132,11 @@ export function StaffGateDeviceHistoryPanel({
               {importKnownInfo}
             </Text>
           ) : null}
+          </> : null}
         </View>
       ) : null}
       {showSearch ? (
+        <>
         <Input
           value={filterQuery}
           onChangeText={onFilterQueryChange}
@@ -131,6 +146,10 @@ export function StaffGateDeviceHistoryPanel({
           autoCorrect={false}
           clearButtonMode="while-editing"
         />
+        <Text style={{ ...typography.caption, color: colors.secondary }}>
+          Chỉ tìm trong {loadedCount} lượt đã tải
+        </Text>
+        </>
       ) : null}
       {totalAvailable === 0 ? (
         <Text style={{ ...typography.subhead, color: colors.secondary }}>
@@ -241,9 +260,9 @@ export function StaffGateDeviceHistoryPanel({
           ) : null}
           <Text
             style={{ ...typography.caption, color: colors.secondary,  textAlign: 'center' }}
-            accessibilityLabel={`Đã tải ${renderedCount} lượt`}
+            accessibilityLabel={`Đã tải ${loadedCount} lượt`}
           >
-            Đã tải {renderedCount} lượt
+            Đã tải {loadedCount} lượt
           </Text>
         </View>
       ) : null}

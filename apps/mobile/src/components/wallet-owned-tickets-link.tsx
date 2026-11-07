@@ -27,7 +27,7 @@ export function WalletOwnedTicketsLink({
 
   const label = `Bạn có ${count} vé`;
   const cardRow = variant === 'card-row';
-  const linkLabel = cardRow ? label : `${label} · Xem vé →`;
+  const linkLabel = cardRow ? `${label} · Mở vé trong ví →` : `${label} · Xem vé →`;
 
   return (
     <Button
@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
     textAlign: 'left' },
   cardRow: {
     width: '100%',
-    backgroundColor: colors.surfaceSubtle,
+    backgroundColor: colors.admitSurface,
     borderRadius: radius.sm + 2,
     paddingVertical: space.md,
     paddingHorizontal: space.md + 2
@@ -69,7 +69,7 @@ const styles = StyleSheet.create({
   cardRowContent: {
     width: '100%'
   },
-  cardRowText: { ...typography.callout, color: brand.primary,
+  cardRowText: { ...typography.callout, color: colors.admit,
     fontFamily: fontFamilies.bodySemiBold,
     textAlign: 'center' }
 });

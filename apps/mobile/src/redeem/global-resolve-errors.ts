@@ -13,7 +13,7 @@ export function userMessageForGlobalResolveError(code: string): string {
     case RESOLVE_ERROR_CODES.RESOLVE_DISABLED:
       return 'Hiện chưa hỗ trợ tra cứu mã toàn hệ thống. Thử lại sau hoặc liên hệ tổ chức sự kiện.';
     case ISSUE_ERROR_CODES.CODE_INVALID:
-      return 'Mã không hợp lệ hoặc không tìm thấy.';
+      return 'Không tìm thấy vé với mã này. Kiểm tra lại ký tự trong mã, rồi thử lần nữa.';
     case ISSUE_ERROR_CODES.CODE_CONSUMED:
       return 'Mã đã được sử dụng.';
     case ISSUE_ERROR_CODES.CODE_DISABLED:

@@ -1,0 +1,458 @@
+[
+  {
+    "file": "images/claim-guest-real.png",
+    "sha256": "410bbf09ae3b17707c5e3b77c5d10277ba0aaf29aff6b9159c1d59558e1c29ec"
+  },
+  {
+    "file": "images/claim-issued-real.png",
+    "sha256": "ac88abf539d390f17fb0d5ae5cce6decb41c96c119975ff96479c27df364b77b"
+  },
+  {
+    "file": "images/claim-oidc-keyboard.png",
+    "sha256": "d0288efa00a2e263c5406bab2fb5c11088dd6c801e2a1751e570bb895eccabf4"
+  },
+  {
+    "file": "images/claim-return-verified-real.png",
+    "sha256": "1c93caf1a8fc6df378bcab0dc1192e9f7e67043f32f573d280786e58e2c4d163"
+  },
+  {
+    "file": "images/claim-used-link-verified-real.png",
+    "sha256": "295b1d9f645a203aac20af234249892752405db066a2bd03907508735f80bdce"
+  },
+  {
+    "file": "images/claim-verified-scrolled-real.png",
+    "sha256": "b41a875e071cd9a62640f6402fdc680fed6084c1328267b69a528ca73086c9cc"
+  },
+  {
+    "file": "images/d6-account-attendee-390.png",
+    "sha256": "362f43582368be35867ee131a4210d72dcf85039583be6ea1fa0999772a945ae"
+  },
+  {
+    "file": "images/d6-account-attendee-scrolled-390.png",
+    "sha256": "2888ba39525c80d9146fd5bce074f8d5a4a4d81d8d1cb657fa8c5bdcc4d087ef"
+  },
+  {
+    "file": "images/d6-claim-focused-form-390.png",
+    "sha256": "b4c8e20a6c27fc9c1cb7d172a07e5e231220294e56db22f0fe68363aef98e9eb"
+  },
+  {
+    "file": "images/d6-claim-form-scrolled-390.png",
+    "sha256": "9e5e2368487996fd7e8b95e9f967b4e67129e03c9f62161c2dcb2fa5e4b9b6db"
+  },
+  {
+    "file": "images/d6-claim-issued-detail-390.png",
+    "sha256": "9b4a868370d885a80bcf74a7510d8e15ace22031eeb423b03a28fc55efbe373f"
+  },
+  {
+    "file": "images/d6-claim-keyboard-dismiss-footer-390.png",
+    "sha256": "31037514557e889324108b7db48df46ec1d3c7fdcbb6fb6957df6af685299ff7"
+  },
+  {
+    "file": "images/d6-claim-keyboard-input-390.png",
+    "sha256": "6e36655d3b067bff823fb1514b75eb68b859c5f34475aae90f847c9cd2e39c34"
+  },
+  {
+    "file": "images/d6-claim-keyboard-visible-390.png",
+    "sha256": "8ec28d46656944aac07c1ca782ece1e58f51cdb8454b000e569b44f9c91d326e"
+  },
+  {
+    "file": "images/d6-claim-pending-390.png",
+    "sha256": "f30c22e5fbb4e29e997956137f4e559c40cc38e0199c93c92ed3d5ca90c5f849"
+  },
+  {
+    "file": "images/d6-claim-pending-refresh-390.png",
+    "sha256": "f30c22e5fbb4e29e997956137f4e559c40cc38e0199c93c92ed3d5ca90c5f849"
+  },
+  {
+    "file": "images/d6-claim-pending-refreshed38-390.png",
+    "sha256": "cb4e1640158bd3c51056b28eafc32a701630a9e923d096bf6717e3d190de9e2d"
+  },
+  {
+    "file": "images/d6-claim-phone-keyboard-input-390.png",
+    "sha256": "cd6c9c48b043ddcc93d460867c1b68b621719603f5638825f07aee2f519e6418"
+  },
+  {
+    "file": "images/d6-deletion-ack-390.png",
+    "sha256": "82b46d127f0fa9f7344a1b939fa2a32de8d108a73f163e76a589c601994b91f2"
+  },
+  {
+    "file": "images/d6-deletion-confirm-scrolled-390.png",
+    "sha256": "935def6169367ad6f6765a532a584f1d7e574f86d238bd07c333de04289144f9"
+  },
+  {
+    "file": "images/d6-deletion-get-error-390.png",
+    "sha256": "3295afdae1b9add5f63dc3b735614644e795773d21903ad985db43ca48865948"
+  },
+  {
+    "file": "images/d6-deletion-get-recovered-390.png",
+    "sha256": "f194bae3d1a679964a371cf165cefd3187481efbc5e205306dfca264d2306a9a"
+  },
+  {
+    "file": "images/d6-deletion-initial-390.png",
+    "sha256": "f6aab532866cf8b8d5757654011e7ed3a4b989583372aa97b775d696ad53700d"
+  },
+  {
+    "file": "images/d6-deletion-post-error-390.png",
+    "sha256": "8591c70bc91817c6f0c85c0f6f23767593e273af9d010bef6b5afcd83ad9f0fd"
+  },
+  {
+    "file": "images/d6-empty-wallet-390.png",
+    "sha256": "fa5ff48d4be59d9dbca1be79f250778c582fb88eadc425039b56df4041307803"
+  },
+  {
+    "file": "images/d6-empty-wallet-explore-target-390.png",
+    "sha256": "c3048a6e134160aa07f611723ed6973121de027842f2d386d4cce838766276d1"
+  },
+  {
+    "file": "images/d6-empty-wallet-redeem-target-390.png",
+    "sha256": "a5c49b804d0d7f94bfea7a3336ee063f98e3fcfc0eca810b9645ff7b8065b0e7"
+  },
+  {
+    "file": "images/d6-fix-logout-cold-390.png",
+    "sha256": "89389b059b7aa0b2f3738440babe30e9fe289779161083e88c81522eee41b464"
+  },
+  {
+    "file": "images/d6-fix-logout-guest-390.png",
+    "sha256": "ce69562bf64ba5e07d37a2dedc46f69c3dfb3a0f86958112650efb4e012b314a"
+  },
+  {
+    "file": "images/d6-fix-membership-network-390.png",
+    "sha256": "e199b3f321447a269769d1217fb5c1d6501a81b0ef9c948ef036f046a414b094"
+  },
+  {
+    "file": "images/d6-fix-membership-recovered-390.png",
+    "sha256": "bd77075fa53339a037fe991da0ad711e9520c023ce68da2684d16f70edbc4449"
+  },
+  {
+    "file": "images/d6-fix-wallet-before-logout-390.png",
+    "sha256": "c20541d9de6e07303068a6bbd8fc7c72f8d0b31efb6fad589f51649d3f0fb406"
+  },
+  {
+    "file": "images/d6-gate-idle-390.png",
+    "sha256": "e051d94b6c965f101142f9f5661c67d29f924ad7dbb8e3fec97fbb1ae8fe6037"
+  },
+  {
+    "file": "images/d6-history-keyboard-search-390.png",
+    "sha256": "2d2a780079826db6093185c2da10d8c19417e9c7721e2ec255a6d0db1f58b7be"
+  },
+  {
+    "file": "images/d6-history-no-results-390.png",
+    "sha256": "7e0bd2dc6b5f18e0ae829f880b1b250e3cdf34c163cbfb11d25fda0e7481ad85"
+  },
+  {
+    "file": "images/d6-history-receipt-503-390.png",
+    "sha256": "8e539f2ee5a985a615ea873b50aec78aa5e90b8a803ed634ac30fc2eb2811b99"
+  },
+  {
+    "file": "images/d6-history-receipt-retry-390.png",
+    "sha256": "6adde8d8b012d4b4740f294ba1e4004b49cd06cdb67eb8c9145221944c3bce19"
+  },
+  {
+    "file": "images/d6-history-two-results-390.png",
+    "sha256": "d6814d778156b3c5f74789c4e9da6faebd6152c881ec915014f1d3680a30dc0f"
+  },
+  {
+    "file": "images/d6-logout-guest-390.png",
+    "sha256": "8f49888f94f6b3b23107b39d6aafbd4f5153d2cafe07755adc221e2fd9647c40"
+  },
+  {
+    "file": "images/d6-manual-allowed-390.png",
+    "sha256": "3abf1cd63fd2d8300698e4f45596eb72be41f0194918930c4b4da337cc3cc629"
+  },
+  {
+    "file": "images/d6-manual-already-used-390.png",
+    "sha256": "6a898bcb781b10e83923063d6cfff9baa19b968be59b6dc10ba3695443a79626"
+  },
+  {
+    "file": "images/d6-manual-cancel-keeps-code-390.png",
+    "sha256": "b7dd0bc11d4f767c0bbdf3cfed3db9bd86f2335d0735e9f5dc252416678bc598"
+  },
+  {
+    "file": "images/d6-manual-focused-390.png",
+    "sha256": "ff71f3bb511dddb6d9d0ef8c2c57a1482d5a73c128a229a67f73d8ac917d41ad"
+  },
+  {
+    "file": "images/d6-manual-keyboard-390.png",
+    "sha256": "b180015a019b90f020000bf8f6341315ee8dc462fe8160defe5acde9f7a3e6c8"
+  },
+  {
+    "file": "images/d6-manual-keyboard-submit-preview-390.png",
+    "sha256": "bae4b284a68de17e8bad4694adb68739bcbb43b069d109d9729e369ddf3fe8fd"
+  },
+  {
+    "file": "images/d6-manual-preview-390.png",
+    "sha256": "3e5b7c6c11bfb9e33009d64a0d88832eeeba4ebfe959d4fdfd1003ca69e7f5ea"
+  },
+  {
+    "file": "images/d6-membership-expired-390.png",
+    "sha256": "ce45506329fd0dace49dbd634c05f6755b15eb55fc674d81595d825653f8afc7"
+  },
+  {
+    "file": "images/d6-membership-keyboard-390.png",
+    "sha256": "3dd7739c7119c7e7a885739b8cfdfe2f8b2cb63e9a385500086796a1a3c2ec78"
+  },
+  {
+    "file": "images/d6-membership-keyboard-input-footer-390.png",
+    "sha256": "324793a56412e589d6a5d3b4d9c5cd8abe45da8a6321f5759b98e955f354e0c7"
+  },
+  {
+    "file": "images/d6-membership-keyboard-scrolled-390.png",
+    "sha256": "216b2a9c5086044409608c2f4dbc2d702d36d47512824771c59bf7248a5705a7"
+  },
+  {
+    "file": "images/d6-membership-network-390.png",
+    "sha256": "42e149a7ed22d685e80cf6c5fe4efd7fbca2cfbde6617f24bf4c5a780c14e158"
+  },
+  {
+    "file": "images/d6-membership-portal-cta-390.png",
+    "sha256": "0d5921a15c615a19ce796c516e1a7cfcd115aa6361a9326fb0182689fea31b7d"
+  },
+  {
+    "file": "images/d6-membership-portal-target-390.png",
+    "sha256": "e3f775e5a459a93373e860a6546e5092f9dcc6ef60b58825b9a2f54c80a0f825"
+  },
+  {
+    "file": "images/d6-membership-recovered-390.png",
+    "sha256": "82eff290d9327865577803d9774066d91b3d18fbab8b1505351be13a342822be"
+  },
+  {
+    "file": "images/d6-membership-success-390.png",
+    "sha256": "c05fb01e729a12f891c5007c907f7d93af3f2bd71f3b8bd7d68184540efae9cf"
+  },
+  {
+    "file": "images/d6-membership-wrong-email-390.png",
+    "sha256": "ce45506329fd0dace49dbd634c05f6755b15eb55fc674d81595d825653f8afc7"
+  },
+  {
+    "file": "images/d6-redeem-focus-reboot-390.png",
+    "sha256": "e4c5557da955ac1681458b38779485a4f8f07121f04db0950d256710b776dc7f"
+  },
+  {
+    "file": "images/d6-redeem-invalid-390.png",
+    "sha256": "d03e6c5611ba5e27edd2ca554d4de5bde39738ba7b4500b6c822073d705b0e84"
+  },
+  {
+    "file": "images/d6-redeem-invalid-keyboard-390.png",
+    "sha256": "280f50bf27afa54dceb2f52c3f392daadb6f2b6e69e85b06dd4dd08a7a97094c"
+  },
+  {
+    "file": "images/d6-staff-account-390.png",
+    "sha256": "1f916e8089d2e220a7340cf604ac4e2f799699c595f05823ab36486bf95b5811"
+  },
+  {
+    "file": "images/d6-staff-account-scroll-390.png",
+    "sha256": "50077b356236e8186b1a0a5673802b9b45a7f21badadc1fd0fe58b854c58da77"
+  },
+  {
+    "file": "images/d6-staff-denied-390.png",
+    "sha256": "42d2a62d0f3501038dc72d40d0adead5acefcb4651a369a5f330a5c8306704f9"
+  },
+  {
+    "file": "images/d6-staff-logout-cold38-390.png",
+    "sha256": "38a27a95b3e93f00dde609d06afe81ca462d0614ea2e1ef84f65775d176e885b"
+  },
+  {
+    "file": "images/d6-ticket-missing-390.png",
+    "sha256": "0fbd8514ed0eca2022a5973ec193cd4328b44670c6cd659ef3288efee1ee051a"
+  },
+  {
+    "file": "images/d6-wallet-attendee-390.png",
+    "sha256": "7d1a15151c429036ddfa4c15f30f3f6ddd65cf33905fd112b3fad7a253d53100"
+  },
+  {
+    "file": "images/qr-admitted25-390.png",
+    "sha256": "fb59c91e1eb004300c3121c93f50a5f35d4bc3477445f3f79007421f203ddd3c"
+  },
+  {
+    "file": "images/qr-admitted38-390.png",
+    "sha256": "a022f95ca27933bf0abc02f2623867b6deb57d97921729e74b4f579d12289602"
+  },
+  {
+    "file": "images/qr-confirm-unknown38-390.png",
+    "sha256": "45559295fa3dcd06ec44ff785046048d468ec2be8afc0c5fcf81990c33a24139"
+  },
+  {
+    "file": "images/qr-continue25-390.png",
+    "sha256": "48c0be37c6ea8995f3bc6c90731485bf90b28ac5974c93651727806867284c1c"
+  },
+  {
+    "file": "images/qr-denied38-390.png",
+    "sha256": "7c2ae31818ce67fe0760d0c7925376d2b3a2c62d13307afc6e8e7e02553863c5"
+  },
+  {
+    "file": "images/qr-duplicate25-390.png",
+    "sha256": "65cd8744a952cec7d2f160ef92795c286f2bce20430c795ef8b88f78c19e34f8"
+  },
+  {
+    "file": "images/qr-duplicate38-390.png",
+    "sha256": "b9868e1be77bfde95b8bc349049aec4eafff06896ca0eadd8493b49bbd35e6fd"
+  },
+  {
+    "file": "images/qr-processing-observed38-390.png",
+    "sha256": "6e13eff6a7cbad8e1eee935da3d462a265343b679838d696ee4f962583f12ec4"
+  },
+  {
+    "file": "images/qr-processing-two-callbacks-settled38-390.png",
+    "sha256": "153cc2b8ae373b3eda34205e797efeaedefe465a90b557715136aed6850ab50e"
+  },
+  {
+    "file": "images/qr-processing-two-callbacks38-390.png",
+    "sha256": "e943321c106aa1a84c427916270583f503334d94e8ebd842f5c242bcdc0f9c8d"
+  },
+  {
+    "file": "images/qr-processing38-390.png",
+    "sha256": "960aa04be68cee9798030c816729e826582bae5f899b4e5cfa68257414c52fcd"
+  },
+  {
+    "file": "images/qr-queued-cold-history38-390.png",
+    "sha256": "e00cddfe719a232dcb503c6545a6489f147fea49627d54b009662bee36d9539a"
+  },
+  {
+    "file": "images/qr-queued-observed38-390.png",
+    "sha256": "419a04791220e1cf7f24e4602de357a080081506a83009c54d91c52cc5931a25"
+  },
+  {
+    "file": "images/qr-queued38-390.png",
+    "sha256": "a70873ec0c42979722c93775e378e8907e83ac911c654d9b2a11bdaf1610df9d"
+  },
+  {
+    "file": "images/qr-reconciled38-390.png",
+    "sha256": "81dc5b534289877d05f6a9af14184b24e7a875f03604342c2e0e5d39ad2aad69"
+  },
+  {
+    "file": "images/qr-unknown38-390.png",
+    "sha256": "c3274fcb4051367cf88ecc429f064c7dd0c749277ec9c999ffffc6faf08d1a66"
+  },
+  {
+    "file": "images/staff-entry.png",
+    "sha256": "d683309a5ac4d1600eabe350f008f6c127a74060522a82a5f7890e570525f271"
+  },
+  {
+    "file": "images/staff-keyboard.png",
+    "sha256": "3521b08e1877bb6eac72f4dd078696bf7991c4aaa9672d08ecd66a1ce3b9ffd9"
+  },
+  {
+    "file": "images/staff-load-t1.png",
+    "sha256": "2fa8b2e64329163275d042e9a1bfa46f4cf9e4c1ecd2600e13f0422fc421ac94"
+  },
+  {
+    "file": "images/staff-load-t3.png",
+    "sha256": "ec3dfe3c5c423ab35fa0bbab228764b8a888a2ba373ce387b2c039ddac193233"
+  },
+  {
+    "file": "images/staff-load-t5.png",
+    "sha256": "09d3c55748144c0311e207ecc6878409c9ea3c284a86094cab3c4acaea18fae3"
+  },
+  {
+    "file": "images/staff-loading-observed.png",
+    "sha256": "ab9db4f5b9c9f984b295966b105923012009806ba008c6771fc3116fef70815a"
+  },
+  {
+    "file": "images/staff-loading.png",
+    "sha256": "299afd514a98f186dedc3a5ff2ccb6101a8c4b138531e660a1bc6422b110b630"
+  },
+  {
+    "file": "images/ticket-signed-real.png",
+    "sha256": "5b89a88c852bf06a5a619c0e2061cd7d9b207204436a7dfd7b472c2b1150ea84"
+  },
+  {
+    "file": "images/ticket-signed-scrolled-real.png",
+    "sha256": "5b89a88c852bf06a5a619c0e2061cd7d9b207204436a7dfd7b472c2b1150ea84"
+  },
+  {
+    "file": "images/wallet-issued-real.png",
+    "sha256": "1c5edaf4faac6a98a2b77a7fedd6f7f9e7b8b28972ba15ec915b6767e1d78a7c"
+  },
+  {
+    "file": "ax/d6-claim-keyboard-390.ax.json",
+    "sha256": "207ce03e04c989202855fffa4a1c3952825623acd0bafed5d0411f7e2bc8773f"
+  },
+  {
+    "file": "ax/d6-claim-pending-refreshed38-390.ax.json",
+    "sha256": "f5a32054fd75249d69db1850df2666289dc898d6502e9fc0c2ffe43d45c6feab"
+  },
+  {
+    "file": "ax/d6-claim-pending38-390.ax.json",
+    "sha256": "2031a8b5dec62d74a0f35bbbc9817c069fda610b4a082e59900142fea620fb40"
+  },
+  {
+    "file": "ax/d6-history-keyboard-search-390.ax.json",
+    "sha256": "f9e427ba82da0591183200d7924437a2024f526c8776e880a6bd70e4b81fc642"
+  },
+  {
+    "file": "ax/d6-manual-keyboard-390.ax.json",
+    "sha256": "e49f6f64ed793f23da978f5db5444833b2b663fb4b4699604cd7cf2551cc6778"
+  },
+  {
+    "file": "ax/d6-membership-keyboard-390.ax.json",
+    "sha256": "9f8658d4a62b23b644cdaae583c60c939664de4dbb61a84564f075d394fba8dd"
+  },
+  {
+    "file": "ax/d6-redeem-invalid-keyboard-390.ax.json",
+    "sha256": "0ca35f519b4700e692e36add0eabce2a0de4084b78ff884ae06ec04924d74935"
+  },
+  {
+    "file": "ax/qr-admitted25-390.json",
+    "sha256": "764adbcca1dc7f0c93126c4a4481d9e0d7dda94e1080fbe1105372e6c47f1cdd"
+  },
+  {
+    "file": "ax/qr-admitted38-390.json",
+    "sha256": "b45f5c1696aa83c8858e6bdbe0b99646a351d3b9089a292e219d274f77ebdd22"
+  },
+  {
+    "file": "ax/qr-confirm-unknown38-390.json",
+    "sha256": "1339e523433f9c3fda47fbad7b328fbae0f6f20ccef57c1aa8575d0e90812fea"
+  },
+  {
+    "file": "ax/qr-continue25-390.json",
+    "sha256": "8c9000c1b3f42a30ed80bdb28ead41b5d88dce1aab8ad574aad439aac64fd0af"
+  },
+  {
+    "file": "ax/qr-denied38-390.json",
+    "sha256": "7c69b4053d1d297e63415c2814a6567f8202ddc8176ba4430d5afe10b4522cbe"
+  },
+  {
+    "file": "ax/qr-duplicate25-390.json",
+    "sha256": "ca21c2c565cbe3476155f51ebd6faa1fe82ed2b7532da7ddd4ddee139df57375"
+  },
+  {
+    "file": "ax/qr-duplicate38-390.json",
+    "sha256": "ac8b69eb7ae23e5997e7bc253acbf4613743093c91380865bf851c916b3a5c79"
+  },
+  {
+    "file": "ax/qr-processing-observed38-390.json",
+    "sha256": "7d32a867a53dd12e1ae7d3a62b4c0ab474fb526c17393a425220ee3979c387a5"
+  },
+  {
+    "file": "ax/qr-processing-two-callbacks-settled38-390.json",
+    "sha256": "c1aba67ba25cc0cf96665558446c6bebc40dade2d025efb26426e423d90d5a81"
+  },
+  {
+    "file": "ax/qr-processing-two-callbacks38-390.json",
+    "sha256": "dc70a3bb417a0e937576650a52d05c45d915d7c7d1ac431ba76847bee7a2f6f0"
+  },
+  {
+    "file": "ax/qr-processing38-390.json",
+    "sha256": "3435691a4d892f5bd58bdff6a70d9f5e4d9c6cbb8ac09c5828eba90f3de97945"
+  },
+  {
+    "file": "ax/qr-queued-cold-history38-390.json",
+    "sha256": "dc5af85a3ced65a9b7041339d0985978b83ca0ae97e8ae83033becacf6de1ebe"
+  },
+  {
+    "file": "ax/qr-queued-observed38-390.json",
+    "sha256": "e473704841ff06294032ce7673680e075430b3e4887240fb2cf91b5b40609a04"
+  },
+  {
+    "file": "ax/qr-queued38-390.json",
+    "sha256": "1effc35f3219eb8d35de6a40d77c19f765def5ea8463922ef39e6f4caefc2713"
+  },
+  {
+    "file": "ax/qr-reconciled38-390.json",
+    "sha256": "1b6d6bf42fa63ec3bac7e7886479530935e81a1af1e53f688a1a0377e4bd86d0"
+  },
+  {
+    "file": "ax/qr-unknown38-390.json",
+    "sha256": "b1b7c12534502bab36fcf572bc5c4875e0846b5f3d4cde6ef0844b9c0b4eb389"
+  }
+]

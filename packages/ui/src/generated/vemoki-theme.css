@@ -1,16 +1,20 @@
 /* Auto-generated from brand/vemoki/tokens.json — do not edit */
 @theme {
-  --color-ink: #141020;
+  --color-ink: #17151F;
   --color-paper: #FFFFFF;
-  --color-signal: #6C35FF;
-  --color-primary: #6C35FF;
-  --color-focus: #5B22F0;
-  --color-line: #D7D6E0;
-  --color-muted: #5C5774;
-  --color-destructive: #8A1F1F;
-  --color-admit: #1B7F4A;
-  --color-unknown: #8A6D3B;
-  --font-display: Sora, ui-sans-serif, system-ui, sans-serif;
+  --color-background: #FAFAFC;
+  --color-signal: #7038FF;
+  --color-primary: #7038FF;
+  --color-primaryHover: #6028E8;
+  --color-primaryPressed: #5120C5;
+  --color-focus: #7038FF;
+  --color-line: #DEDCE6;
+  --color-muted: #625E70;
+  --color-destructive: #BE263B;
+  --color-admit: #137A4B;
+  --color-unknown: #8A5700;
+  --color-info: #2459BA;
+  --font-display: Be Vietnam Pro, ui-sans-serif, system-ui, sans-serif;
   --font-sans: "Be Vietnam Pro", ui-sans-serif, system-ui, sans-serif;
   --animate-spin: spin 1s linear infinite;
   --radius-sm: 8px;
@@ -42,17 +46,21 @@
  * This :root block keeps var(--*) stable for any remaining legacy CSS until fully removed.
  */
 :root {
-  --color-ink: #141020;
+  --color-ink: #17151F;
   --color-paper: #FFFFFF;
-  --color-signal: #6C35FF;
-  --color-primary: #6C35FF;
-  --color-focus: #5B22F0;
-  --color-line: #D7D6E0;
-  --color-muted: #5C5774;
-  --color-destructive: #8A1F1F;
-  --color-admit: #1B7F4A;
-  --color-unknown: #8A6D3B;
-  --font-display: Sora, ui-sans-serif, system-ui, sans-serif;
+  --color-background: #FAFAFC;
+  --color-signal: #7038FF;
+  --color-primary: #7038FF;
+  --color-primaryHover: #6028E8;
+  --color-primaryPressed: #5120C5;
+  --color-focus: #7038FF;
+  --color-line: #DEDCE6;
+  --color-muted: #625E70;
+  --color-destructive: #BE263B;
+  --color-admit: #137A4B;
+  --color-unknown: #8A5700;
+  --color-info: #2459BA;
+  --font-display: Be Vietnam Pro, ui-sans-serif, system-ui, sans-serif;
   --font-sans: "Be Vietnam Pro", ui-sans-serif, system-ui, sans-serif;
   --animate-spin: spin 1s linear infinite;
   --radius-sm: 8px;

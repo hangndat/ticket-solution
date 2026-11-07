@@ -86,7 +86,7 @@ describe('@ticket/ui token generator', () => {
     assert.ok(fs.existsSync(themePath), 'vemoki-theme.css must exist after build');
     assert.match(
       fs.readFileSync(themePath, 'utf8'),
-      /@theme\s*\{[\s\S]*--color-ink:\s*#141020/,
+      /@theme\s*\{[\s\S]*--color-ink:\s*#17151F/,
     );
   });
 
@@ -94,7 +94,7 @@ describe('@ticket/ui token generator', () => {
     const rootBlocks = [...themeCss.matchAll(/:root\s*\{([^}]+)\}/g)];
     assert.ok(rootBlocks.length >= 1, ':root legacy contract block in vemoki-theme.css');
     const contract = rootBlocks[rootBlocks.length - 1][1];
-    assert.match(contract, /--color-line:\s*#D7D6E0/);
+    assert.match(contract, /--color-line:\s*#DEDCE6/);
     assert.match(contract, /--spacing-lg:\s*16px/);
   });
 });

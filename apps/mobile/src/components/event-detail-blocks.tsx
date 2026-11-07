@@ -6,7 +6,7 @@ import { eventsCopy } from '@/components/screen-state-copy';
 import { isLongEventText } from '@/published/event-detail-model';
 import { brand, colors } from '@/theme/colors';
 import { fontFamilies } from '@/theme/fonts';
-import { layout, space } from '@/theme/tokens';
+import { layout, radius, space } from '@/theme/tokens';
 import { typography } from '@/theme/typography';
 
 const copy = eventsCopy.detail;
@@ -66,32 +66,34 @@ export function EventMeta({
   organizer: string | null;
 }) {
   const rows = [
-    whenLine ? { key: 'when', text: whenLine, a11y: `Thời gian: ${whenLine}` } : null,
-    venue ? { key: 'venue', text: venue, a11y: `Địa điểm: ${venue}` } : null,
+    whenLine ? { key: 'when', icon: '◷', text: whenLine, a11y: `Thời gian: ${whenLine}` } : null,
+    venue ? { key: 'venue', icon: '⌖', text: venue, a11y: `Địa điểm: ${venue}` } : null,
     organizer
       ? {
           key: 'org',
+          icon: '◯',
           text: organizer,
           a11y: `${copy.organizerLabel}: ${organizer}`
         }
       : null
-  ].filter(Boolean) as { key: string; text: string; a11y: string }[];
+  ].filter(Boolean) as { key: string; icon: string; text: string; a11y: string }[];
   if (rows.length === 0) return null;
   return (
-    <View style={{ gap: space.xs }}>
+    <View style={{ backgroundColor: colors.onAccent, borderWidth: 1,
+      borderColor: colors.line, borderRadius: radius.md, overflow: 'hidden' }}>
       {rows.map((row, i) => (
-        <Text
-          key={row.key}
-          selectable
-          accessibilityLabel={row.a11y}
-          style={{
-            ...typography.body,
-            fontFamily: fontFamilies.body,
-            color: i === 0 ? brand.ink : colors.secondary
-          }}
-        >
-          {row.text}
-        </Text>
+        <View key={row.key} style={{ flexDirection: 'row', alignItems: 'center',
+          gap: space.md, padding: space.md,
+          borderBottomWidth: i === rows.length - 1 ? 0 : 1,
+          borderBottomColor: colors.line }}>
+          <Text accessibilityElementsHidden style={{ ...typography.title,
+            color: colors.admit }}>{row.icon}</Text>
+          <Text selectable accessibilityLabel={row.a11y}
+            style={{ ...typography.body, flex: 1,
+              fontFamily: fontFamilies.bodySemiBold, color: brand.ink }}>
+            {row.text}
+          </Text>
+        </View>
       ))}
     </View>
   );

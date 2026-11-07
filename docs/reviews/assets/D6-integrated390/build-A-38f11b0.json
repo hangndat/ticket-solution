@@ -1,0 +1,10 @@
+{
+  "label": "A",
+  "sha": "38f11b0bef63914c5b0428d428ab2ed1be754990",
+  "app": "apps/mobile/.uat-artifacts/d6/securestore-sim/DerivedData/Build/Products/Release-iphonesimulator/VemokiUAT.app",
+  "udid": "D38D07AE-A413-4F59-8596-469EDAAD6B84",
+  "api": "http://127.0.0.1:4099",
+  "gitCommitSha": "38f11b0bef63914c5b0428d428ab2ed1be754990",
+  "executableSha256": "ba9b8829c237037c2eb0dc4ce4e310ea7f02d861681898e7c1ec6bbafa62d60e",
+  "logSha256": "44839c845ab317428d52584571d5d5a9050c82fa219b80e8855040e4c0bf1d5f"
+}

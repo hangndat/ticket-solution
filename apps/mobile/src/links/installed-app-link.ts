@@ -1,4 +1,5 @@
 import { isAppScheme } from '../identity/app-schemes.ts';
+import { getProductWebOrigin } from '../identity/product-web-origin.ts';
 import {
   attendeeRedeemHref,
   extractRedeemCodeFromLinkInput,
@@ -6,16 +7,34 @@ import {
 import {
   extractMembershipInviteTokenFromUrl,
   isMembershipInviteToken,
+  parkMembershipInviteToken,
 } from './membership-invite-url.ts';
+import {
+  clearGuestClaimIntent,
+  parkGuestClaimIntent,
+} from '../redeem/claim-intent.ts';
 
-const UUID =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const EVENT_ID = /^[A-Za-z0-9][A-Za-z0-9-]{0,80}$/;
 /** Opaque claim token — length-bounded; never logged by callers. */
 const CLAIM_TOKEN = /^[A-Za-z0-9._~-]{16,512}$/;
+let claimLinkSequence = 0;
+
+export function isValidInvitationClaimScope(input: {
+  token: string;
+  tenantId: string;
+  eventId: string;
+}): boolean {
+  return (
+    CLAIM_TOKEN.test(input.token.trim()) &&
+    UUID.test(input.tenantId.trim()) &&
+    UUID.test(input.eventId.trim())
+  );
+}
 
 export type InstalledAppLink =
   | { kind: 'ticket'; ticketId: string; href: string }
+  | { kind: 'wallet-entry'; href: '/wallet-access' }
   | { kind: 'event'; eventId: string; href: string }
   | {
       kind: 'invitation-claim';
@@ -26,10 +45,12 @@ export type InstalledAppLink =
       eventSlug?: string;
       href: string;
     }
+  | { kind: 'invitation-claim-invalid'; href: '/claim' }
   | { kind: 'staff-access'; href: string }
   | {
       kind: 'membership-invite';
       token: string;
+      invalid: boolean;
       href: string;
     }
   | { kind: 'uat-session'; href: string }
@@ -75,10 +96,16 @@ export function parseInstalledAppLink(input: string): InstalledAppLink {
     return { kind: 'redeem-entry', href: attendeeRedeemHref(code) };
   }
 
+  // A hidden NativeTabs trigger cannot be navigated to. Enter the root stack
+  // first so guest links show the sign-in/explore state before any tab redirect.
+  if (head.toLowerCase() === 'my-tickets' && id === undefined) {
+    return { kind: 'wallet-entry', href: '/wallet-access' };
+  }
+
   if (!id) return { kind: 'passthrough' };
 
-  if (head.toLowerCase() === 'tickets' && UUID.test(id)) {
-    return { kind: 'ticket', ticketId: id, href: `/my-tickets/${id}` };
+  if ((head.toLowerCase() === 'tickets' || head.toLowerCase() === 'my-tickets') && UUID.test(id)) {
+    return { kind: 'ticket', ticketId: id, href: `/wallet-access/${id}` };
   }
   if (head.toLowerCase() === 'events' && EVENT_ID.test(id)) {
     return {
@@ -99,13 +126,36 @@ export function routeForInstalledAppLink(input: string): string | null {
   if (parsed.kind === 'oauth-callback') return null;
   if (
     parsed.kind === 'ticket' ||
+    parsed.kind === 'wallet-entry' ||
     parsed.kind === 'event' ||
     parsed.kind === 'invitation-claim' ||
+    parsed.kind === 'invitation-claim-invalid' ||
     parsed.kind === 'staff-access' ||
     parsed.kind === 'membership-invite' ||
     parsed.kind === 'uat-session' ||
     parsed.kind === 'redeem-entry'
   ) {
+    if (parsed.kind === 'invitation-claim') {
+      // Keep the opaque token out of Expo Router's path and navigation history.
+      parkGuestClaimIntent({
+        token: parsed.token,
+        tenantId: parsed.tenantId,
+        eventId: parsed.eventId,
+        tenantSlug: parsed.tenantSlug,
+        eventSlug: parsed.eventSlug,
+        parkedUserId: null,
+        parkedGeneration: null,
+      });
+      // A non-secret sequence refreshes an already open claim route.
+      return `/claim?intent=${++claimLinkSequence}`;
+    }
+    if (parsed.kind === 'invitation-claim-invalid') {
+      clearGuestClaimIntent();
+    }
+    if (parsed.kind === 'membership-invite') {
+      const href = parkMembershipInviteToken(parsed.token);
+      return parsed.invalid ? `${href}&invalid=1` : href;
+    }
     return parsed.href;
   }
   return input;
@@ -161,12 +211,15 @@ function parseMembershipInviteLink(raw: string): InstalledAppLink | null {
   try {
     if (/^https?:\/\//i.test(raw)) {
       url = new URL(raw);
+      const product = new URL(getProductWebOrigin());
+      if (url.origin !== product.origin || url.username || url.password) return null;
       const path = url.pathname.replace(/\/+$/, '') || '/';
       if (path !== '/invite') return null;
       const token = extractMembershipInviteTokenFromUrl(url);
       return {
         kind: 'membership-invite',
         token,
+        invalid: Boolean((url.hash && url.hash !== '#') || url.searchParams.has('token')) && !token,
         href: membershipInviteRouteHref(token),
       };
     }
@@ -194,6 +247,7 @@ function parseMembershipInviteLink(raw: string): InstalledAppLink | null {
   return {
     kind: 'membership-invite',
     token,
+    invalid: Boolean((url.hash && url.hash !== '#') || url.searchParams.has('token')) && !token,
     href: membershipInviteRouteHref(token),
   };
 }
@@ -244,8 +298,9 @@ function parseInvitationClaimLink(raw: string): InstalledAppLink | null {
   const tenantSlug = url.searchParams.get('tenantSlug')?.trim() || undefined;
   const eventSlug = url.searchParams.get('eventSlug')?.trim() || undefined;
 
-  if (!CLAIM_TOKEN.test(token) || !UUID.test(tenantId) || !UUID.test(eventId)) {
-    return { kind: 'passthrough' };
+  if (!isValidInvitationClaimScope({ token, tenantId, eventId })) {
+    // A recognized claim path still lands on its dedicated invalid-link state.
+    return { kind: 'invitation-claim-invalid', href: '/claim' };
   }
 
   const qs = new URLSearchParams({

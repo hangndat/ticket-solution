@@ -218,7 +218,7 @@ async function startIsolatedPostgres() {
   };
 }
 
-async function seedTenantEvent(db, tenantId, eventId, slug, eventName) {
+async function seedTenantEvent(db, tenantId, eventId, slug, eventName, startsAt) {
   await withTenant(db, tenantId, async (tx) => {
     await tx.tenant.create({
       data: { id: tenantId, slug: 'tenant-' + slug, name: 'T ' + slug },
@@ -229,6 +229,7 @@ async function seedTenantEvent(db, tenantId, eventId, slug, eventName) {
         id: eventId,
         slug,
         name: eventName,
+        startsAt,
         status: 'PUBLISHED',
       },
     });
@@ -242,7 +243,7 @@ async function seedTenantEvent(db, tenantId, eventId, slug, eventName) {
 }
 
 test(
-  'GET /v1/me/tickets returns eventName for scoped and aggregate listings',
+  'GET /v1/me/tickets and ticket detail return event dates across read paths',
   { timeout: 240000 },
   async () => {
     let container;
@@ -263,8 +264,19 @@ test(
       const tenantId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
       const eventId = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
       const eventName = 'Gala Night 2026';
+      const startsAt = '2026-12-01T09:30:00.000Z';
+      const laterEventId = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
       const gateConfig = createGateTestConfig(CRED_KEY, 'me-tickets-gate-test-kid');
-      await seedTenantEvent(db, tenantId, eventId, 'gala', eventName);
+      await seedTenantEvent(db, tenantId, eventId, 'gala', eventName, new Date(startsAt));
+      await withTenant(db, tenantId, async (tx) => {
+        await tx.event.create({ data: {
+          tenantId, id: laterEventId, slug: 'alpha', name: 'Alpha Later',
+          status: 'PUBLISHED', startsAt: new Date('2027-02-01T00:00:00.000Z'),
+        } });
+        await seedEventInventory(tx, HMAC, {
+          tenantId, eventId: laterEventId, eventQuota: 5, rawCodes: ['CODE-alpha'],
+        });
+      });
 
       await withTenant(db, tenantId, async (tx) => {
         const outcome = await redeemAndIssueTicket(tx, HMAC, CRED_KEY, {
@@ -278,6 +290,13 @@ test(
           manualCodePepper: readGateManualCodePepper(gateConfig.env),
         });
         unwrapRedeemOutcome(outcome);
+        const later = await redeemAndIssueTicket(tx, HMAC, CRED_KEY, {
+          tenantId, eventId: laterEventId, actorUserId: user.userId,
+          actorEmail: user.email, emailVerified: true, rawCode: 'CODE-alpha',
+          idempotencyKey: randomUUID(),
+          manualCodePepper: readGateManualCodePepper(gateConfig.env),
+        });
+        unwrapRedeemOutcome(later);
       });
 
       const app = await createApp({
@@ -306,9 +325,12 @@ test(
       });
       assert.equal(scoped.statusCode, 200);
       const scopedBody = scoped.json();
-      assert.equal(scopedBody.tickets.length, 1);
-      assert.equal(scopedBody.tickets[0].eventName, eventName);
-      assert.equal(scopedBody.tickets[0].eventId, eventId);
+      assert.equal(scopedBody.tickets.length, 2);
+      const scopedByEvent = new Map(scopedBody.tickets.map((ticket) => [ticket.eventId, ticket]));
+      assert.equal(scopedByEvent.get(eventId).eventName, eventName);
+      assert.equal(scopedByEvent.get(eventId).startsAt, startsAt);
+      assert.equal(scopedByEvent.get(laterEventId).startsAt, '2027-02-01T00:00:00.000Z');
+      assert.ok(scopedByEvent.get(eventId).startsAt < scopedByEvent.get(laterEventId).startsAt);
 
       const aggregate = await app.inject({
         method: 'GET',
@@ -317,8 +339,42 @@ test(
       });
       assert.equal(aggregate.statusCode, 200);
       const aggBody = aggregate.json();
-      assert.equal(aggBody.tickets.length, 1);
-      assert.equal(aggBody.tickets[0].eventName, eventName);
+      assert.equal(aggBody.tickets.length, 2);
+      const aggByEvent = new Map(aggBody.tickets.map((ticket) => [ticket.eventId, ticket]));
+      assert.equal(aggByEvent.get(eventId).startsAt, startsAt);
+      assert.equal(aggByEvent.get(laterEventId).startsAt, '2027-02-01T00:00:00.000Z');
+
+      const detail = await app.inject({
+        method: 'GET',
+        url: '/v1/me/tickets/' + scopedByEvent.get(eventId).ticketId + '?tenantId=' + tenantId,
+        headers: { authorization: 'Bearer ' + token },
+      });
+      assert.equal(detail.statusCode, 200);
+      assert.equal(detail.json().startsAt, startsAt);
+      assert.equal(detail.json().eventName, eventName);
+
+      await withTenant(db, tenantId, (tx) => tx.event.update({
+        where: { tenantId_id: { tenantId, id: eventId } }, data: { startsAt: null },
+      }));
+      const unscheduled = await app.inject({
+        method: 'GET', url: '/v1/me/tickets?tenantId=' + tenantId,
+        headers: { authorization: 'Bearer ' + token },
+      });
+      assert.equal(unscheduled.statusCode, 200);
+      assert.equal(unscheduled.json().tickets.find((ticket) => ticket.eventId === eventId).startsAt, null);
+      const unscheduledAggregate = await app.inject({
+        method: 'GET', url: '/v1/me/tickets',
+        headers: { authorization: 'Bearer ' + token },
+      });
+      assert.equal(unscheduledAggregate.statusCode, 200);
+      assert.equal(unscheduledAggregate.json().tickets.find((ticket) => ticket.eventId === eventId).startsAt, null);
+      const unscheduledDetail = await app.inject({
+        method: 'GET',
+        url: '/v1/me/tickets/' + scopedByEvent.get(eventId).ticketId + '?tenantId=' + tenantId,
+        headers: { authorization: 'Bearer ' + token },
+      });
+      assert.equal(unscheduledDetail.statusCode, 200);
+      assert.equal(unscheduledDetail.json().startsAt, null);
 
       await app.close();
     } finally {

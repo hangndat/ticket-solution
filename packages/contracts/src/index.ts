@@ -111,6 +111,8 @@ export interface TicketSummary {
   createdAt: string;
   /** Present when the event row still exists; omitted if deleted. */
   eventName?: string;
+  /** Event start in UTC ISO-8601; null when unscheduled, omitted by older servers or if the event was deleted. */
+  startsAt?: string | null;
 }
 
 export {

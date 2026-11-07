@@ -9,26 +9,17 @@ const outDir = path.join(pkgRoot, 'src/generated');
 
 const tokens = JSON.parse(fs.readFileSync(tokensPath, 'utf8'));
 const colors = tokens.colors ?? {};
-const { ink, paper, signal, primary, focus, line, muted, destructive, admit, unknown } =
-  colors;
 
-const requiredColors = {
-  ink,
-  paper,
-  signal,
-  primary,
-  focus,
-  line,
-  muted,
-  destructive,
-  admit,
-  unknown,
-};
-for (const [key, value] of Object.entries(requiredColors)) {
-  if (!value) {
+const requiredColors = ['ink', 'paper', 'signal', 'primary', 'focus', 'line', 'muted', 'destructive', 'admit', 'unknown'];
+for (const key of requiredColors) {
+  if (!colors[key]) {
     throw new Error(`brand/vemoki/tokens.json missing colors.${key}`);
   }
 }
+
+const typography = tokens.typography ?? {};
+const fontDisplay = typography.display ?? 'Be Vietnam Pro';
+const fontBody = typography.body ?? 'Be Vietnam Pro';
 
 const radius = tokens.radius ?? {};
 const shadow = tokens.shadow ?? {};
@@ -38,18 +29,9 @@ const breakpoints = tokens.breakpoints ?? {};
 fs.mkdirSync(outDir, { recursive: true });
 
 const themeLines = [
-  `  --color-ink: ${ink};`,
-  `  --color-paper: ${paper};`,
-  `  --color-signal: ${signal};`,
-  `  --color-primary: ${primary};`,
-  `  --color-focus: ${focus};`,
-  `  --color-line: ${line};`,
-  `  --color-muted: ${muted};`,
-  `  --color-destructive: ${destructive};`,
-  `  --color-admit: ${admit};`,
-  `  --color-unknown: ${unknown};`,
-  `  --font-display: Sora, ui-sans-serif, system-ui, sans-serif;`,
-  `  --font-sans: "Be Vietnam Pro", ui-sans-serif, system-ui, sans-serif;`,
+  ...Object.entries(colors).map(([key, value]) => `  --color-${key}: ${value};`),
+  `  --font-display: ${fontDisplay}, ui-sans-serif, system-ui, sans-serif;`,
+  `  --font-sans: "${fontBody}", ui-sans-serif, system-ui, sans-serif;`,
   `  --animate-spin: spin 1s linear infinite;`,
 ];
 
@@ -83,18 +65,7 @@ ${themeLines.join('\n')}
 }
 `;
 
-const snapshotLines = [
-  `  --ink: ${ink};`,
-  `  --paper: ${paper};`,
-  `  --signal: ${signal};`,
-  `  --primary: ${primary};`,
-  `  --focus: ${focus};`,
-  `  --line: ${line};`,
-  `  --muted: ${muted};`,
-  `  --destructive: ${destructive};`,
-  `  --admit: ${admit};`,
-  `  --unknown: ${unknown};`,
-];
+const snapshotLines = Object.entries(colors).map(([key, value]) => `  --${key}: ${value};`);
 
 const rootSnapshot = `/* Snapshot for CI — canonical :root brand colors from tokens.json */
 :root {

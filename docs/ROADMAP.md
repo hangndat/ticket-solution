@@ -1,6 +1,6 @@
 # Roadmap — phạm vi và gate Vemoki
 
-Ngày đối chiếu tài liệu: **03/11/2026**. Đây là bản đồ scope/gates, không phải snapshot board hoặc báo cáo runtime. [Project #3](https://github.com/users/hangndat/projects/3) là nguồn Status động; không suy trạng thái hiện tại từ ngày/SHA trong docs.
+Ngày đối chiếu tài liệu: **05/11/2026**. Đây là bản đồ scope/gates, không phải snapshot board hoặc báo cáo runtime. [Project #3](https://github.com/users/hangndat/projects/3) là nguồn Status động; không suy trạng thái hiện tại từ ngày/SHA trong docs.
 
 ## 0. Nguồn quyết định và lịch sử
 
@@ -16,6 +16,7 @@ Ngày đối chiếu tài liệu: **03/11/2026**. Đây là bản đồ scope/ga
 - **Pilot/UAT #1008:** phạm vi riêng theo [catalog](plans/PROD-LAUNCH-UAT.md). Chỉ chạy launch-uat khi Task authorize; đóng #914 không cấp quyền hoặc chứng minh pilot ready.
 - **F04 #1029–#1037:** E2E local theo [acceptance matrix](../tests/e2e/ACCEPTANCE.md) và [plan](../tests/e2e/PLAN.md). `pnpm e2e:f04-status` báo hợp ID có evidence lịch sử đã review và evidence hiện tại; tiến độ này trải trên nhiều SHA, không phải full regression trên HEAD. Không chép số PASS/BLOCKED theo SHA cũ thành tình trạng hôm nay.
 - **D13 #301/#310:** [kế hoạch App Store](plans/D13-APP-STORE-RELEASE-PLAN.md); submit/release theo approval riêng và mandatory gates, không EAS Cloud Build.
+- **D6 iOS UI 05/11 (wireframe đã duyệt):** Triển khai theo [wireframe iOS đã duyệt](design/mobile-approved-wireframes-2026-11-05/README.md), [handoff](design/mobile-approved-wireframes-2026-11-05/IMPLEMENTATION-HANDOFF.md) và [ADR](architecture/ADR-MOBILE-WIREFRAMES-2026-11-05.md). Phạm vi `apps/mobile`; Architecture impact: Không. Nguồn chuẩn là board 45 khung + 15 HTML `originals/` (pin bằng `MANIFEST.sha256`), **không** dùng board 25 màn dựng lại sai. Áp bốn delta CTA sau duyệt (tài khoản nhân viên, khám phá trống, link mời sai, sự kiện không sẵn sàng) theo README. Giữ O28–O33, auth/Gate invariants và Electric Violet token SoT (`brand/vemoki/tokens.json`); O30 chỉ đổi **trình bày** ví A+C, không đổi hành vi thứ tự vé hợp lệ/đã dùng, watermark, back navigation. Epic #914 đã **CLOSED** — việc này mở Issue/Epic mới trong Project #3, không reopen #914. Màn đại diện làm trước: **Ví của tôi** (`apps/mobile/src/app/(tabs)/my-tickets`) đối chiếu `originals/wallet-wireframe-hybrid-ac.html`. Approval thiết kế ≠ code complete / acceptance complete / pilot ready.
 - **O33:** VoiceOver, Dynamic Type và WCAG UAT được waive khỏi gate MVP/pilot, không phải known gap và không chặn các Epic đã được quyết định. Mục tiêu thiết kế accessibility không tự tạo lại gate.
 - **Non-goals MVP:** Android native; payment/refund/chuyển nhượng; seat map; Apple/Google Wallet. Không mở scope mới từ research/prototype.
 

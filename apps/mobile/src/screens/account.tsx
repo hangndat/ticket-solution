@@ -6,9 +6,9 @@ import { privacyPolicyHref } from '@/navigation/privacy-policy-navigation';
 import type { MeResponse } from '@ticket/contracts';
 import { AttendeeCta } from '@/components/attendee-cta';
 import {
-  AccountGroupedDivider,
   AccountGroupedRow,
-  AccountGroupedSection
+  AccountGroupedSection,
+  AccountSectionFooter
 } from '@/components/account-grouped-section';
 import { Notice, Page } from '@/components/page';
 import { accountCopy } from '@/components/screen-state-copy';
@@ -35,12 +35,11 @@ import {
   planPostLogoutNavigation,
   runPostLogoutNavigation
 } from '@/navigation/post-logout-navigation';
-import { returnToStaffGateScanTab } from '@/navigation/staff-scan-tab-navigation';
 import { useStaffWorkspace } from '@/navigation/use-staff-workspace';
 import { ATTENDEE_ACCOUNT_HREF } from '@/navigation/attendee-account-route';
 import { useAttendeeTabBarInset } from '@/navigation/use-attendee-tab-bar-inset';
 import { PushAccountSection } from '@/push/push-account-section';
-import { space } from '@/theme/tokens';
+import { radius, space } from '@/theme/tokens';
 
 export type AccountPresentation = 'tab' | 'stack';
 
@@ -256,10 +255,10 @@ function ConfiguredAccount({
 
   const tabBarInset = useAttendeeTabBarInset(24);
   const showLogout = isSignedIn;
-  const showDeleteRow = isSignedIn && !meError;
+  const showDeleteRow = isSignedIn;
 
   const youTitle = visibleMe?.email ?? accountCopy.verified.body;
-  const youBody = accountCopy.verified.body;
+  const youBody = 'Đã đăng nhập trên thiết bị này';
 
   if (!isSignedIn) {
     return (
@@ -290,9 +289,27 @@ function ConfiguredAccount({
         style={{ flex: 1, backgroundColor: brand.paper }}
         contentContainerStyle={{ padding: space.xl, paddingBottom: tabBarInset, gap: space.xl }}
       >
-        <AccountGroupedSection title={accountCopy.sections.you}>
-          <AccountGroupedRow label={youTitle} value={youBody} disabled={busy} />
-        </AccountGroupedSection>
+        <View
+          style={{
+            backgroundColor: colors.card,
+            borderColor: colors.line,
+            borderWidth: 1,
+            borderRadius: radius.lg,
+            borderCurve: 'continuous',
+            padding: space.lg,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: space.md,
+          }}
+        >
+          <View style={{ width: 44, height: 44, borderRadius: radius.pill, backgroundColor: colors.card, alignItems: 'center', justifyContent: 'center' }}>
+            <Text style={{ color: brand.primary, ...typography.title }} accessibilityElementsHidden>◯</Text>
+          </View>
+          <View style={{ flex: 1, gap: space.xxs }}>
+            <Text selectable numberOfLines={2} style={{ color: brand.ink, ...typography.bodySemibold }}>{youTitle}</Text>
+            <Text style={{ color: colors.admit, ...typography.caption }}>{youBody}</Text>
+          </View>
+        </View>
 
         <PushAccountSection identityKind="verified" disabled={busy} />
 
@@ -308,35 +325,7 @@ function ConfiguredAccount({
             disabled={busy}
             testID="account-cta-privacy"
           />
-          {showDeleteRow ? (
-            <>
-              <AccountGroupedDivider />
-              <AccountGroupedRow
-                label={accountCopy.deleteAccountRow}
-                showChevron
-                onPress={() =>
-                  router.push(
-                    staffWorkspace
-                      ? `${STAFF_ACCOUNT_HREF}/delete`
-                      : `${ATTENDEE_ACCOUNT_HREF}/delete`,
-                  )
-                }
-                disabled={busy}
-                testID="account-delete-row"
-              />
-            </>
-          ) : null}
         </AccountGroupedSection>
-
-        {staffWorkspace ? (
-          <AttendeeCta
-            label={accountCopy.staffBackToGate}
-            variant="secondary"
-            onPress={() => returnToStaffGateScanTab()}
-            disabled={busy}
-            testID="account-cta-staff-back"
-          />
-        ) : null}
 
         {busy ? (
           <View style={{ padding: space.sm, alignItems: 'center' }}>
@@ -362,6 +351,22 @@ function ConfiguredAccount({
           </View>
         ) : null}
 
+        {showDeleteRow ? (
+          <View style={{ gap: space.sm, borderTopColor: colors.line, borderTopWidth: 1, paddingTop: space.lg }}>
+            <AccountGroupedSection title="Xóa tài khoản">
+              <AccountGroupedRow
+                label={accountCopy.deleteAccountRow}
+                destructive
+                showChevron
+                onPress={() => router.push(staffWorkspace ? `${STAFF_ACCOUNT_HREF}/delete` : `${ATTENDEE_ACCOUNT_HREF}/delete`)}
+                disabled={busy}
+                testID="account-delete-row"
+                accessibilityHint="Mở trang giải thích và xác nhận trước khi gửi yêu cầu"
+              />
+            </AccountGroupedSection>
+            <AccountSectionFooter>Mở trang giải thích và xác nhận trước khi gửi yêu cầu. Chạm dòng này không xóa ngay.</AccountSectionFooter>
+          </View>
+        ) : null}
         {showLogout || logoutFailed ? (
           <AttendeeCta
             label={logoutFailed ? 'Thử lại đăng xuất' : accountCopy.logoutCta}

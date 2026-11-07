@@ -1,14 +1,19 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
+  isValidInvitationClaimScope,
   parseInstalledAppLink,
   routeForInstalledAppLink,
 } from './installed-app-link.ts';
+import {
+  clearGuestClaimIntent,
+  peekGuestClaimIntent,
+} from '../redeem/claim-intent.ts';
 
 const ticketId = '11111111-1111-4111-8111-111111111111';
 
 test('ticket link opens the existing ticket screen', () => {
-  const href = `/my-tickets/${ticketId}`;
+  const href = `/wallet-access/${ticketId}`;
   for (const input of [
     `ticketsolution://tickets/${ticketId}`,
     `vemoki://tickets/${ticketId}`,
@@ -16,6 +21,7 @@ test('ticket link opens the existing ticket screen', () => {
     `ticketsolution:///tickets/${ticketId}`,
     `tickets/${ticketId}`,
     `/tickets/${ticketId}?from=qr`,
+    `vemoki://my-tickets/${ticketId}`,
   ]) {
     assert.deepEqual(parseInstalledAppLink(input), {
       kind: 'ticket',
@@ -23,6 +29,16 @@ test('ticket link opens the existing ticket screen', () => {
       href,
     });
     assert.equal(routeForInstalledAppLink(input), href);
+  }
+});
+
+test('wallet deep link enters root access route before the hidden tab', () => {
+  for (const input of ['vemoki://my-tickets', 'vemoki:///my-tickets', '/my-tickets']) {
+    assert.deepEqual(parseInstalledAppLink(input), {
+      kind: 'wallet-entry',
+      href: '/wallet-access',
+    });
+    assert.equal(routeForInstalledAppLink(input), '/wallet-access');
   }
 });
 
@@ -73,15 +89,15 @@ test('redeem deep link preserves code query on global route', () => {
   const parsed = parseInstalledAppLink(input);
   assert.equal(parsed.kind, 'redeem-entry');
   if (parsed.kind !== 'redeem-entry') return;
-  assert.equal(
-    parsed.href,
-    `/(tabs)/redeem?code=${encodeURIComponent(code)}`,
-  );
+  assert.equal(parsed.href, `/(tabs)/redeem?code=${encodeURIComponent(code)}`);
   assert.equal(routeForInstalledAppLink(input), parsed.href);
 });
 
 test('unrelated and invalid links are left untouched', () => {
-  assert.equal(parseInstalledAppLink('https://example.com/tickets/x').kind, 'passthrough');
+  assert.equal(
+    parseInstalledAppLink('https://example.com/tickets/x').kind,
+    'passthrough',
+  );
   assert.equal(
     parseInstalledAppLink('ticketsolution://tickets/not-a-uuid').kind,
     'passthrough',
@@ -97,6 +113,7 @@ test('unrelated and invalid links are left untouched', () => {
 });
 
 test('invitation claim link routes to /claim without fixture fallback', () => {
+  clearGuestClaimIntent();
   const token = 'opaque-claim-token-16chars';
   const tenantId = '22222222-2222-4222-8222-222222222222';
   const eventId = '33333333-3333-4333-8333-333333333333';
@@ -109,14 +126,33 @@ test('invitation claim link routes to /claim without fixture fallback', () => {
   assert.equal(parsed.eventId, eventId);
   assert.match(parsed.href, /^\/claim\?/);
   assert.doesNotMatch(parsed.href, /fixture/);
-  assert.equal(routeForInstalledAppLink(input), parsed.href);
+  const firstRoute = routeForInstalledAppLink(input);
+  const secondRoute = routeForInstalledAppLink(input);
+  assert.match(firstRoute ?? '', /^\/claim\?intent=\d+$/);
+  assert.match(secondRoute ?? '', /^\/claim\?intent=\d+$/);
+  assert.notEqual(firstRoute, secondRoute);
+  assert.doesNotMatch(firstRoute ?? '', /token=/);
+  assert.equal(peekGuestClaimIntent()?.token, token);
 });
 
-test('invitation claim with short token is not routed', () => {
+test('invitation claim with short token opens invalid-link screen', () => {
   const parsed = parseInstalledAppLink(
     'vemoki://invitations/claim?token=short&tenantId=22222222-2222-4222-8222-222222222222&eventId=33333333-3333-4333-8333-333333333333',
   );
-  assert.equal(parsed.kind, 'passthrough');
+  assert.equal(parsed.kind, 'invitation-claim-invalid');
+  assert.equal(
+    routeForInstalledAppLink('vemoki://invitations/claim?token=short'),
+    '/claim',
+  );
+  assert.equal(peekGuestClaimIntent(), null);
+  assert.equal(
+    isValidInvitationClaimScope({
+      token: 'short',
+      tenantId: '22222222-2222-4222-8222-222222222222',
+      eventId: '33333333-3333-4333-8333-333333333333',
+    }),
+    false,
+  );
 });
 
 test('membership invite opens web bridge (not native claim)', () => {
@@ -132,7 +168,9 @@ test('membership invite opens web bridge (not native claim)', () => {
     assert.equal(parsed.token, token);
     assert.match(parsed.href, /^\/membership-invite\?token=/);
     assert.doesNotMatch(parsed.href, /^\/claim/);
-    assert.equal(routeForInstalledAppLink(input), parsed.href);
+    const route = routeForInstalledAppLink(input);
+    assert.match(route ?? '', /^\/membership-invite\?intent=\d+$/);
+    assert.doesNotMatch(route ?? '', /token=/);
   }
 });
 
@@ -141,7 +179,21 @@ test('membership invite without token still routes to bridge', () => {
   assert.equal(parsed.kind, 'membership-invite');
   if (parsed.kind !== 'membership-invite') return;
   assert.equal(parsed.token, '');
+  assert.equal(parsed.invalid, false);
   assert.equal(parsed.href, '/membership-invite');
+  assert.match(routeForInstalledAppLink('vemoki://invite') ?? '', /^\/membership-invite\?intent=\d+$/);
+  assert.equal(routeForInstalledAppLink('/invite?token=')?.includes('invalid=1'), true);
+});
+
+test('malformed membership token reaches invalid state without exposing token', () => {
+  const route = routeForInstalledAppLink('vemoki://invite?token=short');
+  assert.match(route ?? '', /^\/membership-invite\?intent=\d+&invalid=1$/);
+  assert.doesNotMatch(route ?? '', /short|token=/);
+});
+
+test('untrusted web host cannot open the invite bridge', () => {
+  assert.equal(parseInstalledAppLink('https://evil.test/invite#token=ABCDEFGH').kind, 'passthrough');
+  assert.equal(parseInstalledAppLink('https://app.vemoki.com.evil.test/invite').kind, 'passthrough');
 });
 
 test('staff deep link opens soft-access (O02 deny / tab gate)', () => {

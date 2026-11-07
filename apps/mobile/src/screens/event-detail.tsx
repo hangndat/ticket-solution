@@ -2,11 +2,13 @@ import { useEffect, useState } from 'react';
 import {
   AccessibilityInfo,
   Animated,
+  ScrollView,
   Text,
   View
 } from 'react-native';
 import { router } from 'expo-router';
 import { AttendeeCta } from '@/components/attendee-cta';
+import { Button } from '@/components/ui/button';
 import { EVENT_BANNER_HEIGHT_DETAIL } from '@/components/event-banner-metrics';
 import {
   CollapsibleRow,
@@ -27,6 +29,7 @@ import { eventsCopy } from '@/components/screen-state-copy';
 import { ATTENDEE_REDEEM_PATH } from '@/navigation/attendee-redeem-entry';
 import { eventDate, findDemoEvent } from '@/data/demo-events';
 import { buildEventDetailModel } from '@/published/event-detail-model';
+import { publishedDetailPhaseFromResult, type PublishedDetailPhase } from '@/published/event-detail-state';
 import {
   fetchPublishedEventDetail
 } from '@/published/published-event-api';
@@ -36,6 +39,7 @@ import { fontFamilies } from '@/theme/fonts';
 import { useTheme } from '@/theme/ThemeProvider';
 import { typography } from '@/theme/typography';
 import { WalletOwnedTicketsLink } from '@/components/wallet-owned-tickets-link';
+import { eventCtaForeground, eventIdentityColor } from '@/brand/event-identity';
 import { space } from '@/theme/tokens';
 
 export function EventDetailScreen({
@@ -168,13 +172,7 @@ function PublishedEventDetailView({
   tenantSlug: string;
   slug: string;
 }) {
-  const [phase, setPhase] = useState<
-    | { kind: 'loading' }
-    | { kind: 'ready'; event: PublishedEventDetail }
-    | { kind: 'not-found' }
-    | { kind: 'error'; message: string }
-    | { kind: 'misconfigured' }
-  >({ kind: 'loading' });
+  const [phase, setPhase] = useState<PublishedDetailPhase>({ kind: 'loading' });
   const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
@@ -188,25 +186,7 @@ function PublishedEventDetailView({
         controller.signal,
       );
       if (cancelled) return;
-      if (result.status === 'ok') {
-        setPhase({ kind: 'ready', event: result.event });
-        return;
-      }
-      if (result.status === 'not-found') {
-        setPhase({ kind: 'not-found' });
-        return;
-      }
-      if (result.status === 'misconfigured') {
-        setPhase({ kind: 'misconfigured' });
-        return;
-      }
-      setPhase({
-        kind: 'error',
-        message:
-          result.status === 'unreachable'
-            ? 'Không tải được sự kiện. Kiểm tra kết nối rồi thử lại.'
-            : 'Không tải được sự kiện. Phản hồi không hợp lệ.'
-      });
+      setPhase(publishedDetailPhaseFromResult(result));
     })();
     return () => {
       cancelled = true;
@@ -237,18 +217,23 @@ function PublishedEventDetailView({
 
   if (phase.kind === 'not-found') {
     return (
-      <Page>
-        <EmptyState title="Sự kiện không khả dụng">
-          Sự kiện này không khả dụng hoặc chưa được xuất bản. Đây không phải
-          nội dung demo.
-        </EmptyState>
-        <AttendeeCta
-          label="Về danh sách sự kiện"
-          variant="secondary"
-          onPress={() => router.replace('/')}
-          testID="event-detail-home"
-        />
-      </Page>
+      <ScrollView contentInsetAdjustmentBehavior="automatic"
+        style={{ flex: 1, backgroundColor: colors.paper }}
+        contentContainerStyle={{ flexGrow: 1, justifyContent: 'center',
+          alignItems: 'center', padding: space.xl, gap: space.md }}>
+        <Text style={{ ...typography.display, color: brand.primary }}>✧</Text>
+        <Text accessibilityRole="header" style={{ ...typography.title,
+          color: brand.ink, textAlign: 'center' }}>Không tìm thấy sự kiện</Text>
+        <Text style={{ ...typography.body, color: colors.secondary,
+          textAlign: 'center' }}>
+          Sự kiện này có thể không còn công khai hoặc đường dẫn đã thay đổi.
+        </Text>
+        <View style={{ alignSelf: 'stretch', paddingTop: space.sm }}>
+          <AttendeeCta label="Khám phá sự kiện"
+            onPress={() => router.replace('/')}
+            testID="event-detail-home" />
+        </View>
+      </ScrollView>
     );
   }
 
@@ -257,7 +242,7 @@ function PublishedEventDetailView({
       <Page>
         <ErrorState
           title={eventsCopy.errorDetail.title}
-          onRetry={() => setRetryKey((k) => k + 1)}
+          onRetry={phase.retryable ? () => setRetryKey((k) => k + 1) : undefined}
           retryLabel="Thử lại"
         >
           {phase.message}
@@ -279,6 +264,7 @@ function PublishedEventComposition({
   const { heroOpacity, reduceMotionOs } = useHeroFade();
   const model = buildEventDetailModel(event);
   const copy = eventsCopy.detail;
+  const ctaBackground = eventIdentityColor(event.id, event.brand.primaryColor);
 
   useEffect(() => {
     applyBranding(
@@ -295,26 +281,19 @@ function PublishedEventComposition({
 
   const footer = (
     <>
-      <WalletOwnedTicketsLink
-        eventId={event.id}
-        variant="card-row"
-        testID="event-detail-owned-tickets"
-      />
-      {model.redeemHint ? (
-        <Text
-          selectable
-          numberOfLines={2}
-          style={{ ...typography.callout, color: colors.secondary }}
-        >
-          {model.redeemHint}
-        </Text>
-      ) : null}
-      <AttendeeCta
-        label={eventsCopy.redeemCta}
-        accessibilityLabel={`${eventsCopy.redeemCta} — nhận vé cho ${event.name}`}
+      <Button
+        label="Đổi mã nhận vé"
+        size="lg"
+        style={{ backgroundColor: ctaBackground }}
+        accessibilityLabel={`Đổi mã nhận vé cho ${event.name}`}
         onPress={() => router.push(ATTENDEE_REDEEM_PATH)}
         testID="event-detail-cta-redeem"
-      />
+      >
+        <Text style={{ ...typography.callout, fontFamily: fontFamilies.bodySemiBold,
+          color: eventCtaForeground(ctaBackground), textAlign: 'center' }}>
+          Đổi mã nhận vé
+        </Text>
+      </Button>
     </>
   );
 
@@ -338,6 +317,8 @@ function PublishedEventComposition({
         />
         <EventDetailBody>
           <View style={{ gap: space.sm }}>
+            <Text style={{ ...typography.caption, color: colors.secondary,
+              fontFamily: fontFamilies.bodySemiBold }}>SỰ KIỆN CÔNG KHAI</Text>
             <Text
               accessibilityRole="header"
               selectable
@@ -350,7 +331,18 @@ function PublishedEventComposition({
               venue={model.venue}
               organizer={model.organizer}
             />
+            <WalletOwnedTicketsLink
+              eventId={event.id}
+              variant="card-row"
+              testID="event-detail-owned-tickets"
+            />
           </View>
+
+          {model.redeemHint ? (
+            <Text selectable style={{ ...typography.callout, color: colors.secondary }}>
+              {model.redeemHint}
+            </Text>
+          ) : null}
 
           {model.about ? (
             <SectionBlock title={copy.aboutTitle}>

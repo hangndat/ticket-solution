@@ -54,6 +54,7 @@ import {
   resolvePendingOpAfterOfflineReplay,
 } from '@/gate/staff-gate-replay-pending';
 import {
+  canRetryGateWorkspaceLoad,
   invalidateGateWorkspaceLifecycle,
   isGateWorkspaceLifecycleCurrent,
   loadWorkspaceWithLifecycleGuard,
@@ -69,12 +70,13 @@ import {
   SCAN_TOAST_FADE_MS,
   SCAN_TOAST_VISIBLE_MS,
   cameraFeedbackLifecycle,
-  needsStickyPendingOp,
+  needsScanContinuation,
+  isScanIntakeBlocked,
+  canAcceptCameraScan,
   prominentCanReconcile,
   selectScanFeedbackOp,
   shouldDismissToastAttempt,
   shouldShowCameraToast,
-  shouldSuppressCameraRescan
 } from '@/gate/staff-gate-scan-feedback';
 import { randomId } from '@/lib/random-id';
 import { resolveGateScanFallback } from '@/gate/staff-gate-scope';
@@ -184,6 +186,7 @@ export type StaffGateWorkspaceValue = {
   gateEventsLoading: boolean;
   gateEventsError: string | null;
   workspaceLoadError?: boolean;
+  retryWorkspaceLoad: (expectedEpoch?: SessionEpoch | null) => void;
   eventPickerOpen: boolean;
   setEventPickerOpen: (open: boolean | ((prev: boolean) => boolean)) => void;
   queueSnap: OfflineQueueSnapshot;
@@ -240,6 +243,8 @@ export function StaffGateWorkspaceProvider({
   const [gateEventsLoading, setGateEventsLoading] = useState(false);
   const [gateEventsError, setGateEventsError] = useState<string | null>(null);
   const [workspaceLoadError, setWorkspaceLoadError] = useState(false);
+  const [workspaceRetryNonce, setWorkspaceRetryNonce] = useState(0);
+  const workspaceRetryPendingRef = useRef(false);
   const [eventPickerOpen, setEventPickerOpen] = useState(false);
   const [gatesLoad, setGatesLoad] = useState<GatesLoadState | null>(null);
   const [selectedGate, setSelectedGate] = useState<{ key: string; id: string } | null>(null);
@@ -251,6 +256,8 @@ export function StaffGateWorkspaceProvider({
   const [sessionOpenError, setSessionOpenError] = useState<{ key: string; message: string } | null>(null);
   const lock = useRef(false);
   const lockOwnerRef = useRef<string | null>(null);
+  const busyRef = useRef(false);
+  const pendingOpRef = useRef<GateOp | null>(null);
   const workspaceRef = useRef(emptyStaffGateWorkspace());
   const ownerRef = useRef<SessionEpoch | null>(null);
   const ownerWriteGenerationRef = useRef(0);
@@ -267,6 +274,7 @@ export function StaffGateWorkspaceProvider({
   const foregroundSyncChainRef = useRef<Promise<void>>(Promise.resolve());
   const workspaceWriteRef = useRef<Promise<void>>(Promise.resolve());
   const recoveryAttemptedSessionsRef = useRef(new Set<string>());
+
   useLayoutEffect(() => {
     viewRef.current = { gateScope, sessionId, ops };
   }, [gateScope, sessionId, ops]);
@@ -297,6 +305,7 @@ export function StaffGateWorkspaceProvider({
     toastAttemptRef.current = null;
     setToastOp(null);
     setToastVisible(false);
+    pendingOpRef.current = null;
     setPendingOp(null);
     lastCameraPayloadRef.current = null;
   }, [clearToastTimers]);
@@ -312,6 +321,7 @@ export function StaffGateWorkspaceProvider({
     setSessionId(null);
     setGateScope(null);
     setReady(false);
+    busyRef.current = false;
     setBusy(false);
     lock.current = false;
     lockOwnerRef.current = null;
@@ -319,9 +329,14 @@ export function StaffGateWorkspaceProvider({
   }), [clearScanFeedback]);
 
   const dismissPendingAction = useCallback(() => {
+    clearToastTimers();
+    toastAttemptRef.current = null;
+    setToastOp(null);
+    setToastVisible(false);
+    pendingOpRef.current = null;
     setPendingOp(null);
     lastCameraPayloadRef.current = null;
-  }, []);
+  }, [clearToastTimers]);
 
   const applyScanResult = useCallback(
     (op: GateOp | null, attemptId: string) => {
@@ -331,7 +346,8 @@ export function StaffGateWorkspaceProvider({
       }
       toastAttemptRef.current = attemptId;
       clearToastTimers();
-      setPendingOp(needsStickyPendingOp(op) ? op : null);
+      pendingOpRef.current = needsScanContinuation(op) ? op : null;
+      setPendingOp(pendingOpRef.current);
 
       if (shouldShowCameraToast(op, false)) {
         setToastOp(op);
@@ -353,7 +369,7 @@ export function StaffGateWorkspaceProvider({
         toastCleanupTimerRef.current = setTimeout(() => {
           if (toastAttemptRef.current !== attemptId) return;
           setToastOp(null);
-          if (!needsStickyPendingOp(op)) {
+          if (!needsScanContinuation(op)) {
             toastAttemptRef.current = null;
             lastCameraPayloadRef.current = null;
           }
@@ -381,6 +397,22 @@ export function StaffGateWorkspaceProvider({
     session.getSnapshot,
   );
   const verifiedUserId = identitySnapshot.status === 'verified' ? identitySnapshot.userId : null;
+
+  const retryWorkspaceLoad = useCallback((expectedEpoch?: SessionEpoch | null) => {
+    if (!canRetryGateWorkspaceLoad({
+      requested: expectedEpoch ?? null,
+      current: session.captureEpoch(),
+      verifiedUserId,
+      active,
+      loadError: workspaceLoadError,
+      ready,
+      pending: workspaceRetryPendingRef.current,
+      hasScope: gateScope !== null,
+      hasSession: sessionId !== null,
+    })) return;
+    workspaceRetryPendingRef.current = true;
+    setWorkspaceRetryNonce((nonce) => nonce + 1);
+  }, [active, gateScope, ready, sessionId, verifiedUserId, workspaceLoadError]);
 
 
   const gatesKey =
@@ -502,14 +534,13 @@ export function StaffGateWorkspaceProvider({
       viewRef.current = { gateScope: scope, sessionId: activeSession, ops: mergedOps };
       workspaceRef.current = persistActiveScope(workspaceRef.current, scope, mergedOps, activeSession);
       setOps(mergedOps);
-      setPendingOp((current) =>
-        resolvePendingOpAfterOfflineReplay({
-          currentPending: current,
-          currentOps,
-          nextOps: mergedOps,
-          activeSession,
-        }),
-      );
+      pendingOpRef.current = resolvePendingOpAfterOfflineReplay({
+        currentPending: pendingOpRef.current,
+        currentOps,
+        nextOps: mergedOps,
+        activeSession,
+      });
+      setPendingOp(pendingOpRef.current);
       const replayFeedback = findTerminalReplayFeedbackOp(latestOps, mergedOps);
       if (replayFeedback) applyScanResult(replayFeedback, randomId());
       await saveWorkspace(userId);
@@ -568,6 +599,7 @@ export function StaffGateWorkspaceProvider({
       setGateEventChoices([]);
       setGateEventsError(null);
       setWorkspaceLoadError(false);
+      workspaceRetryPendingRef.current = false;
       setGateEventsLoading(false);
       return;
     }
@@ -694,6 +726,7 @@ export function StaffGateWorkspaceProvider({
       setGateEventsLoading(false);
       setEventPickerOpen(false);
       setConnectivity('unknown');
+      busyRef.current = false;
       setBusy(false);
       setReady(false);
     });
@@ -717,6 +750,7 @@ export function StaffGateWorkspaceProvider({
           workspaceRef.current = emptyStaffGateWorkspace();
           viewRef.current = { gateScope: null, sessionId: null, ops: [] };
           setOps([]);
+          busyRef.current = false;
           setBusy(false);
           lock.current = false;
           lockOwnerRef.current = null;
@@ -740,8 +774,12 @@ export function StaffGateWorkspaceProvider({
             () => loadStaffGateWorkspace(verifiedUserId),
           );
         } catch {
-          setGateEventsError('Không thể mở dữ liệu cổng trên thiết bị. Vui lòng thử lại.');
-          setWorkspaceLoadError(true);
+          if (!cancelled && session.isEpochCurrent(activationEpoch) &&
+              isGateWorkspaceLifecycleCurrent(foregroundLifecycleRef, lifecycleToken)) {
+            setGateEventsError('Không thể mở dữ liệu cổng trên thiết bị. Vui lòng thử lại.');
+            setWorkspaceLoadError(true);
+            workspaceRetryPendingRef.current = false;
+          }
           return;
         }
         if (
@@ -800,6 +838,7 @@ export function StaffGateWorkspaceProvider({
     runForegroundSync,
     verifiedUserId,
     clearScanFeedback,
+    workspaceRetryNonce,
   ]);
 
   const selectGateScope = useCallback(
@@ -834,12 +873,17 @@ export function StaffGateWorkspaceProvider({
   );
 
   const submitScan = useCallback(async (payload: string, source: 'qr' | 'manual' = 'qr') => {
+    const code = payload.trim();
+    if (!code || isScanIntakeBlocked({ locked: lock.current, busy: busyRef.current, pending: pendingOpRef.current })) return;
     const replayEpoch = session.captureEpoch();
     const startedView = viewRef.current;
     const writeGeneration = gateWorkspaceWriteGeneration(replayEpoch?.userId ?? '');
-    const code = payload.trim();
-    if (!code || lock.current || !replayEpoch || replayEpoch.userId !== verifiedUserId) return;
+    if (!replayEpoch || replayEpoch.userId !== verifiedUserId) return;
+    // Acquire before any state update or await so a queued native callback
+    // cannot start another QR even before React rerenders disabled props.
     const attemptId = randomId();
+    lock.current = true;
+    lockOwnerRef.current = attemptId;
     feedbackGenerationRef.current += 1;
     const startedGeneration = feedbackGenerationRef.current;
     const isCurrent = gateWorkspaceOperationGuard({
@@ -854,9 +898,8 @@ export function StaffGateWorkspaceProvider({
     clearToastTimers();
     setToastOp(null);
     setToastVisible(false);
+    pendingOpRef.current = null;
     setPendingOp(null);
-    lock.current = true;
-    lockOwnerRef.current = attemptId;
     const auth = await resolveGateAuth();
     if (!isCurrent()) {
       if (lockOwnerRef.current === attemptId) { lock.current = false; lockOwnerRef.current = null; }
@@ -897,6 +940,7 @@ export function StaffGateWorkspaceProvider({
       lockOwnerRef.current = null;
       return;
     }
+    busyRef.current = true;
     setBusy(true);
     try {
       const snap = session.getSnapshot();
@@ -993,7 +1037,7 @@ export function StaffGateWorkspaceProvider({
       }
     } finally {
       if (lockOwnerRef.current === attemptId) { lock.current = false; lockOwnerRef.current = null; }
-      if (session.isEpochCurrent(replayEpoch)) setBusy(false);
+      if (session.isEpochCurrent(replayEpoch)) { busyRef.current = false; setBusy(false); }
     }
   }, [
     applyScanResult,
@@ -1010,17 +1054,15 @@ export function StaffGateWorkspaceProvider({
 
   const handleCameraScan = useCallback((data: string) => {
     const code = normalizeGatePasteInput(data);
-    if (!code || lock.current) return;
     const lifecycle = cameraFeedbackLifecycle(busy, toastVisible, pendingOp);
-    if (
-      shouldSuppressCameraRescan(
-        code,
-        lastCameraPayloadRef.current,
-        lifecycle,
-      )
-    ) {
-      return;
-    }
+    if (!canAcceptCameraScan({
+      code,
+      locked: lock.current,
+      busy: busyRef.current,
+      pending: pendingOpRef.current,
+      lastPayload: lastCameraPayloadRef.current,
+      lifecycle,
+    })) return;
     lastCameraPayloadRef.current = code;
     void submitScan(code);
   }, [busy, pendingOp, submitScan, toastVisible]);
@@ -1047,6 +1089,7 @@ export function StaffGateWorkspaceProvider({
     setToastVisible(false);
     const auth = await resolveGateAuth();
     if (!auth.ok || !isCurrent()) return;
+    busyRef.current = true;
     setBusy(true);
     try {
       const reconciled = await reconcileOp({
@@ -1064,7 +1107,7 @@ export function StaffGateWorkspaceProvider({
       await persist([next, ...rest], next, sessionId, isCurrent);
       if (isCurrent()) applyScanResult(next, attemptId);
     } finally {
-      if (session.isEpochCurrent(epoch)) setBusy(false);
+      if (session.isEpochCurrent(epoch)) { busyRef.current = false; setBusy(false); }
     }
   }, [applyScanResult, clearToastTimers, ops, pendingOp, persist, sessionId, verifiedUserId]);
 
@@ -1073,6 +1116,7 @@ export function StaffGateWorkspaceProvider({
     if (!epoch) return;
     const auth = await resolveGateAuth();
     if (!auth.ok || !session.isEpochCurrent(epoch)) return;
+    busyRef.current = true;
     setBusy(true);
     try {
       await offlineScanQueue.bindUser(epoch.userId);
@@ -1081,6 +1125,7 @@ export function StaffGateWorkspaceProvider({
       if (!session.isEpochCurrent(epoch)) return;
       await replayAndReconcile(auth.bearer, auth.apiBase, epoch.userId, epoch);
     } finally {
+      busyRef.current = false;
       setBusy(false);
     }
   }, [replayAndReconcile]);
@@ -1352,7 +1397,7 @@ export function StaffGateWorkspaceProvider({
   );
 
   const scanDisabled =
-    busy || !ready || !gateScope || gateEventsLoading;
+    busy || !ready || !gateScope || gateEventsLoading || pendingOp !== null;
 
   const queueAttention =
     queueSnap.pendingCount > 0 || queueSnap.conflictCount > 0;
@@ -1373,6 +1418,7 @@ export function StaffGateWorkspaceProvider({
       gateEventsLoading,
       gateEventsError,
       workspaceLoadError,
+      retryWorkspaceLoad,
       eventPickerOpen,
       setEventPickerOpen,
       queueSnap,
@@ -1408,6 +1454,7 @@ export function StaffGateWorkspaceProvider({
       gateEventsLoading,
       gateEventsError,
       workspaceLoadError,
+      retryWorkspaceLoad,
       eventPickerOpen,
       queueSnap,
       machineLabel,

@@ -17,21 +17,23 @@ import {
 import type { TicketSummary } from '@ticket/contracts';
 import { AttendeeCta } from '@/components/attendee-cta';
 import { Button } from '@/components/ui/button';
+import { EVENT_BANNER_HEIGHT_TICKET } from '@/components/event-banner-metrics';
 import { EventBanner } from '@/components/event-media';
 import {
   EmptyState,
   ErrorState,
   LoadingState
 } from '@/components/screen-state';
-import { eventsCopy, walletCopy } from '@/components/screen-state-copy';
+import { walletCopy } from '@/components/screen-state-copy';
 import { ATTENDEE_REDEEM_PATH } from '@/navigation/attendee-redeem-entry';
+import { ATTENDEE_ACCOUNT_HREF, GUEST_HOME_HREF } from '@/navigation/attendee-account-route';
 import {
   attendeeWalletCopy
 } from '@/attendee/attendee-outcome-copy';
 import { AttendeeScreenChrome } from '@/navigation/attendee-screen-chrome';
 import { hasDemoMediaForEventId } from '@/data/demo-media';
 import { brand, colors } from '@/theme/colors';
-import { layout, space, radius } from '@/theme/tokens';
+import { elevation, layout, space, radius } from '@/theme/tokens';
 import { typography } from '@/theme/typography';
 import { fontFamilies } from '@/theme/fonts';
 import { session } from '@/identity/session';
@@ -56,7 +58,9 @@ import {
   decideTicketSyncApply
 } from '@/tickets/ticket-sync-guard';
 import { walletOfflineNoticeBody } from '@/tickets/wallet-sync-display';
+import { formatWalletEventStart, selectHeroTicket } from '@/tickets/wallet-hero-ticket';
 import { startWalletFocusRefresh } from '@/tickets/wallet-focus-refresh';
+import { walletContentPhase } from '@/tickets/wallet-content-phase';
 import { logoutAndClearWalletArtifacts } from '@/tickets/wallet-logout';
 import { isApnsProvider, pushProviderName } from '@/push/push';
 import { normalizeIosNotificationPermission } from '@/push/push-permission';
@@ -105,6 +109,77 @@ function WalletGroupedTicketList({
         <EventTicketSection key={group.eventId} group={group} offline={offline} />
       ))}
     </>
+  );
+}
+
+const walletEyebrowStyle = {
+  ...typography.badge,
+  color: colors.secondary,
+  textTransform: 'uppercase' as const
+};
+
+/** Hero card: most urgent usable ticket, surfaced above the compact remaining list (A+C). */
+function WalletHeroTicket({
+  ticket,
+  group,
+  offline
+}: {
+  ticket: TicketSummary;
+  group: EventTicketGroup;
+  offline: boolean;
+}) {
+  const status = walletTicketStatus(ticket, { offline });
+  const eventStart = formatWalletEventStart(ticket.startsAt);
+  return (
+    <View
+      style={{
+        backgroundColor: colors.ticketCanvas,
+        borderRadius: radius.lg,
+        borderCurve: 'continuous',
+        borderWidth: 1,
+        borderColor: colors.line,
+        overflow: 'hidden',
+        ...elevation.card
+      }}
+    >
+      <EventBanner
+        eventId={group.eventId}
+        fallbackColor={group.brandColor}
+        wordmark={group.eventName}
+        height={EVENT_BANNER_HEIGHT_TICKET}
+        style={{ borderRadius: layout.none }}
+        testID="wallet-hero-banner"
+        accessibilityLabel={`Banner ${group.eventName}`}
+      />
+      <View style={{ padding: space.lg, gap: space.sm }}>
+        <StatusChip status={status} />
+        <Text style={{ ...typography.title, color: brand.ink }}>
+          {group.eventName}
+        </Text>
+        {eventStart ? (
+          <Text style={{ ...typography.footnote, color: colors.secondary }}>
+            {`Ngày sự kiện · ${eventStart} (giờ thiết bị)`}
+          </Text>
+        ) : null}
+        <View style={{ height: 1, backgroundColor: colors.line }} />
+        <Text style={{ ...typography.footnoteSemibold, color: brand.ink }}>
+          {walletTicketCardTitle(ticket)}
+        </Text>
+        <Button
+          label={attendeeWalletCopy.viewTicketCta}
+          variant="primary"
+          size="lg"
+          accessibilityLabel={walletTicketA11yLabel(group.eventName, ticket, status)}
+          onPress={() =>
+            router.push({
+              pathname: '/my-tickets/[ticketId]',
+              params: { ticketId: ticket.ticketId },
+            })
+          }
+          testID="wallet-hero-cta"
+        />
+      </View>
+    </View>
   );
 }
 
@@ -350,7 +425,7 @@ export function MyTicketsScreen() {
   );
 
   if (identity.status === 'verified') {
-    return <VerifiedWallet userId={identity.userId} />;
+    return <VerifiedWallet key={identity.userId} userId={identity.userId} />;
   }
 
   if (offline.status === 'bound') {
@@ -372,6 +447,10 @@ export function MyTicketsScreen() {
           <EmptyState title={walletCopy.guestWalletBlockedTitle}>
             {walletCopy.guestWalletBlockedBody}
           </EmptyState>
+          <View style={{ gap: space.sm, marginTop: space.xl }}>
+            <AttendeeCta label="Đăng nhập" onPress={() => router.push(ATTENDEE_ACCOUNT_HREF)} testID="wallet-guest-signin" />
+            <AttendeeCta label="Khám phá sự kiện" variant="secondary" onPress={() => router.replace(GUEST_HOME_HREF)} testID="wallet-guest-events" />
+          </View>
         </ScrollView>
       <AttendeeScreenChrome title="Vé của tôi" />
     </>
@@ -393,6 +472,7 @@ function OfflineDisplayWallet({
   const [syncedAt, setSyncedAt] = useState<string | null>(null);
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const contentPhase = walletContentPhase({ ticketCount: tickets.length, busy, error, onlineLoaded: false, offline: true });
 
   useEffect(() => {
     let cancelled = false;
@@ -448,7 +528,7 @@ function OfflineDisplayWallet({
         )}`}
       />
 
-      {busy && tickets.length === 0 ? (
+      {contentPhase === 'loading' ? (
         <LoadingState title={walletCopy.loading.title}>
           {walletCopy.loading.body}
         </LoadingState>
@@ -458,15 +538,15 @@ function OfflineDisplayWallet({
         <ErrorState title={walletCopy.errorTitle}>{error}</ErrorState>
       ) : null}
 
-      {tickets.length === 0 && !busy ? (
+      {contentPhase === 'empty-offline' ? (
         <EmptyState title={walletCopy.emptyOffline.title}>
           {walletCopy.emptyOffline.body}
         </EmptyState>
-      ) : (
+      ) : contentPhase === 'tickets' ? (
         <View style={{ gap: space.xl }}>
           <WalletGroupedTicketList tickets={tickets} offline />
         </View>
-      )}
+      ) : null}
 
     </ScrollView>
     <AttendeeScreenChrome title="Vé của tôi" />
@@ -491,6 +571,8 @@ function VerifiedWallet({ userId }: { userId: string }) {
   const [offline, setOffline] = useState(false);
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [authError, setAuthError] = useState(false);
+  const [onlineLoaded, setOnlineLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [showPushPrompt, setShowPushPrompt] = useState(false);
@@ -521,10 +603,13 @@ function VerifiedWallet({ userId }: { userId: string }) {
     if (!epoch || epoch.userId !== userId) return;
 
     setError(null);
+    setAuthError(false);
     const credential = await session.resolveCredential();
     if (!isActive() || !session.isEpochCurrent(epoch)) return;
     if (credential.status === 'unavailable') {
-      setError('Phiên đăng nhập không còn hiệu lực. Đăng nhập lại.');
+      setTickets([]);
+      setAuthError(true);
+      setError('Phiên đăng nhập không còn hiệu lực. Mở Tài khoản để đăng xuất rồi đăng nhập lại.');
       return;
     }
 
@@ -563,6 +648,8 @@ function VerifiedWallet({ userId }: { userId: string }) {
       if (decision.action === 'stale') return;
 
       if (decision.action === 'unauthorized') {
+        setTickets([]);
+        setAuthError(true);
         setError(
           'Phiên không còn được phép xem vé. Đăng nhập lại. Không dùng bộ đệm offline.',
         );
@@ -601,6 +688,7 @@ function VerifiedWallet({ userId }: { userId: string }) {
       }
 
       if (decision.action === 'apply') {
+        setOnlineLoaded(true);
         if (!isActive() || !session.isEpochCurrent(epoch)) return;
         await persistWalletTicketCaches(
           userId,
@@ -694,6 +782,21 @@ function VerifiedWallet({ userId }: { userId: string }) {
     }
   }, [refresh]);
 
+  const contentPhase = walletContentPhase({
+    ticketCount: tickets.length, busy, error, onlineLoaded, offline,
+  });
+
+  // A+C hero only applies to the unfiltered wallet view; an event-filtered
+  // view keeps its existing flat grouped list (wireframe covers no filter).
+  const heroTicket = filterEventId ? null : selectHeroTicket(tickets, offline);
+  const heroGroup = heroTicket
+    ? groupTicketsByEvent(tickets).find((group) => group.eventId === heroTicket.eventId)
+    : null;
+  const hero = heroTicket && heroGroup ? { ticket: heroTicket, group: heroGroup } : null;
+  const remainingTickets = hero
+    ? tickets.filter((t) => t.ticketId !== hero.ticket.ticketId)
+    : tickets;
+
   return (
     <>
     <ScrollView
@@ -746,7 +849,7 @@ function VerifiedWallet({ userId }: { userId: string }) {
         </View>
       ) : null}
 
-      {busy && tickets.length === 0 ? (
+      {contentPhase === 'loading' ? (
         <LoadingState title={walletCopy.loading.title}>
           {walletCopy.loading.body}
         </LoadingState>
@@ -759,33 +862,54 @@ function VerifiedWallet({ userId }: { userId: string }) {
       {error ? (
         <ErrorState
           title={walletCopy.errorTitle}
-          onRetry={() => void onRefresh()}
+          onRetry={authError ? undefined : () => void onRefresh()}
           retryLabel="Làm mới vé"
         >
           {error}
         </ErrorState>
       ) : null}
+      {contentPhase === 'error' && authError ? (
+        <AttendeeCta label="Mở Tài khoản" onPress={() => router.push(ATTENDEE_ACCOUNT_HREF)} testID="wallet-error-account" />
+      ) : null}
 
-      {tickets.length === 0 && !busy ? (
+      {contentPhase === 'empty-online' ? (
         <EmptyState title={walletCopy.emptyOnline.title}>
           {walletCopy.emptyOnline.body}
         </EmptyState>
-      ) : (
-        <View style={{ gap: space.xl }}>
-          <WalletGroupedTicketList
-            tickets={tickets}
-            filterEventId={filterEventId}
-            offline={offline}
-          />
-        </View>
-      )}
+      ) : contentPhase === 'tickets' ? (
+        <>
+          {hero ? (
+            <View style={{ gap: space.sm }}>
+              <Text style={walletEyebrowStyle}>Vé cần dùng gần nhất</Text>
+              <WalletHeroTicket
+                ticket={hero.ticket}
+                group={hero.group}
+                offline={offline}
+              />
+            </View>
+          ) : null}
+          {remainingTickets.length > 0 ? (
+            <View style={{ gap: space.sm }}>
+              {hero ? (
+                <Text style={walletEyebrowStyle}>Các vé còn lại</Text>
+              ) : null}
+              <View style={{ gap: space.xl }}>
+                <WalletGroupedTicketList
+                  tickets={remainingTickets}
+                  filterEventId={filterEventId}
+                  offline={offline}
+                />
+              </View>
+            </View>
+          ) : null}
+        </>
+      ) : null}
 
-      {tickets.length === 0 && !busy ? (
-        <AttendeeCta
-          label={eventsCopy.redeemCta}
-          variant="secondary"
-          onPress={() => router.push(ATTENDEE_REDEEM_PATH)}
-        />
+      {contentPhase === 'empty-online' ? (
+        <View style={{ gap: space.sm }}>
+          <AttendeeCta label="Khám phá sự kiện" onPress={() => router.push(GUEST_HOME_HREF)} testID="wallet-empty-events" />
+          <AttendeeCta label="Đổi mã nhận vé" variant="secondary" onPress={() => router.push(ATTENDEE_REDEEM_PATH)} testID="wallet-empty-redeem" />
+        </View>
       ) : null}
     </ScrollView>
     <AttendeeScreenChrome title="Vé của tôi" />
