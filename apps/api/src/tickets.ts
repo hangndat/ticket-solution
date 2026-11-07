@@ -283,6 +283,7 @@ export class TicketIssueService {
       ...('eventTimezone' in ticket
         ? { eventTimezone: ticket.eventTimezone }
         : {}),
+      ...('bannerUrl' in ticket ? { bannerUrl: ticket.bannerUrl } : {}),
     };
   }
 
