@@ -17,6 +17,9 @@ import {
   walletGroupSummary,
   walletTicketA11yLabel,
   walletTicketStatus,
+  walletTicketDateBucket,
+  filterWalletTickets,
+  groupWalletTicketsByDate,
 } from './wallet-event-grouping.ts';
 
 function ticket(
@@ -42,6 +45,14 @@ test('ticketEventDisplayName prefers API eventName over demo catalog', () => {
     eventName: 'Sự kiện thật từ API',
   });
   assert.equal(ticketEventDisplayName(row), 'Sự kiện thật từ API');
+});
+
+test('wallet only uses ticket API name and does not inject demo dates or venue', () => {
+  const row = ticket({ ticketId: '11111111-1111-4111-8111-111111111111', eventId: 'demo-mfest' });
+  assert.equal(ticketEventDisplayName(row), 'Sự kiện');
+  const [group] = groupTicketsByEvent([row]);
+  assert.equal(group.metaLine, null);
+  assert.equal(group.brandColor, undefined);
 });
 
 test('groupTicketsByEvent groups and counts per event', () => {
@@ -88,6 +99,33 @@ test('filter and aggregate helpers', () => {
   assert.equal(filterTicketsByEventId(tickets, '').length, 2);
 });
 
+test('wallet date filters use only valid startsAt, never ACTIVE state as a date', () => {
+  const now = Date.parse('2026-11-07T00:00:00Z');
+  const upcoming = T('upcoming', 'evt-a', 'ACTIVE', 'Alpha');
+  upcoming.startsAt = '2026-11-08T19:00:00+07:00';
+  const past = T('past', 'evt-a', 'ACTIVE', 'Alpha');
+  past.startsAt = '2026-11-06T19:00:00+07:00';
+  const undated = T('undated', 'evt-a', 'ACTIVE', 'Alpha');
+  const malformed = T('bad', 'evt-b', 'USED', 'Beta');
+  malformed.startsAt = 'not-a-date';
+  const usedFuture = T('used-future', 'evt-c', 'USED', 'Gamma');
+  usedFuture.startsAt = '2026-11-09T09:00:00+07:00';
+  assert.equal(walletTicketDateBucket(upcoming, now), 'upcoming');
+  assert.equal(walletTicketDateBucket(past, now), 'past');
+  assert.equal(walletTicketDateBucket(undated, now), 'undated');
+  assert.equal(walletTicketDateBucket(usedFuture, now), 'past');
+  assert.deepEqual(filterWalletTickets([upcoming, past, undated, malformed, usedFuture], 'upcoming', now), [upcoming]);
+  assert.deepEqual(filterWalletTickets([upcoming, past, undated, malformed, usedFuture], 'past', now), [past, malformed, usedFuture]);
+  assert.equal(filterWalletTickets([upcoming, past, undated, malformed, usedFuture], 'all', now).length, 5);
+  const sameEventLater = T('later', 'evt-a', 'ACTIVE', 'Alpha');
+  sameEventLater.startsAt = '2026-11-08T21:00:00+07:00';
+  const sameEventEarlier = T('earlier', 'evt-a', 'ACTIVE', 'Alpha');
+  sameEventEarlier.startsAt = '2026-11-08T08:00:00+07:00';
+  const reversedInput = groupWalletTicketsByDate([sameEventLater, sameEventEarlier, past, upcoming, undated], now);
+  assert.deepEqual(reversedInput.map((g) => g.tickets[0]?.ticketId), [past.ticketId, sameEventEarlier.ticketId, undated.ticketId]);
+  assert.deepEqual(reversedInput[1]?.tickets.map((row) => row.ticketId), [sameEventEarlier.ticketId, upcoming.ticketId, sameEventLater.ticketId]);
+});
+
 
 test('sortTicketsActiveFirst sinks used tickets, stable otherwise', () => {
   const mk = (id: string, state: string) =>
@@ -132,8 +170,8 @@ test('2 events, 1 ticket each: no summary, distinct identity colors/initials', (
   assert.equal(groups.length, 2);
   for (const g of groups) assert.equal(walletGroupSummary(g), null);
   const colors = groups.map((g) => eventIdentityColor(g.eventId, g.brandColor));
-  assert.notEqual(colors[0], colors[1]);
-  assert.ok(groups.every((g) => g.metaLine && g.metaLine.includes(' · ')));
+  assert.ok(colors.every((color) => /^#[0-9A-F]{6}$/i.test(color)));
+  assert.ok(groups.every((g) => g.metaLine === null));
 });
 
 test('events without brand color get a stable palette color', () => {

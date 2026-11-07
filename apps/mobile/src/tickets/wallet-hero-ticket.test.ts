@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { TicketSummary } from '@ticket/contracts';
-import { formatWalletEventStart, selectHeroTicket, walletEventStartMs } from './wallet-hero-ticket.ts';
+import { formatWalletEventStart, formatWalletEventTime, selectHeroTicket, walletEventStartMs } from './wallet-hero-ticket.ts';
 
 const now = Date.parse('2026-11-06T12:00:00.000Z');
 function ticket(id: string, eventName: string, startsAt?: string | null, state = 'ACTIVE'): TicketSummary {
@@ -63,4 +63,5 @@ test('missing, null and malformed starts never infer a hero from createdAt or de
   assert.equal(walletEventStartMs('2026-11-07'), null);
   assert.equal(formatWalletEventStart(null), null);
   assert.ok(formatWalletEventStart('2026-11-07T12:00:00.000Z'));
+  assert.match(formatWalletEventTime('2026-11-07T12:00:00.000Z') ?? '', /^\d{2}:\d{2}$/);
 });

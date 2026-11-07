@@ -1,6 +1,5 @@
 import type { TicketSummary } from '@ticket/contracts';
 import { ticketStateLabelVi } from '../attendee/attendee-outcome-copy.ts';
-import { eventDate, findDemoEventById } from '../data/demo-events.ts';
 
 /** Re-export shared brand helpers so My Tickets keeps a stable import path. */
 export { eventIdentityColor, eventInitial } from '../brand/event-identity.ts';
@@ -9,8 +8,6 @@ export { eventIdentityColor, eventInitial } from '../brand/event-identity.ts';
 export function ticketEventDisplayName(ticket: TicketSummary): string {
   const fromApi = ticket.eventName?.trim();
   if (fromApi) return fromApi;
-  const demo = findDemoEventById(ticket.eventId);
-  if (demo?.name?.trim()) return demo.name.trim();
   return 'Sự kiện';
 }
 
@@ -26,9 +23,9 @@ export type EventTicketGroup = {
   usableCount: number;
   /** Tickets already used (gate-consumed). */
   usedCount: number;
-  /** Event's own brand color when known (demo catalog), else undefined. */
+  /** Published event metadata is not part of TicketSummary yet. */
   brandColor?: string;
-  /** «date · venue» line when the catalog knows it; null otherwise. */
+  /** «date · venue» only when supplied by an approved real metadata source. */
   metaLine: string | null;
 };
 
@@ -37,17 +34,12 @@ function isUsed(t: TicketSummary): boolean {
 }
 
 function finishGroup(g: EventTicketGroup): EventTicketGroup {
-  const demo = findDemoEventById(g.eventId);
-  const parts = demo
-    ? [eventDate(demo), demo.location?.trim() || null].filter(Boolean)
-    : [];
   return {
     ...g,
     tickets: sortTicketsActiveFirst(g.tickets),
     usableCount: g.tickets.filter((t) => !isInactive(t)).length,
     usedCount: g.tickets.filter(isUsed).length,
-    brandColor: demo?.brand.primaryColor,
-    metaLine: parts.length ? parts.join(' · ') : null,
+    metaLine: null,
   };
 }
 
@@ -105,6 +97,67 @@ export function walletListSubtitle(
   eventCount: number,
 ): string {
   return `${ticketCount} vé · ${eventCount} sự kiện`;
+}
+
+export type WalletFilter = 'upcoming' | 'all' | 'past';
+
+/** ACTIVE is only a ticket state; date membership requires a valid startsAt. */
+export function walletTicketDateBucket(
+  ticket: TicketSummary,
+  nowMs = Date.now(),
+): 'upcoming' | 'past' | 'undated' {
+  // Ticket state takes precedence over the event date: a consumed credential
+  // cannot be "upcoming" even when the event metadata is future dated.
+  if (isInactive(ticket)) return 'past';
+  const value = ticket.startsAt;
+  if (typeof value !== 'string') return 'undated';
+  const ms = Date.parse(value);
+  if (!Number.isFinite(ms) || !/(?:Z|[+-]\d{2}:\d{2})$/i.test(value)) return 'undated';
+  return ms >= nowMs ? 'upcoming' : 'past';
+}
+
+export function filterWalletTickets(
+  tickets: TicketSummary[],
+  filter: WalletFilter,
+  nowMs = Date.now(),
+): TicketSummary[] {
+  if (filter === 'all') return tickets;
+  const bucket = filter === 'upcoming' ? 'upcoming' : 'past';
+  return tickets.filter((ticket) => walletTicketDateBucket(ticket, nowMs) === bucket);
+}
+
+export function groupWalletTicketsByDate(
+  tickets: TicketSummary[],
+  nowMs = Date.now(),
+): Array<{ key: string; label: string; tickets: TicketSummary[] }> {
+  const groups = new Map<string, { key: string; label: string; tickets: TicketSummary[] }>();
+  for (const ticket of tickets) {
+    const bucket = walletTicketDateBucket(ticket, nowMs);
+    const date = bucket === 'undated' ? null : new Date(Date.parse(ticket.startsAt!));
+    const key = date
+      ? `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`
+      : 'undated';
+    const label = date
+      ? new Intl.DateTimeFormat('vi-VN', { weekday: 'long', day: '2-digit', month: 'short' }).format(date)
+      : 'Chưa có ngày';
+    const group = groups.get(key) ?? { key, label, tickets: [] };
+    group.tickets.push(ticket);
+    groups.set(key, group);
+  }
+  return [...groups.values()].map((group) => ({
+    ...group,
+    tickets: [...group.tickets].sort((a, b) => {
+      const aTime = typeof a.startsAt === 'string' ? Date.parse(a.startsAt) : Number.NaN;
+      const bTime = typeof b.startsAt === 'string' ? Date.parse(b.startsAt) : Number.NaN;
+      if (!Number.isFinite(aTime)) return Number.isFinite(bTime) ? 1 : a.ticketId.localeCompare(b.ticketId);
+      if (!Number.isFinite(bTime)) return -1;
+      return aTime - bTime;
+    }),
+  })).sort((a, b) => {
+    if (a.key === 'undated') return 1;
+    if (b.key === 'undated') return -1;
+    return Date.parse(a.tickets[0]!.startsAt!) - Date.parse(b.tickets[0]!.startsAt!);
+  });
 }
 
 export function walletEventSectionHeader(
