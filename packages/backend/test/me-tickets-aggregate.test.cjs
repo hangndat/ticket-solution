@@ -18,6 +18,10 @@ const {
   listOwnerTicketsAggregated,
   getTicketForOwner,
   readCodeHmacEnvironment,
+  grantMembership,
+  grantEventAssignment,
+  saveEventConfigVersion,
+  publishEventConfig,
 } = require('../dist');
 
 const docker = (...args) =>
@@ -171,6 +175,61 @@ test(
 
       await seedTenantEvent(db, T1, E1, 'one');
       await seedTenantEvent(db, T2, E2, 'two');
+      const bannerAssetId = 'abababab-abab-4bab-8bab-abababababab';
+      const manager = await users.upsertFromVerifiedIdentity({
+        issuer: 'http://127.0.0.1:8080/realms/ticket',
+        subject: 'banner-publisher',
+        email: 'banner-publisher@example.com',
+        emailVerified: true,
+      });
+      await withTenant(db, T1, async (tx) => {
+        await tx.$executeRaw`
+          UPDATE events SET visibility = 'PUBLIC', business_status = 'ACTIVE'
+          WHERE tenant_id = ${T1}::uuid AND id = ${E1}::uuid
+        `;
+        const membership = await grantMembership(tx, {
+          tenantId: T1, userId: manager.userId, role: 'MANAGER',
+          permissions: ['event.config', 'event.publish'],
+        });
+        await grantEventAssignment(tx, {
+          tenantId: T1, eventId: E1, membershipId: membership.membershipId,
+          permissions: ['event.config', 'event.publish'],
+        });
+        await tx.$executeRaw`
+          INSERT INTO event_assets (
+            tenant_id, event_id, id, status, quarantine_key, ready_key,
+            original_filename, content_type, byte_length, width_px, height_px,
+            sha256, created_by, finalized_at
+          ) VALUES (
+            ${T1}::uuid, ${E1}::uuid, ${bannerAssetId}::uuid, 'READY',
+            'test/quarantine/banner', 'test/ready/banner', 'banner.png',
+            'image/png', 10, 760, 200, 'test-sha', ${manager.userId}::uuid, now()
+          )
+        `;
+        const payload = {
+          schemaVersion: 1,
+          brand: { primaryColor: '#245B47', organizationName: 'Org', bannerAssetId },
+          sections: ['hero', 'info', 'redeem', 'guide', 'faq', 'terms'].map(
+            (kind, order) => ({
+              kind, id: `banner-${kind}`, visible: true, order,
+              body: kind === 'terms'
+                ? { title: 'Terms', termsVersion: 'terms-v1', text: 'Terms' }
+                : kind === 'faq'
+                  ? { title: 'FAQ', items: [] }
+                  : { title: kind, text: kind },
+            }),
+          ),
+          termsVersion: 'terms-v1',
+        };
+        const saved = await saveEventConfigVersion(tx, {
+          tenantId: T1, eventId: E1, actorUserId: manager.userId, payload,
+        });
+        await publishEventConfig(tx, {
+          tenantId: T1, eventId: E1, actorUserId: manager.userId,
+          expectedVersion: saved.version,
+        });
+      });
+      process.env.PUBLISHED_ASSET_PUBLIC_BASE = 'https://api.example.test';
       await withTenant(db, T1, async (tx) => {
         await seedEventInventory(tx, HMAC, {
           tenantId: T1,
@@ -189,6 +248,8 @@ test(
           emailVerified: true,
           rawCode: 'CODE-one',
           idempotencyKey: randomUUID(),
+          termsVersion: 'terms-v1',
+          termsAccepted: true,
         });
         return unwrapRedeemOutcome(outcome);
       });
@@ -213,6 +274,8 @@ test(
           emailVerified: true,
           rawCode: 'CODE-one-b',
           idempotencyKey: randomUUID(),
+          termsVersion: 'terms-v1',
+          termsAccepted: true,
         });
         unwrapRedeemOutcome(outcome);
       });
@@ -238,6 +301,10 @@ test(
         '2026-12-01T00:00:00.000Z',
       );
       assert.equal(aggregate.find((t) => t.tenantId === T2).startsAt, null);
+      const expectedBannerUrl =
+        'https://api.example.test/v1/public/tenants/tenant-one/events/one/assets/' +
+        bannerAssetId;
+      assert.equal(aggregate.find((t) => t.tenantId === T1).bannerUrl, expectedBannerUrl);
       assert.equal(
         aggregate.find((t) => t.tenantId === T1).venueName,
         'Venue One',
@@ -261,6 +328,96 @@ test(
       );
       assert.equal(detail.ticketTypeLabel, 'Owner Type One');
       assert.equal(detail.venueName, 'Venue One');
+      assert.equal(detail.bannerUrl, expectedBannerUrl);
+
+      const assertNoOwnerBanner = async () => {
+        const list = await withTenant(db, T1, (tx) =>
+          listTicketsForOwner(tx, T1, userA.userId),
+        );
+        assert.equal(list.find((ticket) => ticket.ticketId === ticketA1.ticketId).bannerUrl, null);
+        const aggregateRows = await listOwnerTicketsAggregated(db, userA.userId);
+        assert.equal(aggregateRows.find((ticket) => ticket.ticketId === ticketA1.ticketId).bannerUrl, null);
+        const detailRow = await withTenant(db, T1, (tx) =>
+          getTicketForOwner(tx, T1, userA.userId, ticketA1.ticketId),
+        );
+        assert.equal(detailRow.bannerUrl, null);
+      };
+      const wrongEventId = randomUUID();
+      const wrongEventAssetId = randomUUID();
+      await withTenant(db, T1, async (tx) => {
+        await tx.$executeRaw`
+          INSERT INTO events (tenant_id, id, slug, name, status, timezone)
+          VALUES (${T1}::uuid, ${wrongEventId}::uuid, 'wrong-banner-event',
+                  'Wrong Banner Event', 'PUBLISHED', 'UTC')
+        `;
+        await tx.$executeRaw`
+          INSERT INTO event_assets (
+            tenant_id, event_id, id, status, quarantine_key, ready_key,
+            original_filename, content_type, byte_length, width_px, height_px,
+            sha256, created_by, finalized_at
+          ) VALUES (
+            ${T1}::uuid, ${wrongEventId}::uuid, ${wrongEventAssetId}::uuid,
+            'READY', 'wrong/quarantine', 'wrong/ready', 'wrong.png',
+            'image/png', 10, 760, 200, 'wrong-sha', ${manager.userId}::uuid, now()
+          )
+        `;
+        await tx.$executeRaw`
+          UPDATE events
+          SET published_brand_snapshot = jsonb_set(
+            published_brand_snapshot, '{bannerAssetId}', to_jsonb(${wrongEventAssetId}::text)
+          )
+          WHERE tenant_id = ${T1}::uuid AND id = ${E1}::uuid
+        `;
+      });
+      await assertNoOwnerBanner();
+      await withTenant(db, T1, (tx) => tx.$executeRaw`
+        UPDATE events
+        SET published_brand_snapshot = jsonb_set(
+          published_brand_snapshot, '{bannerAssetId}', to_jsonb(${bannerAssetId}::text)
+        )
+        WHERE tenant_id = ${T1}::uuid AND id = ${E1}::uuid
+      `);
+      await withTenant(db, T1, (tx) => tx.$executeRaw`
+        UPDATE events SET visibility = 'UNLISTED'
+        WHERE tenant_id = ${T1}::uuid AND id = ${E1}::uuid
+      `);
+      await assertNoOwnerBanner();
+      await withTenant(db, T1, (tx) => tx.$executeRaw`
+        UPDATE events SET visibility = 'PUBLIC', content_status = 'ARCHIVED'
+        WHERE tenant_id = ${T1}::uuid AND id = ${E1}::uuid
+      `);
+      await assertNoOwnerBanner();
+      await withTenant(db, T1, (tx) => tx.$executeRaw`
+        UPDATE events SET content_status = 'PUBLISHED'
+        WHERE tenant_id = ${T1}::uuid AND id = ${E1}::uuid
+      `);
+      await withTenant(db, T1, (tx) => tx.$executeRaw`
+        UPDATE events SET visibility = 'PUBLIC', content_status = 'DRAFT'
+        WHERE tenant_id = ${T1}::uuid AND id = ${E1}::uuid
+      `);
+      await assertNoOwnerBanner();
+      await withTenant(db, T1, (tx) => tx.$executeRaw`
+        UPDATE events SET content_status = 'PUBLISHED'
+        WHERE tenant_id = ${T1}::uuid AND id = ${E1}::uuid
+      `);
+      await withTenant(db, T1, (tx) => tx.$executeRaw`
+        UPDATE event_assets SET status = 'QUARANTINE', ready_key = NULL,
+          content_type = NULL, byte_length = NULL, width_px = NULL,
+          height_px = NULL, finalized_at = NULL
+        WHERE tenant_id = ${T1}::uuid AND id = ${bannerAssetId}::uuid
+      `);
+      await assertNoOwnerBanner();
+      await withTenant(db, T1, (tx) => tx.$executeRaw`
+        UPDATE event_assets SET status = 'READY', ready_key = 'test/ready/banner',
+          content_type = 'image/png', byte_length = 10, width_px = 760,
+          height_px = 200, finalized_at = now()
+        WHERE tenant_id = ${T1}::uuid AND id = ${bannerAssetId}::uuid
+      `);
+      await withTenant(db, T1, (tx) => tx.$executeRaw`
+        UPDATE events SET published_config_version = NULL
+        WHERE tenant_id = ${T1}::uuid AND id = ${E1}::uuid
+      `);
+      await assertNoOwnerBanner();
 
       const otherEventId = randomUUID();
       const otherTypeId = randomUUID();
@@ -306,6 +463,7 @@ test(
         '2026-12-01T00:00:00.000Z',
       );
       assert.equal(t1Only[0].ticketTypeLabel, 'Owner Type One');
+      assert.equal(t1Only[0].bannerUrl, null);
 
       const crossLeak = await withActor(db, userB.userId, (tx) =>
         listAllTicketsForOwner(tx, userA.userId),

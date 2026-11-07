@@ -35,6 +35,11 @@ import { isRetryableTransactionConflict } from './transaction-conflict';
 import type { PrismaClient } from './generated/prisma/client';
 import { assignManualEntryCode } from './gate';
 import { readGateManualCodePepper } from './gate-credential';
+import {
+  readPublishedAssetPublicBase,
+  resolvePublishedBrandAssetUrls,
+} from './published-asset-url';
+import type { EventBrandSnapshot, EventConfigPayload } from '@ticket/contracts';
 
 export const REDEEM_COMMAND = 'redemption.redeem' as const;
 export const APPROVAL_PENDING = 'APPROVAL_PENDING' as const;
@@ -947,6 +952,7 @@ export type ListedTicket = {
   venueName?: string | null;
   ticketTypeLabel?: string | null;
   eventTimezone?: string | null;
+  bannerUrl?: string | null;
 };
 
 type OwnerTicketListRow = {
@@ -984,6 +990,52 @@ function mapOwnerTicketListRow(row: OwnerTicketListRow): ListedTicket {
   };
 }
 
+async function resolveOwnerBannerUrl(
+  tx: Prisma.TransactionClient,
+  tenantId: string,
+  eventId: string,
+): Promise<string | null> {
+  const rows = await tx.$queryRaw<{
+    id: string;
+    slug: string;
+    tenant_slug: string;
+    published_brand_snapshot: EventBrandSnapshot | null;
+    payload: EventConfigPayload;
+  }[]>`
+    SELECT e.id, e.slug, tn.slug AS tenant_slug,
+           e.published_brand_snapshot, v.payload
+    FROM events e
+    INNER JOIN tenants tn ON tn.id = e.tenant_id AND tn.status = 'ACTIVE'
+    INNER JOIN event_config_versions v
+      ON v.tenant_id = e.tenant_id
+     AND v.event_id = e.id
+     AND v.version = e.published_config_version
+     AND v.published_at IS NOT NULL
+    WHERE e.tenant_id = ${tenantId}::uuid
+      AND e.id = ${eventId}::uuid
+      AND e.visibility = 'PUBLIC'
+      AND e.content_status = 'PUBLISHED'
+      AND e.business_status = 'ACTIVE'
+      AND e.published_config_version IS NOT NULL
+    LIMIT 1
+  `;
+  const row = rows[0];
+  if (!row) return null;
+  const bannerAssetId =
+    row.published_brand_snapshot?.bannerAssetId ??
+    row.payload?.brand?.bannerAssetId;
+  if (!bannerAssetId) return null;
+  const urls = await resolvePublishedBrandAssetUrls(tx, {
+    publicBase: readPublishedAssetPublicBase(),
+    tenantId,
+    tenantSlug: row.tenant_slug,
+    eventId: row.id,
+    eventSlug: row.slug,
+    bannerAssetId,
+  });
+  return urls.bannerUrl ?? null;
+}
+
 export type ListedTicketWithTenant = ListedTicket & { tenantId: string };
 
 /** Owner My Tickets listing inside withTenant. */
@@ -1007,7 +1059,11 @@ export async function listTicketsForOwner(
       AND t.owner_user_id = ${ownerUserId}::uuid
     ORDER BY t.created_at DESC
   `;
-  return rows.map(mapOwnerTicketListRow);
+  return Promise.all(rows.map(async (row) => {
+    const ticket = mapOwnerTicketListRow(row);
+    ticket.bannerUrl = await resolveOwnerBannerUrl(tx, tenantId, ticket.eventId);
+    return ticket;
+  }));
 }
 
 /**
@@ -1072,6 +1128,7 @@ async function enrichOwnerTicketsWithEvents(
     }
   >();
   const typeLabelByTenantEventType = new Map<string, string>();
+  const bannerByTenantEvent = new Map<string, string | null>();
   for (const [tenantId, eventIds] of eventIdsByTenant) {
     await withTenant(db, tenantId, async (tx) => {
       const rows = await tx.$queryRaw<
@@ -1107,6 +1164,51 @@ async function enrichOwnerTicketsWithEvents(
           `${tenantId}:${row.event_id}:${row.id}`,
           row.label,
         );
+
+      // Wallet banners use the same published-only event/config eligibility
+      // as the public summary. Never resolve draft or unlisted assets here.
+      const publishedRows = await tx.$queryRaw<{
+        id: string;
+        slug: string;
+        tenant_slug: string;
+        published_brand_snapshot: EventBrandSnapshot | null;
+        payload: EventConfigPayload;
+      }[]>`
+        SELECT e.id, e.slug, tn.slug AS tenant_slug,
+               e.published_brand_snapshot, v.payload
+        FROM events e
+        INNER JOIN tenants tn ON tn.id = e.tenant_id AND tn.status = 'ACTIVE'
+        INNER JOIN event_config_versions v
+          ON v.tenant_id = e.tenant_id
+         AND v.event_id = e.id
+         AND v.version = e.published_config_version
+         AND v.published_at IS NOT NULL
+        WHERE e.tenant_id = ${tenantId}::uuid
+          AND e.id = ANY(${eventIds}::uuid[])
+          AND e.visibility = 'PUBLIC'
+          AND e.content_status = 'PUBLISHED'
+          AND e.business_status = 'ACTIVE'
+          AND e.published_config_version IS NOT NULL
+      `;
+      for (const row of publishedRows) {
+        const payloadBrand = row.payload?.brand;
+        const bannerAssetId =
+          row.published_brand_snapshot?.bannerAssetId ??
+          payloadBrand?.bannerAssetId;
+        if (!bannerAssetId) continue;
+        const urls = await resolvePublishedBrandAssetUrls(tx, {
+          publicBase: readPublishedAssetPublicBase(),
+          tenantId,
+          tenantSlug: row.tenant_slug,
+          eventId: row.id,
+          eventSlug: row.slug,
+          bannerAssetId,
+        });
+        bannerByTenantEvent.set(
+          `${tenantId}:${row.id}`,
+          urls.bannerUrl ?? null,
+        );
+      }
     });
   }
   return tickets.map((ticket) => {
@@ -1127,6 +1229,8 @@ async function enrichOwnerTicketsWithEvents(
         typeLabelByTenantEventType.get(
           `${ticket.tenantId}:${ticket.eventId}:${ticket.ticketTypeId}`,
         ) ?? null,
+      bannerUrl:
+        bannerByTenantEvent.get(`${ticket.tenantId}:${ticket.eventId}`) ?? null,
     };
   });
 }
@@ -1174,7 +1278,9 @@ export async function getTicketForOwner(
       'Ticket was not found',
     );
   }
-  return mapOwnerTicketListRow(row);
+  const ticket = mapOwnerTicketListRow(row);
+  ticket.bannerUrl = await resolveOwnerBannerUrl(tx, tenantId, ticket.eventId);
+  return ticket;
 }
 
 export async function getOperationForActor(
