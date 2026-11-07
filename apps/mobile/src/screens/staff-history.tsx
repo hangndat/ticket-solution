@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { RefreshControl, ScrollView, Text, View } from 'react-native';
+import { Platform, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { Button } from '@/components/ui/button';
 import { StaffGateNoEventState } from '@/gate/staff-gate-empty-state';
 import { StaffGateDeviceHistoryPanel } from '@/gate/staff-gate-device-history-panel';
@@ -117,6 +117,8 @@ export function StaffHistoryScreen() {
     <>
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
+        automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+        keyboardShouldPersistTaps="handled"
         style={{ flex: 1, backgroundColor: brand.paper }}
         contentContainerStyle={{ padding: space.xl, paddingBottom: space.huge, gap: space.lg }}
         refreshControl={
