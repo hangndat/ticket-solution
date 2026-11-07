@@ -14,7 +14,10 @@ function toneColor(tone: GateScanStatusView['tone']): string {
   return colors.secondary;
 }
 
-function toneSurface(tone: GateScanStatusView['tone'], emphasized: boolean): string {
+function toneSurface(
+  tone: GateScanStatusView['tone'],
+  emphasized: boolean,
+): string {
   if (!emphasized) return colors.card;
   if (tone === 'admit') return colors.admitSurface;
   if (tone === 'deny') return colors.denySurface;
@@ -27,13 +30,15 @@ export function StaffGateScanStatusPanel({
   view,
   busy,
   emphasized,
-  testID
+  testID,
+  eyebrow,
 }: {
   view: GateScanStatusView;
   busy: boolean;
   /** Terminal / sticky scan result — not idle ready chrome. */
   emphasized?: boolean;
   testID?: string;
+  eyebrow?: string;
 }) {
   const tint = toneColor(view.tone);
   const showSpinner = busy || view.kind === 'processing';
@@ -50,15 +55,17 @@ export function StaffGateScanStatusPanel({
         borderRadius: radius.md,
         backgroundColor: toneSurface(view.tone, panelEmphasized),
         borderWidth: panelEmphasized ? 1 : 0,
-        borderColor: panelEmphasized ? colors.line : 'transparent'
+        borderColor: panelEmphasized ? colors.line : 'transparent',
       }}
     >
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.md }}>
+      {eyebrow ? (
+        <Text style={{ ...typography.caption, color: tint }}>{eyebrow}</Text>
+      ) : null}
+      <View
+        style={{ flexDirection: 'row', alignItems: 'center', gap: space.md }}
+      >
         {showSpinner ? (
-          <Spinner
-            accessibilityLabel="Đang xử lý quét"
-            color={colors.accent}
-          />
+          <Spinner accessibilityLabel="Đang xử lý quét" color={colors.accent} />
         ) : (
           <SymbolView
             name={view.symbol}
@@ -79,8 +86,11 @@ export function StaffGateScanStatusPanel({
         </Text>
       </View>
       <Text
-        style={{ ...typography.subhead, color: colors.secondary,
-          lineHeight: 20 }}
+        style={{
+          ...typography.subhead,
+          color: colors.secondary,
+          lineHeight: 20,
+        }}
       >
         {view.hint}
       </Text>
