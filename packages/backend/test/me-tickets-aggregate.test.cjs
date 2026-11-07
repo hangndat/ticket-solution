@@ -262,6 +262,29 @@ test(
       assert.equal(detail.ticketTypeLabel, 'Owner Type One');
       assert.equal(detail.venueName, 'Venue One');
 
+      const otherEventId = randomUUID();
+      const otherTypeId = randomUUID();
+      await withTenant(db, T1, async (tx) => {
+        await tx.$executeRaw`
+          INSERT INTO events (tenant_id, id, slug, name, status, timezone)
+          VALUES (${T1}::uuid, ${otherEventId}::uuid, 'other-event', 'Other Event', 'PUBLISHED', 'UTC')
+        `;
+        await tx.$executeRaw`
+          INSERT INTO ticket_types (tenant_id, event_id, id, label)
+          VALUES (${T1}::uuid, ${otherEventId}::uuid, ${otherTypeId}::uuid, 'Wrong Event Type')
+        `;
+        await tx.$executeRaw`
+          UPDATE tickets SET ticket_type_id = ${otherTypeId}::uuid
+          WHERE tenant_id = ${T1}::uuid AND id = ${ticketA1.ticketId}::uuid
+        `;
+        const mismatchedType = await getTicketForOwner(tx, T1, userA.userId, ticketA1.ticketId);
+        assert.equal(mismatchedType.ticketTypeLabel, null);
+        await tx.$executeRaw`
+          UPDATE tickets SET ticket_type_id = ${ticketA1.ticketTypeId}::uuid
+          WHERE tenant_id = ${T1}::uuid AND id = ${ticketA1.ticketId}::uuid
+        `;
+      });
+
       const bView = await listOwnerTicketsAggregated(db, userB.userId);
       assert.equal(bView.length, 1);
       assert.equal(bView[0].tenantId, T1);
