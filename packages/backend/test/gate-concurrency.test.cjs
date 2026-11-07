@@ -352,7 +352,7 @@ test(
         const won = unwrapConfirmOutcome(await confirm(db, hold, sessA, staffA));
         const refused = await reserve(db2, ticket, sessB, staffB);
         assert.equal(refused.ok, false);
-        assert.equal(refused.code, GATE_ERROR_CODES.TICKET_NOT_ACTIVE);
+        assert.equal(refused.code, GATE_ERROR_CODES.ALREADY_CHECKED_IN);
         assert.equal((await snapshot(ticket)).held, 0, 'a refused scan leaves no hold');
         await undo(db, won.checkinId, staffB, 'undo then rescan');
         const rescan = unwrapReserveOutcome(await reserve(db2, ticket, sessB, staffB));
@@ -382,12 +382,8 @@ test(
           seen.scanAfterUndo++;
         } else {
           // Scan landed first and was refused; a fresh scan works after the undo.
-          // The ticket is USED at that moment, and reserveCheckin tests the ticket
-          // state before it looks for a current check-in, so the refusal is
-          // TICKET_NOT_ACTIVE (not ALREADY_CHECKED_IN). CI timing hit this branch
-          // when local runs never did, which is why it is also covered
-          // deterministically below.
-          assert.equal(scan.code, GATE_ERROR_CODES.TICKET_NOT_ACTIVE);
+          // The ticket is USED with a current check-in at this moment.
+          assert.equal(scan.code, GATE_ERROR_CODES.ALREADY_CHECKED_IN);
           assert.equal(s.held, 0);
           unwrapReserveOutcome(await reserve(db, ticket, sessB, staffB));
           seen.scanBeforeUndo++;
