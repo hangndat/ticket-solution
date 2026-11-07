@@ -13,6 +13,7 @@ import { brand, colors } from '@/theme/colors';
 import { fontFamilies } from '@/theme/fonts';
 import { typography } from '@/theme/typography';
 import { space, radius } from '@/theme/tokens';
+import { inviteFooterLift } from '@/links/membership-invite-layout';
 
 /** The web page owns verification, acceptance, result, and permissions. */
 export default function MembershipInviteScreen() {
@@ -23,6 +24,7 @@ export default function MembershipInviteScreen() {
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [inviteInputFocused, setInviteInputFocused] = useState(false);
   useEffect(() => {
     const show = Keyboard.addListener('keyboardWillShow', (event) => setKeyboardHeight(event.endCoordinates.height));
     const hide = Keyboard.addListener('keyboardWillHide', () => setKeyboardHeight(0));
@@ -65,7 +67,17 @@ export default function MembershipInviteScreen() {
           <WebView
             key={reloadKey}
             source={{ uri: inviteUrl }}
-            injectedJavaScriptBeforeContentLoaded={`(function(){if(location.pathname!=='/invite')return;function mask(){var field=document.querySelector('input[autocomplete="off"][spellcheck="false"]');if(field&&field.type!=='password')field.type='password';}new MutationObserver(mask).observe(document,{childList:true,subtree:true});document.addEventListener('DOMContentLoaded',mask);mask();})();true;`}
+            injectedJavaScriptBeforeContentLoaded={`(function(){
+              if (location.pathname !== '/invite') return;
+              function inviteField() { return document.querySelector('input[autocomplete="off"][spellcheck="false"]'); }
+              function mask() { var field = inviteField(); if (field && field.type !== 'password') field.type = 'password'; }
+              function reportFocus() { window.ReactNativeWebView.postMessage(document.activeElement === inviteField() ? 'invite-input-focused' : 'invite-input-blurred'); }
+              new MutationObserver(mask).observe(document, { childList: true, subtree: true });
+              document.addEventListener('DOMContentLoaded', function() { mask(); reportFocus(); });
+              document.addEventListener('focusin', reportFocus, true);
+              document.addEventListener('focusout', function() { setTimeout(reportFocus, 0); }, true);
+              mask();
+            })();true;`}
             sharedCookiesEnabled
             thirdPartyCookiesEnabled
             onShouldStartLoadWithRequest={(request) => {
@@ -80,7 +92,11 @@ export default function MembershipInviteScreen() {
               }
               return true;
             }}
-            onLoadStart={() => { setLoading(true); setError(null); }}
+            onLoadStart={() => { setLoading(true); setError(null); setInviteInputFocused(false); }}
+            onMessage={(event) => {
+              if (event.nativeEvent.data === 'invite-input-focused') setInviteInputFocused(true);
+              if (event.nativeEvent.data === 'invite-input-blurred') setInviteInputFocused(false);
+            }}
             onLoadEnd={() => setLoading(false)}
             onError={() => { setLoading(false); setError('Không kết nối được trang nhận lời mời. Kiểm tra mạng rồi thử lại.'); }}
             onHttpError={(event) => {
@@ -106,7 +122,7 @@ export default function MembershipInviteScreen() {
           ) : null}
         </View>
       )}
-      <View style={{ paddingHorizontal: space.xl, paddingTop: space.md, paddingBottom: keyboardHeight ? space.sm : Math.max(insets.bottom, space.md), marginBottom: keyboardHeight }}>
+      <View style={{ paddingHorizontal: space.xl, paddingTop: space.md, paddingBottom: keyboardHeight ? space.sm : Math.max(insets.bottom, space.md), marginBottom: inviteFooterLift(keyboardHeight, inviteInputFocused, space.xxxl) }}>
         <AttendeeCta label="Về Sự kiện" variant="secondary" onPress={leave} testID="membership-invite-cta-events" />
       </View>
     </View>
