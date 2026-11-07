@@ -1,10 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import {
-  useEffect,
-  useRef,
-  useState,
-  useSyncExternalStore,
-} from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { AccessibilityInfo, Animated, Text, View } from 'react-native';
 import { SymbolView } from 'expo-symbols';
 import {
@@ -628,10 +623,24 @@ export function ClaimScreen() {
             />
           ) : null}
           <AttendeeCta
-            label="Về Sự kiện"
+            label={
+              decision?.kind === 'denied'
+                ? presentation.homeLabel
+                : 'Về Sự kiện'
+            }
             variant="secondary"
-            onPress={() => leaveClaim('/(tabs)/(events)')}
-            testID="claim-cta-events"
+            onPress={() =>
+              leaveClaim(
+                decision?.kind === 'denied'
+                  ? presentation.homeHref
+                  : '/(tabs)/(events)',
+              )
+            }
+            testID={
+              decision?.kind === 'denied'
+                ? 'claim-cta-denied-home'
+                : 'claim-cta-events'
+            }
           />
         </View>
       )}

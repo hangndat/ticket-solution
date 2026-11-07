@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { claimPresentation } from './claim-presentation.ts';
+import { claimInvitation } from './claim-client.ts';
 import {
   clearGuestClaimIntent,
   dropGuestClaimIntentIfStale,
@@ -71,6 +72,31 @@ test('expired or revoked invitation never offers claim form', () => {
       'invalid',
     );
   }
+});
+
+test('verified server 403 denial keeps its failure state and exits to wallet', async () => {
+  const denied = await claimInvitation({
+    apiBase: 'https://example.invalid',
+    bearer: 'synthetic-bearer',
+    tenantId: 'tenant',
+    eventId: 'event',
+    token: 'synthetic-invitation-token',
+    idempotencyKey: 'synthetic-attempt',
+    fetchImpl: async () =>
+      new Response(JSON.stringify({ code: 'INVITATION_EMAIL_MISMATCH' }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+  });
+  assert.equal(denied.kind, 'denied');
+  const view = claimPresentation({
+    hasInvite: false,
+    verified: true,
+    decision: denied,
+  });
+  assert.equal(view.phase, 'failure');
+  assert.equal(view.homeLabel, 'Về Vé của tôi');
+  assert.equal(view.homeHref, '/(tabs)/my-tickets');
 });
 
 test('verified claim remains pending with refresh after its one-time intent is consumed', () => {
