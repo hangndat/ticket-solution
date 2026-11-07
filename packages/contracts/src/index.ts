@@ -113,6 +113,14 @@ export interface TicketSummary {
   eventName?: string;
   /** Event start in UTC ISO-8601; null when unscheduled, omitted by older servers or if the event was deleted. */
   startsAt?: string | null;
+  /** Current event venue from the owner-scoped ticket projection, when available. */
+  venueName?: string | null;
+  /** Display label of this ticket's type, when the type row still exists. */
+  ticketTypeLabel?: string | null;
+  /** IANA timezone of the event; startsAt remains UTC ISO-8601. */
+  eventTimezone?: string | null;
+  /** Publicly eligible published event banner URL, when available. */
+  bannerUrl?: string | null;
 }
 
 export {
