@@ -26,7 +26,7 @@ const fixture = {
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true, __historyRetryTest: fixture });
 
 const mocks: Record<string, string> = {
-  'react-native': `export const RefreshControl='RefreshControl',ScrollView='ScrollView',Text='Text',View='View';`,
+  'react-native': `export const Platform={OS:'ios'},RefreshControl='RefreshControl',ScrollView='ScrollView',Text='Text',View='View';`,
   '@/components/ui/button': `import React from ${JSON.stringify(import.meta.resolve('react'))}; export const Button=(props)=>React.createElement('Button',props);`,
   '@/gate/staff-gate-empty-state': `export const StaffGateNoEventState=()=>null;`,
   '@/gate/staff-gate-device-history-panel': `import React from ${JSON.stringify(import.meta.resolve('react'))}; export const StaffGateDeviceHistoryPanel=(props)=>React.createElement('HistoryPanel',props);`,
