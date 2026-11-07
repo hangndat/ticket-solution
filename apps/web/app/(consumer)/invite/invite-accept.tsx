@@ -1,7 +1,7 @@
 'use client';
 
 import { Button } from '@ticket/ui';
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useAttendeeLocale } from '../../../src/i18n';
 import { invitePageCopy } from '../../../src/invite/invite-copy';
 import {
@@ -106,6 +106,11 @@ export function InviteAcceptForm({
   const [ux, setUx] = useState<InviteUxMessage | null>(null);
   const [busy, setBusy] = useState(false);
   const [csrfReady, setCsrfReady] = useState(false);
+  const successHeadingRef = useRef<HTMLHeadingElement>(null);
+
+  useEffect(() => {
+    if (view?.kind === 'ok') successHeadingRef.current?.focus();
+  }, [view]);
 
   // CSRF cookie is issued by GET Route Handlers — not RSC (cookies().set illegal).
   useEffect(() => {
@@ -175,6 +180,44 @@ export function InviteAcceptForm({
         ? liveRegionForStatus('success')
         : null;
 
+  // A server-confirmed acceptance is a terminal view. Keeping the accept form
+  // mounted here invites a duplicate submission and pushes the Portal action
+  // below controls that no longer apply.
+  if (displayUx?.kind === 'success' && view?.kind === 'ok') {
+    return (
+      <div className={claimFormRoot}>
+        <section
+          className={inviteSuccessOutcomeClass()}
+          role={outcomeLive?.role ?? 'status'}
+          aria-live={outcomeLive?.ariaLive}
+          aria-atomic={outcomeLive?.ariaAtomic}
+          data-testid="invite-accept-result"
+        >
+          <h2 ref={successHeadingRef} tabIndex={-1}>
+            {displayUx.title}
+          </h2>
+          <p>{displayUx.detail}</p>
+          {portalOrigin ? (
+            <div className={authButtonsRow}>
+              <Button asChild variant="primary">
+                <a
+                  href={portalMigrationLocation(
+                    portalOrigin,
+                    '/admin',
+                    `?tenantId=${encodeURIComponent(view.value.tenantId)}`,
+                  )}
+                  data-testid="invite-accept-portal-cta"
+                >
+                  {copy.openPortal}
+                </a>
+              </Button>
+            </div>
+          ) : null}
+        </section>
+      </div>
+    );
+  }
+
   return (
     <div className={claimFormRoot}>
       <p className={inviteSupportCopy}>{copy.support}</p>
@@ -189,6 +232,7 @@ export function InviteAcceptForm({
           <input
             value={token}
             onChange={(e) => setTokenOverride(e.target.value)}
+            type="password"
             autoComplete="off"
             spellCheck={false}
             aria-label={copy.tokenLabel}
@@ -224,34 +268,6 @@ export function InviteAcceptForm({
             testId="invite-accept-loading"
           />
         </div>
-      ) : null}
-      {displayUx && displayUx.kind === 'success' && view?.kind === 'ok' ? (
-        <section
-          className={inviteSuccessOutcomeClass()}
-          role={outcomeLive?.role ?? 'status'}
-          aria-live={outcomeLive?.ariaLive}
-          aria-atomic={outcomeLive?.ariaAtomic}
-          data-testid="invite-accept-result"
-        >
-          <h2>{displayUx.title}</h2>
-          <p>{displayUx.detail}</p>
-          <p className={authButtonsRow}>
-            {portalOrigin ? (
-              <Button asChild variant="primary">
-                <a
-                  href={portalMigrationLocation(
-                    portalOrigin,
-                    '/admin',
-                    `?tenantId=${encodeURIComponent(view.value.tenantId)}`,
-                  )}
-                  data-testid="invite-accept-portal-cta"
-                >
-                  {copy.openPortal}
-                </a>
-              </Button>
-            ) : null}
-          </p>
-        </section>
       ) : null}
       {displayUx && displayUx.kind !== 'success' ? (
         <div className={guestOutcomeWrap}>

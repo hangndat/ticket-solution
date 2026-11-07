@@ -21,8 +21,8 @@ export const INVITE_PAGE_COPY_CATALOG = {
   login: dual('Đăng nhập', 'Sign in'),
   tokenLabel: dual('Mã lời mời', 'Invite code'),
   tokenHint: dual(
-    'Mở link mời (mã nằm sau # trên URL) — tránh dán mã dạng ?token= trên thanh địa chỉ.',
-    'Open the invite link (the code is after # in the URL) — avoid pasting ?token= in the address bar.',
+    'Mã lời mời được giữ riêng tư và chỉ gửi tới máy chủ để kiểm tra.',
+    'Your invite code stays private and is sent only to the server for verification.',
   ),
   emptyTitle: dual('Chưa có mã lời mời', 'No invite code yet'),
   emptyDetail: dual(
