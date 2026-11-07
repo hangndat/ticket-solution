@@ -1,5 +1,6 @@
 'use client';
 
+import { cn } from "../../../lib/utils";
 import { inviteCompactForm, inviteCompactPanel } from "./invite-surface";
 import { Button } from '@ticket/ui';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
@@ -219,7 +220,7 @@ export function InviteAcceptForm({
   // below controls that no longer apply.
   if (displayUx?.kind === 'success' && view?.kind === 'ok') {
     return (
-      <div className={`${claimFormRoot} ${inviteCompactForm}`}>
+      <div className={cn(claimFormRoot, inviteCompactForm)}>
         <section
           className={inviteSuccessOutcomeClass()}
           role={outcomeLive?.role ?? 'status'}
@@ -254,14 +255,14 @@ export function InviteAcceptForm({
   }
 
   return (
-    <div className={`${claimFormRoot} ${inviteCompactForm}`}>
+    <div className={cn(claimFormRoot, inviteCompactForm)}>
       <p className={inviteSupportCopy}>{copy.support}</p>
       <div className={authButtonsRow}>
         <Button asChild variant="primary">
           <a href={loginHref}>{copy.login}</a>
         </Button>
       </div>
-      <div className={`${inviteFormPanel} ${inviteCompactPanel}`}>
+      <div className={cn(inviteFormPanel, inviteCompactPanel)}>
         <label>
           {copy.tokenLabel}
           <input

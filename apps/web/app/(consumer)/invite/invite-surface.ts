@@ -15,4 +15,4 @@ export const inviteCompactForm =
 
 // 16px avoids iOS focus auto-zoom while preserving user pinch zoom.
 export const inviteCompactPanel =
-  "w-full min-w-0 [&_input]:w-full [&_input]:min-w-0 [&_input]:text-base max-[480px]:p-4 max-[480px]:gap-3 max-[480px]:rounded-xl max-[480px]:[&_button]:w-full max-[480px]:[&_button]:whitespace-normal";
+  "w-full min-w-0 [&_input]:w-full [&_input]:min-w-0 [&_input]:text-base! max-[480px]:p-4 max-[480px]:gap-3 max-[480px]:rounded-xl max-[480px]:[&_button]:w-full max-[480px]:[&_button]:whitespace-normal";
