@@ -7,12 +7,13 @@ import { TenantLogo } from '@/theme/TenantLogo';
 import { space, radius } from '@/theme/tokens';
 import { typography } from '@/theme/typography';
 
-export function Page({ children }: PropsWithChildren) {
+export function Page({ children, keyboardAware = false }: PropsWithChildren<{ keyboardAware?: boolean }>) {
   return (
     <View style={{ flex: 1, backgroundColor: colors.paper }}>
       <AtmosphereWash />
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
+        automaticallyAdjustKeyboardInsets={keyboardAware}
         keyboardShouldPersistTaps="handled"
         style={{ backgroundColor: 'transparent' }}
         contentContainerStyle={{ padding: space.xl, paddingBottom: space.huge, gap: space.xl }}
