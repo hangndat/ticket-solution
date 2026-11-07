@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { Keyboard, Platform, ScrollView, Text, View } from 'react-native';
+import { StaffGateScanStatusPanel } from '@/gate/staff-gate-scan-status';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { gateOutcomeAnnouncement } from '@/a11y/announcements';
 import { Button } from '@/components/ui/button';
@@ -11,21 +12,11 @@ import { StaffManualConfirmSheet } from '@/gate/staff-manual-confirm-sheet';
 import { StaffGateNoEventState } from '@/gate/staff-gate-empty-state';
 import { StaffGateOpsSticky } from '@/gate/staff-gate-ops-sticky';
 import { StaffGateScreenChrome } from '@/gate/staff-gate-screen-chrome';
-import type { GateScanStatusView } from '@/gate/gate-scan-status-ui';
 import { useStaffGateWorkspace } from '@/gate/staff-gate-workspace-context';
 import { STAFF_TAB_TITLES } from '@/navigation/staff-tab-titles';
 import { colors } from '@/theme/colors';
-import { brand, radius, space } from '@/theme/tokens';
+import { brand, space } from '@/theme/tokens';
 import { typography } from '@/theme/typography';
-
-function manualResultToneColor(tone: GateScanStatusView['tone']): string {
-  if (tone === 'admit') return colors.admit;
-  if (tone === 'deny') return colors.deny;
-  if (tone === 'warning') return colors.warning;
-  if (tone === 'unknown') return colors.unknown;
-  if (tone === 'default') return colors.label;
-  return colors.label;
-}
 
 export function StaffManualEntryScreen() {
   const insets = useSafeAreaInsets();
@@ -52,6 +43,7 @@ export function StaffManualEntryScreen() {
     ? manualResultAction(resultView.kind, Boolean(activeOp && canReconcile(activeOp)))
     : null;
   const safeResultHint = manualResultHint(gate.busy, resultView);
+  const resultFirst = showScanResult && !confirmVisible;
 
   const onCheck = useCallback(() => {
     const result = checkManualEntryCode(displayRaw, gate.gateScope);
@@ -125,6 +117,30 @@ export function StaffManualEntryScreen() {
           )}
         />
         <StaffGateNoEventState />
+        <Text accessibilityRole="header" style={{ ...typography.sectionTitleBold, color: colors.label }}>
+          Nhập tay
+        </Text>
+        {resultFirst ? (
+          <View testID="gate-manual-scan-result" style={{ gap: space.md }}
+            {...gateOutcomeAnnouncement({
+              phase: announcementPhaseFor(gate.busy ? 'confirming' : announceOp?.phase),
+              title: gate.busy ? 'Đang kiểm tra cổng' : resultView.label,
+              message: safeResultHint,
+            })}
+            accessibilityLiveRegion={resultView.assertive ? 'assertive' : 'polite'}>
+            <StaffGateScanStatusPanel view={{ ...resultView, hint: safeResultHint }} busy={gate.busy} emphasized />
+            {resultAction === 'reconcile' ? (
+              <Button label="Đối soát" accessibilityLabel="Đối soát kết quả lượt này"
+                onPress={() => void gate.reconcile()} variant="secondary" />
+            ) : null}
+            {resultAction === 'next' || resultAction === 'other' ? (
+              <Button label={resultAction === 'next' ? 'Nhập mã tiếp' : 'Kiểm tra mã khác'}
+                accessibilityLabel={resultAction === 'next' ? 'Nhập mã tiếp' : 'Kiểm tra mã khác'}
+                onPress={onNextCode} variant="secondary" />
+            ) : null}
+          </View>
+        ) : null}
+        {!resultFirst ? <>
         <Text
           style={{ ...typography.footnote, color: colors.secondary, lineHeight: 20 }}
         >
@@ -177,63 +193,7 @@ export function StaffManualEntryScreen() {
             {gate.gateEventsError}
           </Text>
         ) : null}
-        {showScanResult ? (
-          <View
-            testID="gate-manual-scan-result"
-            {...gateOutcomeAnnouncement({
-              phase: announcementPhaseFor(
-                gate.busy ? 'confirming' : announceOp?.phase,
-              ),
-              title: gate.busy ? 'Đang kiểm tra cổng' : resultView.label,
-              message: gate.busy
-                ? 'Đang kiểm tra mã.'
-                : safeResultHint,
-            })}
-            accessibilityLiveRegion={
-              resultView.assertive ? 'assertive' : 'polite'
-            }
-            style={{
-              padding: space.lg,
-              borderRadius: radius.md,
-              backgroundColor: colors.surfaceMuted,
-              gap: space.sm,
-            }}
-          >
-            <Text
-              style={{
-                ...typography.callout,
-                color: manualResultToneColor(resultView.tone),
-              }}
-            >
-              {gate.busy ? 'Đang kiểm tra cổng…' : resultView.label}
-            </Text>
-            <Text
-              style={{
-                ...typography.footnote,
-                color: colors.secondary,
-                lineHeight: 20,
-              }}
-            >
-              {safeResultHint}
-            </Text>
-            {resultAction === 'reconcile' ? (
-              <Button
-                label="Đối soát"
-                accessibilityLabel="Đối soát kết quả lượt này"
-                onPress={() => void gate.reconcile()}
-                variant="secondary"
-              />
-            ) : null}
-            {resultAction === 'next' || resultAction === 'other' ? (
-              <Button
-                label={resultAction === 'next' ? 'Nhập mã tiếp' : 'Kiểm tra mã khác'}
-                accessibilityLabel={resultAction === 'next' ? 'Nhập mã tiếp' : 'Kiểm tra mã khác'}
-                onPress={onNextCode}
-                variant="secondary"
-              />
-            ) : null}
-          </View>
-        ) : null}
+        </> : null}
       </ScrollView>
       <StaffManualConfirmSheet
         visible={confirmVisible}
@@ -243,7 +203,7 @@ export function StaffManualEntryScreen() {
         onConfirm={onConfirmAdmit}
         onCancel={onCancelConfirm}
       />
-      <StaffGateScreenChrome tabTitle={STAFF_TAB_TITLES.manual} largeTitle />
+      <StaffGateScreenChrome tabTitle={STAFF_TAB_TITLES.manual} />
     </>
   );
 }

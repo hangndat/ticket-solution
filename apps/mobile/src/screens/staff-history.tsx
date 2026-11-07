@@ -126,6 +126,9 @@ export function StaffHistoryScreen() {
           />
         }
       >
+        <Text accessibilityRole="header" style={{ ...typography.sectionTitleBold, color: colors.label }}>
+          Lịch sử
+        </Text>
         {gate.ready ? <StaffGateNoEventState /> : null}
         {!gate.ready ? (
           <View style={{ gap: space.sm }}>
@@ -150,7 +153,7 @@ export function StaffHistoryScreen() {
           />
         </View> : null}
       </ScrollView>
-      <StaffGateScreenChrome tabTitle={STAFF_TAB_TITLES.history} largeTitle />
+      <StaffGateScreenChrome tabTitle={STAFF_TAB_TITLES.history} />
     </>
   );
 }

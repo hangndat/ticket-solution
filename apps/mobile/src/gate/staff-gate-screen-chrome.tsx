@@ -7,30 +7,26 @@ import { STAFF_ACCOUNT_HREF } from '@/navigation/staff-account-route';
 import { TabStackTitle } from '@/navigation/tab-stack-title';
 
 type StaffGateScreenChromeProps = {
-  /** Bottom tab / large-title label (Nhập tay, Scan, Lịch sử). */
+  /** Bottom tab / task label (Nhập tay, Quét vé, Lịch sử). */
   tabTitle: string;
-  largeTitle?: boolean;
 };
 
 /**
  * Shared native header: large title + event switch (if >1) + filled profile.
  * Place after scroll root (Expo Router composition).
  */
-export function StaffGateScreenChrome({
-  tabTitle,
-  largeTitle = true
-}: StaffGateScreenChromeProps) {
+export function StaffGateScreenChrome({ tabTitle }: StaffGateScreenChromeProps) {
   const gate = useStaffGateWorkspace();
   const canSwitch = gate.gateEventChoices.length > 1;
   const navTitle = staffGateNavTitle(gate);
 
   return (
     <>
-      <TabStackTitle title={tabTitle} large={largeTitle} />
+      <TabStackTitle title={tabTitle} large={false} />
       <Stack.Screen
         options={{
           title: navTitle,
-          headerLargeTitleEnabled: largeTitle
+          headerLargeTitleEnabled: false
         }}
       />
       <Stack.Toolbar placement="right">
