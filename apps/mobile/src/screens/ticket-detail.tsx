@@ -335,8 +335,8 @@ export function TicketDetailScreen() {
           {visibleLoad.reason === 'unreachable'
             ? walletCopy.detailProbeErrorBody
             : visibleLoad.reason === 'unauthorized'
-              ? 'Phiên đăng nhập không còn hiệu lực. Đăng nhập lại để xem vé.'
-              : 'Không xác minh được vé cho tài khoản hiện tại.'}
+                ? `Phiên đăng nhập không còn hiệu lực. Đăng nhập lại để xem vé. ${walletCopy.credentialUnavailableBody}`
+                : `Không xác minh được vé cho tài khoản hiện tại. ${walletCopy.credentialUnavailableBody}`}
         </AttendeeStateCard>
         {visibleLoad.reason === 'unreachable' ? (
           <AttendeeCta label="Thử lại" onPress={() => setReloadKey((key) => key + 1)} testID="ticket-detail-error-retry" />
@@ -519,7 +519,7 @@ export function TicketDetailScreen() {
             tone="warning"
             testID="ticket-detail-credential-state"
           >
-            Chưa xác minh được mã vào cổng nên app không hiển thị mã. Kết nối mạng và cập nhật lại; thông tin sự kiện và vé vẫn được giữ.
+            {`${walletCopy.credentialUnavailableBody} Kết nối mạng và cập nhật lại; thông tin sự kiện và vé vẫn được giữ.`}
           </AttendeeStateCard>
           {mode === 'verified' ? (
             <AttendeeCta label="Cập nhật mã vào cổng" onPress={() => setReloadKey((key) => key + 1)} testID="ticket-detail-credential-retry" />

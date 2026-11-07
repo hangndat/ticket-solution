@@ -27,6 +27,7 @@ let memory: unknown = [legacy];
 let cache: unknown = { tickets: [legacy], syncedAt: '2026-11-04T00:00:00Z' };
 let calls = 0;
 let replacedRoute: string | null = null;
+let routeTicketId = 'ticket-a';
 let probe = async (): Promise<unknown> => ({ status: 'ok', body: { tickets: [ticket] } });
 let credential: { status: 'token'; accessToken: string } | { status: 'unavailable' } = { status: 'token', accessToken: 'synthetic' };
 const session = {
@@ -38,12 +39,12 @@ const session = {
 };
 Object.assign(globalThis, {
   IS_REACT_ACT_ENVIRONMENT: true,
-  __ticketDetailTest: { session, offline, cache: () => cache, probe: () => { calls++; return probe(); }, replace: (route: string) => { replacedRoute = route; } },
+  __ticketDetailTest: { session, offline, cache: () => cache, probe: () => { calls++; return probe(); }, replace: (route: string) => { replacedRoute = route; }, route: () => routeTicketId },
 });
 const moduleUrl = (source: string) => 'data:text/javascript,' + encodeURIComponent(source);
 const stateModule = `import React from ${JSON.stringify(import.meta.resolve('react'))}; export const ErrorState=({title,children,onRetry})=>React.createElement('ErrorState',{title,onRetry},children);`;
 const mocks: Record<string, string> = {
-  'expo-router': `export const useLocalSearchParams=()=>({ticketId:'ticket-a'}); export const router={replace:route=>globalThis.__ticketDetailTest.replace(route)};`,
+  'expo-router': `export const useLocalSearchParams=()=>({ticketId:globalThis.__ticketDetailTest.route()}); export const router={replace:route=>globalThis.__ticketDetailTest.replace(route)};`,
   'react-native': `export const ScrollView='ScrollView',Text='Text',View='View';`,
   '@/identity/session': `export const session=globalThis.__ticketDetailTest.session;`,
   '@/tickets/offline-display-session': `export const offlineDisplay={subscribe:()=>()=>{},getSnapshot:()=>globalThis.__ticketDetailTest.offline};`,
@@ -51,7 +52,7 @@ const mocks: Record<string, string> = {
   '@/tickets/fetch-me-tickets': `export const probeMeTickets=()=>globalThis.__ticketDetailTest.probe();`,
   '@/tickets/wallet-fetch-scope': `export const walletFetchScopeFromEnv=()=>({kind:'owner'});`,
   '@/components/screen-state': stateModule,
-  '@/components/screen-state-copy': `export const walletCopy={loading:{},detailProbeErrorTitle:'Fetch error',detailMissingTitle:'Missing'};`,
+  '@/components/screen-state-copy': `export const walletCopy={loading:{},detailProbeErrorTitle:'Fetch error',detailProbeErrorBody:'Fetch failed. Không hiển thị mã vào cổng khi chưa xác minh được vé.',detailMissingTitle:'Missing',detailMissingBody:'Ticket unavailable. Không hiển thị mã vào cổng khi chưa xác minh được vé.',credentialUnavailableBody:'Không hiển thị mã vào cổng khi chưa xác minh được vé.',guestWalletBlockedTitle:'Guest',guestWalletBlockedBody:'Không hiển thị mã vào cổng cho khách chưa đăng nhập.'};`,
   '@/components/page': `export const Notice='Notice';`,
   '@/components/attendee-cta': `export const AttendeeCta='AttendeeCta';`,
   '@/components/attendee-state-card': `export const AttendeeStateCard='AttendeeStateCard';`,
@@ -123,7 +124,7 @@ test('offline legacy metadata shows a QR error; retry loads the signed credentia
   assert.equal(tree!.root.findAllByType('QrCode').length, 0);
   const state = tree!.root.findByType('AttendeeStateCard');
   assert.equal(state.props.title, 'Chưa thể dùng vé tại cổng');
-  assert.match(state.props.children, /không hiển thị mã/i);
+  assert.match(state.props.children, /không hiển thị mã vào cổng/i);
   assert.equal(tree!.root.findByProps({ testID: 'ticket-detail-credential-unavailable' }).props.testID, 'ticket-detail-credential-unavailable');
   probe = async () => ({ status: 'ok', body: { tickets: [ticket] } });
   await act(async () => { tree!.root.findByProps({ testID: 'ticket-detail-credential-retry' }).props.onPress(); });
@@ -206,7 +207,8 @@ test('unauthorized response cannot display cached QR', async () => {
   let tree: ReturnType<typeof Renderer.create>;
   await act(async () => { tree = Renderer.create(React.createElement(TicketDetailScreen)); });
   assert.equal(tree!.root.findAllByType('QrCode').length, 0);
-  assert.equal(tree!.root.findAllByType('AttendeeStateCard').length, 1);
+  const state = tree!.root.findByType('AttendeeStateCard');
+  assert.match(state.props.children, /không hiển thị mã vào cổng/i);
   assert.equal(tree!.root.findAllByProps({ testID: 'ticket-detail-error-retry' }).length, 0);
   assert.equal(tree!.root.findByProps({ testID: 'ticket-detail-home' }).props.label, 'Về Vé của tôi');
   tree!.root.findByProps({ testID: 'ticket-detail-home' }).props.onPress();
@@ -220,8 +222,39 @@ test('ticket absent from verified owner list offers wallet return without QR', a
   let tree: ReturnType<typeof Renderer.create>;
   await act(async () => { tree = Renderer.create(React.createElement(TicketDetailScreen)); });
   assert.equal(tree!.root.findAllByType('QrCode').length, 0);
+  assert.match(tree!.root.findByType('AttendeeStateCard').props.children, /không hiển thị mã vào cổng/i);
   assert.equal(tree!.root.findByProps({ testID: 'ticket-detail-home' }).props.label, 'Về Vé của tôi');
   tree!.root.findByProps({ testID: 'ticket-detail-home' }).props.onPress();
   assert.equal(replacedRoute, '/wallet-access');
   await act(async () => { tree!.unmount(); });
+});
+
+test('invalid ticket route explicitly withholds the Gate code', async () => {
+  const previousRoute = routeTicketId;
+  routeTicketId = '';
+  let tree: ReturnType<typeof Renderer.create>;
+  try {
+    await act(async () => { tree = Renderer.create(React.createElement(TicketDetailScreen)); });
+    assert.equal(tree!.root.findAllByType('QrCode').length, 0);
+    const state = tree!.root.findByProps({ testID: 'ticket-detail-invalid-route' });
+    assert.match(state.props.children, /không hiển thị mã vào cổng/i);
+  } finally {
+    await act(async () => { tree!.unmount(); });
+    routeTicketId = previousRoute;
+  }
+});
+
+test('guest ticket route explicitly withholds the Gate code', async () => {
+  const previousIdentity = identity;
+  identity = { status: 'guest', userId: '' };
+  let tree: ReturnType<typeof Renderer.create>;
+  try {
+    await act(async () => { tree = Renderer.create(React.createElement(TicketDetailScreen)); });
+    assert.equal(tree!.root.findAllByType('QrCode').length, 0);
+    const state = tree!.root.findByProps({ testID: 'ticket-detail-guest-state' });
+    assert.match(state.props.children, /không hiển thị mã vào cổng/i);
+  } finally {
+    await act(async () => { tree!.unmount(); });
+    identity = previousIdentity;
+  }
 });

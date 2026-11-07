@@ -5,6 +5,8 @@ export const EVENT_DETAIL_COLLAPSE_CHARS = 280;
 
 export type EventDetailModel = {
   title: string;
+  bannerWordmark: string;
+  showBannerFallbackName: false;
   /** "20 tháng 3, 2027 lúc 10:00 GMT+7" — null when startsAt missing. */
   whenLine: string | null;
   venue: string | null;
@@ -71,6 +73,8 @@ export function buildEventDetailModel(
   const termsBody = clean(event.terms?.bodyMarkdown);
   return {
     title: event.name,
+    bannerWordmark: event.name,
+    showBannerFallbackName: false,
     whenLine: formatEventWhen(event.startsAt, event.timezone),
     venue: clean(event.location),
     organizer,

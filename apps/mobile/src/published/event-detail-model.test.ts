@@ -48,6 +48,8 @@ test('model omits empty fields and hidden/empty sections', () => {
       ],
     }),
   );
+  assert.equal(m.bannerWordmark, 'Show');
+  assert.equal(m.showBannerFallbackName, false);
   assert.equal(m.venue, null);
   assert.equal(m.organizer, null, 'organizer equal to name is dropped');
   assert.equal(m.about, 'A\n\nB');

@@ -310,7 +310,8 @@ function PublishedEventComposition({
           tenantSlug={event.tenantSlug}
           bannerUrl={event.brand.bannerUrl}
           fallbackColor={event.brand.primaryColor}
-          wordmark={event.name}
+          wordmark={model.bannerWordmark}
+          showFallbackName={model.showBannerFallbackName}
           height={EVENT_BANNER_HEIGHT_DETAIL}
           style={{ borderRadius: 0, width: undefined }}
           testID={`pub-detail-banner-${event.id}`}

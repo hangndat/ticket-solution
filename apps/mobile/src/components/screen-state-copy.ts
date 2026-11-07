@@ -25,12 +25,13 @@ export const walletCopy = {
     body: 'Đăng nhập khi có mạng rồi kéo để làm mới nhằm lưu vé xem offline.',
   },
   errorTitle: 'Không tải được vé',
+  credentialUnavailableBody: 'Không hiển thị mã vào cổng khi chưa xác minh được vé.',
   detailMissingTitle: 'Không mở được vé này',
   detailMissingBody:
-    'Vé không còn sẵn sàng trong tài khoản hiện tại. Chỉ vé được xác minh mới có QR hoặc mã nhập tay.',
+    'Vé không còn sẵn sàng trong tài khoản hiện tại. Chỉ vé được xác minh mới có QR hoặc mã nhập tay. Không hiển thị mã vào cổng khi chưa xác minh được vé.',
   detailProbeErrorTitle: 'Không tải được vé',
   detailProbeErrorBody:
-    'Không kiểm tra được vé trên máy chủ. Thử lại khi có mạng — đây chưa phải vé thiếu.',
+    'Không kiểm tra được vé trên máy chủ. Thử lại khi có mạng — đây chưa phải vé thiếu. Không hiển thị mã vào cổng khi chưa xác minh được vé.',
   signInErrorTitle: 'Không đăng nhập được',
   signInLoading: {
     title: 'Đang đăng nhập',
@@ -38,7 +39,7 @@ export const walletCopy = {
   },
   guestWalletBlockedTitle: 'Vé của bạn ở đây',
   guestWalletBlockedBody:
-    'Đăng nhập để xem vé đã nhận và mã vào cổng. Vé chỉ hiển thị sau khi tài khoản được xác minh.',
+    'Đăng nhập để xem vé đã nhận và mã vào cổng. Vé chỉ hiển thị sau khi tài khoản được xác minh. Không hiển thị mã vào cổng cho khách chưa đăng nhập.',
   firstTicketPush: walletCopyFirstTicketPush,
 } as const;
 

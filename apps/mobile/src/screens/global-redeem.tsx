@@ -57,6 +57,7 @@ import {
   ATTENDEE_REDEEM_PATH,
   sanitizeRedeemCodeParam,
 } from '@/navigation/attendee-redeem-entry';
+import { globalRedeemErrorExitHref } from '@/redeem/global-redeem-presentation';
 import { randomId } from '@/lib/random-id';
 import { refreshWalletAfterIssue } from '@/tickets/refresh-wallet-after-issue';
 import { ticketDetailHref } from '@/tickets/ticket-detail-href';
@@ -581,9 +582,9 @@ export function GlobalRedeemScreen() {
       ) : null}
       {!resolved && (resolveFeedback?.kind === 'invalid' || resolveFeedback?.kind === 'network') ? (
         <AttendeeCta
-          label={verified ? 'Về Vé của tôi' : 'Về Sự kiện'}
+          label="Về Sự kiện"
           variant="secondary"
-          onPress={() => router.replace(verified ? '/(tabs)/my-tickets' : '/(tabs)/(events)')}
+          onPress={() => router.replace(globalRedeemErrorExitHref(verified ? 'verified' : 'guest'))}
           testID="global-redeem-resolve-exit"
         />
       ) : null}
