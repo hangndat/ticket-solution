@@ -42,9 +42,22 @@ function formatListDate(startsAt: string, timezone: string): string {
   }
 }
 
+function formatListTime(startsAt: string, timezone: string): string {
+  try {
+    return new Intl.DateTimeFormat('vi', {
+      timeStyle: 'short',
+      timeZone: timezone
+    }).format(new Date(startsAt));
+  } catch {
+    return 'Chưa có giờ bắt đầu';
+  }
+}
+
 function PublishedEventCard({ item, featured }: { item: PublishedEventSummary; featured: boolean }) {
   const dateLine = item.startsAt
-    ? formatListDate(item.startsAt, item.timezone)
+    ? featured
+      ? formatListTime(item.startsAt, item.timezone)
+      : formatListDate(item.startsAt, item.timezone)
     : 'Chưa có giờ bắt đầu';
 
   const dateBadge = (() => {
@@ -97,6 +110,7 @@ function PublishedEventCard({ item, featured }: { item: PublishedEventSummary; f
               bannerUrl={item.brand.bannerUrl}
               fallbackColor={item.brand.primaryColor}
               wordmark={item.name}
+              showFallbackName={false}
               height={featured ? EVENT_BANNER_HEIGHT_LIST : 52}
               style={{ borderRadius: featured ? 0 : radius.sm }}
               testID={`pub-media-${item.id}-banner`}

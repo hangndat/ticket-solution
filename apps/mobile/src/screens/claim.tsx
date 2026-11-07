@@ -450,12 +450,6 @@ export function ClaimScreen() {
             overflow: 'hidden',
           }}
         >
-          <View
-            style={{
-              height: space.huge + space.xl,
-              backgroundColor: colors.surfaceSubtle,
-            }}
-          />
           <View style={{ padding: space.lg, gap: space.sm }}>
             <Text style={{ ...typography.badge, color: colors.secondary }}>
               SỰ KIỆN
@@ -512,10 +506,6 @@ export function ClaimScreen() {
         </View>
       ) : pending ? (
         <View style={{ gap: space.md }}>
-          <Notice title="Chưa có vé trong ví" tone="unknown">
-            Đợi kết quả từ đơn vị tổ chức. Yêu cầu chờ duyệt chưa giữ chỗ; bạn
-            có thể kiểm tra lại trạng thái tại đây.
-          </Notice>
           {notice ? (
             <Text
               selectable
@@ -526,7 +516,6 @@ export function ClaimScreen() {
           ) : null}
           <AttendeeCta
             label={busy ? 'Đang kiểm tra…' : 'Kiểm tra lại trạng thái'}
-            variant="secondary"
             disabled={busy}
             onPress={() => void refreshStatus()}
             accessibilityLabel={

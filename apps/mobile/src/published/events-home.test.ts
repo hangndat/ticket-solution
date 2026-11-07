@@ -70,7 +70,10 @@ test('upcoming heading and rank change exactly when an event begins', () => {
   const first = { ...sampleSummary, startsAt: '2027-03-20T10:00:00+07:00' };
   const second = { ...sampleSummary, id: 'second', startsAt: '2027-03-21T10:00:00+07:00' };
   const start = Date.parse(first.startsAt);
-  assert.equal(featuredCatalogHeading(first, '', start - 1), 'Sắp diễn ra gần nhất');
+  assert.equal(
+    featuredCatalogHeading(first, '', start - 1),
+    'Sắp diễn ra gần nhất · 20 thg 3, 2027',
+  );
   assert.equal(nextCatalogRefreshMs([first, second], start - 1), 2);
   assert.equal(featuredCatalogHeading(first, '', start), 'Sự kiện công khai');
   assert.equal(featuredCatalogHeading(first, 'MFest', start - 1), 'Kết quả tìm kiếm');

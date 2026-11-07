@@ -10,7 +10,7 @@ import {
 import { Animated, KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
 import { Input } from '@/components/ui/input';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import type { RedemptionResolveResponse } from '@ticket/contracts';
+import { ISSUE_ERROR_CODES, type RedemptionResolveResponse } from '@ticket/contracts';
 import {
   redeemActionAnnouncement,
   redeemDecisionAnnouncement,
@@ -20,6 +20,7 @@ import {
 import { presentRedeemDecision } from '@/attendee/attendee-outcome-copy';
 import { useAttendeeSignIn } from '@/attendee/use-attendee-sign-in';
 import { AttendeeCta } from '@/components/attendee-cta';
+import { AttendeeStateCard } from '@/components/attendee-state-card';
 import { Notice } from '@/components/page';
 import { AttendeeScreenChrome } from '@/navigation/attendee-screen-chrome';
 import { ErrorState, LoadingState } from '@/components/screen-state';
@@ -56,6 +57,7 @@ import {
   ATTENDEE_REDEEM_PATH,
   sanitizeRedeemCodeParam,
 } from '@/navigation/attendee-redeem-entry';
+import { globalRedeemErrorExitHref } from '@/redeem/global-redeem-presentation';
 import { randomId } from '@/lib/random-id';
 import { refreshWalletAfterIssue } from '@/tickets/refresh-wallet-after-issue';
 import { ticketDetailHref } from '@/tickets/ticket-detail-href';
@@ -66,6 +68,11 @@ import { radius, space } from '@/theme/tokens';
 import { typography } from '@/theme/typography';
 
 const AUTH_CODES = new Set(['UNAUTHENTICATED', 'EMAIL_NOT_VERIFIED']);
+
+type ResolveFeedback = {
+  kind: 'missing' | 'auth' | 'invalid' | 'network' | 'service';
+  message: string;
+};
 
 function contextNotice(body: RedemptionResolveResponse): string {
   const window = body.redemptionWindow;
@@ -108,7 +115,7 @@ export function GlobalRedeemScreen() {
   const [resolveContext, setResolveContext] =
     useState<RedemptionResolveResponse | null>(null);
   const [resolveNotice, setResolveNotice] = useState<string | null>(null);
-  const [resolveError, setResolveError] = useState<string | null>(null);
+  const [resolveFeedback, setResolveFeedback] = useState<ResolveFeedback | null>(null);
   const [busy, setBusy] = useState(false);
   const [decision, setDecision] = useState<RedeemDecision | null>(null);
   const [attempt, setAttempt] = useState<RedeemAttempt | null>(null);
@@ -136,7 +143,7 @@ export function GlobalRedeemScreen() {
   const applyResolveBody = useCallback((body: RedemptionResolveResponse) => {
     setResolveContext(body);
     setResolveNotice(contextNotice(body));
-    setResolveError(null);
+    setResolveFeedback(null);
     const publishedForm = body.published.form;
     setForm(publishedForm ? (publishedForm as FormDefinition) : null);
     const terms = resolveTermsForDisplay(body.published.terms);
@@ -156,11 +163,11 @@ export function GlobalRedeemScreen() {
       const bearer = await session.getCredential();
       const apiBase = getApiBaseUrl();
       if (!session.isEpochCurrent(epoch) || !bearer || !apiBase || !epoch) {
-        setResolveError('Cần đăng nhập để tra cứu mã.');
+        setResolveFeedback({ kind: 'auth', message: 'Cần đăng nhập để tra cứu mã.' });
         return;
       }
       setBusy(true);
-      setResolveError(null);
+      setResolveFeedback(null);
       setOfflineNotice(null);
       try {
         const result = await resolveRedemptionCodeGlobal({
@@ -174,12 +181,15 @@ export function GlobalRedeemScreen() {
           return;
         }
         if (result.status === 'network') {
-          setOfflineNotice(redeemCopy.offlineBody);
+          setResolveFeedback({ kind: 'network', message: redeemCopy.offlineBody });
           return;
         }
         setResolveContext(null);
         setResolveNotice(null);
-        setResolveError(result.message);
+        setResolveFeedback({
+          kind: result.code === ISSUE_ERROR_CODES.CODE_INVALID ? 'invalid' : 'service',
+          message: result.message,
+        });
       } finally {
         if (session.isEpochCurrent(epoch)) setBusy(false);
       }
@@ -222,6 +232,7 @@ export function GlobalRedeemScreen() {
         setStatusNote(null);
         setResolveContext(null);
         setResolveNotice(null);
+        setResolveFeedback(null);
         return;
       }
       clearError();
@@ -253,7 +264,7 @@ export function GlobalRedeemScreen() {
   async function onContinueOrResolve() {
     const trimmed = code.trim();
     if (!trimmed) {
-      setResolveError('Nhập mã đổi vé.');
+      setResolveFeedback({ kind: 'missing', message: 'Nhập mã đổi vé.' });
       return;
     }
     if (!verified) {
@@ -265,7 +276,7 @@ export function GlobalRedeemScreen() {
       });
       parkSignInReturn({ pathname: ATTENDEE_REDEEM_PATH });
       const ok = await signIn();
-      if (ok) setResolveError(null);
+      if (ok) setResolveFeedback(null);
       return;
     }
     await runResolve(trimmed);
@@ -273,7 +284,7 @@ export function GlobalRedeemScreen() {
 
   async function submit() {
     if (!resolveContext) {
-      setResolveError('Tra cứu mã trước khi xác nhận đổi vé.');
+      setResolveFeedback({ kind: 'missing', message: 'Tra cứu mã trước khi xác nhận đổi vé.' });
       return;
     }
     const epoch = session.captureEpoch();
@@ -517,12 +528,6 @@ export function GlobalRedeemScreen() {
         <Notice title={redeemCopy.offlineTitle}>{offlineNotice}</Notice>
       ) : null}
 
-      {resolveError ? (
-        <Notice title="Không tra cứu được" tone="deny">
-          {resolveError}
-        </Notice>
-      ) : null}
-
       {!checking ? (
         <>
           <Input
@@ -530,6 +535,7 @@ export function GlobalRedeemScreen() {
             value={code}
             onChangeText={(value) => {
               setCode(value);
+              setResolveFeedback(null);
               if (resolved) {
                 setResolveContext(null);
                 setResolveNotice(null);
@@ -544,14 +550,42 @@ export function GlobalRedeemScreen() {
           <Text style={{ ...typography.caption, color: colors.secondary }}>
             Kiểm tra lại từng ký tự trước khi tiếp tục.
           </Text>
+          {resolveFeedback ? (
+            <AttendeeStateCard
+              symbol={resolveFeedback.kind === 'network' ? 'wifi.exclamationmark' : resolveFeedback.kind === 'invalid' ? 'ticket' : 'exclamationmark.circle'}
+              title={
+                resolveFeedback.kind === 'invalid'
+                  ? 'Mã chưa được tìm thấy'
+                  : resolveFeedback.kind === 'network'
+                    ? 'Mất kết nối'
+                    : resolveFeedback.kind === 'missing'
+                      ? 'Nhập mã nhận vé'
+                      : resolveFeedback.kind === 'auth'
+                        ? 'Cần đăng nhập'
+                        : 'Chưa tra cứu được mã'
+              }
+              tone={resolveFeedback.kind === 'invalid' || resolveFeedback.kind === 'service' ? 'error' : 'warning'}
+              testID={`global-redeem-resolve-${resolveFeedback.kind}`}
+            >
+              {resolveFeedback.message}
+            </AttendeeStateCard>
+          ) : null}
         </>
       ) : null}
       {!resolved ? (
         <AttendeeCta
-          label={busy ? 'Đang tra cứu…' : redeemCopy.lookupCta}
+          label={busy ? 'Đang tra cứu…' : resolveFeedback ? redeemCopy.lookupAgainCta : redeemCopy.lookupCta}
           disabled={busy || code.trim().length === 0}
           onPress={() => void onContinueOrResolve()}
           testID="global-redeem-cta-resolve"
+        />
+      ) : null}
+      {!resolved && (resolveFeedback?.kind === 'invalid' || resolveFeedback?.kind === 'network') ? (
+        <AttendeeCta
+          label="Về Sự kiện"
+          variant="secondary"
+          onPress={() => router.replace(globalRedeemErrorExitHref(verified ? 'verified' : 'guest'))}
+          testID="global-redeem-resolve-exit"
         />
       ) : null}
 

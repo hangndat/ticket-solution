@@ -84,9 +84,16 @@ export function featuredCatalogHeading(
 ): string {
   if (query.trim()) return 'Kết quả tìm kiếm';
   const start = featured.startsAt ? Date.parse(featured.startsAt) : NaN;
-  return Number.isFinite(start) && start > now
-    ? 'Sắp diễn ra gần nhất'
-    : 'Sự kiện công khai';
+  if (!Number.isFinite(start) || start <= now) return 'Sự kiện công khai';
+  try {
+    const date = new Intl.DateTimeFormat('vi', {
+      dateStyle: 'medium',
+      timeZone: featured.timezone,
+    }).format(new Date(start));
+    return `Sắp diễn ra gần nhất · ${date}`;
+  } catch {
+    return 'Sắp diễn ra gần nhất';
+  }
 }
 
 /** Wake at the next start (or daily for distant events); caller clears the timer. */

@@ -16,11 +16,11 @@ import {
 } from 'react-native';
 import type { TicketSummary } from '@ticket/contracts';
 import { AttendeeCta } from '@/components/attendee-cta';
+import { AttendeeStateCard } from '@/components/attendee-state-card';
 import { Button } from '@/components/ui/button';
 import { EVENT_BANNER_HEIGHT_TICKET } from '@/components/event-banner-metrics';
 import { EventBanner } from '@/components/event-media';
 import {
-  EmptyState,
   ErrorState,
   LoadingState
 } from '@/components/screen-state';
@@ -500,9 +500,13 @@ export function MyTicketsScreen() {
           style={{ flex: 1, backgroundColor: brand.paper }}
           contentContainerStyle={{ padding: space.xl }}
         >
-          <EmptyState title={walletCopy.guestWalletBlockedTitle}>
+          <AttendeeStateCard
+            symbol="person.crop.circle"
+            title={walletCopy.guestWalletBlockedTitle}
+            testID="wallet-guest-state"
+          >
             {walletCopy.guestWalletBlockedBody}
-          </EmptyState>
+          </AttendeeStateCard>
           <View style={{ gap: space.sm, marginTop: space.xl }}>
             <AttendeeCta label="Đăng nhập" onPress={() => router.push(ATTENDEE_ACCOUNT_HREF)} testID="wallet-guest-signin" />
             <AttendeeCta label="Khám phá sự kiện" variant="secondary" onPress={() => router.replace(GUEST_HOME_HREF)} testID="wallet-guest-events" />
@@ -595,9 +599,13 @@ function OfflineDisplayWallet({
       ) : null}
 
       {contentPhase === 'empty-offline' ? (
-        <EmptyState title={walletCopy.emptyOffline.title}>
+        <AttendeeStateCard
+          symbol="ticket"
+          title={walletCopy.emptyOffline.title}
+          testID="wallet-empty-offline-state"
+        >
           {walletCopy.emptyOffline.body}
-        </EmptyState>
+        </AttendeeStateCard>
       ) : contentPhase === 'tickets' ? (
         <View style={{ gap: space.xl }}>
           <WalletGroupedTicketList tickets={tickets} offline />
@@ -936,9 +944,13 @@ function VerifiedWallet({ userId }: { userId: string }) {
       ) : null}
 
       {contentPhase === 'empty-online' ? (
-        <EmptyState title={walletCopy.emptyOnline.title}>
+        <AttendeeStateCard
+          symbol="ticket"
+          title={walletCopy.emptyOnline.title}
+          testID="wallet-empty-online-state"
+        >
           {walletCopy.emptyOnline.body}
-        </EmptyState>
+        </AttendeeStateCard>
       ) : contentPhase === 'tickets' ? (
         <>
           {hero ? (
@@ -988,9 +1000,13 @@ function VerifiedWallet({ userId }: { userId: string }) {
         </View>
       ) : null}
       {contentPhase === 'tickets' && filteredTickets.length === 0 ? (
-        <EmptyState title={walletFilter === 'past' ? 'Chưa có vé đã qua' : 'Chưa có vé sắp dùng'}>
+        <AttendeeStateCard
+          symbol="ticket"
+          title={walletFilter === 'past' ? 'Chưa có vé đã qua' : 'Chưa có vé sắp dùng'}
+          testID="wallet-filter-empty-state"
+        >
           {walletFilter === 'past' ? 'Vé đã qua sẽ xuất hiện ở đây.' : 'Vé chưa có ngày bắt đầu vẫn xem được trong Tất cả.'}
-        </EmptyState>
+        </AttendeeStateCard>
       ) : null}
     </ScrollView>
     <AttendeeScreenChrome title="Vé của tôi" />
