@@ -127,12 +127,13 @@ test('offline legacy metadata shows a QR error; retry loads the signed credentia
   assert.equal(JSON.stringify(tree!.toJSON()).includes('SYNTHETIC-CODE'), false);
   const state = tree!.root.findByType('AttendeeStateCard');
   assert.equal(state.props.title, 'Chưa thể dùng vé tại cổng');
+  assert.equal(state.props.compact, true);
   assert.match(state.props.children, /không hiển thị mã vào cổng/i);
   assert.equal(tree!.root.findByProps({ testID: 'ticket-detail-credential-retry' }).props.label, 'Cập nhật mã vào cổng');
-  assert.equal(tree!.root.findByProps({ testID: 'ticket-detail-credential-unavailable' }).props.style.minHeight, 104);
+  assert.equal(tree!.root.findByProps({ testID: 'ticket-detail-credential-unavailable' }).props.style.minHeight, 80);
   assert.equal(tree!.root.findByProps({ testID: 'ticket-detail-credential-retry' }).props.label, 'Cập nhật mã vào cổng');
   assert.equal(tree!.root.findByProps({ testID: 'ticket-detail-credential-unavailable' }).props.testID, 'ticket-detail-credential-unavailable');
-  assert.equal(tree!.root.findByProps({ testID: 'ticket-detail-credential-unavailable' }).props.style.minHeight, 104);
+  assert.equal(tree!.root.findByProps({ testID: 'ticket-detail-credential-unavailable' }).props.style.minHeight, 80);
   probe = async () => ({ status: 'ok', body: { tickets: [ticket] } });
   await act(async () => { tree!.root.findByProps({ testID: 'ticket-detail-credential-retry' }).props.onPress(); });
   assert.equal(calls, 2);

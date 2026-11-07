@@ -74,7 +74,7 @@ function TicketDetailPage({ children, compact = false }: PropsWithChildren<{ com
         paddingHorizontal: space.xl,
         paddingTop: compact ? space.xs : space.md,
         paddingBottom: space.huge,
-        gap: compact ? space.md : space.xl,
+        gap: compact ? space.sm : space.xl,
       }}
     >
       {children}
@@ -416,7 +416,7 @@ export function TicketDetailScreen() {
             paddingHorizontal: space.xl,
             paddingTop: credentialUnavailable ? space.sm : space.md,
             paddingBottom: credentialUnavailable ? space.sm : space.xl,
-            gap: credentialUnavailable ? space.sm : space.md,
+            gap: credentialUnavailable ? space.xs : space.md,
             alignItems: 'stretch',
           }}
         >
@@ -483,7 +483,7 @@ export function TicketDetailScreen() {
               />
             </View>
           ) : (
-            <View testID="ticket-detail-credential-unavailable" style={{ minHeight: credentialUnavailable ? 104 : 184, borderWidth: 1, borderStyle: 'dashed', borderColor: colors.line, borderRadius: radius.md, backgroundColor: colors.surfaceSubtle, justifyContent: 'center', alignItems: 'center', gap: space.sm, padding: space.md }}>
+            <View testID="ticket-detail-credential-unavailable" style={{ minHeight: credentialUnavailable ? 80 : 184, borderWidth: 1, borderStyle: 'dashed', borderColor: colors.line, borderRadius: radius.md, backgroundColor: colors.surfaceSubtle, justifyContent: 'center', alignItems: 'center', gap: space.xs, padding: space.sm }}>
               <Text style={{ ...typography.title, color: colors.secondary }}>▦</Text>
               <Text style={{ ...typography.subhead, color: colors.secondary, textAlign: 'center' }}>Chưa có mã QR để quét</Text>
             </View>
@@ -526,6 +526,7 @@ export function TicketDetailScreen() {
             symbol="qrcode"
             title="Chưa thể dùng vé tại cổng"
             tone="warning"
+            compact
             testID="ticket-detail-credential-state"
           >
             {`${walletCopy.credentialUnavailableBody} Kết nối mạng và cập nhật lại; thông tin sự kiện và vé vẫn được giữ.`}

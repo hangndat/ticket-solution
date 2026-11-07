@@ -10,6 +10,7 @@ type AttendeeStateCardProps = PropsWithChildren<{
   title: string;
   tone?: 'neutral' | 'warning' | 'error';
   testID?: string;
+  compact?: boolean;
 }>;
 
 /** Attendee empty and unavailable states with a clear native visual hierarchy. */
@@ -18,6 +19,7 @@ export function AttendeeStateCard({
   title,
   tone = 'neutral',
   testID,
+  compact = false,
   children,
 }: AttendeeStateCardProps) {
   const tintColor =
@@ -32,8 +34,8 @@ export function AttendeeStateCard({
       testID={testID}
       style={{
         alignItems: 'center',
-        gap: space.md,
-        padding: space.xl,
+        gap: compact ? space.sm : space.md,
+        padding: compact ? space.md : space.xl,
         borderRadius: radius.lg,
         borderCurve: 'continuous',
         borderWidth: 1,
@@ -44,8 +46,8 @@ export function AttendeeStateCard({
       <View
         accessible={false}
         style={{
-          width: 52,
-          height: 52,
+          width: compact ? 36 : 52,
+          height: compact ? 36 : 52,
           alignItems: 'center',
           justifyContent: 'center',
           borderRadius: radius.lg,
@@ -57,7 +59,7 @@ export function AttendeeStateCard({
                 : colors.surfaceSubtle,
         }}
       >
-        <SymbolView name={symbol} size={26} tintColor={tintColor} />
+        <SymbolView name={symbol} size={compact ? 20 : 26} tintColor={tintColor} />
       </View>
       <Text
         accessibilityRole="header"
@@ -66,7 +68,7 @@ export function AttendeeStateCard({
         {title}
       </Text>
       {children != null && children !== '' ? (
-        <Text style={{ ...typography.body, color: colors.secondary, textAlign: 'center' }}>
+        <Text style={{ ...(compact ? typography.subhead : typography.body), color: colors.secondary, textAlign: 'center' }}>
           {children}
         </Text>
       ) : null}
