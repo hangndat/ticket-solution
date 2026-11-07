@@ -116,10 +116,25 @@ class TicketSummaryDto implements TicketSummary {
     },
   })
   gateCredential!: TicketSummary['gateCredential'];
-  @ApiProperty({ nullable: true, type: String }) manualEntryCode!: string | null;
+  @ApiProperty({ nullable: true, type: String }) manualEntryCode!:
+    string | null;
   @ApiProperty() createdAt!: string;
   @ApiProperty({ required: false }) eventName?: string;
-  @ApiProperty({ required: false, nullable: true, type: String, format: 'date-time' }) startsAt?: string | null;
+  @ApiProperty({
+    required: false,
+    nullable: true,
+    type: String,
+    format: 'date-time',
+  })
+  startsAt?: string | null;
+  @ApiProperty({ required: false, nullable: true, type: String }) venueName?:
+    string | null;
+  @ApiProperty({ required: false, nullable: true, type: String })
+  ticketTypeLabel?: string | null;
+  @ApiProperty({ required: false, nullable: true, type: String })
+  eventTimezone?: string | null;
+  @ApiProperty({ required: false, nullable: true, type: String, format: 'uri' })
+  bannerUrl?: string | null;
 }
 
 class MeTicketsDto implements MeTicketsResponse {
@@ -213,7 +228,10 @@ export class TicketIssueService {
   constructor(private readonly deps: TicketServices) {}
 
   private async ticketSummary(
-    ticket: Awaited<ReturnType<typeof getTicketForOwner>> | Awaited<ReturnType<typeof listTicketsForOwner>>[number] | Awaited<ReturnType<typeof listOwnerTicketsAggregated>>[number],
+    ticket:
+      | Awaited<ReturnType<typeof getTicketForOwner>>
+      | Awaited<ReturnType<typeof listTicketsForOwner>>[number]
+      | Awaited<ReturnType<typeof listOwnerTicketsAggregated>>[number],
     tenantId: string,
   ): Promise<TicketSummary> {
     const config = this.deps.gateCredentialConfig;
@@ -236,7 +254,10 @@ export class TicketIssueService {
     });
     let manualEntryCode: string | null = null;
     if (ticket.state === 'ACTIVE' && ticket.manualEntryCodeSealed) {
-      manualEntryCode = openManualEntryCode(ticket.manualEntryCodeSealed, credentialKey);
+      manualEntryCode = openManualEntryCode(
+        ticket.manualEntryCodeSealed,
+        credentialKey,
+      );
     }
     return {
       ticketId: ticket.ticketId,
@@ -254,6 +275,13 @@ export class TicketIssueService {
         : {}),
       ...('startsAt' in ticket
         ? { startsAt: ticket.startsAt?.toISOString() ?? null }
+        : {}),
+      ...('venueName' in ticket ? { venueName: ticket.venueName } : {}),
+      ...('ticketTypeLabel' in ticket
+        ? { ticketTypeLabel: ticket.ticketTypeLabel }
+        : {}),
+      ...('eventTimezone' in ticket
+        ? { eventTimezone: ticket.eventTimezone }
         : {}),
     };
   }
@@ -381,7 +409,11 @@ export class TicketIssueService {
     const tickets = await withTenant(this.deps.db, tenantId, (tx) =>
       listTicketsForOwner(tx, tenantId, user.userId),
     );
-    return { tickets: await Promise.all(tickets.map((ticket) => this.ticketSummary(ticket, tenantId))) };
+    return {
+      tickets: await Promise.all(
+        tickets.map((ticket) => this.ticketSummary(ticket, tenantId)),
+      ),
+    };
   }
 
   async listMineAll(
@@ -395,7 +427,11 @@ export class TicketIssueService {
       );
     }
     const tickets = await listOwnerTicketsAggregated(this.deps.db, user.userId);
-    return { tickets: await Promise.all(tickets.map((ticket) => this.ticketSummary(ticket, ticket.tenantId))) };
+    return {
+      tickets: await Promise.all(
+        tickets.map((ticket) => this.ticketSummary(ticket, ticket.tenantId)),
+      ),
+    };
   }
 
   async getMine(

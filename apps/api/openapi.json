@@ -5933,6 +5933,23 @@
             "type": "string",
             "nullable": true,
             "format": "date-time"
+          },
+          "venueName": {
+            "type": "string",
+            "nullable": true
+          },
+          "ticketTypeLabel": {
+            "type": "string",
+            "nullable": true
+          },
+          "eventTimezone": {
+            "type": "string",
+            "nullable": true
+          },
+          "bannerUrl": {
+            "type": "string",
+            "nullable": true,
+            "format": "uri"
           }
         },
         "required": [
