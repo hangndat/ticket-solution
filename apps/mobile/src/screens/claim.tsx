@@ -484,7 +484,7 @@ export function ClaimScreen() {
   }
 
   return (
-    <Page>
+    <Page keyboardAware>
       <View style={{ gap: space.md }}>
         <View
           style={{
