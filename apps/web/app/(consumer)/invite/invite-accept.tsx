@@ -1,7 +1,7 @@
 'use client';
 
 import { Button } from '@ticket/ui';
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useAttendeeLocale } from '../../../src/i18n';
 import { invitePageCopy } from '../../../src/invite/invite-copy';
 import {
@@ -106,6 +106,11 @@ export function InviteAcceptForm({
   const [ux, setUx] = useState<InviteUxMessage | null>(null);
   const [busy, setBusy] = useState(false);
   const [csrfReady, setCsrfReady] = useState(false);
+  const successHeadingRef = useRef<HTMLHeadingElement>(null);
+
+  useEffect(() => {
+    if (view?.kind === 'ok') successHeadingRef.current?.focus();
+  }, [view]);
 
   // CSRF cookie is issued by GET Route Handlers — not RSC (cookies().set illegal).
   useEffect(() => {
@@ -188,7 +193,9 @@ export function InviteAcceptForm({
           aria-atomic={outcomeLive?.ariaAtomic}
           data-testid="invite-accept-result"
         >
-          <h2>{displayUx.title}</h2>
+          <h2 ref={successHeadingRef} tabIndex={-1}>
+            {displayUx.title}
+          </h2>
           <p>{displayUx.detail}</p>
           {portalOrigin ? (
             <div className={authButtonsRow}>
