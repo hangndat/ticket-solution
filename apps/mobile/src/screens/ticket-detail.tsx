@@ -40,6 +40,7 @@ import {
 import { walletFetchScopeFromEnv } from '@/tickets/wallet-fetch-scope';
 import { offlineDisplay } from '@/tickets/offline-display-session';
 import { walletOfflineNoticeBody } from '@/tickets/wallet-sync-display';
+import { ownerBannerUrl, ownerText } from '@/tickets/owner-metadata';
 import { space, radius } from '@/theme/tokens';
 import { ATTENDEE_ACCOUNT_HREF, GUEST_HOME_HREF } from '@/navigation/attendee-account-route';
 
@@ -399,6 +400,8 @@ export function TicketDetailScreen() {
         <View style={{ opacity: used ? 0.45 : 1 }}>
           <EventBanner
             eventId={ticket.eventId}
+            bannerUrl={ownerBannerUrl(ticket)}
+            allowDemoMedia={false}
             wordmark={row.eventTitle}
             showFallbackName={false}
             height={76}
@@ -451,6 +454,11 @@ export function TicketDetailScreen() {
                 textAlign: 'center' }}
             >
               {eventWhere}
+            </Text>
+          ) : null}
+          {ownerText(ticket.ticketTypeLabel) ? (
+            <Text style={{ ...typography.subhead, color: colors.secondary, textAlign: 'center' }}>
+              {`Loại vé · ${ownerText(ticket.ticketTypeLabel)}`}
             </Text>
           ) : null}
           <View

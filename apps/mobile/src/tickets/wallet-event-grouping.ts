@@ -1,5 +1,7 @@
 import type { TicketSummary } from '@ticket/contracts';
 import { ticketStateLabelVi } from '../attendee/attendee-outcome-copy.ts';
+import { ownerEventTimezone, ownerText } from './owner-metadata.ts';
+import { formatWalletEventStart, walletEventStartMs, walletEventTimeBasis } from './wallet-hero-ticket.ts';
 
 /** Re-export shared brand helpers so My Tickets keeps a stable import path. */
 export { eventIdentityColor, eventInitial } from '../brand/event-identity.ts';
@@ -16,6 +18,7 @@ function isInactive(t: TicketSummary): boolean {
 }
 
 export type EventTicketGroup = {
+  key: string;
   eventId: string;
   eventName: string;
   tickets: TicketSummary[];
@@ -23,9 +26,7 @@ export type EventTicketGroup = {
   usableCount: number;
   /** Tickets already used (gate-consumed). */
   usedCount: number;
-  /** Published event metadata is not part of TicketSummary yet. */
   brandColor?: string;
-  /** «date · venue» only when supplied by an approved real metadata source. */
   metaLine: string | null;
 };
 
@@ -34,25 +35,28 @@ function isUsed(t: TicketSummary): boolean {
 }
 
 function finishGroup(g: EventTicketGroup): EventTicketGroup {
+  const start = formatWalletEventStart(g.tickets[0]!);
   return {
     ...g,
     tickets: sortTicketsActiveFirst(g.tickets),
     usableCount: g.tickets.filter((t) => !isInactive(t)).length,
     usedCount: g.tickets.filter(isUsed).length,
-    metaLine: null,
+    metaLine: [start ? `${start} (${walletEventTimeBasis(g.tickets[0]!)})` : null, ownerText(g.tickets[0]?.venueName)].filter(Boolean).join(' · ') || null,
   };
 }
 
 export function groupTicketsByEvent(tickets: TicketSummary[]): EventTicketGroup[] {
   const map = new Map<string, EventTicketGroup>();
   for (const ticket of tickets) {
-    const existing = map.get(ticket.eventId);
+    const key = `${ticket.tenantId}:${ticket.eventId}`;
+    const existing = map.get(key);
     if (existing) {
       existing.tickets.push(ticket);
       const apiName = ticket.eventName?.trim();
       if (apiName) existing.eventName = apiName;
     } else {
-      map.set(ticket.eventId, {
+      map.set(key, {
+        key,
         eventId: ticket.eventId,
         eventName: ticketEventDisplayName(ticket),
         tickets: [ticket],
@@ -73,7 +77,7 @@ export function groupTicketsByEvent(tickets: TicketSummary[]): EventTicketGroup[
 }
 
 export function countDistinctEvents(tickets: TicketSummary[]): number {
-  return new Set(tickets.map((row) => row.eventId)).size;
+  return new Set(tickets.map((row) => `${row.tenantId}:${row.eventId}`)).size;
 }
 
 export function filterTicketsByEventId(
@@ -109,10 +113,8 @@ export function walletTicketDateBucket(
   // Ticket state takes precedence over the event date: a consumed credential
   // cannot be "upcoming" even when the event metadata is future dated.
   if (isInactive(ticket)) return 'past';
-  const value = ticket.startsAt;
-  if (typeof value !== 'string') return 'undated';
-  const ms = Date.parse(value);
-  if (!Number.isFinite(ms) || !/(?:Z|[+-]\d{2}:\d{2})$/i.test(value)) return 'undated';
+  const ms = walletEventStartMs(ticket.startsAt);
+  if (ms === null) return 'undated';
   return ms >= nowMs ? 'upcoming' : 'past';
 }
 
@@ -133,12 +135,14 @@ export function groupWalletTicketsByDate(
   const groups = new Map<string, { key: string; label: string; tickets: TicketSummary[] }>();
   for (const ticket of tickets) {
     const bucket = walletTicketDateBucket(ticket, nowMs);
-    const date = bucket === 'undated' ? null : new Date(Date.parse(ticket.startsAt!));
+    const start = walletEventStartMs(ticket.startsAt);
+    const date = bucket === 'undated' || start === null ? null : new Date(start);
+    const timeZone = ownerEventTimezone(ticket) ?? undefined;
     const key = date
-      ? `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`
+      ? `${timeZone ?? 'device'}:${new Intl.DateTimeFormat('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone }).format(date)}`
       : 'undated';
     const label = date
-      ? new Intl.DateTimeFormat('vi-VN', { weekday: 'long', day: '2-digit', month: 'short' }).format(date)
+      ? `${new Intl.DateTimeFormat('vi-VN', { weekday: 'long', day: '2-digit', month: 'short', timeZone }).format(date)} (${timeZone ? 'giờ sự kiện' : 'giờ thiết bị'})`
       : 'Chưa có ngày';
     const group = groups.get(key) ?? { key, label, tickets: [] };
     group.tickets.push(ticket);
@@ -186,7 +190,7 @@ export function sortTicketsActiveFirst(tickets: TicketSummary[]): TicketSummary[
 
 /** Card title under an event section header: short ticket code, not the event again. */
 export function walletTicketCardTitle(ticket: TicketSummary): string {
-  return `Vé · ${ticket.ticketId.slice(0, 8).toUpperCase()}`;
+  return `${ownerText(ticket.ticketTypeLabel) ?? 'Vé'} · ${ticket.ticketId.slice(0, 8).toUpperCase()}`;
 }
 
 export type WalletTicketTone = 'usable' | 'used' | 'inactive' | 'sync' | 'pending';

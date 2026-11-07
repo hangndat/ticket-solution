@@ -81,6 +81,27 @@ test('groupTicketsByEvent groups and counts per event', () => {
   assert.equal(walletEventSectionHeader(alpha.eventName, alpha.tickets.length), 'Alpha · 2 vé');
 });
 
+test('owner event grouping isolates tenant and uses real venue and ticket type', () => {
+  const first = ticket({ ticketId: 'a', eventId: 'shared', tenantId: 'tenant-a', eventName: 'Alpha', venueName: 'Nhà hát A', ticketTypeLabel: 'Hạng A', startsAt: '2026-11-08T12:00:00.000Z', eventTimezone: 'Asia/Ho_Chi_Minh' });
+  const second = ticket({ ticketId: 'b', eventId: 'shared', tenantId: 'tenant-b', eventName: 'Beta', venueName: 'Nhà hát B' });
+  assert.equal(countDistinctEvents([first, second]), 2);
+  const groups = groupTicketsByEvent([first, second]);
+  assert.equal(groups.length, 2);
+  assert.match(groups[0]!.metaLine ?? '', /Nhà hát A/);
+  assert.equal(groups[1]!.metaLine, 'Nhà hát B');
+  assert.equal(walletTicketCardTitle(first), 'Hạng A · A');
+});
+
+test('wallet timeline groups each ticket under its event timezone date', () => {
+  const sameInstant = '2026-11-08T00:30:00.000Z';
+  const losAngeles = ticket({ ticketId: 'la', eventId: 'la', startsAt: sameInstant, eventTimezone: 'America/Los_Angeles' });
+  const hoChiMinh = ticket({ ticketId: 'hcm', eventId: 'hcm', startsAt: sameInstant, eventTimezone: 'Asia/Ho_Chi_Minh' });
+  const sections = groupWalletTicketsByDate([losAngeles, hoChiMinh], Date.parse('2026-11-01T00:00:00Z'));
+  assert.equal(sections.length, 2);
+  assert.notEqual(sections[0]?.key, sections[1]?.key);
+  assert.ok(sections.every((section) => section.label.includes('giờ sự kiện')));
+});
+
 test('filter and aggregate helpers', () => {
   const tickets = [
     ticket({

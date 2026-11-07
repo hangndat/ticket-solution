@@ -1,5 +1,6 @@
 import type { TicketSummary } from '@ticket/contracts';
 import type { TicketDisplayCache } from './display-cache-types.ts';
+import { hasValidOwnerMetadata } from './owner-metadata.ts';
 
 export type { TicketDisplayCache } from './display-cache-types.ts';
 
@@ -14,7 +15,8 @@ function isTicketSummary(value: unknown): value is TicketSummary {
     typeof row.sourceId === 'string' &&
     typeof row.state === 'string' &&
     typeof row.credentialVersion === 'number' &&
-    typeof row.createdAt === 'string'
+    typeof row.createdAt === 'string' &&
+    hasValidOwnerMetadata(row)
   );
 }
 

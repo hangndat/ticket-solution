@@ -1,5 +1,6 @@
 import type { MeTicketsResponse, TicketSummary } from '@ticket/contracts';
 import { getApiBaseUrl } from '../identity/config.ts';
+import { hasValidOwnerMetadata } from './owner-metadata.ts';
 import {
   type MeTicketsFetchScope,
   normalizeMeTicketsFetchScope,
@@ -21,7 +22,8 @@ function isTicketSummary(value: unknown): value is TicketSummary {
     // Credential availability is per ticket, not validity of the whole wallet.
     // Legacy API/cache rows still provide useful metadata; the detail screen
     // validates QR displayability and refreshes a missing signed credential.
-    (row.manualEntryCode == null || typeof row.manualEntryCode === 'string')
+    (row.manualEntryCode == null || typeof row.manualEntryCode === 'string') &&
+    hasValidOwnerMetadata(row)
   );
 }
 
