@@ -73,7 +73,7 @@ export function PrivacyScreen() {
         >
           <Text style={{ color: brand.ink, ...typography.bodySemibold }}>Đến nhanh một mục</Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm }}>
-            {[0, 3, 4, 6].map((index) => {
+            {([['Dữ liệu thu', 0], ['Lưu giữ', 3], ['Xóa tài khoản', 4], ['Liên hệ', 6]] as const).map(([label, index]) => {
               const section = PRIVACY_POLICY_SECTIONS[index];
               return (
                 <Button
@@ -81,7 +81,7 @@ export function PrivacyScreen() {
                   variant="secondary"
                   accessibilityLabel={`Đến mục ${section.title}`}
                   onPress={() => scroll.current?.scrollTo({ y: sectionOffsets.current[section.title] ?? 0, animated: true })}
-                  label={section.title}
+                  label={label}
                   style={{ borderRadius: radius.pill }}
                 />
               );

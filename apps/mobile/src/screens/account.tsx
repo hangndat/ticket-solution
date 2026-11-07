@@ -351,6 +351,16 @@ function ConfiguredAccount({
           </View>
         ) : null}
 
+        {!staffWorkspace && (showLogout || logoutFailed) ? (
+          <AttendeeCta
+            label={logoutFailed ? 'Thử lại đăng xuất' : accountCopy.logoutCta}
+            variant="destructive"
+            onPress={() => void onLogout()}
+            disabled={busy}
+            accessibilityLabel={logoutFailed ? 'Thử lại dọn dẹp đăng xuất' : accountCopy.logoutAccessibility}
+            testID="account-cta-logout"
+          />
+        ) : null}
         {showDeleteRow ? (
           <View style={{ gap: space.sm, borderTopColor: colors.line, borderTopWidth: 1, paddingTop: space.lg }}>
             <AccountGroupedSection title="Xóa tài khoản">
@@ -367,7 +377,7 @@ function ConfiguredAccount({
             <AccountSectionFooter>Mở trang giải thích và xác nhận trước khi gửi yêu cầu. Chạm dòng này không xóa ngay.</AccountSectionFooter>
           </View>
         ) : null}
-        {showLogout || logoutFailed ? (
+        {staffWorkspace && (showLogout || logoutFailed) ? (
           <AttendeeCta
             label={logoutFailed ? 'Thử lại đăng xuất' : accountCopy.logoutCta}
             variant="destructive"
