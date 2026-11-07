@@ -127,7 +127,7 @@ export function StaffManualEntryScreen() {
               <Button label="Đối soát" accessibilityLabel="Đối soát kết quả lượt này"
                 onPress={() => void gate.reconcile()} variant="secondary" />
             ) : null}
-            {!gate.busy && resultAction !== 'reconcile' ? (
+            {resultAction === 'next' || resultAction === 'other' ? (
               <Button label={resultAction === 'next' ? 'Nhập mã tiếp' : 'Kiểm tra mã khác'}
                 accessibilityLabel={resultAction === 'next' ? 'Nhập mã tiếp' : 'Kiểm tra mã khác'}
                 onPress={onNextCode} variant="secondary" />
