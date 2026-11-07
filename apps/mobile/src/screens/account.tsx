@@ -264,7 +264,7 @@ function ConfiguredAccount({
     return (
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
-        style={{ flex: 1, backgroundColor: brand.paper }}
+        style={{ flex: 1, backgroundColor: colors.surfaceSubtle }}
         contentContainerStyle={{ padding: space.xl, paddingBottom: tabBarInset, gap: space.xl }}
       >
         <AttendeeCta
@@ -286,12 +286,12 @@ function ConfiguredAccount({
     <>
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
-        style={{ flex: 1, backgroundColor: brand.paper }}
+        style={{ flex: 1, backgroundColor: colors.surfaceSubtle }}
         contentContainerStyle={{ padding: space.xl, paddingBottom: tabBarInset, gap: space.xl }}
       >
         <View
           style={{
-            backgroundColor: colors.card,
+            backgroundColor: colors.paper,
             borderColor: colors.line,
             borderWidth: 1,
             borderRadius: radius.lg,
@@ -302,7 +302,7 @@ function ConfiguredAccount({
             gap: space.md,
           }}
         >
-          <View style={{ width: 44, height: 44, borderRadius: radius.pill, backgroundColor: colors.card, alignItems: 'center', justifyContent: 'center' }}>
+          <View style={{ width: 44, height: 44, borderRadius: radius.pill, backgroundColor: colors.surfaceSubtle, alignItems: 'center', justifyContent: 'center' }}>
             <Text style={{ color: brand.primary, ...typography.title }} accessibilityElementsHidden>◯</Text>
           </View>
           <View style={{ flex: 1, gap: space.xxs }}>
@@ -351,6 +351,16 @@ function ConfiguredAccount({
           </View>
         ) : null}
 
+        {!staffWorkspace && (showLogout || logoutFailed) ? (
+          <AttendeeCta
+            label={logoutFailed ? 'Thử lại đăng xuất' : accountCopy.logoutCta}
+            variant="destructive"
+            onPress={() => void onLogout()}
+            disabled={busy}
+            accessibilityLabel={logoutFailed ? 'Thử lại dọn dẹp đăng xuất' : accountCopy.logoutAccessibility}
+            testID="account-cta-logout"
+          />
+        ) : null}
         {showDeleteRow ? (
           <View style={{ gap: space.sm, borderTopColor: colors.line, borderTopWidth: 1, paddingTop: space.lg }}>
             <AccountGroupedSection title="Xóa tài khoản">
@@ -367,7 +377,7 @@ function ConfiguredAccount({
             <AccountSectionFooter>Mở trang giải thích và xác nhận trước khi gửi yêu cầu. Chạm dòng này không xóa ngay.</AccountSectionFooter>
           </View>
         ) : null}
-        {showLogout || logoutFailed ? (
+        {staffWorkspace && (showLogout || logoutFailed) ? (
           <AttendeeCta
             label={logoutFailed ? 'Thử lại đăng xuất' : accountCopy.logoutCta}
             variant="destructive"

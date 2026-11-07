@@ -180,7 +180,7 @@ export function AccountDeletionPanel({ attendee = false }: { attendee?: boolean 
       accessibilityRole="summary"
       accessibilityLabel="Yêu cầu xóa tài khoản"
     >
-      {attendee ? (
+      {(phase.kind === 'idle' || phase.kind === 'loading') && attendee ? (
         <View style={{ gap: space.md }}>
           <View style={{ width: 48, height: 48, borderRadius: radius.md, backgroundColor: colors.denySurface, alignItems: 'center', justifyContent: 'center' }}>
             <Text style={{ color: colors.destructive, ...typography.avatarInitial }} accessibilityElementsHidden>⊖</Text>
@@ -205,9 +205,9 @@ export function AccountDeletionPanel({ attendee = false }: { attendee?: boolean 
             ))}
           </View>
         </View>
-      ) : (
+      ) : phase.kind === 'idle' || phase.kind === 'loading' ? (
         <Notice title={explainer.title}>{explainer.body}</Notice>
-      )}
+      ) : null}
 
       {phase.kind === 'idle' ? (
         <SecondaryButton
@@ -220,7 +220,15 @@ export function AccountDeletionPanel({ attendee = false }: { attendee?: boolean 
 
       {phase.kind === 'confirming' ? (
         <View style={{ gap: space.sm }}>
-          <Notice title={confirm.title}>{confirm.body}</Notice>
+          <View style={{ gap: space.md }}>
+            <View style={{ width: 48, height: 48, borderRadius: radius.md, backgroundColor: colors.denySurface, alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ color: colors.destructive, ...typography.avatarInitial }} accessibilityElementsHidden>⊖</Text>
+            </View>
+            <Text accessibilityRole="header" style={{ color: brand.ink, ...typography.title }}>{confirm.title}</Text>
+            <Text selectable style={{ color: colors.secondary, ...typography.subhead }}>{confirm.body}</Text>
+            <Notice title="Điều gì xảy ra tiếp theo?">Máy chủ ghi nhận yêu cầu. Bạn có thể quay lại màn này để xem trạng thái xử lý.</Notice>
+            <Text style={{ color: colors.secondary, ...typography.footnote }}>Đăng xuất vẫn là thao tác riêng.</Text>
+          </View>
           <PrimaryButton
             label={confirm.confirmLabel}
             onPress={() => void onConfirmSubmit()}
@@ -244,9 +252,12 @@ export function AccountDeletionPanel({ attendee = false }: { attendee?: boolean 
       ) : null}
 
       {phase.kind === 'acknowledged' || phase.kind === 'status' ? (
-        <Notice title={describeAccountDeletionRequest(phase.request).title}>
-          {describeAccountDeletionRequest(phase.request).body}
-        </Notice>
+        <View style={{ gap: space.md }}>
+          <Text style={{ color: colors.admit, ...typography.subheadSemibold }}>●  Trạng thái yêu cầu</Text>
+          <Notice title={describeAccountDeletionRequest(phase.request).title}>
+            {describeAccountDeletionRequest(phase.request).body}
+          </Notice>
+        </View>
       ) : null}
 
       {phase.kind === 'error' ? (

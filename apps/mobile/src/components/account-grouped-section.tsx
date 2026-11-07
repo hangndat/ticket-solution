@@ -40,7 +40,9 @@ export function AccountGroupedSection({
         style={{
           borderRadius: radius.md,
           borderCurve: 'continuous',
-          backgroundColor: colors.card,
+          backgroundColor: colors.paper,
+          borderColor: colors.line,
+          borderWidth: 1,
           overflow: 'hidden'
         }}
       >
