@@ -6,6 +6,7 @@ import { gateOutcomeAnnouncement } from '@/a11y/announcements';
 import { AtmosphereWash } from '@/components/screen-atmosphere';
 import { scanCopy } from '@/components/screen-state-copy';
 import { scanDecisionActions } from '@/gate/gate-scan-decision-actions';
+import { scanDecisionCopy } from '@/gate/gate-scan-decision-copy';
 import { GateCamera } from '@/gate/gate-camera';
 import {
   GateCameraIdle,
@@ -44,6 +45,7 @@ export function StaffScanScreen() {
     connectivity: gate.connectivity,
     busy: gate.busy,
   });
+  const decisionCopy = scanDecisionCopy(outcomeView.kind);
 
   return (
     <>
@@ -107,8 +109,77 @@ export function StaffScanScreen() {
                 }}
               >
                 <View
+                  pointerEvents="none"
+                  accessibilityElementsHidden
+                  importantForAccessibility="no-hide-descendants"
+                  style={{
+                    position: 'absolute',
+                    top: space.xl,
+                    left: space.xl,
+                    right: space.xl,
+                    bottom: space.xl,
+                    justifyContent: 'space-between',
+                    opacity: 0.75,
+                  }}
+                >
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <View
+                      style={{
+                        width: 30,
+                        height: 30,
+                        borderTopWidth: 3,
+                        borderLeftWidth: 3,
+                        borderColor: colors.paper,
+                        borderTopLeftRadius: radius.sm,
+                      }}
+                    />
+                    <View
+                      style={{
+                        width: 30,
+                        height: 30,
+                        borderTopWidth: 3,
+                        borderRightWidth: 3,
+                        borderColor: colors.paper,
+                        borderTopRightRadius: radius.sm,
+                      }}
+                    />
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <View
+                      style={{
+                        width: 30,
+                        height: 30,
+                        borderBottomWidth: 3,
+                        borderLeftWidth: 3,
+                        borderColor: colors.paper,
+                        borderBottomLeftRadius: radius.sm,
+                      }}
+                    />
+                    <View
+                      style={{
+                        width: 30,
+                        height: 30,
+                        borderBottomWidth: 3,
+                        borderRightWidth: 3,
+                        borderColor: colors.paper,
+                        borderBottomRightRadius: radius.sm,
+                      }}
+                    />
+                  </View>
+                </View>
+                <View
                   testID="gate-scan-outcome-panel"
-                  style={{ gap: space.sm }}
+                  style={{ gap: space.sm, zIndex: 1 }}
                   {...gateOutcomeAnnouncement({
                     phase: announcementPhaseFor(
                       gate.busy ? 'confirming' : announceOp?.phase,
@@ -124,6 +195,7 @@ export function StaffScanScreen() {
                     view={outcomeView}
                     busy={gate.busy}
                     emphasized={outcomeEmphasized}
+                    eyebrow={decisionCopy.eyebrow}
                   />
                 </View>
               </View>
@@ -147,6 +219,7 @@ export function StaffScanScreen() {
                 ) : null}
                 {actions.sync ? (
                   <Button
+                    variant="secondary"
                     testID="gate-scan-sync-now"
                     label="Đồng bộ ngay"
                     accessibilityLabel="Đồng bộ lượt quét đang chờ"
@@ -155,6 +228,7 @@ export function StaffScanScreen() {
                 ) : null}
                 {actions.continueScan ? (
                   <Button
+                    variant="secondary"
                     testID="gate-scan-continue"
                     label="Quét tiếp"
                     accessibilityLabel="Quét tiếp"
@@ -162,6 +236,11 @@ export function StaffScanScreen() {
                   />
                 ) : null}
               </View>
+            ) : null}
+            {showOutcome && decisionCopy.guidance ? (
+              <Text style={{ ...typography.footnote, color: colors.secondary }}>
+                {decisionCopy.guidance}
+              </Text>
             ) : null}
             {showLive && !showOutcome ? (
               <View style={{ gap: space.sm }}>
