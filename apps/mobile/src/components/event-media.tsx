@@ -40,6 +40,8 @@ type BannerProps = {
   style?: StyleProp<ViewStyle>;
   testID?: string;
   accessibilityLabel?: string;
+  /** Prevent fixture-pack imagery when rendering an unverified wallet fallback. */
+  allowDemoMedia?: boolean;
 };
 
 type LogoProps = {
@@ -162,10 +164,10 @@ export function EventBanner({
   style,
   testID = 'event-banner',
   accessibilityLabel = 'Ảnh banner sự kiện'
+  , allowDemoMedia = true
 }: BannerProps) {
-  const pack = bundledDemoSource(eventId);
-  const source =
-    bannerSource ?? remoteImageSource(bannerUrl) ?? pack?.banner ?? null;
+  const pack = allowDemoMedia ? bundledDemoSource(eventId) : null;
+  const source = bannerSource ?? remoteImageSource(bannerUrl) ?? pack?.banner ?? null;
   const sourceKey = `${eventId ?? ''}|${bannerUrl ?? ''}|${bannerSource ? 'explicit' : ''}`;
   const [failedSourceKey, setFailedSourceKey] = useState<string | null>(null);
   const imageFailed = failedSourceKey === sourceKey;

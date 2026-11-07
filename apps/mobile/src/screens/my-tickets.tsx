@@ -31,7 +31,6 @@ import {
   attendeeWalletCopy
 } from '@/attendee/attendee-outcome-copy';
 import { AttendeeScreenChrome } from '@/navigation/attendee-screen-chrome';
-import { hasDemoMediaForEventId } from '@/data/demo-media';
 import { brand, colors } from '@/theme/colors';
 import { elevation, layout, space, radius } from '@/theme/tokens';
 import { typography } from '@/theme/typography';
@@ -79,6 +78,12 @@ import {
   walletTicketA11yLabel,
   walletTicketCardTitle,
   walletTicketStatus,
+  countDistinctEvents,
+  ticketEventDisplayName,
+  filterWalletTickets,
+  groupWalletTicketsByDate,
+  walletListSubtitle,
+  type WalletFilter,
   type EventTicketGroup,
   type WalletTicketStatus
 } from '@/tickets/wallet-event-grouping';
@@ -145,11 +150,11 @@ function WalletHeroTicket({
       <EventBanner
         eventId={group.eventId}
         fallbackColor={group.brandColor}
-        wordmark={group.eventName}
+        allowDemoMedia={false}
         height={EVENT_BANNER_HEIGHT_TICKET}
         style={{ borderRadius: layout.none }}
         testID="wallet-hero-banner"
-        accessibilityLabel={`Banner ${group.eventName}`}
+        accessibilityLabel="Hình nhận diện sự kiện"
       />
       <View style={{ padding: space.lg, gap: space.sm }}>
         <StatusChip status={status} />
@@ -187,28 +192,6 @@ function WalletHeroTicket({
 function EventIdentityBlock({ group }: { group: EventTicketGroup }) {
   const size = 56;
   const color = eventIdentityColor(group.eventId, group.brandColor);
-  if (hasDemoMediaForEventId(group.eventId)) {
-    return (
-      <View
-        style={{
-          width: size,
-          height: size,
-          borderRadius: radius.md,
-          borderCurve: 'continuous',
-          overflow: 'hidden',
-          backgroundColor: color
-        }}
-      >
-        <EventBanner
-          eventId={group.eventId}
-          height={size}
-          style={{ width: size, borderRadius: layout.none }}
-          testID={`wallet-event-banner-${group.eventId}`}
-          accessibilityLabel={`Banner ${group.eventName}`}
-        />
-      </View>
-    );
-  }
   return (
     <View
       accessibilityElementsHidden
@@ -412,6 +395,73 @@ function TicketRow({
   );
 }
 
+function WalletFilterBar({
+  value,
+  onChange
+}: {
+  value: WalletFilter;
+  onChange: (next: WalletFilter) => void;
+}) {
+  const items: Array<{ key: WalletFilter; label: string }> = [
+    { key: 'upcoming', label: 'Sắp dùng' },
+    { key: 'all', label: 'Tất cả' },
+    { key: 'past', label: 'Đã qua' }
+  ];
+  return (
+    <View accessibilityRole="tablist" style={{ flexDirection: 'row', padding: space.xs, borderRadius: radius.md, backgroundColor: colors.surfaceMuted, gap: space.xs }}>
+      {items.map((item) => {
+        const selected = item.key === value;
+        return (
+          <Pressable
+            key={item.key}
+            accessibilityRole="tab"
+            accessibilityState={{ selected }}
+            onPress={() => onChange(item.key)}
+            style={{ flex: 1, minHeight: 44, justifyContent: 'center', alignItems: 'center', paddingHorizontal: space.xs, borderRadius: radius.sm, backgroundColor: selected ? colors.ticketCanvas : 'transparent' }}
+            testID={`wallet-filter-${item.key}`}
+          >
+            <Text style={{ ...typography.footnoteSemibold, color: selected ? brand.primary : colors.secondary, textAlign: 'center' }}>{item.label}</Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+function WalletDateTimeline({
+  tickets,
+  offline
+}: {
+  tickets: TicketSummary[];
+  offline: boolean;
+}) {
+  const sections = groupWalletTicketsByDate(tickets);
+  return (
+    <View style={{ gap: space.md }}>
+      {sections.map((section) => (
+        <View key={section.key} style={{ gap: space.xs }}>
+          <Text accessibilityRole="header" style={{ ...typography.footnoteSemibold, color: colors.secondary, textTransform: 'capitalize' }}>{section.label}</Text>
+          {section.tickets.map((ticket) => {
+            const status = walletTicketStatus(ticket, { offline });
+            const time = formatWalletEventStart(ticket.startsAt)?.split(' ').slice(-2).join(' ');
+            return (
+              <Link key={ticket.ticketId} href={{ pathname: '/my-tickets/[ticketId]', params: { ticketId: ticket.ticketId } }} asChild>
+                <Pressable accessibilityRole="button" accessibilityLabel={walletTicketA11yLabel(ticketEventDisplayName(ticket), ticket, status)} style={({ pressed }) => ({ minHeight: 56, flexDirection: 'row', alignItems: 'center', gap: space.md, paddingHorizontal: space.md, paddingVertical: space.sm, borderRadius: radius.md, backgroundColor: colors.ticketCanvas, borderWidth: 1, borderColor: colors.line, opacity: pressed ? 0.8 : 1 })}>
+                  <View style={{ flex: 1, gap: space.xxs }}>
+                    <Text numberOfLines={1} style={{ ...typography.footnoteSemibold, color: brand.ink }}>{ticketEventDisplayName(ticket)}</Text>
+                    <Text numberOfLines={1} style={{ ...typography.caption, color: colors.secondary }}>{[time, status.label].filter(Boolean).join(' · ')}</Text>
+                  </View>
+                  <Text accessibilityElementsHidden style={{ ...typography.title, color: colors.secondary }}>›</Text>
+                </Pressable>
+              </Link>
+            );
+          })}
+        </View>
+      ))}
+    </View>
+  );
+}
+
 export function MyTicketsScreen() {
   const identity = useSyncExternalStore(
     session.subscribe,
@@ -576,6 +626,7 @@ function VerifiedWallet({ userId }: { userId: string }) {
   const [busy, setBusy] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [showPushPrompt, setShowPushPrompt] = useState(false);
+  const [walletFilter, setWalletFilter] = useState<WalletFilter>('upcoming');
 
   const hydrateFromCache = useCallback(async (isActive: () => boolean) => {
     const epoch = session.captureEpoch();
@@ -788,14 +839,15 @@ function VerifiedWallet({ userId }: { userId: string }) {
 
   // A+C hero only applies to the unfiltered wallet view; an event-filtered
   // view keeps its existing flat grouped list (wireframe covers no filter).
-  const heroTicket = filterEventId ? null : selectHeroTicket(tickets, offline);
+  const filteredTickets = useMemo(() => filterWalletTickets(tickets, walletFilter), [tickets, walletFilter]);
+  const heroTicket = filterEventId || walletFilter === 'past' ? null : selectHeroTicket(filteredTickets, offline);
   const heroGroup = heroTicket
-    ? groupTicketsByEvent(tickets).find((group) => group.eventId === heroTicket.eventId)
+    ? groupTicketsByEvent(filteredTickets).find((group) => group.eventId === heroTicket.eventId)
     : null;
   const hero = heroTicket && heroGroup ? { ticket: heroTicket, group: heroGroup } : null;
   const remainingTickets = hero
-    ? tickets.filter((t) => t.ticketId !== hero.ticket.ticketId)
-    : tickets;
+    ? filteredTickets.filter((t) => t.ticketId !== hero.ticket.ticketId)
+    : filteredTickets;
 
   return (
     <>
@@ -849,6 +901,11 @@ function VerifiedWallet({ userId }: { userId: string }) {
         </View>
       ) : null}
 
+      <View style={{ gap: space.sm }}>
+        <Text style={{ ...typography.caption, color: colors.secondary }}>{walletListSubtitle(tickets.length, countDistinctEvents(tickets))}</Text>
+        <WalletFilterBar value={walletFilter} onChange={setWalletFilter} />
+      </View>
+
       {contentPhase === 'loading' ? (
         <LoadingState title={walletCopy.loading.title}>
           {walletCopy.loading.body}
@@ -893,13 +950,13 @@ function VerifiedWallet({ userId }: { userId: string }) {
               {hero ? (
                 <Text style={walletEyebrowStyle}>Các vé còn lại</Text>
               ) : null}
-              <View style={{ gap: space.xl }}>
-                <WalletGroupedTicketList
-                  tickets={remainingTickets}
-                  filterEventId={filterEventId}
-                  offline={offline}
-                />
-              </View>
+              {!filterEventId && walletFilter !== 'all' ? (
+                <WalletDateTimeline tickets={remainingTickets} offline={offline} />
+              ) : (
+                <View style={{ gap: space.xl }}>
+                  <WalletGroupedTicketList tickets={remainingTickets} filterEventId={filterEventId} offline={offline} />
+                </View>
+              )}
             </View>
           ) : null}
         </>
@@ -910,6 +967,11 @@ function VerifiedWallet({ userId }: { userId: string }) {
           <AttendeeCta label="Khám phá sự kiện" onPress={() => router.push(GUEST_HOME_HREF)} testID="wallet-empty-events" />
           <AttendeeCta label="Đổi mã nhận vé" variant="secondary" onPress={() => router.push(ATTENDEE_REDEEM_PATH)} testID="wallet-empty-redeem" />
         </View>
+      ) : null}
+      {contentPhase === 'tickets' && filteredTickets.length === 0 ? (
+        <EmptyState title={walletFilter === 'past' ? 'Chưa có vé đã qua' : 'Chưa có vé sắp dùng'}>
+          {walletFilter === 'past' ? 'Vé đã qua sẽ xuất hiện ở đây.' : 'Vé chưa có ngày bắt đầu vẫn xem được trong Tất cả.'}
+        </EmptyState>
       ) : null}
     </ScrollView>
     <AttendeeScreenChrome title="Vé của tôi" />
