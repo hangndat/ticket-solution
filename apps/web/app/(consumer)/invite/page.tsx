@@ -1,6 +1,6 @@
+import { invitePageMain } from "./invite-surface";
 import type { Metadata } from 'next';
 import { invitePageCopy } from '../../../src/invite/invite-copy';
-import { guestPageMain } from '../../../src/guest/guest-flow-surface';
 import { ConsumerPageShell } from '../../../src/consumer-page-shell';
 import { portalOriginFromEnv } from '../../../src/portal/dual-run';
 import { InviteAcceptForm } from './invite-accept';
@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 
 export default function InvitePage() {
   return (
-    <ConsumerPageShell mainClassName={guestPageMain}>
+    <ConsumerPageShell mainClassName={invitePageMain}>
       <InvitePageHeader />
       <InviteAcceptForm portalOrigin={portalOriginFromEnv()} />
       <InviteHomeLink />

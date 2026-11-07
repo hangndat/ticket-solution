@@ -11,8 +11,8 @@ export const INVITE_PAGE_COPY_CATALOG = {
     'Accept an organization invite — sign in with the invited email.',
   ),
   intro: dual(
-    'Đây là lời mời tham gia tổ chức — khác lời mời nhận vé sự kiện. Mở liên kết mời, đăng nhập nếu cần, rồi xác nhận mã. Email đăng nhập phải khớp email được mời; giao diện không tự cấp quyền quản trị.',
-    'This is an organization membership invite — not an event ticket invite. Open the invite link, sign in if needed, then confirm the code. The signed-in email must match the invited email; this screen does not grant admin rights by itself.',
+    'Tham gia tổ chức bằng email được mời. Đây không phải lời mời nhận vé sự kiện.',
+    'Join the organization with the invited email. This is not an event ticket invite.',
   ),
   support: dual(
     'Đăng nhập bằng đúng email đã được mời. Máy chủ kiểm tra hết hạn, dùng một lần và khớp email — giao diện không tự cấp quyền Owner.',
