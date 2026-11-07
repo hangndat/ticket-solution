@@ -35,7 +35,7 @@ test('fetchMeTickets accepts MeTicketsResponse and rejects invalid bodies', asyn
   let status = 200;
   globalThis.fetch = async (input) => {
     const url = String(input);
-    assert.match(url, /\/v1\/me\/tickets\?tenantId=/);
+    assert.match(url, /\/v1\/me\/tickets(?:\?tenantId=|$)/);
     return new Response(JSON.stringify(body), {
       status,
       headers: { 'Content-Type': 'application/json' },
@@ -45,6 +45,17 @@ test('fetchMeTickets accepts MeTicketsResponse and rejects invalid bodies', asyn
     assert.deepEqual(await fetchMeTickets('tok', sampleTicket.tenantId), {
       tickets: [sampleTicket],
     });
+    const projected = { ...sampleTicket, eventName: 'Đêm nhạc thật', startsAt: '2026-11-08T12:00:00.000Z', venueName: 'Nhà hát A', ticketTypeLabel: 'Hạng A', eventTimezone: 'Asia/Ho_Chi_Minh', bannerUrl: 'https://cdn.example.test/banner.jpg' };
+    body = { tickets: [projected] };
+    const owner = await probeMeTickets('tok', { kind: 'owner' });
+    assert.equal(owner.status, 'ok');
+    if (owner.status === 'ok') assert.deepEqual(owner.body.tickets[0], projected);
+    for (const field of ['venueName', 'ticketTypeLabel', 'eventTimezone', 'bannerUrl']) {
+      body = { tickets: [{ ...projected, [field]: 42 }] };
+      assert.equal((await probeMeTickets('tok', sampleTicket.tenantId)).status, 'invalid');
+    }
+    body = { tickets: [{ ...sampleTicket, venueName: null, ticketTypeLabel: null, eventTimezone: null, bannerUrl: null }] };
+    assert.equal((await probeMeTickets('tok', sampleTicket.tenantId)).status, 'ok');
     body = { tickets: [{ ticketId: 'x' }] };
     assert.equal(await fetchMeTickets('tok', sampleTicket.tenantId), null);
     for (const gateCredential of [undefined, null,

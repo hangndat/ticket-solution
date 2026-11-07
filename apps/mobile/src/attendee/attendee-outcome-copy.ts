@@ -4,10 +4,8 @@
  */
 
 import type { TicketSummary } from '@ticket/contracts';
-import {
-  eventDate,
-  findDemoEventById,
-} from '../data/demo-events.ts';
+import { formatWalletEventStart, walletEventTimeBasis } from '../tickets/wallet-hero-ticket.ts';
+import { ownerText } from '../tickets/owner-metadata.ts';
 import type { RedeemDecision } from '../redeem/redeem-client.ts';
 
 export type OutcomeTone = 'admit' | 'deny' | 'unknown' | 'default';
@@ -23,7 +21,7 @@ export type RedeemOutcomeView = {
 };
 
 export type TicketRowView = {
-  /** Primary: event name (demo catalog) or plain «Sự kiện». */
+  /** Primary: owner event name or plain «Sự kiện». */
   eventTitle: string;
   /** Ticket status in Vietnamese. */
   statusLabel: string;
@@ -35,7 +33,7 @@ export type TicketRowView = {
   credentialLine: string;
   /** Truncated event id when name unknown. */
   eventIdLine: string;
-  /** Event date/time when known (demo catalog only today). */
+  /** Event date/time when supplied by the owner ticket. */
   whenLine: string | null;
   /** List CTA label (mock wallet row). */
   viewTicketCta: string;
@@ -68,9 +66,7 @@ export function ticketStateLabelVi(state: string): string {
  * Ví row hierarchy (PD §2.2): event + status primary; UUID / credentialVersion secondary.
  */
 export function presentTicketRow(ticket: TicketSummary): TicketRowView {
-  const demo = findDemoEventById(ticket.eventId);
-  const eventTitle =
-    ticket.eventName?.trim() || demo?.name?.trim() || 'Sự kiện';
+  const eventTitle = ownerText(ticket.eventName) || 'Sự kiện';
   const statusLabel = ticketStateLabelVi(ticket.state);
   const shortEventId =
     ticket.eventId.length > 12
@@ -83,7 +79,7 @@ export function presentTicketRow(ticket: TicketSummary): TicketRowView {
     accessibilityLabel: `${eventTitle} · ${statusLabel} · ${attendeeWalletCopy.viewTicketCta}`,
     ticketId: ticket.ticketId,
     credentialLine: `Phiên bản vé · ${ticket.credentialVersion}`,
-    eventIdLine: demo ? `ID sự kiện · ${shortEventId}` : `Sự kiện · ${shortEventId}`,
+    eventIdLine: `Sự kiện · ${shortEventId}`,
     whenLine: when,
     viewTicketCta: attendeeWalletCopy.viewTicketCta,
   };
@@ -210,20 +206,16 @@ export const attendeeWalletCopy = {
 } as const;
 
 /**
- * Giờ và địa điểm trên vé khi tra được catalog demo (`findDemoEventById`).
- * Vé production (eventId không khớp demo) → cả hai null; UI không render dòng.
+ * Owner projection only; missing metadata stays visibly absent.
  */
 export function ticketScheduleVenueLines(ticket: TicketSummary): {
   when: string | null;
   where: string | null;
 } {
-  const demo = findDemoEventById(ticket.eventId);
-  if (!demo) {
-    return { when: null, where: null };
-  }
+  const when = formatWalletEventStart(ticket);
   return {
-    when: eventDate(demo),
-    where: demo.location?.trim() || null,
+    when: when ? `${when} (${walletEventTimeBasis(ticket)})` : null,
+    where: ownerText(ticket.venueName),
   };
 }
 

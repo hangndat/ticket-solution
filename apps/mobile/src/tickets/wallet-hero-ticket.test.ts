@@ -61,7 +61,14 @@ test('missing, null and malformed starts never infer a hero from createdAt or de
   assert.equal(selectHeroTicket([missing, nil, invalid], true, now), null);
   assert.equal(walletEventStartMs('not-a-date'), null);
   assert.equal(walletEventStartMs('2026-11-07'), null);
-  assert.equal(formatWalletEventStart(null), null);
-  assert.ok(formatWalletEventStart('2026-11-07T12:00:00.000Z'));
-  assert.match(formatWalletEventTime('2026-11-07T12:00:00.000Z') ?? '', /^\d{2}:\d{2}$/);
+  assert.equal(formatWalletEventStart(nil), null);
+  const timed = ticket('timed', 'Alpha', '2026-11-07T12:00:00.000Z');
+  assert.ok(formatWalletEventStart(timed));
+  assert.match(formatWalletEventTime(timed) ?? '', /^\d{2}:\d{2}$/);
+});
+
+test('owner timezone controls display, malformed timezone falls back safely', () => {
+  const timed = ticket('timed', 'Alpha', '2026-11-07T12:00:00.000Z');
+  assert.equal(formatWalletEventTime({ ...timed, eventTimezone: 'Asia/Ho_Chi_Minh' }), '19:00');
+  assert.ok(formatWalletEventStart({ ...timed, eventTimezone: 'Invalid/Zone' }));
 });

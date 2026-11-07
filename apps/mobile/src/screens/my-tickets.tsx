@@ -57,7 +57,8 @@ import {
   decideTicketSyncApply
 } from '@/tickets/ticket-sync-guard';
 import { walletOfflineNoticeBody } from '@/tickets/wallet-sync-display';
-import { formatWalletEventStart, formatWalletEventTime, selectHeroTicket } from '@/tickets/wallet-hero-ticket';
+import { formatWalletEventStart, formatWalletEventTime, selectHeroTicket, walletEventTimeBasis } from '@/tickets/wallet-hero-ticket';
+import { ownerBannerUrl, ownerText } from '@/tickets/owner-metadata';
 import { startWalletFocusRefresh } from '@/tickets/wallet-focus-refresh';
 import { walletContentPhase } from '@/tickets/wallet-content-phase';
 import { logoutAndClearWalletArtifacts } from '@/tickets/wallet-logout';
@@ -111,7 +112,7 @@ function WalletGroupedTicketList({
   return (
     <>
       {groups.map((group) => (
-        <EventTicketSection key={group.eventId} group={group} offline={offline} />
+        <EventTicketSection key={group.key} group={group} offline={offline} />
       ))}
     </>
   );
@@ -134,7 +135,7 @@ function WalletHeroTicket({
   offline: boolean;
 }) {
   const status = walletTicketStatus(ticket, { offline });
-  const eventStart = formatWalletEventStart(ticket.startsAt);
+  const eventStart = formatWalletEventStart(ticket);
   return (
     <View
       style={{
@@ -149,6 +150,7 @@ function WalletHeroTicket({
     >
       <EventBanner
         eventId={group.eventId}
+        bannerUrl={ownerBannerUrl(ticket)}
         wordmark={group.eventName}
         fallbackColor={group.brandColor}
         allowDemoMedia={false}
@@ -165,7 +167,12 @@ function WalletHeroTicket({
         </Text>
         {eventStart ? (
           <Text style={{ ...typography.footnote, color: colors.secondary }}>
-            {`Ngày sự kiện · ${eventStart} (giờ thiết bị)`}
+            {`Ngày sự kiện · ${eventStart} (${walletEventTimeBasis(ticket)})`}
+          </Text>
+        ) : null}
+        {ownerText(ticket.venueName) ? (
+          <Text style={{ ...typography.footnote, color: colors.secondary }}>
+            {`Địa điểm · ${ownerText(ticket.venueName)}`}
           </Text>
         ) : null}
         <View style={{ height: 1, backgroundColor: colors.line }} />
@@ -449,13 +456,13 @@ function WalletDateTimeline({
           <Text accessibilityRole="header" style={{ ...typography.footnoteSemibold, color: colors.secondary, textTransform: 'capitalize' }}>{section.label}</Text>
           {section.tickets.map((ticket) => {
             const status = walletTicketStatus(ticket, { offline });
-            const time = formatWalletEventTime(ticket.startsAt);
+             const time = formatWalletEventTime(ticket);
             return (
               <Link key={ticket.ticketId} href={{ pathname: '/my-tickets/[ticketId]', params: { ticketId: ticket.ticketId } }} asChild>
                 <Button variant="ghost" size="lg" accessibilityLabel={walletTicketA11yLabel(ticketEventDisplayName(ticket), ticket, status)} style={{ minHeight: 56, paddingHorizontal: space.md, paddingVertical: space.sm, borderRadius: radius.md, backgroundColor: colors.ticketCanvas, borderWidth: 1, borderColor: colors.line }} contentStyle={{ flex: 1, flexDirection: 'row', justifyContent: 'space-between', gap: space.md }}>
                   <View style={{ flex: 1, gap: space.xxs }}>
                     <Text numberOfLines={1} style={{ ...typography.footnoteSemibold, color: brand.ink }}>{ticketEventDisplayName(ticket)}</Text>
-                    <Text numberOfLines={1} style={{ ...typography.caption, color: colors.secondary }}>{[time, status.label].filter(Boolean).join(' · ')}</Text>
+                     <Text numberOfLines={1} style={{ ...typography.caption, color: colors.secondary }}>{[time, ownerText(ticket.ticketTypeLabel), status.label].filter(Boolean).join(' · ')}</Text>
                   </View>
                   <Text accessibilityElementsHidden style={{ ...typography.title, color: colors.secondary }}>›</Text>
                 </Button>
@@ -856,7 +863,7 @@ function VerifiedWallet({ userId }: { userId: string }) {
   const filteredTickets = useMemo(() => filterWalletTickets(tickets, walletFilter), [tickets, walletFilter]);
   const heroTicket = filterEventId || walletFilter === 'past' ? null : selectHeroTicket(filteredTickets, offline);
   const heroGroup = heroTicket
-    ? groupTicketsByEvent(filteredTickets).find((group) => group.eventId === heroTicket.eventId)
+    ? groupTicketsByEvent(filteredTickets).find((group) => group.key === `${heroTicket.tenantId}:${heroTicket.eventId}`)
     : null;
   const hero = heroTicket && heroGroup ? { ticket: heroTicket, group: heroGroup } : null;
   const remainingTickets = hero

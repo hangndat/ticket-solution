@@ -39,6 +39,9 @@ test('display cache JSON rejects other users and malformed payloads', () => {
   );
   assert.equal(parseTicketDisplayCacheJson('{"tickets":[]}'), null);
   assert.equal(parseTicketDisplayCacheJson(null), null);
+  const projected = { ...ticket, venueName: 'Nhà hát A', ticketTypeLabel: 'Hạng A', eventTimezone: 'Asia/Ho_Chi_Minh', bannerUrl: 'https://cdn.example.test/banner.jpg' };
+  assert.deepEqual(parseTicketDisplayCacheJson(JSON.stringify({ ...ok, tickets: [projected] }))?.tickets[0], projected);
+  assert.equal(parseTicketDisplayCacheJson(JSON.stringify({ ...ok, tickets: [{ ...projected, bannerUrl: 42 }] })), null);
 });
 
 test('display QR payload is the exact signed Gate envelope', () => {

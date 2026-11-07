@@ -35,9 +35,9 @@ test('ticketStateLabelVi maps known states to Vietnamese', () => {
 
 test('presentTicketRow puts event name and status above UUID/credential', () => {
   const row = presentTicketRow(sampleTicket);
-  assert.equal(row.eventTitle, 'MFest · Demo');
+  assert.equal(row.eventTitle, 'Sự kiện');
   assert.equal(row.statusLabel, 'Chưa sử dụng');
-  assert.match(row.accessibilityLabel, /MFest/);
+  assert.match(row.accessibilityLabel, /Sự kiện/);
   assert.equal(row.ticketId, sampleTicket.ticketId);
   assert.match(row.credentialLine, /3/);
   assert.doesNotMatch(row.eventTitle, /v3|credential/i);
@@ -59,6 +59,16 @@ test('presentTicketRow prefers API eventName over demo catalog', () => {
     eventName: 'Tên từ máy chủ',
   });
   assert.equal(row.eventTitle, 'Tên từ máy chủ');
+});
+
+test('owner metadata presents real venue and event time without demo substitution', () => {
+  const projected = { ...sampleTicket, eventName: 'Đêm nhạc thật', startsAt: '2026-11-08T12:00:00.000Z', eventTimezone: 'Asia/Ho_Chi_Minh', venueName: 'Nhà hát A', ticketTypeLabel: 'Hạng A' };
+  assert.equal(presentTicketRow(projected).eventTitle, 'Đêm nhạc thật');
+  const lines = ticketScheduleVenueLines(projected);
+  assert.match(lines.when ?? '', /08\/11\/2026/);
+  assert.match(lines.when ?? '', /19:00.*giờ sự kiện/);
+  assert.equal(lines.where, 'Nhà hát A');
+  assert.deepEqual(ticketScheduleVenueLines({ ...sampleTicket, eventName: undefined, venueName: null, startsAt: null }), { when: null, where: null });
 });
 
 test('presentRedeemDecision issued never leads with raw ticket UUID only', () => {
@@ -130,17 +140,16 @@ test('attendeeWalletCopy avoids Keycloak / Nest on guest chrome', () => {
   assert.match(attendeeWalletCopy.viewTicketCta, /QR/);
 });
 
-test('presentTicketRow includes schedule line for demo events', () => {
+test('presentTicketRow does not invent a schedule for demo IDs', () => {
   const row = presentTicketRow(sampleTicket);
-  assert.ok(row.whenLine);
+  assert.equal(row.whenLine, null);
   assert.equal(row.viewTicketCta, attendeeWalletCopy.viewTicketCta);
 });
 
-test('ticketScheduleVenueLines uses demo catalog when event id matches', () => {
+test('ticketScheduleVenueLines ignores demo catalog when owner metadata is absent', () => {
   const lines = ticketScheduleVenueLines(sampleTicket);
-  assert.ok(lines.when);
-  assert.match(lines.when ?? '', /2027/);
-  assert.ok(lines.where?.includes('Ho Chi Minh'));
+  assert.equal(lines.when, null);
+  assert.equal(lines.where, null);
 });
 
 test('ticketScheduleVenueLines empty for unknown event id', () => {

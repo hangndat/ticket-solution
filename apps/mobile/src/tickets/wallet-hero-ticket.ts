@@ -1,5 +1,5 @@
 import type { TicketSummary } from '@ticket/contracts';
-import { walletTicketStatus } from './wallet-event-grouping.ts';
+import { ownerEventTimezone } from './owner-metadata.ts';
 
 /** Old offline caches may omit the event start. Never use ticket creation time. */
 export function walletEventStartMs(startsAt: string | null | undefined): number | null {
@@ -20,14 +20,13 @@ export function walletEventStartMs(startsAt: string | null | undefined): number 
 /** Earliest upcoming usable event, otherwise the most recently started one. */
 export function selectHeroTicket(
   tickets: TicketSummary[],
-  offline: boolean,
+  _offline: boolean,
   nowMs = Date.now(),
 ): TicketSummary | null {
   let chosen: TicketSummary | null = null;
   let chosenStart = 0;
   for (const ticket of tickets) {
-    const tone = walletTicketStatus(ticket, { offline }).tone;
-    if (tone !== 'usable' && tone !== 'sync') continue;
+    if (ticket.state.trim().toUpperCase() !== 'ACTIVE') continue;
     const start = walletEventStartMs(ticket.startsAt);
     if (start === null) continue;
     if (
@@ -42,9 +41,8 @@ export function selectHeroTicket(
   return chosen;
 }
 
-/** TicketSummary has no event timezone, so display in the device's local time. */
-export function formatWalletEventStart(startsAt: string | null | undefined): string | null {
-  const start = walletEventStartMs(startsAt);
+export function formatWalletEventStart(ticket: TicketSummary): string | null {
+  const start = walletEventStartMs(ticket.startsAt);
   if (start === null) return null;
   return new Intl.DateTimeFormat('vi-VN', {
     day: '2-digit',
@@ -53,16 +51,22 @@ export function formatWalletEventStart(startsAt: string | null | undefined): str
     hour: '2-digit',
     minute: '2-digit',
     hourCycle: 'h23',
+    timeZone: ownerEventTimezone(ticket) ?? undefined,
   }).format(new Date(start));
 }
 
-/** Compact local clock time for rows already grouped under a date heading. */
-export function formatWalletEventTime(startsAt: string | null | undefined): string | null {
-  const start = walletEventStartMs(startsAt);
+/** Compact clock time for rows already grouped under a date heading. */
+export function formatWalletEventTime(ticket: TicketSummary): string | null {
+  const start = walletEventStartMs(ticket.startsAt);
   if (start === null) return null;
   return new Intl.DateTimeFormat('vi-VN', {
     hour: '2-digit',
     minute: '2-digit',
     hourCycle: 'h23',
+    timeZone: ownerEventTimezone(ticket) ?? undefined,
   }).format(new Date(start));
+}
+
+export function walletEventTimeBasis(ticket: TicketSummary): string {
+  return ownerEventTimezone(ticket) ? 'giờ sự kiện' : 'giờ thiết bị';
 }
