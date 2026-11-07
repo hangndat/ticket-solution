@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { radius, space } from '@/theme/tokens';
@@ -44,9 +44,9 @@ export type StaffGateDeviceHistoryPanelProps = {
 
 function HistoryRow({ row }: { row: DeviceScanHistoryRow }) {
   const [expanded, setExpanded] = useState(false);
-  return <Pressable
+  return <Button
+    variant="ghost"
     onPress={() => setExpanded((value) => !value)}
-    accessibilityRole="button"
     accessibilityState={{ expanded }}
     accessibilityLabel={`${formatDeviceHistoryTime(row.at)}. Vé ${row.ticketLabel}. ${row.statusLabel}. ${expanded ? 'Ẩn' : 'Xem'} mã lượt đầy đủ`}
     style={{ flexDirection: 'row', alignItems: 'flex-start', gap: space.sm,
@@ -69,7 +69,7 @@ function HistoryRow({ row }: { row: DeviceScanHistoryRow }) {
       </View> : null}
     </View>
     <SymbolView name={expanded ? 'chevron.up' : 'chevron.down'} size={13} tintColor={colors.secondary} />
-  </Pressable>;
+  </Button>;
 }
 
 export function StaffGateDeviceHistoryPanel({
