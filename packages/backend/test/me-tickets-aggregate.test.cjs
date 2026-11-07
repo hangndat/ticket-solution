@@ -342,11 +342,55 @@ test(
         );
         assert.equal(detailRow.bannerUrl, null);
       };
+      const wrongEventId = randomUUID();
+      const wrongEventAssetId = randomUUID();
+      await withTenant(db, T1, async (tx) => {
+        await tx.$executeRaw`
+          INSERT INTO events (tenant_id, id, slug, name, status, timezone)
+          VALUES (${T1}::uuid, ${wrongEventId}::uuid, 'wrong-banner-event',
+                  'Wrong Banner Event', 'PUBLISHED', 'UTC')
+        `;
+        await tx.$executeRaw`
+          INSERT INTO event_assets (
+            tenant_id, event_id, id, status, quarantine_key, ready_key,
+            original_filename, content_type, byte_length, width_px, height_px,
+            sha256, created_by, finalized_at
+          ) VALUES (
+            ${T1}::uuid, ${wrongEventId}::uuid, ${wrongEventAssetId}::uuid,
+            'READY', 'wrong/quarantine', 'wrong/ready', 'wrong.png',
+            'image/png', 10, 760, 200, 'wrong-sha', ${manager.userId}::uuid, now()
+          )
+        `;
+        await tx.$executeRaw`
+          UPDATE events
+          SET published_brand_snapshot = jsonb_set(
+            published_brand_snapshot, '{bannerAssetId}', to_jsonb(${wrongEventAssetId}::text)
+          )
+          WHERE tenant_id = ${T1}::uuid AND id = ${E1}::uuid
+        `;
+      });
+      await assertNoOwnerBanner();
+      await withTenant(db, T1, (tx) => tx.$executeRaw`
+        UPDATE events
+        SET published_brand_snapshot = jsonb_set(
+          published_brand_snapshot, '{bannerAssetId}', to_jsonb(${bannerAssetId}::text)
+        )
+        WHERE tenant_id = ${T1}::uuid AND id = ${E1}::uuid
+      `);
       await withTenant(db, T1, (tx) => tx.$executeRaw`
         UPDATE events SET visibility = 'UNLISTED'
         WHERE tenant_id = ${T1}::uuid AND id = ${E1}::uuid
       `);
       await assertNoOwnerBanner();
+      await withTenant(db, T1, (tx) => tx.$executeRaw`
+        UPDATE events SET content_status = 'ARCHIVED'
+        WHERE tenant_id = ${T1}::uuid AND id = ${E1}::uuid
+      `);
+      await assertNoOwnerBanner();
+      await withTenant(db, T1, (tx) => tx.$executeRaw`
+        UPDATE events SET content_status = 'PUBLISHED'
+        WHERE tenant_id = ${T1}::uuid AND id = ${E1}::uuid
+      `);
       await withTenant(db, T1, (tx) => tx.$executeRaw`
         UPDATE events SET visibility = 'PUBLIC', content_status = 'DRAFT'
         WHERE tenant_id = ${T1}::uuid AND id = ${E1}::uuid
