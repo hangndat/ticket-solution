@@ -133,6 +133,7 @@ function FixtureDemoDetail({
           tenantSlug={event.tenantSlug}
           fallbackColor={event.brand.primaryColor}
           wordmark={event.name}
+          showFallbackName={false}
           height={EVENT_BANNER_HEIGHT_DETAIL}
           style={{ borderRadius: 0, width: undefined }}
           testID={`fixture-banner-${event.id}`}

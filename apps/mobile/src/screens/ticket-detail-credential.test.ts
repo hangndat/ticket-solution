@@ -54,11 +54,13 @@ const mocks: Record<string, string> = {
   '@/components/screen-state-copy': `export const walletCopy={loading:{},detailProbeErrorTitle:'Fetch error',detailMissingTitle:'Missing'};`,
   '@/components/page': `export const Notice='Notice';`,
   '@/components/attendee-cta': `export const AttendeeCta='AttendeeCta';`,
+  '@/components/attendee-state-card': `export const AttendeeStateCard='AttendeeStateCard';`,
   '@/components/qr-code': `export const QrCode='QrCode';`,
   '@/components/ticket-used-stamp': `export const TicketUsedStamp='Used';`,
   '@/components/ticket-status-pill': `export const TicketStatusPill='Pill';`,
   '@/components/event-banner-metrics': `export const EVENT_BANNER_HEIGHT_TICKET=100;`,
   '@/components/event-media': `export const EventBanner='Banner',EventLogo='Logo';`,
+  '@/navigation/attendee-account-route': `export const ATTENDEE_ACCOUNT_HREF='/account',GUEST_HOME_HREF='/(tabs)/(events)';`,
   '@/data/demo-media': `export const hasDemoMediaForEventId=()=>false;`,
   '@/data/demo-events': `export const findDemoEventById=()=>null;`,
   '@/theme/colors': `export const brand={ink:'#141020',primary:'#6C35FF'},colors={paper:'#fff',secondary:'#555',onAccent:'#fff'};`,
@@ -119,11 +121,12 @@ test('offline legacy metadata shows a QR error; retry loads the signed credentia
   let tree: ReturnType<typeof Renderer.create>;
   await act(async () => { tree = Renderer.create(React.createElement(TicketDetailScreen)); });
   assert.equal(tree!.root.findAllByType('QrCode').length, 0);
-  const error = tree!.root.findByType('ErrorState');
-  assert.equal(error.props.title, 'Chưa thể dùng vé tại cổng');
+  const state = tree!.root.findByType('AttendeeStateCard');
+  assert.equal(state.props.title, 'Chưa thể dùng vé tại cổng');
+  assert.match(state.props.children, /không hiển thị mã/i);
   assert.equal(tree!.root.findByProps({ testID: 'ticket-detail-credential-unavailable' }).props.testID, 'ticket-detail-credential-unavailable');
   probe = async () => ({ status: 'ok', body: { tickets: [ticket] } });
-  await act(async () => { error.props.onRetry(); });
+  await act(async () => { tree!.root.findByProps({ testID: 'ticket-detail-credential-retry' }).props.onPress(); });
   assert.equal(calls, 2);
   assert.equal(tree!.root.findByType('QrCode').props.value, JSON.stringify(ticket.gateCredential));
   await act(async () => { tree!.unmount(); });
@@ -169,7 +172,7 @@ test('verified snapshot without credential cannot display cached QR or manual co
     assert.equal(calls, 0);
     assert.equal(tree!.root.findAllByType('QrCode').length, 0);
     assert.equal(JSON.stringify(tree!.toJSON()).includes('SYNTHETIC-CODE'), false);
-    assert.equal(tree!.root.findAllByType('ErrorState').length, 1);
+    assert.equal(tree!.root.findAllByType('AttendeeStateCard').length, 1);
   } finally {
     await act(async () => { tree!.unmount(); });
     credential = { status: 'token', accessToken: 'synthetic' };
@@ -203,8 +206,8 @@ test('unauthorized response cannot display cached QR', async () => {
   let tree: ReturnType<typeof Renderer.create>;
   await act(async () => { tree = Renderer.create(React.createElement(TicketDetailScreen)); });
   assert.equal(tree!.root.findAllByType('QrCode').length, 0);
-  assert.equal(tree!.root.findAllByType('ErrorState').length, 1);
-  assert.equal(tree!.root.findByType('ErrorState').props.onRetry, undefined);
+  assert.equal(tree!.root.findAllByType('AttendeeStateCard').length, 1);
+  assert.equal(tree!.root.findAllByProps({ testID: 'ticket-detail-error-retry' }).length, 0);
   assert.equal(tree!.root.findByProps({ testID: 'ticket-detail-home' }).props.label, 'Về Vé của tôi');
   tree!.root.findByProps({ testID: 'ticket-detail-home' }).props.onPress();
   assert.equal(replacedRoute, '/wallet-access');

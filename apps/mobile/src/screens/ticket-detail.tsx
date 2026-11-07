@@ -16,7 +16,7 @@ import {
   ticketScheduleVenueLines
 } from '@/attendee/attendee-outcome-copy';
 import { TicketUsedStamp } from '@/components/ticket-used-stamp';
-import { ErrorState } from '@/components/screen-state';
+import { AttendeeStateCard } from '@/components/attendee-state-card';
 import { walletCopy } from '@/components/screen-state-copy';
 import { EventBanner } from '@/components/event-media';
 import { Notice } from '@/components/page';
@@ -41,6 +41,7 @@ import { walletFetchScopeFromEnv } from '@/tickets/wallet-fetch-scope';
 import { offlineDisplay } from '@/tickets/offline-display-session';
 import { walletOfflineNoticeBody } from '@/tickets/wallet-sync-display';
 import { space, radius } from '@/theme/tokens';
+import { ATTENDEE_ACCOUNT_HREF, GUEST_HOME_HREF } from '@/navigation/attendee-account-route';
 
 type LoadOwner = {
   ownerUserId: string;
@@ -282,11 +283,32 @@ export function TicketDetailScreen() {
   );
 
   if (!displayMode || !owner) {
+    if (displayMode) {
+      return (
+        <TicketDetailPage>
+          <AttendeeStateCard
+            symbol="ticket"
+            title={walletCopy.detailMissingTitle}
+            tone="warning"
+            testID="ticket-detail-invalid-route"
+          >
+            {walletCopy.detailMissingBody}
+          </AttendeeStateCard>
+          <AttendeeCta label="Về Vé của tôi" onPress={() => router.replace('/wallet-access' as Href)} testID="ticket-detail-home" />
+        </TicketDetailPage>
+      );
+    }
     return (
       <TicketDetailPage>
-        <Notice title={walletCopy.guestWalletBlockedTitle}>
+        <AttendeeStateCard
+          symbol="person.crop.circle"
+          title={walletCopy.guestWalletBlockedTitle}
+          testID="ticket-detail-guest-state"
+        >
           {walletCopy.guestWalletBlockedBody}
-        </Notice>
+        </AttendeeStateCard>
+        <AttendeeCta label="Đăng nhập" onPress={() => router.push(ATTENDEE_ACCOUNT_HREF)} testID="ticket-detail-guest-signin" />
+        <AttendeeCta label="Khám phá sự kiện" variant="secondary" onPress={() => router.replace(GUEST_HOME_HREF)} testID="ticket-detail-guest-events" />
       </TicketDetailPage>
     );
   }
@@ -304,17 +326,21 @@ export function TicketDetailScreen() {
   if (visibleLoad.status === 'error') {
     return (
       <TicketDetailPage>
-        <ErrorState
-          title={walletCopy.detailProbeErrorTitle}
-          onRetry={visibleLoad.reason === 'unreachable' ? () => setReloadKey((key) => key + 1) : undefined}
-          retryLabel="Thử lại"
+        <AttendeeStateCard
+          symbol={visibleLoad.reason === 'unreachable' ? 'wifi.exclamationmark' : 'ticket'}
+          title={visibleLoad.reason === 'unauthorized' ? 'Cần đăng nhập lại' : walletCopy.detailProbeErrorTitle}
+          tone={visibleLoad.reason === 'unreachable' ? 'warning' : 'error'}
+          testID="ticket-detail-error-state"
         >
           {visibleLoad.reason === 'unreachable'
             ? walletCopy.detailProbeErrorBody
             : visibleLoad.reason === 'unauthorized'
               ? 'Phiên đăng nhập không còn hiệu lực. Đăng nhập lại để xem vé.'
               : 'Không xác minh được vé cho tài khoản hiện tại.'}
-        </ErrorState>
+        </AttendeeStateCard>
+        {visibleLoad.reason === 'unreachable' ? (
+          <AttendeeCta label="Thử lại" onPress={() => setReloadKey((key) => key + 1)} testID="ticket-detail-error-retry" />
+        ) : null}
         <AttendeeCta label="Về Vé của tôi" variant="secondary" onPress={() => router.replace('/wallet-access' as Href)} testID="ticket-detail-home" />
       </TicketDetailPage>
     );
@@ -323,9 +349,14 @@ export function TicketDetailScreen() {
   if (visibleLoad.status === 'missing') {
     return (
       <TicketDetailPage>
-        <Notice title={walletCopy.detailMissingTitle}>
+        <AttendeeStateCard
+          symbol="ticket"
+          title={walletCopy.detailMissingTitle}
+          tone="warning"
+          testID="ticket-detail-missing-state"
+        >
           {walletCopy.detailMissingBody}
-        </Notice>
+        </AttendeeStateCard>
         <AttendeeCta label="Về Vé của tôi" onPress={() => router.replace('/wallet-access' as Href)} testID="ticket-detail-home" />
       </TicketDetailPage>
     );
@@ -368,6 +399,8 @@ export function TicketDetailScreen() {
         <View style={{ opacity: used ? 0.45 : 1 }}>
           <EventBanner
             eventId={ticket.eventId}
+            wordmark={row.eventTitle}
+            showFallbackName={false}
             height={76}
             style={{ borderRadius: 0 }}
             testID="ticket-detail-banner"
@@ -479,9 +512,19 @@ export function TicketDetailScreen() {
         </Notice>
       ) : null}
       {!credentialAvailable && !used ? (
-        <ErrorState title="Chưa thể dùng vé tại cổng" onRetry={mode === 'verified' ? () => setReloadKey((key) => key + 1) : undefined} retryLabel="Cập nhật mã vào cổng">
-          Kết nối mạng và cập nhật lại mã. Thông tin sự kiện và vé vẫn được giữ.
-        </ErrorState>
+        <>
+          <AttendeeStateCard
+            symbol="qrcode"
+            title="Chưa thể dùng vé tại cổng"
+            tone="warning"
+            testID="ticket-detail-credential-state"
+          >
+            Chưa xác minh được mã vào cổng nên app không hiển thị mã. Kết nối mạng và cập nhật lại; thông tin sự kiện và vé vẫn được giữ.
+          </AttendeeStateCard>
+          {mode === 'verified' ? (
+            <AttendeeCta label="Cập nhật mã vào cổng" onPress={() => setReloadKey((key) => key + 1)} testID="ticket-detail-credential-retry" />
+          ) : null}
+        </>
       ) : gateHint ? (
         <Notice title={gateHint} tone="deny">
           {isDemo ? 'Vé demo / fixture — không dùng để vào cổng.' : 'Trạng thái vé không cho phép quét cổng.'}
