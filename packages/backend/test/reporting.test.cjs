@@ -414,7 +414,7 @@ test(
         ),
       );
       // O14: online Gate deny must auto-audit so rejectByReason is not undercounted.
-      // After confirm the ticket is USED → reserve denies with TICKET_NOT_ACTIVE.
+      // After confirm the ticket is USED → reserve warns with ALREADY_CHECKED_IN.
       // Outcome (not throw) so withTenant commits gate.reject audit.
       const onlineDeny = await withTenant(db, tenantId, (tx) =>
         reserveCheckin(tx, {
@@ -426,7 +426,7 @@ test(
         }),
       );
       assert.equal(onlineDeny.ok, false);
-      assert.equal(onlineDeny.code, GATE_ERROR_CODES.TICKET_NOT_ACTIVE);
+      assert.equal(onlineDeny.code, GATE_ERROR_CODES.ALREADY_CHECKED_IN);
       const afterConfirm = await withTenant(db, tenantId, (tx) =>
         readEventReport(tx, {
           tenantId,
@@ -438,7 +438,7 @@ test(
       assert.equal(afterConfirm.ticketsByState.USED, 2);
       assert.equal(afterConfirm.ticketsByState.ACTIVE, 0);
       assert.deepEqual(afterConfirm.rejectByReason, {
-        [GATE_ERROR_CODES.TICKET_NOT_ACTIVE]: 1,
+        [GATE_ERROR_CODES.ALREADY_CHECKED_IN]: 1,
       });
 
       await withTenant(db, tenantId, (tx) =>

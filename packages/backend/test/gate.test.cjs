@@ -562,7 +562,9 @@ test(
         }),
       );
       assert.equal(inactiveProof.ok, false);
-      assert.equal(inactiveProof.code, GATE_ERROR_CODES.TICKET_NOT_ACTIVE);
+      assert.equal(inactiveProof.code, after.state === 'USED'
+        ? GATE_ERROR_CODES.ALREADY_CHECKED_IN
+        : GATE_ERROR_CODES.TICKET_NOT_ACTIVE);
       if (after.state === 'USED') {
         assert.equal(after.checkins, 1);
         const confirmOutcome = raceRevoke[0];
