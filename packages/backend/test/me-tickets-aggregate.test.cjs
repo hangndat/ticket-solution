@@ -383,7 +383,7 @@ test(
       `);
       await assertNoOwnerBanner();
       await withTenant(db, T1, (tx) => tx.$executeRaw`
-        UPDATE events SET content_status = 'ARCHIVED'
+        UPDATE events SET visibility = 'PUBLIC', content_status = 'ARCHIVED'
         WHERE tenant_id = ${T1}::uuid AND id = ${E1}::uuid
       `);
       await assertNoOwnerBanner();
