@@ -108,13 +108,22 @@ test('wallet date filters use only valid startsAt, never ACTIVE state as a date'
   const undated = T('undated', 'evt-a', 'ACTIVE', 'Alpha');
   const malformed = T('bad', 'evt-b', 'USED', 'Beta');
   malformed.startsAt = 'not-a-date';
+  const usedFuture = T('used-future', 'evt-c', 'USED', 'Gamma');
+  usedFuture.startsAt = '2026-11-09T09:00:00+07:00';
   assert.equal(walletTicketDateBucket(upcoming, now), 'upcoming');
   assert.equal(walletTicketDateBucket(past, now), 'past');
   assert.equal(walletTicketDateBucket(undated, now), 'undated');
-  assert.deepEqual(filterWalletTickets([upcoming, past, undated, malformed], 'upcoming', now), [upcoming]);
-  assert.deepEqual(filterWalletTickets([upcoming, past, undated, malformed], 'past', now), [past]);
-  assert.equal(filterWalletTickets([upcoming, past, undated, malformed], 'all', now).length, 4);
-  assert.deepEqual(groupWalletTicketsByDate([past, upcoming, undated], now).map((g) => g.tickets[0]?.ticketId), [past.ticketId, upcoming.ticketId, undated.ticketId]);
+  assert.equal(walletTicketDateBucket(usedFuture, now), 'past');
+  assert.deepEqual(filterWalletTickets([upcoming, past, undated, malformed, usedFuture], 'upcoming', now), [upcoming]);
+  assert.deepEqual(filterWalletTickets([upcoming, past, undated, malformed, usedFuture], 'past', now), [past, malformed, usedFuture]);
+  assert.equal(filterWalletTickets([upcoming, past, undated, malformed, usedFuture], 'all', now).length, 5);
+  const sameEventLater = T('later', 'evt-a', 'ACTIVE', 'Alpha');
+  sameEventLater.startsAt = '2026-11-08T21:00:00+07:00';
+  const sameEventEarlier = T('earlier', 'evt-a', 'ACTIVE', 'Alpha');
+  sameEventEarlier.startsAt = '2026-11-08T08:00:00+07:00';
+  const reversedInput = groupWalletTicketsByDate([sameEventLater, sameEventEarlier, past, upcoming, undated], now);
+  assert.deepEqual(reversedInput.map((g) => g.tickets[0]?.ticketId), [past.ticketId, sameEventEarlier.ticketId, undated.ticketId]);
+  assert.deepEqual(reversedInput[1]?.tickets.map((row) => row.ticketId), [sameEventEarlier.ticketId, upcoming.ticketId, sameEventLater.ticketId]);
 });
 
 

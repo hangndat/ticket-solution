@@ -55,3 +55,14 @@ export function formatWalletEventStart(startsAt: string | null | undefined): str
     hourCycle: 'h23',
   }).format(new Date(start));
 }
+
+/** Compact local clock time for rows already grouped under a date heading. */
+export function formatWalletEventTime(startsAt: string | null | undefined): string | null {
+  const start = walletEventStartMs(startsAt);
+  if (start === null) return null;
+  return new Intl.DateTimeFormat('vi-VN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).format(new Date(start));
+}

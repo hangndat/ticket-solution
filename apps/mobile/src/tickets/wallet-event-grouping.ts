@@ -106,6 +106,9 @@ export function walletTicketDateBucket(
   ticket: TicketSummary,
   nowMs = Date.now(),
 ): 'upcoming' | 'past' | 'undated' {
+  // Ticket state takes precedence over the event date: a consumed credential
+  // cannot be "upcoming" even when the event metadata is future dated.
+  if (isInactive(ticket)) return 'past';
   const value = ticket.startsAt;
   if (typeof value !== 'string') return 'undated';
   const ms = Date.parse(value);
@@ -141,7 +144,16 @@ export function groupWalletTicketsByDate(
     group.tickets.push(ticket);
     groups.set(key, group);
   }
-  return [...groups.values()].sort((a, b) => {
+  return [...groups.values()].map((group) => ({
+    ...group,
+    tickets: [...group.tickets].sort((a, b) => {
+      const aTime = typeof a.startsAt === 'string' ? Date.parse(a.startsAt) : Number.NaN;
+      const bTime = typeof b.startsAt === 'string' ? Date.parse(b.startsAt) : Number.NaN;
+      if (!Number.isFinite(aTime)) return Number.isFinite(bTime) ? 1 : a.ticketId.localeCompare(b.ticketId);
+      if (!Number.isFinite(bTime)) return -1;
+      return aTime - bTime;
+    }),
+  })).sort((a, b) => {
     if (a.key === 'undated') return 1;
     if (b.key === 'undated') return -1;
     return Date.parse(a.tickets[0]!.startsAt!) - Date.parse(b.tickets[0]!.startsAt!);

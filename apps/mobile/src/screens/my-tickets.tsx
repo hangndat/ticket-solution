@@ -57,7 +57,7 @@ import {
   decideTicketSyncApply
 } from '@/tickets/ticket-sync-guard';
 import { walletOfflineNoticeBody } from '@/tickets/wallet-sync-display';
-import { formatWalletEventStart, selectHeroTicket } from '@/tickets/wallet-hero-ticket';
+import { formatWalletEventStart, formatWalletEventTime, selectHeroTicket } from '@/tickets/wallet-hero-ticket';
 import { startWalletFocusRefresh } from '@/tickets/wallet-focus-refresh';
 import { walletContentPhase } from '@/tickets/wallet-content-phase';
 import { logoutAndClearWalletArtifacts } from '@/tickets/wallet-logout';
@@ -149,8 +149,10 @@ function WalletHeroTicket({
     >
       <EventBanner
         eventId={group.eventId}
+        wordmark={group.eventName}
         fallbackColor={group.brandColor}
         allowDemoMedia={false}
+        showFallbackName={false}
         height={EVENT_BANNER_HEIGHT_TICKET}
         style={{ borderRadius: layout.none }}
         testID="wallet-hero-banner"
@@ -412,16 +414,20 @@ function WalletFilterBar({
       {items.map((item) => {
         const selected = item.key === value;
         return (
-          <Pressable
+          <Button
             key={item.key}
+            variant="ghost"
+            size="lg"
             accessibilityRole="tab"
             accessibilityState={{ selected }}
+            accessibilityLabel={item.label}
             onPress={() => onChange(item.key)}
-            style={{ flex: 1, minHeight: 44, justifyContent: 'center', alignItems: 'center', paddingHorizontal: space.xs, borderRadius: radius.sm, backgroundColor: selected ? colors.ticketCanvas : 'transparent' }}
+            style={{ flex: 1, minHeight: 44, paddingHorizontal: space.xs, borderRadius: radius.sm, backgroundColor: selected ? colors.ticketCanvas : 'transparent' }}
+            contentStyle={{ justifyContent: 'center', alignItems: 'center' }}
             testID={`wallet-filter-${item.key}`}
           >
             <Text style={{ ...typography.footnoteSemibold, color: selected ? brand.primary : colors.secondary, textAlign: 'center' }}>{item.label}</Text>
-          </Pressable>
+          </Button>
         );
       })}
     </View>
@@ -443,16 +449,16 @@ function WalletDateTimeline({
           <Text accessibilityRole="header" style={{ ...typography.footnoteSemibold, color: colors.secondary, textTransform: 'capitalize' }}>{section.label}</Text>
           {section.tickets.map((ticket) => {
             const status = walletTicketStatus(ticket, { offline });
-            const time = formatWalletEventStart(ticket.startsAt)?.split(' ').slice(-2).join(' ');
+            const time = formatWalletEventTime(ticket.startsAt);
             return (
               <Link key={ticket.ticketId} href={{ pathname: '/my-tickets/[ticketId]', params: { ticketId: ticket.ticketId } }} asChild>
-                <Pressable accessibilityRole="button" accessibilityLabel={walletTicketA11yLabel(ticketEventDisplayName(ticket), ticket, status)} style={({ pressed }) => ({ minHeight: 56, flexDirection: 'row', alignItems: 'center', gap: space.md, paddingHorizontal: space.md, paddingVertical: space.sm, borderRadius: radius.md, backgroundColor: colors.ticketCanvas, borderWidth: 1, borderColor: colors.line, opacity: pressed ? 0.8 : 1 })}>
+                <Button variant="ghost" size="lg" accessibilityLabel={walletTicketA11yLabel(ticketEventDisplayName(ticket), ticket, status)} style={{ minHeight: 56, paddingHorizontal: space.md, paddingVertical: space.sm, borderRadius: radius.md, backgroundColor: colors.ticketCanvas, borderWidth: 1, borderColor: colors.line }} contentStyle={{ flex: 1, flexDirection: 'row', justifyContent: 'space-between', gap: space.md }}>
                   <View style={{ flex: 1, gap: space.xxs }}>
                     <Text numberOfLines={1} style={{ ...typography.footnoteSemibold, color: brand.ink }}>{ticketEventDisplayName(ticket)}</Text>
                     <Text numberOfLines={1} style={{ ...typography.caption, color: colors.secondary }}>{[time, status.label].filter(Boolean).join(' · ')}</Text>
                   </View>
                   <Text accessibilityElementsHidden style={{ ...typography.title, color: colors.secondary }}>›</Text>
-                </Pressable>
+                </Button>
               </Link>
             );
           })}
@@ -947,11 +953,24 @@ function VerifiedWallet({ userId }: { userId: string }) {
           ) : null}
           {remainingTickets.length > 0 ? (
             <View style={{ gap: space.sm }}>
-              {hero ? (
-                <Text style={walletEyebrowStyle}>Các vé còn lại</Text>
-              ) : null}
-              {!filterEventId && walletFilter !== 'all' ? (
-                <WalletDateTimeline tickets={remainingTickets} offline={offline} />
+              {!filterEventId ? (
+                <>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.sm }}>
+                    <Text style={walletEyebrowStyle}>
+                      {walletFilter === 'all' ? 'Tất cả vé' : walletFilter === 'past' ? 'Đã qua' : hero ? 'Các vé còn lại' : 'Sắp dùng'}
+                    </Text>
+                    {walletFilter === 'upcoming' ? (
+                      <Button
+                        label="Xem tất cả"
+                        variant="ghost"
+                        size="md"
+                        onPress={() => setWalletFilter('all')}
+                        testID="wallet-show-all-timeline"
+                      />
+                    ) : null}
+                  </View>
+                  <WalletDateTimeline tickets={remainingTickets} offline={offline} />
+                </>
               ) : (
                 <View style={{ gap: space.xl }}>
                   <WalletGroupedTicketList tickets={remainingTickets} filterEventId={filterEventId} offline={offline} />

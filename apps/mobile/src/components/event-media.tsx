@@ -42,6 +42,8 @@ type BannerProps = {
   accessibilityLabel?: string;
   /** Prevent fixture-pack imagery when rendering an unverified wallet fallback. */
   allowDemoMedia?: boolean;
+  /** Suppress the full name when a nearby wallet title already shows it. */
+  showFallbackName?: boolean;
 };
 
 type LogoProps = {
@@ -80,6 +82,7 @@ function EventBrandFallback({
   wordmark,
   testID,
   accessibilityLabel,
+  showFallbackName = true,
   style,
 }: {
   eventId?: string | null;
@@ -88,6 +91,7 @@ function EventBrandFallback({
   wordmark?: string | null;
   testID?: string;
   accessibilityLabel: string;
+  showFallbackName?: boolean;
   style?: StyleProp<ViewStyle>;
 }) {
   const fill = eventIdentityColor(eventId?.trim() || 'event', fallbackColor);
@@ -131,7 +135,7 @@ function EventBrandFallback({
       >
         {initial}
       </Text>
-      {label && !compact ? (
+      {showFallbackName && label && !compact ? (
         <Text
           numberOfLines={1}
           maxFontSizeMultiplier={1.2}
@@ -163,8 +167,9 @@ export function EventBanner({
   height = EVENT_BANNER_HEIGHT_LIST,
   style,
   testID = 'event-banner',
-  accessibilityLabel = 'Ảnh banner sự kiện'
-  , allowDemoMedia = true
+  accessibilityLabel = 'Ảnh banner sự kiện',
+  allowDemoMedia = true,
+  showFallbackName = true,
 }: BannerProps) {
   const pack = allowDemoMedia ? bundledDemoSource(eventId) : null;
   const source = bannerSource ?? remoteImageSource(bannerUrl) ?? pack?.banner ?? null;
@@ -181,6 +186,7 @@ export function EventBanner({
         wordmark={wordmark}
         testID={testID}
         accessibilityLabel={accessibilityLabel}
+        showFallbackName={showFallbackName}
         style={style}
       />
     );
