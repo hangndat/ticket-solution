@@ -106,11 +106,44 @@ export function InviteAcceptForm({
   const [ux, setUx] = useState<InviteUxMessage | null>(null);
   const [busy, setBusy] = useState(false);
   const [csrfReady, setCsrfReady] = useState(false);
+  const tokenFieldRef = useRef<HTMLInputElement>(null);
   const successHeadingRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
-    if (view?.kind === 'ok') successHeadingRef.current?.focus();
+    if (view?.kind !== 'ok') return;
+    const heading = successHeadingRef.current;
+    heading?.focus({ preventScroll: true });
+    // The form may have been scrolled into a short keyboard viewport. Wait for
+    // the terminal view to paint, then place its heading inside the viewport.
+    let frame = requestAnimationFrame(() =>
+      heading?.scrollIntoView({ block: 'center' }),
+    );
+    const onViewportResize = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() =>
+        heading?.scrollIntoView({ block: 'center' }),
+      );
+    };
+    window.visualViewport?.addEventListener('resize', onViewportResize);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.visualViewport?.removeEventListener('resize', onViewportResize);
+    };
   }, [view]);
+
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+    const onViewportResize = () => {
+      if (document.activeElement === tokenFieldRef.current) {
+        requestAnimationFrame(() =>
+          tokenFieldRef.current?.scrollIntoView({ block: 'center' }),
+        );
+      }
+    };
+    viewport.addEventListener('resize', onViewportResize);
+    return () => viewport.removeEventListener('resize', onViewportResize);
+  }, []);
 
   // CSRF cookie is issued by GET Route Handlers — not RSC (cookies().set illegal).
   useEffect(() => {
@@ -230,8 +263,10 @@ export function InviteAcceptForm({
         <label>
           {copy.tokenLabel}
           <input
+            ref={tokenFieldRef}
             value={token}
             onChange={(e) => setTokenOverride(e.target.value)}
+            onFocus={(e) => e.currentTarget.scrollIntoView({ block: 'center' })}
             type="password"
             autoComplete="off"
             spellCheck={false}
