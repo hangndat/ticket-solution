@@ -1,3 +1,4 @@
+import styles from "./invite.module.css";
 import type { Metadata } from 'next';
 import { invitePageCopy } from '../../../src/invite/invite-copy';
 import { guestPageMain } from '../../../src/guest/guest-flow-surface';
@@ -16,7 +17,7 @@ export const metadata: Metadata = {
 
 export default function InvitePage() {
   return (
-    <ConsumerPageShell mainClassName={guestPageMain}>
+    <ConsumerPageShell mainClassName={`${guestPageMain} ${styles.page}`}>
       <InvitePageHeader />
       <InviteAcceptForm portalOrigin={portalOriginFromEnv()} />
       <InviteHomeLink />

@@ -1,5 +1,6 @@
 'use client';
 
+import styles from "./invite.module.css";
 import { Button } from '@ticket/ui';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useAttendeeLocale } from '../../../src/i18n';
@@ -218,13 +219,14 @@ export function InviteAcceptForm({
   // below controls that no longer apply.
   if (displayUx?.kind === 'success' && view?.kind === 'ok') {
     return (
-      <div className={claimFormRoot}>
+      <div className={`${claimFormRoot} ${styles.form}`}>
         <section
           className={inviteSuccessOutcomeClass()}
           role={outcomeLive?.role ?? 'status'}
           aria-live={outcomeLive?.ariaLive}
           aria-atomic={outcomeLive?.ariaAtomic}
           data-testid="invite-accept-result"
+          data-invite-success
         >
           <h2 ref={successHeadingRef} tabIndex={-1}>
             {displayUx.title}
@@ -252,14 +254,14 @@ export function InviteAcceptForm({
   }
 
   return (
-    <div className={claimFormRoot}>
+    <div className={`${claimFormRoot} ${styles.form}`}>
       <p className={inviteSupportCopy}>{copy.support}</p>
       <div className={authButtonsRow}>
         <Button asChild variant="primary">
           <a href={loginHref}>{copy.login}</a>
         </Button>
       </div>
-      <div className={inviteFormPanel}>
+      <div className={`${inviteFormPanel} ${styles.panel}`}>
         <label>
           {copy.tokenLabel}
           <input
@@ -274,14 +276,6 @@ export function InviteAcceptForm({
           />
         </label>
         <span className={inviteFieldHint}>{copy.tokenHint}</span>
-        {!token.trim() ? (
-          <SurfaceState
-            kind="empty"
-            title={copy.emptyTitle}
-            detail={copy.emptyDetail}
-            testId="invite-token-empty"
-          />
-        ) : null}
         <Button
           type="button"
           variant="primary"
