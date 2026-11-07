@@ -1,11 +1,12 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import {
-  useEffect,
-  useRef,
-  useState,
-  useSyncExternalStore,
-} from 'react';
-import { AccessibilityInfo, Animated, Text, View } from 'react-native';
+  AccessibilityInfo,
+  Animated,
+  ScrollView,
+  Text,
+  View,
+} from 'react-native';
 import { SymbolView } from 'expo-symbols';
 import {
   redeemDecisionAnnouncement,
@@ -387,6 +388,101 @@ export function ClaimScreen() {
     router.replace(href);
   };
 
+  if (invalid) {
+    return (
+      <ScrollView
+        contentInsetAdjustmentBehavior="automatic"
+        style={{ flex: 1, backgroundColor: colors.paper }}
+        contentContainerStyle={{
+          flexGrow: 1,
+          padding: space.xl,
+          paddingBottom: space.huge,
+          gap: space.xl,
+        }}
+      >
+        <View
+          style={{
+            flexGrow: 1,
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: space.md,
+            paddingVertical: space.xl,
+          }}
+        >
+          <View
+            style={{
+              width: space.huge,
+              height: space.huge,
+              borderRadius: radius.lg,
+              borderCurve: 'continuous',
+              backgroundColor: colors.denySurface,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <SymbolView
+              name="arrow.up.right"
+              size={28}
+              tintColor={colors.deny}
+            />
+          </View>
+          <Text
+            accessibilityRole="header"
+            selectable
+            style={{
+              ...typography.title,
+              color: colors.label,
+              textAlign: 'center',
+            }}
+          >
+            Không mở được lời mời
+          </Text>
+          <Text
+            selectable
+            style={{
+              ...typography.subhead,
+              color: colors.secondary,
+              textAlign: 'center',
+            }}
+          >
+            Link mời có thể đã hết hạn hoặc không hợp lệ. Hãy yêu cầu người gửi
+            chia sẻ link mới.
+          </Text>
+        </View>
+        <View style={{ gap: space.md }}>
+          <View
+            testID="claim-invalid-no-ticket"
+            style={{
+              backgroundColor: colors.denySurface,
+              borderRadius: radius.lg,
+              borderCurve: 'continuous',
+              padding: space.md,
+              gap: space.xs,
+            }}
+          >
+            <Text
+              selectable
+              style={{ ...typography.subheadSemibold, color: colors.deny }}
+            >
+              Chưa có vé nào được thêm
+            </Text>
+            <Text
+              selectable
+              style={{ ...typography.footnote, color: colors.deny }}
+            >
+              Ví vé của bạn vẫn giữ nguyên.
+            </Text>
+          </View>
+          <AttendeeCta
+            label={presentation.homeLabel}
+            onPress={() => leaveClaim(presentation.homeHref)}
+            testID="claim-cta-invalid-home"
+          />
+        </View>
+      </ScrollView>
+    );
+  }
+
   return (
     <Page>
       <View style={{ gap: space.md }}>
@@ -402,7 +498,7 @@ export function ClaimScreen() {
           }}
         >
           <SymbolView
-            name={pending ? 'clock' : invalid ? 'link.badge.plus' : 'envelope'}
+            name={pending ? 'clock' : 'envelope'}
             size={28}
             tintColor={colors.accent}
           />
@@ -411,37 +507,33 @@ export function ClaimScreen() {
           accessibilityRole="header"
           style={{ ...typography.display, color: colors.label }}
         >
-          {invalid
-            ? 'Liên kết không hợp lệ'
-            : pending
-              ? 'Đang chờ duyệt'
-              : issued
-                ? 'Đã nhận vé'
-                : presentation.phase === 'failure'
-                  ? 'Không thể nhận vé'
-                  : needsLogin
-                    ? 'Bạn có lời mời nhận vé'
-                    : 'Kiểm tra trước khi nhận'}
+          {pending
+            ? 'Đang chờ duyệt'
+            : issued
+              ? 'Đã nhận vé'
+              : presentation.phase === 'failure'
+                ? 'Không thể nhận vé'
+                : needsLogin
+                  ? 'Bạn có lời mời nhận vé'
+                  : 'Kiểm tra trước khi nhận'}
         </Text>
         <Text
           selectable
           style={{ ...typography.subhead, color: colors.secondary }}
         >
-          {invalid
-            ? 'Liên kết nhận vé thiếu thông tin, không đúng hoặc đã hết hạn. Hãy mở lại liên kết trong thư mời hoặc liên hệ đơn vị tổ chức.'
-            : pending
-              ? 'Yêu cầu nhận vé đã được ghi nhận. Chỉ khi được cấp, vé mới xuất hiện trong Ví của tôi.'
-              : issued
-                ? 'Vé đã được cấp cho tài khoản của bạn.'
-                : presentation.phase === 'failure'
-                  ? 'Lời mời không thể nhận bằng tài khoản này hoặc yêu cầu đã bị từ chối. Chưa có vé được cấp.'
-                  : needsLogin
-                    ? 'Đăng nhập bằng email nhận thư mời để tiếp tục. Lời mời được kiểm tra khi bạn xác nhận.'
-                    : 'Bạn đang dùng tài khoản đã đăng nhập. Máy chủ sẽ kiểm tra email được mời khi gửi yêu cầu.'}
+          {pending
+            ? 'Yêu cầu nhận vé đã được ghi nhận. Chỉ khi được cấp, vé mới xuất hiện trong Ví của tôi.'
+            : issued
+              ? 'Vé đã được cấp cho tài khoản của bạn.'
+              : presentation.phase === 'failure'
+                ? 'Lời mời không thể nhận bằng tài khoản này hoặc yêu cầu đã bị từ chối. Chưa có vé được cấp.'
+                : needsLogin
+                  ? 'Đăng nhập bằng email nhận thư mời để tiếp tục. Lời mời được kiểm tra khi bạn xác nhận.'
+                  : 'Bạn đang dùng tài khoản đã đăng nhập. Máy chủ sẽ kiểm tra email được mời khi gửi yêu cầu.'}
         </Text>
       </View>
 
-      {!invalid && !issued ? (
+      {!issued ? (
         <View
           style={{
             backgroundColor: colors.card,
@@ -469,13 +561,7 @@ export function ClaimScreen() {
         </View>
       ) : null}
 
-      {invalid ? (
-        <AttendeeCta
-          label={presentation.homeLabel}
-          onPress={() => leaveClaim(presentation.homeHref)}
-          testID="claim-cta-invalid-home"
-        />
-      ) : needsLogin ? (
+      {needsLogin ? (
         <View style={{ gap: space.md }}>
           <Notice title="Liên kết được giữ tạm">
             App giữ lời mời trong lúc đăng nhập. Đổi tài khoản hoặc đăng xuất sẽ
@@ -628,10 +714,24 @@ export function ClaimScreen() {
             />
           ) : null}
           <AttendeeCta
-            label="Về Sự kiện"
+            label={
+              decision?.kind === 'denied'
+                ? presentation.homeLabel
+                : 'Về Sự kiện'
+            }
             variant="secondary"
-            onPress={() => leaveClaim('/(tabs)/(events)')}
-            testID="claim-cta-events"
+            onPress={() =>
+              leaveClaim(
+                decision?.kind === 'denied'
+                  ? presentation.homeHref
+                  : '/(tabs)/(events)',
+              )
+            }
+            testID={
+              decision?.kind === 'denied'
+                ? 'claim-cta-denied-home'
+                : 'claim-cta-events'
+            }
           />
         </View>
       )}
